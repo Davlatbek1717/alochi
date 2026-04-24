@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -12,6 +13,7 @@ import { ProgressModule } from './lesson-progress/progress.module';
 import { StudentConfigModule } from './student-lesson-config/config.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WarningsModule } from './warnings/warnings.module';
+import { CronModule } from './cron/cron.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -19,6 +21,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     TenantsModule,
@@ -29,6 +32,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     StudentConfigModule,
     PaymentsModule,
     WarningsModule,
+    CronModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
