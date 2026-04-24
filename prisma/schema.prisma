@@ -34,6 +34,7 @@ model Tenant {
 
   branches Branch[]
   users    User[]
+  lessons  Lesson[]
 
   @@map("tenants")
 }
@@ -67,9 +68,12 @@ model User {
   telegramId   BigInt?    @map("telegram_id")
   createdAt    DateTime   @default(now()) @map("created_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens RefreshToken[]
+  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch          Branch?               @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens   RefreshToken[]
+  studentProgress StudentProgress[]     @relation("StudentProgress")
+  studentConfigs  StudentLessonConfig[] @relation("StudentConfig")
+  managedConfigs  StudentLessonConfig[] @relation("ManagerConfig")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -88,4 +92,81 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+enum LessonType {
+  english
+  personal_development
+  critical_thinking
+  experiment
+}
+
+model Lesson {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String     @map("tenant_id") @db.Uuid
+  title        String
+  type         LessonType
+  orderNumber  Int        @map("order_number")
+  youtubeUrl   String     @map("youtube_url")
+  nRepetitions Int        @default(3) @map("n_repetitions")
+  maxNOverride Int        @default(10) @map("max_n_override")
+  components   Json       @default("{}")
+  isPublished  Boolean    @default(false) @map("is_published")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenant          Tenant                @relation(fields: [tenantId], references: [id])
+  components_data LessonComponent[]
+  progress        StudentProgress[]
+  studentConfigs  StudentLessonConfig[]
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId, isPublished])
+  @@map("lessons")
+}
+
+model LessonComponent {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lessonId String @map("lesson_id") @db.Uuid
+  type     String
+  config   Json
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@map("lesson_components")
+}
+
+model StudentProgress {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId        String    @map("student_id") @db.Uuid
+  lessonId         String    @map("lesson_id") @db.Uuid
+  sessionCount     Int       @default(0) @map("session_count")
+  homeCompleted    Boolean   @default(false) @map("home_completed")
+  academyCompleted Boolean   @default(false) @map("academy_completed")
+  completedAt      DateTime? @map("completed_at")
+  lastActivityAt   DateTime? @map("last_activity_at")
+
+  student User   @relation("StudentProgress", fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@map("student_progress")
+}
+
+model StudentLessonConfig {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId            String   @map("student_id") @db.Uuid
+  lessonId             String   @map("lesson_id") @db.Uuid
+  nRepetitionsOverride Int      @map("n_repetitions_override")
+  changedBy            String   @map("changed_by") @db.Uuid
+  changedAt            DateTime @default(now()) @map("changed_at")
+  reason               String?
+
+  student User   @relation("StudentConfig", fields: [studentId], references: [id])
+  lesson  Lesson @relation(fields: [lessonId], references: [id])
+  manager User   @relation("ManagerConfig", fields: [changedBy], references: [id])
+
+  @@unique([studentId, lessonId])
+  @@map("student_lesson_config")
 }
