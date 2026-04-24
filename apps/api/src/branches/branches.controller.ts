@@ -27,8 +27,11 @@ export class BranchesController {
   assignFiladmin(
     @Param('id') id: string,
     @Body('filadminId') filadminId: string,
+    @Body('tenantId') bodyTenantId: string,
     @Request() req: any,
   ) {
-    return this.branches.assignFiladmin(id, filadminId, req.user.tenantId);
+    // Superadmin passes tenantId in body; other roles use JWT tenantId
+    const tenantId = req.user.role === UserRole.superadmin ? bodyTenantId : req.user.tenantId;
+    return this.branches.assignFiladmin(id, filadminId, tenantId);
   }
 }
