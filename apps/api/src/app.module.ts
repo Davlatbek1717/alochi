@@ -7,6 +7,7 @@ import { TenantsModule } from './tenants/tenants.module';
 import { BranchesModule } from './branches/branches.module';
 import { UsersModule } from './users/users.module';
 import { LessonsModule } from './lessons/lessons.module';
+import { ProgressModule } from './lesson-progress/progress.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -19,6 +20,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     BranchesModule,
     UsersModule,
     LessonsModule,
+    ProgressModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
