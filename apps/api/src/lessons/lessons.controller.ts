@@ -57,4 +57,9 @@ export class LessonsController {
   setVocabulary(@Param('id') id: string, @Body('words') words: any[]) {
     return this.components.setVocabulary(id, words);
   }
+
+  @Get(':id/components')
+  getComponents(@Param('id') id: string) {
+    return this.components.getComponents(id);
+  }
 }

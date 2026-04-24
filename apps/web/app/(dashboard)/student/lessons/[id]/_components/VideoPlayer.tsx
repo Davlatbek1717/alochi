@@ -23,6 +23,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const watchedRef = useRef(0);
   const completedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const videoId = extractVideoId(youtubeUrl);
 
@@ -43,7 +44,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
             }
           },
           onReady: () => {
-            const interval = setInterval(() => {
+            intervalRef.current = setInterval(() => {
               if (!playerRef.current) return;
               const state = playerRef.current.getPlayerState();
               const duration = playerRef.current.getDuration();
@@ -64,8 +65,6 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
                 if (rate !== 1) playerRef.current.setPlaybackRate(1);
               }
             }, 500);
-
-            return () => clearInterval(interval);
           },
         },
       });
@@ -83,6 +82,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
     }
 
     return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
       if (playerRef.current) playerRef.current.destroy();
     };
   }, [videoId]);
