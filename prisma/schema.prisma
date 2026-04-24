@@ -1,0 +1,90 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [uuidOssp(map: "uuid-ossp"), pgcrypto]
+}
+
+enum UserRole {
+  superadmin
+  filadmin
+  manager
+  mentor
+  tester
+  student
+}
+
+enum UserStatus {
+  active
+  blocked_warning
+  blocked_payment
+  inactive
+}
+
+model Tenant {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name      String
+  slug      String   @unique
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  branches Branch[]
+  users    User[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id         String  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  name       String
+  filadminId String? @map("filadmin_id") @db.Uuid
+
+  workStartTime    String @default("09:00") @map("work_start_time")
+  lateGraceMinutes Int    @default(5) @map("late_grace_minutes")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  users  User[]
+
+  @@index([tenantId])
+  @@map("branches")
+}
+
+model User {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String     @map("tenant_id") @db.Uuid
+  branchId     String?    @map("branch_id") @db.Uuid
+  role         UserRole
+  name         String
+  phone        String?
+  login        String
+  passwordHash String     @map("password_hash")
+  status       UserStatus @default(active)
+  telegramId   BigInt?    @map("telegram_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  branch        Branch?        @relation(fields: [branchId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, login])
+  @@index([tenantId, role])
+  @@index([branchId])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
