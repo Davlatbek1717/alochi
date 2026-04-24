@@ -66,8 +66,8 @@ model User {
   telegramId   BigInt?    @map("telegram_id")
   createdAt    DateTime   @default(now()) @map("created_at")
 
-  tenant        Tenant         @relation(fields: [tenantId], references: [id])
-  branch        Branch?        @relation(fields: [branchId], references: [id])
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
 
   @@unique([tenantId, login])
