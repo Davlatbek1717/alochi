@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { VideoPlayer } from './_components/VideoPlayer';
+import { McqTest } from './_components/McqTest';
+import { WordOrderTest } from './_components/WordOrderTest';
 
 const MOCK_LESSON = {
   id: '1',
@@ -9,25 +11,36 @@ const MOCK_LESSON = {
   nRepetitions: 3,
 };
 
-type Step = 'video' | 'tests' | 'academy';
+const MOCK_MCQ = [
+  { text: 'What is "apple" in Uzbek?', options: ['Olma', 'Nok', 'Uzum', 'Limon'], correct: 0 },
+  { text: '"She ___ English."', options: ['speak', 'speaks', 'speaking', 'spoke'], correct: 1 },
+];
+
+const MOCK_WORD_ORDER = [
+  { words: ['a', 'student', 'am', 'I'], correct: 'I am a student' },
+  { words: ['English', 'speaks', 'She'], correct: 'She speaks English' },
+];
+
+type Step = 'video' | 'mcq' | 'word_order' | 'academy';
 
 export default function LessonPage() {
   const [step, setStep] = useState<Step>('video');
   const [videoCompleted, setVideoCompleted] = useState(false);
 
+  const steps: Step[] = ['video', 'mcq', 'word_order', 'academy'];
+  const currentStepIndex = steps.indexOf(step);
+
   return (
     <div className="max-w-3xl mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-bold">{MOCK_LESSON.title}</h1>
-      </div>
+      <h1 className="text-xl font-bold">{MOCK_LESSON.title}</h1>
 
       <div className="flex gap-2">
-        {(['video', 'tests', 'academy'] as Step[]).map((s) => (
+        {steps.map((s, i) => (
           <div
             key={s}
             className={`flex-1 h-2 rounded-full ${
-              step === s ? 'bg-indigo-600' :
-              (step === 'tests' && s === 'video') || (step === 'academy') ? 'bg-green-400' :
+              i < currentStepIndex ? 'bg-green-400' :
+              i === currentStepIndex ? 'bg-indigo-600' :
               'bg-gray-200'
             }`}
           />
@@ -42,7 +55,7 @@ export default function LessonPage() {
           />
           {videoCompleted && (
             <button
-              onClick={() => setStep('tests')}
+              onClick={() => setStep('mcq')}
               className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium"
             >
               Davom etish → Testlar
@@ -56,17 +69,20 @@ export default function LessonPage() {
         </div>
       )}
 
-      {step === 'tests' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm">
-          <h2 className="font-semibold text-lg mb-4">Testlar</h2>
-          <p className="text-gray-500">MCQ va so&apos;z tartibi testlari Task 7 da qo&apos;shiladi.</p>
-          <button
-            onClick={() => setStep('academy')}
-            className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-xl font-medium"
-          >
-            Davom etish → Akademiya
-          </button>
-        </div>
+      {step === 'mcq' && (
+        <McqTest
+          questions={MOCK_MCQ}
+          onPassed={() => setStep('word_order')}
+          onFailed={() => { setStep('video'); setVideoCompleted(false); }}
+        />
+      )}
+
+      {step === 'word_order' && (
+        <WordOrderTest
+          sentences={MOCK_WORD_ORDER}
+          onPassed={() => setStep('academy')}
+          onFailed={() => { setStep('video'); setVideoCompleted(false); }}
+        />
       )}
 
       {step === 'academy' && (
