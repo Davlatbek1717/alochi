@@ -14,6 +14,7 @@ import { StudentConfigModule } from './student-lesson-config/config.module';
 import { PaymentsModule } from './payments/payments.module';
 import { WarningsModule } from './warnings/warnings.module';
 import { CronModule } from './cron/cron.module';
+import { DelegationsModule } from './delegations/delegations.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -33,6 +34,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     PaymentsModule,
     WarningsModule,
     CronModule,
+    DelegationsModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
