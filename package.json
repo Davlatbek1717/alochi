@@ -6,5 +6,16 @@
     "dev:api": "pnpm --filter api run start:dev",
     "dev:web": "pnpm --filter web run dev",
     "build": "pnpm --filter api run build && pnpm --filter web run build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "@prisma/client",
+      "prisma",
+      "bcrypt",
+      "@nestjs/core",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }
