@@ -8,6 +8,7 @@ import { BranchesModule } from './branches/branches.module';
 import { UsersModule } from './users/users.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { ProgressModule } from './lesson-progress/progress.module';
+import { StudentConfigModule } from './student-lesson-config/config.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -21,6 +22,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     UsersModule,
     LessonsModule,
     ProgressModule,
+    StudentConfigModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
