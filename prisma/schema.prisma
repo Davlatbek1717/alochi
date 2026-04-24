@@ -70,10 +70,18 @@ model User {
 
   tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?               @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens   RefreshToken[]
-  studentProgress StudentProgress[]     @relation("StudentProgress")
-  studentConfigs  StudentLessonConfig[] @relation("StudentConfig")
-  managedConfigs  StudentLessonConfig[] @relation("ManagerConfig")
+  refreshTokens      RefreshToken[]
+  studentProgress    StudentProgress[]     @relation("StudentProgress")
+  studentConfigs     StudentLessonConfig[] @relation("StudentConfig")
+  managedConfigs     StudentLessonConfig[] @relation("ManagerConfig")
+  studentStatuses    StudentStatus[]       @relation("StudentStatuses")
+  studentAttendances AttendanceStudent[]   @relation("StudentAttendances")
+  staffAttendances   AttendanceStaff[]     @relation("StaffAttendances")
+  kpiScores          KpiScore[]            @relation("KpiScores")
+  studentWarnings    Warning[]             @relation("StudentWarnings")
+  studentPayments    Payment[]             @relation("StudentPayments")
+  delegationsFrom    Delegation[]          @relation("DelegationFrom")
+  delegationsTo      Delegation[]          @relation("DelegationTo")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -169,4 +177,191 @@ model StudentLessonConfig {
 
   @@unique([studentId, lessonId])
   @@map("student_lesson_config")
+}
+
+// ---- STUDENT STATUS ----
+model StudentStatus {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  date            DateTime @db.Date
+  englishStatus   String?  @map("english_status")
+  englishNote     String?  @map("english_note")
+  personalStatus  String?  @map("personal_status")
+  personalNote    String?  @map("personal_note")
+  criticalStatus  String?  @map("critical_status")
+  criticalNote    String?  @map("critical_note")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  student         User     @relation("StudentStatuses", fields: [studentId], references: [id])
+
+  @@unique([studentId, date])
+  @@index([studentId])
+  @@map("student_status")
+}
+
+// ---- ATTENDANCE ----
+model AttendanceStudent {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  branchId   String   @map("branch_id") @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  date       DateTime @db.Date
+  status     String   @default("absent")
+  markedBy   String?  @map("marked_by") @db.Uuid
+
+  student    User     @relation("StudentAttendances", fields: [studentId], references: [id])
+
+  @@unique([studentId, date])
+  @@index([branchId, date])
+  @@map("attendance_students")
+}
+
+model AttendanceStaff {
+  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  branchId            String    @map("branch_id") @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  date                DateTime  @db.Date
+  loginTime           DateTime? @map("login_time")
+  confirmedAt         DateTime? @map("confirmed_at")
+  confirmedBy         String?   @map("confirmed_by") @db.Uuid
+  isLate              Boolean   @default(false) @map("is_late")
+  recognitionMethod   String    @default("manual") @map("recognition_method")
+  confidence          Float?
+  deviceId            String?   @map("device_id")
+
+  user                User      @relation("StaffAttendances", fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@map("attendance_staff")
+}
+
+// ---- KPI ----
+model KpiScore {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  date         DateTime @db.Date
+  score        Int
+  reason       String
+  taskId       String?  @map("task_id") @db.Uuid
+  delegationId String?  @map("delegation_id") @db.Uuid
+
+  user         User     @relation("KpiScores", fields: [userId], references: [id])
+
+  @@index([userId, date])
+  @@map("kpi_scores")
+}
+
+// ---- WARNINGS ----
+model Warning {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  studentId    String    @map("student_id") @db.Uuid
+  givenBy      String    @map("given_by") @db.Uuid
+  reasonType   String    @map("reason_type")
+  reasonText   String    @map("reason_text")
+  isCancelled  Boolean   @default(false) @map("is_cancelled")
+  cancelledBy  String?   @map("cancelled_by") @db.Uuid
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @map("cancel_reason")
+  delegationId String?   @map("delegation_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  student      User      @relation("StudentWarnings", fields: [studentId], references: [id])
+
+  @@index([studentId, isCancelled])
+  @@map("warnings")
+}
+
+// ---- PAYMENTS ----
+model PaymentSetting {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId        String   @unique @map("tenant_id") @db.Uuid
+  paymentStartDay Int      @default(1) @map("payment_start_day")
+  paymentEndDay   Int      @default(10) @map("payment_end_day")
+  updatedBy       String?  @map("updated_by") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_settings")
+}
+
+model Payment {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  month        String
+  amount       Int
+  paidAt       DateTime @map("paid_at")
+  recordedBy   String   @map("recorded_by") @db.Uuid
+  unblockAt    DateTime @map("unblock_at")
+  delegationId String?  @map("delegation_id") @db.Uuid
+
+  student      User     @relation("StudentPayments", fields: [studentId], references: [id])
+
+  @@unique([studentId, month])
+  @@index([tenantId, unblockAt])
+  @@map("payments")
+}
+
+// ---- DELEGATIONS ----
+enum DelegationStatus {
+  pending
+  active
+  completed
+  cancelled
+  rejected
+}
+
+model Delegation {
+  id            String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId      String           @map("tenant_id") @db.Uuid
+  branchId      String           @map("branch_id") @db.Uuid
+  fromUserId    String           @map("from_user_id") @db.Uuid
+  toUserId      String           @map("to_user_id") @db.Uuid
+  delegatedRole String           @map("delegated_role")
+  permissions   Json
+  reason        String
+  startsAt      DateTime         @map("starts_at")
+  endsAt        DateTime         @map("ends_at")
+  status        DelegationStatus @default(pending)
+  cancelledAt   DateTime?        @map("cancelled_at")
+  cancelledBy   String?          @map("cancelled_by") @db.Uuid
+  cancelReason  String?          @map("cancel_reason")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  fromUser      User             @relation("DelegationFrom", fields: [fromUserId], references: [id])
+  toUser        User             @relation("DelegationTo", fields: [toUserId], references: [id])
+  responses     DelegationResponse[]
+  auditLogs     DelegationAuditLog[]
+
+  @@index([toUserId, status])
+  @@map("delegations")
+}
+
+model DelegationResponse {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  delegationId String    @map("delegation_id") @db.Uuid
+  action       String
+  reason       String?
+  respondedAt  DateTime  @default(now()) @map("responded_at")
+
+  delegation   Delegation @relation(fields: [delegationId], references: [id])
+
+  @@map("delegation_responses")
+}
+
+model DelegationAuditLog {
+  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  delegationId String    @map("delegation_id") @db.Uuid
+  actorId      String    @map("actor_id") @db.Uuid
+  actionType   String    @map("action_type")
+  targetId     String?   @map("target_id") @db.Uuid
+  meta         Json?
+  performedAt  DateTime  @default(now()) @map("performed_at")
+
+  delegation   Delegation @relation(fields: [delegationId], references: [id])
+
+  @@index([delegationId])
+  @@map("delegation_audit_log")
 }
