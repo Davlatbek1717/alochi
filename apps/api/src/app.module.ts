@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { BranchesModule } from './branches/branches.module';
+import { UsersModule } from './users/users.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -15,6 +16,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     AuthModule,
     TenantsModule,
     BranchesModule,
+    UsersModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
