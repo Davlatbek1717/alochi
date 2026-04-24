@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -13,6 +14,10 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
   ) {}
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
 
   async login(dto: LoginDto, tenantSlug?: string) {
     const whereClause = tenantSlug
@@ -46,7 +51,7 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await this.prisma.refreshToken.create({
-      data: { userId: user.id, token: refreshToken, expiresAt },
+      data: { userId: user.id, token: this.hashToken(refreshToken), expiresAt },
     });
 
     return {
@@ -57,8 +62,16 @@ export class AuthService {
   }
 
   async refresh(token: string) {
+    // First verify the JWT signature and expiry
+    try {
+      await this.jwt.verifyAsync(token, { secret: this.config.get<string>('JWT_REFRESH_SECRET') });
+    } catch {
+      throw new UnauthorizedException('Refresh token yaroqsiz');
+    }
+
+    // Then look up DB record by hash
     const stored = await this.prisma.refreshToken.findUnique({
-      where: { token },
+      where: { token: this.hashToken(token) },
       include: { user: true },
     });
 
@@ -84,7 +97,7 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await this.prisma.refreshToken.create({
-      data: { userId: stored.user.id, token: newRefresh, expiresAt },
+      data: { userId: stored.user.id, token: this.hashToken(newRefresh), expiresAt },
     });
 
     return { accessToken: newAccess, refreshToken: newRefresh };
