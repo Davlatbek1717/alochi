@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
 import { LessonsService } from './lessons.service';
+import { ComponentsService } from './components.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -9,7 +10,7 @@ import { UserRole } from '@prisma/client';
 @Controller('lessons')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LessonsController {
-  constructor(private lessons: LessonsService) {}
+  constructor(private lessons: LessonsService, private components: ComponentsService) {}
 
   @Post()
   @Roles(UserRole.superadmin)
@@ -37,5 +38,23 @@ export class LessonsController {
   @Roles(UserRole.superadmin)
   publish(@Param('id') id: string, @Request() req: any) {
     return this.lessons.publish(id, req.user.tenantId);
+  }
+
+  @Post(':id/mcq')
+  @Roles(UserRole.superadmin)
+  setMcq(@Param('id') id: string, @Body('questions') questions: any[]) {
+    return this.components.setMcq(id, questions);
+  }
+
+  @Post(':id/word-order')
+  @Roles(UserRole.superadmin)
+  setWordOrder(@Param('id') id: string, @Body('sentences') sentences: any[]) {
+    return this.components.setWordOrder(id, sentences);
+  }
+
+  @Post(':id/vocabulary')
+  @Roles(UserRole.superadmin)
+  setVocabulary(@Param('id') id: string, @Body('words') words: any[]) {
+    return this.components.setVocabulary(id, words);
   }
 }
