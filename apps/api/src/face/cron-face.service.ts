@@ -16,9 +16,15 @@ export class CronFaceService {
   async generateAllCaches() {
     this.logger.log('Face ID: kesh generatsiya boshlanmoqda...');
 
-    const branches = await this.prisma.branch.findMany({
-      include: { users: { where: { status: 'active' } } },
-    });
+    let branches;
+    try {
+      branches = await this.prisma.branch.findMany({
+        include: { users: { where: { status: 'active' } } },
+      });
+    } catch (err) {
+      this.logger.error(`Face cache: branch listini olib bo'lmadi — ${err}`);
+      return;
+    }
 
     for (const branch of branches) {
       try {

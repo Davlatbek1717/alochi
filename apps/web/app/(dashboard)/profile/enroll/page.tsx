@@ -10,13 +10,32 @@ export default function EnrollPage() {
     setStage('uploading');
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+      // Parse JWT payload to get userId and tenantId
+      let userId = '';
+      let tenantId = '';
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.userId || payload.sub || '';
+          tenantId = payload.tenantId || '';
+        } catch {
+          // JWT parse failed — enroll will fail server-side with 422
+        }
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/face/enroll`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ imagesBase64: images }),
+        body: JSON.stringify({
+          user_id: userId,
+          tenant_id: tenantId,
+          images_base64: images,
+          enrolled_via: 'web',
+        }),
       });
       if (!res.ok) throw new Error("Ro'yxatdan o'tkazib bo'lmadi");
       setStage('done');

@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body, Request } from '@nestjs/common';
+import { Controller, Get, Param, Post, Body, Request, UnauthorizedException } from '@nestjs/common';
 import { CacheService } from './cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -12,7 +12,7 @@ export class FaceController {
   @Get('cache/:branchId')
   async getCache(@Param('branchId') branchId: string, @Request() req: any) {
     const deviceToken = req.headers['x-device-token'];
-    if (!deviceToken) return { error: 'Device token kerak' };
+    if (!deviceToken) throw new UnauthorizedException('Device token kerak');
 
     const device = await this.prisma.branchDevice.findUnique({
       where: { deviceToken },
@@ -20,7 +20,7 @@ export class FaceController {
     });
 
     if (!device || device.branchId !== branchId) {
-      return { error: 'Device ruxsatsiz' };
+      throw new UnauthorizedException('Device ruxsatsiz');
     }
 
     await this.prisma.branchDevice.update({

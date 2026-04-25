@@ -66,10 +66,9 @@ export class CacheService {
         user_id: r.user_id,
         name: r.name,
         embedding: r.embedding
-          .replace('[', '')
-          .replace(']', '')
+          .replace(/^\[|\]$/g, '')
           .split(',')
-          .map(Number),
+          .map((v) => Number(v.trim())),
       })),
     };
   }

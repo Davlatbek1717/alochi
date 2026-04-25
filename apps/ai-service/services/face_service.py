@@ -41,22 +41,24 @@ class FaceRecognitionService:
         branch_id: str,
     ) -> tuple[Optional[str], float]:
         cur = self.conn.cursor()
-        cur.execute(
-            """
-            SELECT user_id, 1 - (embedding <=> %s::vector) AS cosine_sim
-            FROM face_embeddings
-            WHERE tenant_id = %s
-              AND is_active = true
-              AND user_id IN (
-                SELECT id FROM users WHERE branch_id = %s AND status = 'active'
-              )
-            ORDER BY cosine_sim DESC
-            LIMIT 1
-            """,
-            (query_embedding.tolist(), tenant_id, branch_id),
-        )
-        row = cur.fetchone()
-        cur.close()
+        try:
+            cur.execute(
+                """
+                SELECT user_id, 1 - (embedding <=> %s::vector) AS cosine_sim
+                FROM face_embeddings
+                WHERE tenant_id = %s
+                  AND is_active = true
+                  AND user_id IN (
+                    SELECT id FROM users WHERE branch_id = %s AND status = 'active'
+                  )
+                ORDER BY cosine_sim DESC
+                LIMIT 1
+                """,
+                (query_embedding.tolist(), tenant_id, branch_id),
+            )
+            row = cur.fetchone()
+        finally:
+            cur.close()
 
         if not row:
             return None, 0.0
@@ -80,17 +82,22 @@ class FaceRecognitionService:
         avg_embedding = np.mean([np.array(e) for e in embeddings], axis=0)
 
         cur = self.conn.cursor()
-        cur.execute(
-            "UPDATE face_embeddings SET is_active = false WHERE user_id = %s",
-            (user_id,),
-        )
-        cur.execute(
-            """
-            INSERT INTO face_embeddings (tenant_id, user_id, embedding, enrolled_via)
-            VALUES (%s, %s, %s::vector, %s)
-            """,
-            (tenant_id, user_id, avg_embedding.tolist(), enrolled_via),
-        )
-        self.conn.commit()
-        cur.close()
+        try:
+            cur.execute(
+                "UPDATE face_embeddings SET is_active = false WHERE user_id = %s",
+                (user_id,),
+            )
+            cur.execute(
+                """
+                INSERT INTO face_embeddings (tenant_id, user_id, embedding, enrolled_via)
+                VALUES (%s, %s, %s::vector, %s)
+                """,
+                (tenant_id, user_id, avg_embedding.tolist(), enrolled_via),
+            )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            cur.close()
         return True

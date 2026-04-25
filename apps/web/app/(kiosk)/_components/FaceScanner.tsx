@@ -158,6 +158,7 @@ export function FaceScanner({
     return () => {
       if (interval) clearInterval(interval);
       stream?.getTracks().forEach((t) => t.stop());
+      if (script.parentNode) script.parentNode.removeChild(script);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
