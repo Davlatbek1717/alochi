@@ -13,7 +13,9 @@ interface FeedItem {
 }
 
 function relativeTime(isoDate: string): string {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return '';
+  const diffMs = Date.now() - d.getTime();
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 60) return `${diffMin} daqiqa oldin`;
   const diffHour = Math.floor(diffMin / 60);
@@ -27,11 +29,13 @@ export function SocialFeed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<FeedItem[]>('/social/feed', {}, token)
-      .then((res) => setFeed(res.data))
-      .catch(() => setFeed([]))
-      .finally(() => setLoading(false));
+      .then((res) => { if (!cancelled) setFeed(res.data); })
+      .catch(() => { if (!cancelled) setFeed([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -43,7 +47,7 @@ export function SocialFeed() {
         <p className="text-sm text-gray-400 py-2">Do&apos;stlaringiz hali faol emas</p>
       ) : (
         feed.map((item) => (
-          <div key={item.userId + item.lessonId} className="flex items-center gap-3 py-2 border-b last:border-0">
+          <div key={`${item.userId}:${item.lessonId}`} className="flex items-center gap-3 py-2 border-b last:border-0">
             <span className="text-xl">📚</span>
             <div className="flex-1">
               <p className="text-sm">
