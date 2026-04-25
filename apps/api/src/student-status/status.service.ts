@@ -58,4 +58,22 @@ export class StatusService {
       take: limit,
     });
   }
+
+  async getRedStudents(tenantId: string) {
+    return this.prisma.studentStatus.findMany({
+      where: {
+        student: { tenantId },
+        OR: [
+          { englishStatus: 'qizil' },
+          { personalStatus: 'qizil' },
+          { criticalStatus: 'qizil' },
+        ],
+      },
+      orderBy: { date: 'desc' },
+      distinct: ['studentId'],
+      include: {
+        student: { select: { id: true, name: true } },
+      },
+    });
+  }
 }

@@ -23,16 +23,20 @@ export class StatusController {
 
   @Post()
   @Roles(UserRole.mentor, UserRole.manager)
-  setStatus(@Body() body: {
-    studentId: string;
-    date: string;
-    englishStatus?: string;
-    englishNote?: string;
-    personalStatus?: string;
-    personalNote?: string;
-    criticalStatus?: string;
-    criticalNote?: string;
-  }, @Request() req: AuthRequest) {
+  setStatus(
+    @Body()
+    body: {
+      studentId: string;
+      date: string;
+      englishStatus?: string;
+      englishNote?: string;
+      personalStatus?: string;
+      personalNote?: string;
+      criticalStatus?: string;
+      criticalNote?: string;
+    },
+    @Request() req: AuthRequest,
+  ) {
     return this.statusService.setStatus({ ...body, tenantId: req.user.tenantId });
   }
 
@@ -40,6 +44,18 @@ export class StatusController {
   @Roles(UserRole.student)
   getMyStatus(@Request() req: AuthRequest) {
     return this.statusService.getLatest(req.user.userId);
+  }
+
+  @Get('red-students')
+  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
+  getRedStudents(@Request() req: AuthRequest) {
+    return this.statusService.getRedStudents(req.user.tenantId);
+  }
+
+  @Get('history/:studentId')
+  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
+  getHistory(@Param('studentId') studentId: string) {
+    return this.statusService.getHistory(studentId);
   }
 
   @Get(':studentId')
