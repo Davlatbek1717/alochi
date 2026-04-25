@@ -15,6 +15,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { WarningsModule } from './warnings/warnings.module';
 import { CronModule } from './cron/cron.module';
 import { DelegationsModule } from './delegations/delegations.module';
+import { TelegramModule } from './telegram/telegram.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -35,6 +36,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     WarningsModule,
     CronModule,
     DelegationsModule,
+    TelegramModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
