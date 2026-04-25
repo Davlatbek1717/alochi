@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
+import { AiTutor } from './_components/AiTutor';
 
 const MOCK_LESSON = {
   id: '1',
@@ -21,13 +22,13 @@ const MOCK_WORD_ORDER = [
   { words: ['English', 'speaks', 'She'], correct: 'She speaks English' },
 ];
 
-type Step = 'video' | 'mcq' | 'word_order' | 'academy';
+type Step = 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'academy';
 
 export default function LessonPage() {
   const [step, setStep] = useState<Step>('video');
   const [videoCompleted, setVideoCompleted] = useState(false);
 
-  const steps: Step[] = ['video', 'mcq', 'word_order', 'academy'];
+  const steps: Step[] = ['video', 'mcq', 'word_order', 'ai_tutor', 'academy'];
   const currentStepIndex = steps.indexOf(step);
 
   return (
@@ -80,8 +81,15 @@ export default function LessonPage() {
       {step === 'word_order' && (
         <WordOrderTest
           sentences={MOCK_WORD_ORDER}
-          onPassed={() => setStep('academy')}
+          onPassed={() => setStep('ai_tutor')}
           onFailed={() => { setStep('video'); setVideoCompleted(false); }}
+        />
+      )}
+
+      {step === 'ai_tutor' && (
+        <AiTutor
+          lessonContext={MOCK_LESSON.title}
+          onCompleted={() => setStep('academy')}
         />
       )}
 
