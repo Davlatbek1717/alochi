@@ -1,14 +1,27 @@
 'use client';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { XpBar } from './_components/XpBar';
 import { StreakBadge } from './_components/StreakBadge';
 import { DailyQuests } from './_components/DailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
+import { apiRequest } from '@/lib/api';
 
-const DEMO_DATA = {
-  totalXp: 2340,
-  level: 'Scholar',
-  nextLevelXp: 5000,
+type Quest = {
+  questType: string;
+  targetValue: number;
+  progress: number;
+  completed: boolean;
+  xpReward: number;
+};
+
+type XpData = {
+  totalXp: number;
+  level: string;
+  nextLevelXp: number;
+};
+
+const STATIC_DATA = {
   streak: 12,
   hasShield: true,
   cityName: 'Shaharcha',
@@ -18,17 +31,45 @@ const DEMO_DATA = {
     personal: 'yellow',
     critical: 'green',
   },
-  quests: [
-    { questType: 'learn_words', targetValue: 3, progress: 3, completed: true, xpReward: 75 },
-    { questType: 'watch_video', targetValue: 1, progress: 1, completed: true, xpReward: 50 },
-    { questType: 'ask_tutor', targetValue: 3, progress: 0, completed: false, xpReward: 100 },
-  ],
 };
 
 const STATUS_EMOJI: Record<string, string> = { green: '🟢', yellow: '🟡', red: '🔴' };
 
 export default function StudentDashboard() {
-  const d = DEMO_DATA;
+  const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+
+    async function fetchData() {
+      try {
+        const [xpRes, questsRes] = await Promise.all([
+          apiRequest<XpData>('/gamification/xp', {}, token),
+          apiRequest<Quest[]>('/gamification/quests', {}, token),
+        ]);
+        setXpData(xpRes.data);
+        setQuests(questsRes.data);
+      } catch {
+        // keep defaults on error
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const d = STATIC_DATA;
+
+  if (loading) {
+    return (
+      <div className="max-w-lg mx-auto flex items-center justify-center py-20">
+        <p className="text-gray-500">Yuklanmoqda...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-20">
@@ -41,7 +82,7 @@ export default function StudentDashboard() {
           <StreakBadge streak={d.streak} hasShield={d.hasShield} />
         </div>
         <div className="mt-3">
-          <XpBar totalXp={d.totalXp} level={d.level} nextLevelXp={d.nextLevelXp} />
+          <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
         </div>
       </div>
 
@@ -61,7 +102,7 @@ export default function StudentDashboard() {
         })}
       </div>
 
-      <DailyQuests quests={d.quests} />
+      <DailyQuests quests={quests} />
 
       <SocialFeed />
 

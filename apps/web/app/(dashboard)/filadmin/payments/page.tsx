@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { apiRequest } from '@/lib/api';
 
 type StudentPayment = {
   id: string;
@@ -20,23 +21,47 @@ export default function PaymentsPage() {
   const [students, setStudents] = useState<StudentPayment[]>(INITIAL_STUDENTS);
   const [selected, setSelected] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
+  const [payError, setPayError] = useState('');
 
-  function markPaid(id: string) {
+  async function markPaid(id: string) {
     if (!amount) return;
-    setStudents((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, paid: true, status: 'active', amount: parseInt(amount), paidAt: 'Bugun' }
-          : s,
-      ),
-    );
-    setSelected(null);
-    setAmount('');
+    setPayError('');
+
+    const token = localStorage.getItem('accessToken') ?? '';
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+
+    try {
+      await apiRequest('/payments', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: user.tenantId ?? '',
+          studentId: id,
+          recordedBy: user.id ?? '',
+          month: '2026-05',
+          amount: parseInt(amount),
+          paidAt: new Date().toISOString(),
+        }),
+      }, token);
+
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === id
+            ? { ...s, paid: true, status: 'active', amount: parseInt(amount), paidAt: 'Bugun' }
+            : s,
+        ),
+      );
+      setSelected(null);
+      setAmount('');
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "To'lovni saqlashda xatolik");
+    }
   }
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">To&apos;lov Holati — 2026-may</h1>
+
+      {payError && <p className="text-red-500 text-sm">{payError}</p>}
 
       <div className="space-y-2">
         {students.map((s) => (

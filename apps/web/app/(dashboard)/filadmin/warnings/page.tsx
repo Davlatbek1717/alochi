@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { apiRequest } from '@/lib/api';
 
 const REASON_TYPES = [
   { value: 'not_prepared', label: 'Darsga tayyorlanmagan' },
@@ -13,12 +14,32 @@ export default function WarningsPage() {
   const [reasonType, setReasonType] = useState('');
   const [reasonText, setReasonText] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reasonText.trim()) return;
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 2000);
+    setError('');
+
+    const token = localStorage.getItem('accessToken') ?? '';
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+
+    try {
+      await apiRequest('/warnings', {
+        method: 'POST',
+        body: JSON.stringify({
+          tenantId: user.tenantId ?? '',
+          studentId: selectedStudent,
+          givenBy: user.id ?? '',
+          reasonType,
+          reasonText,
+        }),
+      }, token);
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+    }
   }
 
   return (
@@ -70,6 +91,8 @@ export default function WarningsPage() {
             placeholder="Ogohlantirish sababi..."
           />
         </div>
+
+        {error && <p className="text-red-500 text-sm">{error}</p>}
 
         <button
           type="submit"
