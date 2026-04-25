@@ -67,14 +67,14 @@ export class FriendsService {
     );
 
     const events = await this.prisma.socialFeedEvent.findMany({
-      where: { actorId: { in: friendIds } },
+      where: { actorId: { in: friendIds }, tenantId },
       include: { actor: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
 
     return events
-      .filter((e) => e.actor != null)
+      .filter((e): e is typeof e & { actor: NonNullable<typeof e.actor> } => e.actor != null)
       .map((e) => ({
         id: e.id,
         actorId: e.actorId,
