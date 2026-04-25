@@ -20,6 +20,7 @@ import { AiModule } from './ai/ai.module';
 import { FaceModule } from './face/face.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { SocialModule } from './social/social.module';
+import { StudentStatusModule } from './student-status/status.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -45,6 +46,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     FaceModule,
     GamificationModule,
     SocialModule,
+    StudentStatusModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
