@@ -141,7 +141,7 @@ async function main() {
   });
 
   // Lesson 2
-  await prisma.lesson.upsert({
+  const _lesson2 = await prisma.lesson.upsert({
     where: { id: '00000000-0000-0000-0000-000000000102' },
     update: {},
     create: {
@@ -181,12 +181,13 @@ async function main() {
       studentId: student1.id,
       totalXp: 150,
       currentStreak: 3,
+      longestStreak: 3,
       shieldCount: 1,
       lastActivity: new Date(),
     },
   });
 
-  console.log('✅ Seed bajarildi: 6 rol, 2 dars, 1 MCQ, 1 XP yozuvi');
+  console.log('✅ Seed bajarildi: 7 foydalanuvchi (6 rol), 2 dars, 1 MCQ, 1 XP yozuvi');
 }
 
 main().finally(() => prisma.$disconnect());
