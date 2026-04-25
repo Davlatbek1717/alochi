@@ -2,6 +2,9 @@ import {
   Controller, Get, Post, Body, Param, UseGuards, Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { DuelService } from './duel.service';
 import { ChatService } from './chat.service';
 import { FriendsService } from './friends.service';
@@ -11,7 +14,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('social')
 @ApiBearerAuth()
 @Controller('social')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SocialController {
   constructor(
     private duel: DuelService,
@@ -94,5 +97,11 @@ export class SocialController {
   @Get('challenges/active/:groupId')
   getActiveChallenge(@Param('groupId') groupId: string) {
     return this.challenge.getActiveForGroup(groupId);
+  }
+
+  @Get('feed')
+  @Roles(UserRole.student)
+  getFeed(@Request() req: any) {
+    return this.friends.getFeed(req.user.userId, req.user.tenantId);
   }
 }

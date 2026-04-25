@@ -51,4 +51,61 @@ export class FriendsService {
       },
     }) as unknown as Friendship[];
   }
+
+  async getFeed(userId: string, tenantId: string): Promise<{
+    userId: string;
+    userName: string;
+    lessonId: string;
+    lessonTitle: string;
+    sessionCount: number;
+    homeCompleted: boolean;
+    lastActivityAt: string;
+  }[]> {
+    const friendships = await this.prisma.friendship.findMany({
+      where: {
+        status: 'accepted',
+        OR: [{ userId }, { friendId: userId }],
+      },
+      select: { userId: true, friendId: true },
+    });
+
+    if (friendships.length === 0) return [];
+
+    const friendIds = friendships.map((f) =>
+      f.userId === userId ? f.friendId : f.userId,
+    );
+
+    const progressRecords = await this.prisma.studentProgress.findMany({
+      where: {
+        studentId: { in: friendIds },
+        student: { tenantId },
+        lastActivityAt: { not: null },
+      },
+      orderBy: { lastActivityAt: 'desc' },
+      take: 100,
+      include: {
+        student: { select: { id: true, name: true } },
+        lesson: { select: { id: true, title: true } },
+      },
+    });
+
+    const seen = new Set<string>();
+    const deduped = progressRecords.filter((p) => {
+      if (seen.has(p.studentId)) return false;
+      seen.add(p.studentId);
+      return true;
+    }).slice(0, 20);
+
+    return deduped
+      .filter((p) => p.student != null && p.lesson != null)
+      .map((p) => ({
+        userId: p.student.id,
+        userName: p.student.name,
+        lessonId: p.lesson.id,
+        lessonTitle: p.lesson.title,
+        sessionCount: p.sessionCount,
+        homeCompleted: p.homeCompleted,
+        lastActivityAt: p.lastActivityAt!.toISOString(),
+      }));
+  }
 }
