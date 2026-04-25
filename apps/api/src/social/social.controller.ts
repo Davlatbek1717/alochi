@@ -95,4 +95,9 @@ export class SocialController {
   getActiveChallenge(@Param('groupId') groupId: string) {
     return this.challenge.getActiveForGroup(groupId);
   }
+
+  @Get('feed')
+  getFeed(@Request() req: any) {
+    return this.friends.getFeed(req.user.userId);
+  }
 }
