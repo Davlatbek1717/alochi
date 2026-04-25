@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 import { apiRequest } from '@/lib/api';
 
 type FeedItem = {
@@ -63,6 +64,31 @@ export function SocialFeed() {
 
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+    const socket = io(`${apiUrl}/social`, { auth: { token } });
+
+    socket.on('feed:event', (event: { type: string; data: { actorId: string; actorName: string; meta: Record<string, unknown>; createdAt: string } }) => {
+      setFeed((prev) => [
+        {
+          id: `live-${Date.now()}`,
+          actorId: event.data.actorId,
+          actorName: event.data.actorName,
+          eventType: event.type,
+          meta: event.data.meta,
+          createdAt: event.data.createdAt,
+        },
+        ...prev.slice(0, 19),
+      ]);
+    });
+
+    return () => {
+      socket.disconnect();
     };
   }, []);
 

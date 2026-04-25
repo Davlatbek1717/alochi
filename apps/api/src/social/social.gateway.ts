@@ -10,6 +10,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 interface JwtPayload {
   userId: string;
@@ -25,6 +26,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private jwt: JwtService,
     private chat: ChatService,
+    private prisma: PrismaService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -46,12 +48,27 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(_client: Socket) {}
 
   @SubscribeMessage('chat:join')
-  handleJoin(
+  async handleJoin(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { groupId: string },
   ) {
     const user = client.data.user as JwtPayload | undefined;
     if (!user || !data?.groupId) return;
+
+    // NOTE: The Prisma schema has no dedicated group-membership join table
+    // (no GroupStudent / StudentGroup model). As the closest available guard,
+    // we check that no messages for this groupId exist under a *different* tenant,
+    // preventing cross-tenant room hijacking. Fresh groups (no messages yet) are
+    // allowed — the subsequent chat:send enforces sender tenantId consistency.
+    const alienMessage = await this.prisma.groupMessage.findFirst({
+      where: {
+        groupId: data.groupId,
+        tenantId: { not: user.tenantId },
+      },
+      select: { id: true },
+    });
+    if (alienMessage) return;
+
     client.join(`group:${data.groupId}`);
   }
 

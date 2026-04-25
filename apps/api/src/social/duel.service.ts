@@ -191,12 +191,23 @@ export class DuelService {
           ? duel.challenged.name
           : null;
 
+    let xpEarned: number | undefined;
+    if (duel.status === 'completed' && duel.winnerId) {
+      const isWinner = requesterId === duel.winnerId;
+      const isParticipant =
+        requesterId === duel.challengerId || requesterId === duel.challengedId;
+      if (isParticipant) {
+        xpEarned = isWinner ? 50 : 10; // DUEL_WIN : DUEL_PARTICIPATE (from XP_AMOUNTS)
+      }
+    }
+
     return {
       ...duel,
       challengerName: duel.challenger.name,
       challengedName: duel.challenged.name,
       currentQuestionIdx: myAnswers,
       winner: winnerName,
+      xpEarned,
     };
   }
 
