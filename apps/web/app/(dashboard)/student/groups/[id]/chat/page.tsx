@@ -83,8 +83,8 @@ export default function GroupChatPage() {
   }, [messages]);
 
   function sendMessage() {
-    if (!input.trim() || !socketRef.current?.connected) return;
-    socketRef.current.emit('chat:send', { groupId, content: input.trim() });
+    if (!input.trim() || !connected) return;
+    socketRef.current?.emit('chat:send', { groupId, content: input.trim() });
     setInput('');
   }
 
@@ -119,7 +119,7 @@ export default function GroupChatPage() {
         }),
       );
     } catch {
-      // ignore reaction errors
+      setReactingTo(messageId);
     }
   }
 
@@ -141,8 +141,14 @@ export default function GroupChatPage() {
 
   if (error) {
     return (
-      <div className="max-w-lg mx-auto py-10">
+      <div className="max-w-lg mx-auto py-10 text-center space-y-3">
         <p className="text-red-500">{error}</p>
+        <button
+          onClick={() => { setError(''); fetchMessages(); }}
+          className="text-indigo-600 text-sm underline"
+        >
+          Qayta urinish
+        </button>
       </div>
     );
   }
