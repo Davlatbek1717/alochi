@@ -1,11 +1,13 @@
 import { Controller, Get, Param, Post, Body, Request, UnauthorizedException } from '@nestjs/common';
 import { CacheService } from './cache.service';
+import { FaceService } from './face.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('face')
 export class FaceController {
   constructor(
     private cacheService: CacheService,
+    private faceService: FaceService,
     private prisma: PrismaService,
   ) {}
 
@@ -29,6 +31,16 @@ export class FaceController {
     });
 
     return this.cacheService.generateBranchCache(branchId, device.branch.tenantId);
+  }
+
+  @Post('enroll')
+  enroll(@Body() body: { userId: string; tenantId: string; enrolledVia: string }) {
+    return this.faceService.enroll(body.userId, body.tenantId, body.enrolledVia);
+  }
+
+  @Get('enrollments/:userId')
+  getEnrollments(@Param('userId') userId: string) {
+    return this.faceService.getEnrollments(userId);
   }
 
   @Post('manual-checkin')
