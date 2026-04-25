@@ -16,12 +16,7 @@ interface SendMessageDto {
 export class ChatService {
   private blockedKeywords: string[] = [];
 
-  constructor(
-    private prisma: PrismaService,
-    keywords: string[] = [],
-  ) {
-    this.blockedKeywords = keywords;
-  }
+  constructor(private prisma: PrismaService) {}
 
   async sendMessage(dto: SendMessageDto) {
     if (dto.content.length > MAX_MESSAGE_LENGTH) {

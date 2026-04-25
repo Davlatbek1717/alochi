@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Body, Param, UseGuards, Request,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/auth.guard';
 import { DuelService } from './duel.service';
 import { ChatService } from './chat.service';
 
