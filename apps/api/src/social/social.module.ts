@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DuelService } from './duel.service';
+import { DuelCron } from './duel.cron';
 import { ChatService } from './chat.service';
 import { FriendsService } from './friends.service';
 import { ChallengeService } from './challenge.service';
@@ -20,7 +21,7 @@ import { GamificationModule } from '../gamification/gamification.module';
     }),
     GamificationModule,
   ],
-  providers: [DuelService, ChatService, FriendsService, ChallengeService, FeedEventService, SocialGateway],
+  providers: [DuelService, ChatService, FriendsService, ChallengeService, FeedEventService, SocialGateway, DuelCron],
   controllers: [SocialController],
   exports: [DuelService, ChatService, FriendsService, ChallengeService, FeedEventService],
 })

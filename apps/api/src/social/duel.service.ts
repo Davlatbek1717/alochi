@@ -1,11 +1,27 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { XpService } from '../gamification/xp.service';
+import { FeedEventService } from './feed-event.service';
 
 @Injectable()
 export class DuelService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private xp: XpService,
+    private feedEvent: FeedEventService,
+  ) {}
 
   async create(challengerId: string, challengedId: string, tenantId: string) {
+    const active = await this.prisma.duel.count({
+      where: {
+        status: 'active',
+        OR: [{ challengerId }, { challengedId: challengerId }],
+      },
+    });
+    if (active >= 2) {
+      throw new BadRequestException('Bir vaqtda faqat 2 ta faol duel bo\'lishi mumkin');
+    }
+
     const [aProgress, bProgress] = await Promise.all([
       this.prisma.studentProgress.findMany({
         where: { studentId: challengerId, academyCompleted: true },
@@ -21,28 +37,23 @@ export class DuelService {
     const sharedIds = bProgress.map((p) => p.lessonId).filter((id) => aIds.has(id));
 
     if (sharedIds.length === 0) {
-      throw new BadRequestException(
-        'umumiy bajarilgan dars topilmadi — duel uchun kamida 1 ta kerak',
-      );
+      throw new BadRequestException('Umumiy bajarilgan dars topilmadi — duel uchun kamida 1 ta kerak');
     }
 
     const components = await this.prisma.lessonComponent.findMany({
-      where: {
-        type: 'mcq',
-        lesson: { id: { in: sharedIds } },
-      },
+      where: { type: 'mcq', lessonId: { in: sharedIds } },
     });
 
-    const allQuestions = components.flatMap((c) => (c.config as any).questions ?? []);
+    const allQuestions = components.flatMap((c) => {
+      const cfg = c.config as { questions?: unknown[] };
+      return cfg.questions ?? [];
+    });
+
     if (allQuestions.length < 10) {
-      throw new BadRequestException(
-        'Duel uchun yetarli savol topilmadi (kamida 10 ta kerak)',
-      );
+      throw new BadRequestException('Duel uchun yetarli savol topilmadi (kamida 10 ta kerak)');
     }
 
-    const selectedQuestions = allQuestions
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 10);
+    const selectedQuestions = ([...allQuestions].sort(() => Math.random() - 0.5).slice(0, 10)) as object[];
 
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
@@ -53,32 +64,44 @@ export class DuelService {
         challengedId,
         tenantId,
         questions: selectedQuestions,
-        status: 'active',
+        status: 'pending',
         expiresAt,
       },
     });
   }
 
-  async submitAnswer(
-    duelId: string,
-    userId: string,
-    questionIdx: number,
-    answer: number,
-  ) {
+  async respond(duelId: string, userId: string, accept: boolean) {
+    const duel = await this.prisma.duel.findUnique({ where: { id: duelId } });
+    if (!duel) throw new NotFoundException('Duel topilmadi');
+    if (duel.challengedId !== userId) throw new ForbiddenException('Ruxsat yo\'q');
+    if (duel.status !== 'pending') throw new BadRequestException('Duel allaqachon boshlangan yoki rad etilgan');
+
+    return this.prisma.duel.update({
+      where: { id: duelId },
+      data: { status: accept ? 'active' : 'rejected' },
+    });
+  }
+
+  async submitAnswer(duelId: string, userId: string, questionIdx: number, answer: number) {
     const duel = await this.prisma.duel.findUnique({ where: { id: duelId } });
     if (!duel) throw new BadRequestException('Duel topilmadi');
     if (duel.status !== 'active') throw new BadRequestException('Duel faol emas');
-    if (new Date() > duel.expiresAt) throw new BadRequestException("Duel muddati o'tdi");
+    if (new Date() > duel.expiresAt) throw new BadRequestException('Duel muddati o\'tdi');
 
-    const questions = duel.questions as any[];
+    const existing = await this.prisma.duelAnswer.findUnique({
+      where: { duelId_userId_questionIdx: { duelId, userId, questionIdx } },
+    });
+    if (existing) throw new BadRequestException('Bu savol allaqachon javoblangan');
+
+    const questions = duel.questions as Array<{ correct: number }>;
     const question = questions[questionIdx];
     const isCorrect = question != null && answer === question.correct;
+    const isChallenger = userId === duel.challengerId;
 
     await this.prisma.duelAnswer.create({
       data: { duelId, userId, questionIdx, answer, isCorrect },
     });
 
-    const isChallenger = userId === duel.challengerId;
     if (isCorrect) {
       await this.prisma.duel.update({
         where: { id: duelId },
@@ -88,34 +111,116 @@ export class DuelService {
       });
     }
 
-    return { isCorrect };
-  }
+    const [challengerCount, challengedCount] = await Promise.all([
+      this.prisma.duelAnswer.count({ where: { duelId, userId: duel.challengerId } }),
+      this.prisma.duelAnswer.count({ where: { duelId, userId: duel.challengedId } }),
+    ]);
 
-  async getResult(duelId: string) {
-    const duel = await this.prisma.duel.findUnique({
-      where: { id: duelId },
-      include: {
-        challenger: { select: { name: true } },
-        challenged: { select: { name: true } },
-      },
-    });
+    if (challengerCount >= 10 && challengedCount >= 10) {
+      const fresh = await this.prisma.duel.findUnique({ where: { id: duelId } });
+      if (fresh && fresh.status === 'active') {
+        const winnerId =
+          fresh.challengerScore >= fresh.challengedScore
+            ? fresh.challengerId
+            : fresh.challengedId;
+        const loserId = winnerId === fresh.challengerId ? fresh.challengedId : fresh.challengerId;
 
-    if (!duel) throw new BadRequestException('Duel topilmadi');
+        await this.prisma.duel.update({ where: { id: duelId }, data: { status: 'completed', winnerId } });
 
-    let winnerId: string | null = null;
-    if (duel.status === 'completed' || new Date() > duel.expiresAt) {
-      if (duel.challengerScore > duel.challengedScore) {
-        winnerId = duel.challengerId;
-      } else if (duel.challengedScore > duel.challengerScore) {
-        winnerId = duel.challengedId;
+        await Promise.all([
+          this.xp.award(winnerId, 'DUEL_WIN'),
+          this.xp.award(loserId, 'DUEL_PARTICIPATE'),
+        ]);
+
+        const winner = await this.prisma.user.findUnique({
+          where: { id: winnerId },
+          select: { tenantId: true },
+        });
+        if (winner) {
+          this.feedEvent
+            .emit(winner.tenantId, winnerId, 'duel_won', {
+              opponentId: loserId,
+              score: `${fresh.challengerScore}-${fresh.challengedScore}`,
+            })
+            .catch(() => {});
+        }
       }
     }
 
+    return { isCorrect };
+  }
+
+  async getDuel(duelId: string, requesterId: string) {
+    const duel = await this.prisma.duel.findUnique({
+      where: { id: duelId },
+      include: {
+        challenger: { select: { id: true, name: true } },
+        challenged: { select: { id: true, name: true } },
+      },
+    });
+    if (!duel) throw new NotFoundException('Duel topilmadi');
+
+    const myAnswers = await this.prisma.duelAnswer.count({
+      where: { duelId, userId: requesterId },
+    });
+
+    const winnerName =
+      duel.winnerId === duel.challengerId
+        ? duel.challenger.name
+        : duel.winnerId === duel.challengedId
+          ? duel.challenged.name
+          : null;
+
     return {
       ...duel,
-      winnerId,
       challengerName: duel.challenger.name,
       challengedName: duel.challenged.name,
+      currentQuestionIdx: myAnswers,
+      winner: winnerName,
     };
+  }
+
+  async listDuels(userId: string) {
+    const duels = await this.prisma.duel.findMany({
+      where: { OR: [{ challengerId: userId }, { challengedId: userId }] },
+      include: {
+        challenger: { select: { id: true, name: true } },
+        challenged: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return duels.map((d) => ({
+      ...d,
+      challengerName: d.challenger.name,
+      challengedName: d.challenged.name,
+    }));
+  }
+
+  async getResult(duelId: string) {
+    return this.getDuel(duelId, '');
+  }
+
+  async expireOverdue(): Promise<void> {
+    const expired = await this.prisma.duel.findMany({
+      where: { status: 'active', expiresAt: { lt: new Date() } },
+    });
+
+    for (const duel of expired) {
+      const challengedCount = await this.prisma.duelAnswer.count({
+        where: { duelId: duel.id, userId: duel.challengedId },
+      });
+
+      if (challengedCount === 0) {
+        await this.xp.award(duel.challengerId, 'DUEL_PARTICIPATE');
+      }
+
+      await this.prisma.duel.update({ where: { id: duel.id }, data: { status: 'expired' } });
+    }
+
+    await this.prisma.duel.updateMany({
+      where: { status: 'pending', expiresAt: { lt: new Date() } },
+      data: { status: 'expired' },
+    });
   }
 }

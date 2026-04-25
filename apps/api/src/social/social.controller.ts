@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Param, UseGuards, Request,
+  Controller, Get, Post, Patch, Body, Param, UseGuards, Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -43,6 +43,25 @@ export class SocialController {
   @Get('duels/:id/result')
   getDuelResult(@Param('id') id: string) {
     return this.duel.getResult(id);
+  }
+
+  @Patch('duels/:id/respond')
+  respondToDuel(
+    @Param('id') id: string,
+    @Body() body: { accept: boolean },
+    @Request() req: any,
+  ) {
+    return this.duel.respond(id, req.user.userId, body.accept);
+  }
+
+  @Get('duels')
+  listDuels(@Request() req: any) {
+    return this.duel.listDuels(req.user.userId);
+  }
+
+  @Get('duels/:id')
+  getDuel(@Param('id') id: string, @Request() req: any) {
+    return this.duel.getDuel(id, req.user.userId);
   }
 
   @Get('groups/:groupId/messages')
