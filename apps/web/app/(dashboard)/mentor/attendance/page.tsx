@@ -1,83 +1,141 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/api';
 
-interface Student {
+type AttendanceStatus = 'present' | 'absent' | 'late';
+
+type ApiStudent = {
   id: string;
   name: string;
-  status: 'present' | 'late' | 'absent' | null;
-}
+};
 
-interface User {
+type StudentRow = {
   id: string;
-  tenantId: string;
+  name: string;
+  status: AttendanceStatus;
+};
+
+function getGroupIdFromToken(): string | null {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { groupId?: string };
+    return typeof payload.groupId === 'string' ? payload.groupId : null;
+  } catch {
+    return null;
+  }
 }
 
-const MOCK_STUDENTS: Student[] = [
-  { id: 'mock-1', name: 'Sardor Rahimov', status: null },
-  { id: 'mock-2', name: 'Malika Yusupova', status: null },
-  { id: 'mock-3', name: 'Jasur Mirzayev', status: null },
+const TODAY = new Date().toISOString().split('T')[0];
+
+const STATUS_CONFIG: {
+  status: AttendanceStatus;
+  label: string;
+  active: string;
+  inactive: string;
+}[] = [
+  {
+    status: 'present',
+    label: '✅ Keldi',
+    active: 'bg-green-500 text-white',
+    inactive: 'bg-gray-100 text-gray-500',
+  },
+  {
+    status: 'absent',
+    label: '❌ Kelmadi',
+    active: 'bg-red-500 text-white',
+    inactive: 'bg-gray-100 text-gray-500',
+  },
+  {
+    status: 'late',
+    label: '⏰ Kechikdi',
+    active: 'bg-yellow-500 text-white',
+    inactive: 'bg-gray-100 text-gray-500',
+  },
 ];
 
-function formatDate(date: Date): string {
-  const months = [
-    'yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
-    'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr',
-  ];
-  return `${date.getDate()}-${months[date.getMonth()]} ${date.getFullYear()}`;
-}
-
-function toISODateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 export default function MentorAttendancePage() {
-  const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
-  const today = new Date();
-  const formattedDate = formatDate(today);
-  const isoDate = toISODateString(today);
-
-  function setStatus(studentId: string, status: 'present' | 'late' | 'absent') {
-    setStudents((prev) =>
-      prev.map((s) => s.id === studentId ? { ...s, status } : s),
-    );
-  }
-
-  async function handleSave() {
-    setSaving(true);
+  const loadStudents = useCallback(async () => {
+    setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      const user: User = JSON.parse(localStorage.getItem('user') ?? '{}');
+      const groupId = getGroupIdFromToken();
+      if (!groupId) throw new Error("Guruh topilmadi. Administrator bilan bog'laning.");
+      const res = await apiRequest<ApiStudent[]>(`/users/group/${groupId}`, {}, token);
+      setStudents(res.data.map((s) => ({ ...s, status: 'present' as AttendanceStatus })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-      const records = students.map((s) => ({
-        studentId: s.id,
-        status: s.status ?? 'absent',
-        markedBy: user.id,
-        tenantId: user.tenantId,
-        branchId: user.tenantId,
-        date: isoDate,
-      }));
+  useEffect(() => {
+    loadStudents();
+  }, [loadStudents]);
 
-      await apiRequest('/attendance/students/bulk', {
-        method: 'POST',
-        body: JSON.stringify({ records }),
-      }, token);
+  function setStatus(id: string, status: AttendanceStatus) {
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+  }
 
+  async function saveAttendance() {
+    setSaving(true);
+    setSaveError('');
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      await apiRequest(
+        '/attendance/students/bulk',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            date: TODAY,
+            records: students.map(({ id, status }) => ({ studentId: id, status })),
+          }),
+        },
+        token,
+      );
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik yuz berdi');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setSaving(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="bg-white rounded-xl p-4 h-16 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
+        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
+          <p className="text-red-500 mb-3">{error}</p>
+          <button
+            onClick={loadStudents}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Qayta urinish
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -85,12 +143,25 @@ export default function MentorAttendancePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
-          <p className="text-gray-500 mt-1">{formattedDate}</p>
+          <p className="text-gray-500 mt-1">{TODAY}</p>
         </div>
+        <button
+          onClick={saveAttendance}
+          disabled={saving}
+          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+        >
+          {saving ? (
+            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : saved ? (
+            '✅ Saqlandi'
+          ) : (
+            'Saqlash'
+          )}
+        </button>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+      {saveError && (
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{saveError}</div>
       )}
 
       <div className="space-y-3">
@@ -101,52 +172,20 @@ export default function MentorAttendancePage() {
           >
             <span className="font-medium text-gray-900">{student.name}</span>
             <div className="flex gap-2">
-              <button
-                onClick={() => setStatus(student.id, 'present')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  student.status === 'present'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-green-50 text-green-700 hover:bg-green-100'
-                }`}
-              >
-                ✓ Keldi
-              </button>
-              <button
-                onClick={() => setStatus(student.id, 'late')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  student.status === 'late'
-                    ? 'bg-yellow-400 text-white'
-                    : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
-                }`}
-              >
-                ⏰ Kech
-              </button>
-              <button
-                onClick={() => setStatus(student.id, 'absent')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  student.status === 'absent'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-red-50 text-red-700 hover:bg-red-100'
-                }`}
-              >
-                ✗ Kelmadi
-              </button>
+              {STATUS_CONFIG.map(({ status, label, active, inactive }) => (
+                <button
+                  key={status}
+                  onClick={() => setStatus(student.id, status)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+                    student.status === status ? active : inactive
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="flex items-center gap-4">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Saqlanmoqda...' : 'Saqlash'}
-        </button>
-        {saved && (
-          <span className="text-green-600 font-medium">✅ Saqlandi</span>
-        )}
       </div>
     </div>
   );
