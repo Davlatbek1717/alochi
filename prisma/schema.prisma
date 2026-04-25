@@ -608,8 +608,8 @@ model SocialFeedEvent {
   meta      Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
 
-  actor User @relation("FeedEventActor", fields: [actorId], references: [id])
+  actor User @relation("FeedEventActor", fields: [actorId], references: [id], onDelete: Cascade)
 
-  @@index([actorId, createdAt])
+  @@index([actorId, createdAt(sort: Desc)])
   @@map("social_feed_events")
 }
