@@ -34,6 +34,19 @@ type CityData = {
   nextLevelAt: number;
 };
 
+type StatusData = {
+  englishStatus?: string;
+  personalStatus?: string;
+  criticalStatus?: string;
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  yashil: '🟢',
+  sariq: '🟡',
+  qizil: '🔴',
+  '': '⚪',
+};
+
 export default function StudentDashboard() {
   const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -42,18 +55,20 @@ export default function StudentDashboard() {
   const [hasShield, setHasShield] = useState(false);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [statusData, setStatusData] = useState<StatusData | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
           apiRequest<unknown[]>('/progress/my', {}, token),
+          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -61,6 +76,7 @@ export default function StudentDashboard() {
         setStreak(streakRes.data.streak);
         setHasShield(streakRes.data.hasShield);
         setLessonProgress(progressRes.data.length);
+        setStatusData(statusRes.data);
       } catch {
         // keep defaults on error
       } finally {
@@ -96,12 +112,14 @@ export default function StudentDashboard() {
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Ingliz tili', key: 'english' },
-          { label: 'Shaxsiy', key: 'personal' },
-          { label: 'Tanqidiy', key: 'critical' },
+          { label: 'Ingliz tili', field: 'englishStatus' as const },
+          { label: 'Shaxsiy', field: 'personalStatus' as const },
+          { label: 'Tanqidiy', field: 'criticalStatus' as const },
         ].map((s) => (
-          <div key={s.key} className="bg-white rounded-xl p-3 text-center shadow-sm">
-            <p className="text-2xl">⚪</p>
+          <div key={s.field} className="bg-white rounded-xl p-3 text-center shadow-sm">
+            <p className="text-2xl">
+              {STATUS_COLOR[statusData?.[s.field] ?? ''] ?? '⚪'}
+            </p>
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
         ))}
