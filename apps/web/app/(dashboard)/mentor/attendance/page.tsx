@@ -4,9 +4,10 @@ import { apiRequest } from '@/lib/api';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
-type ApiStudent = {
+type ApiUser = {
   id: string;
   name: string;
+  role: string;
 };
 
 type StudentRow = {
@@ -15,11 +16,11 @@ type StudentRow = {
   status: AttendanceStatus;
 };
 
-function getGroupIdFromToken(): string | null {
+function getBranchIdFromToken(): string | null {
   try {
     const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { groupId?: string };
-    return typeof payload.groupId === 'string' ? payload.groupId : null;
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
+    return typeof payload.branchId === 'string' ? payload.branchId : null;
   } catch {
     return null;
   }
@@ -61,21 +62,25 @@ export default function MentorAttendancePage() {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  const branchId = getBranchIdFromToken();
+
   const loadStudents = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      const groupId = getGroupIdFromToken();
-      if (!groupId) throw new Error("Guruh topilmadi. Administrator bilan bog'laning.");
-      const res = await apiRequest<ApiStudent[]>(`/users/group/${groupId}`, {}, token);
-      setStudents(res.data.map((s) => ({ ...s, status: 'present' as AttendanceStatus })));
+      if (!branchId) throw new Error("Filial topilmadi. Administrator bilan bog'laning.");
+      const res = await apiRequest<ApiUser[]>(`/users/by-branch/${branchId}`, {}, token);
+      const studentList = res.data
+        .filter((u) => u.role === 'student')
+        .map((s) => ({ id: s.id, name: s.name, status: 'present' as AttendanceStatus }));
+      setStudents(studentList);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [branchId]);
 
   useEffect(() => {
     loadStudents();
@@ -108,6 +113,17 @@ export default function MentorAttendancePage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!branchId) {
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
+        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
+          <p className="text-red-500">Filial topilmadi. Administrator bilan bog&#39;laning.</p>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -164,29 +180,36 @@ export default function MentorAttendancePage() {
         <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{saveError}</div>
       )}
 
-      <div className="space-y-3">
-        {students.map((student) => (
-          <div
-            key={student.id}
-            className="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between"
-          >
-            <span className="font-medium text-gray-900">{student.name}</span>
-            <div className="flex gap-2">
-              {STATUS_CONFIG.map(({ status, label, active, inactive }) => (
-                <button
-                  key={status}
-                  onClick={() => setStatus(student.id, status)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                    student.status === status ? active : inactive
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+      {students.length === 0 ? (
+        <div className="bg-white rounded-xl p-10 text-center text-gray-500 shadow-sm">
+          <p className="text-4xl mb-2">👥</p>
+          <p className="font-medium">Bu filialda o&#39;quvchilar topilmadi</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {students.map((student) => (
+            <div
+              key={student.id}
+              className="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between"
+            >
+              <span className="font-medium text-gray-900">{student.name}</span>
+              <div className="flex gap-2">
+                {STATUS_CONFIG.map(({ status, label, active, inactive }) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatus(student.id, status)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+                      student.status === status ? active : inactive
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
