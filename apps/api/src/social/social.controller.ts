@@ -41,8 +41,8 @@ export class SocialController {
   }
 
   @Get('duels/:id/result')
-  getDuelResult(@Param('id') id: string) {
-    return this.duel.getResult(id);
+  getDuelResult(@Param('id') id: string, @Request() req: any) {
+    return this.duel.getDuel(id, req.user.userId);
   }
 
   @Patch('duels/:id/respond')

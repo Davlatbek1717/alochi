@@ -88,6 +88,10 @@ export class DuelService {
     if (duel.status !== 'active') throw new BadRequestException('Duel faol emas');
     if (new Date() > duel.expiresAt) throw new BadRequestException('Duel muddati o\'tdi');
 
+    if (userId !== duel.challengerId && userId !== duel.challengedId) {
+      throw new ForbiddenException('Ruxsat yo\'q');
+    }
+
     const existing = await this.prisma.duelAnswer.findUnique({
       where: { duelId_userId_questionIdx: { duelId, userId, questionIdx } },
     });
@@ -117,32 +121,40 @@ export class DuelService {
     ]);
 
     if (challengerCount >= 10 && challengedCount >= 10) {
-      const fresh = await this.prisma.duel.findUnique({ where: { id: duelId } });
-      if (fresh && fresh.status === 'active') {
+      // Determine winner from current duel state
+      const freshDuel = await this.prisma.duel.findUnique({ where: { id: duelId } });
+      if (freshDuel && freshDuel.status === 'active') {
+        // On tie, challenger wins (first-mover advantage)
         const winnerId =
-          fresh.challengerScore >= fresh.challengedScore
-            ? fresh.challengerId
-            : fresh.challengedId;
-        const loserId = winnerId === fresh.challengerId ? fresh.challengedId : fresh.challengerId;
+          freshDuel.challengerScore >= freshDuel.challengedScore
+            ? freshDuel.challengerId
+            : freshDuel.challengedId;
+        const loserId = winnerId === freshDuel.challengerId ? freshDuel.challengedId : freshDuel.challengerId;
 
-        await this.prisma.duel.update({ where: { id: duelId }, data: { status: 'completed', winnerId } });
-
-        await Promise.all([
-          this.xp.award(winnerId, 'DUEL_WIN'),
-          this.xp.award(loserId, 'DUEL_PARTICIPATE'),
-        ]);
-
-        const winner = await this.prisma.user.findUnique({
-          where: { id: winnerId },
-          select: { tenantId: true },
+        // Atomic update — only the first caller succeeds; subsequent calls get count:0 and skip XP
+        const updated = await this.prisma.duel.updateMany({
+          where: { id: duelId, status: 'active' },
+          data: { status: 'completed', winnerId },
         });
-        if (winner) {
-          this.feedEvent
-            .emit(winner.tenantId, winnerId, 'duel_won', {
-              opponentId: loserId,
-              score: `${fresh.challengerScore}-${fresh.challengedScore}`,
-            })
-            .catch(() => {});
+
+        if (updated.count > 0) {
+          await Promise.all([
+            this.xp.award(winnerId, 'DUEL_WIN'),
+            this.xp.award(loserId, 'DUEL_PARTICIPATE'),
+          ]);
+
+          const winner = await this.prisma.user.findUnique({
+            where: { id: winnerId },
+            select: { tenantId: true },
+          });
+          if (winner) {
+            this.feedEvent
+              .emit(winner.tenantId, winnerId, 'duel_won', {
+                opponentId: loserId,
+                score: `${freshDuel.challengerScore}-${freshDuel.challengedScore}`,
+              })
+              .catch(() => {});
+          }
         }
       }
     }
@@ -197,25 +209,27 @@ export class DuelService {
     }));
   }
 
-  async getResult(duelId: string) {
-    return this.getDuel(duelId, '');
-  }
-
   async expireOverdue(): Promise<void> {
     const expired = await this.prisma.duel.findMany({
       where: { status: 'active', expiresAt: { lt: new Date() } },
     });
 
-    for (const duel of expired) {
-      const challengedCount = await this.prisma.duelAnswer.count({
-        where: { duelId: duel.id, userId: duel.challengedId },
+    if (expired.length > 0) {
+      await Promise.all(
+        expired.map(async (duel) => {
+          const challengedCount = await this.prisma.duelAnswer.count({
+            where: { duelId: duel.id, userId: duel.challengedId },
+          });
+          if (challengedCount === 0) {
+            await this.xp.award(duel.challengerId, 'DUEL_PARTICIPATE');
+          }
+        }),
+      );
+
+      await this.prisma.duel.updateMany({
+        where: { id: { in: expired.map((d) => d.id) } },
+        data: { status: 'expired' },
       });
-
-      if (challengedCount === 0) {
-        await this.xp.award(duel.challengerId, 'DUEL_PARTICIPATE');
-      }
-
-      await this.prisma.duel.update({ where: { id: duel.id }, data: { status: 'expired' } });
     }
 
     await this.prisma.duel.updateMany({
