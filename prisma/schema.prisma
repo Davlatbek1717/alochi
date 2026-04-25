@@ -32,9 +32,10 @@ model Tenant {
   status    String   @default("active")
   createdAt DateTime @default(now()) @map("created_at")
 
-  branches Branch[]
-  users    User[]
-  lessons  Lesson[]
+  branches     Branch[]
+  users        User[]
+  lessons      Lesson[]
+  certificates Certificate[]
 
   @@map("tenants")
 }
@@ -85,6 +86,15 @@ model User {
   delegationsTo      Delegation[]          @relation("DelegationTo")
   faceEmbeddings     FaceEmbedding[]       @relation("FaceEmbeddings")
   faceRecognitionLogs FaceRecognitionLog[] @relation("FaceRecognitionLogs")
+  studentXp          StudentXp?          @relation("StudentXp")
+  xpEvents           XpEvent[]           @relation("XpEvents")
+  dailyQuests        DailyQuest[]        @relation("DailyQuests")
+  certificates       Certificate[]       @relation("Certificates")
+  friendsAsUser      Friendship[]        @relation("UserFriends")
+  friendsAsFriend    Friendship[]        @relation("FriendOf")
+  challengerDuels    Duel[]              @relation("DuelChallenger")
+  challengedDuels    Duel[]              @relation("DuelChallenged")
+  groupMessages      GroupMessage[]      @relation("GroupMessages")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -417,4 +427,174 @@ model BranchDevice {
   branch        Branch    @relation(fields: [branchId], references: [id])
 
   @@map("branch_devices")
+}
+
+// ---- GAMIFICATION ----
+
+model StudentXp {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId     String    @unique @map("student_id") @db.Uuid
+  totalXp       Int       @default(0) @map("total_xp")
+  currentStreak Int       @default(0) @map("current_streak")
+  longestStreak Int       @default(0) @map("longest_streak")
+  shieldCount   Int       @default(0) @map("shield_count")
+  lastActivity  DateTime? @map("last_activity")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  student User @relation("StudentXp", fields: [studentId], references: [id])
+
+  @@map("student_xp")
+}
+
+model XpEvent {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  amount    Int
+  reason    String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  student User @relation("XpEvents", fields: [studentId], references: [id])
+
+  @@index([studentId])
+  @@map("xp_events")
+}
+
+model DailyQuest {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  date        DateTime @db.Date
+  questType   String   @map("quest_type")
+  targetValue Int      @map("target_value")
+  progress    Int      @default(0)
+  completed   Boolean  @default(false)
+  xpReward    Int      @map("xp_reward")
+
+  student User @relation("DailyQuests", fields: [studentId], references: [id])
+
+  @@unique([studentId, date, questType])
+  @@map("daily_quests")
+}
+
+model Certificate {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  level            String
+  lessonsCompleted Int      @map("lessons_completed")
+  qrCode           String   @map("qr_code")
+  issuedAt         DateTime @default(now()) @map("issued_at")
+
+  student User   @relation("Certificates", fields: [studentId], references: [id])
+  tenant  Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("certificates")
+}
+
+// ---- SOCIAL ----
+
+model Friendship {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  friendId  String   @map("friend_id") @db.Uuid
+  scope     String
+  status    String   @default("pending")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation("UserFriends", fields: [userId], references: [id])
+  friend User @relation("FriendOf", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model Duel {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  challengerId    String   @map("challenger_id") @db.Uuid
+  challengedId    String   @map("challenged_id") @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  questions       Json
+  status          String   @default("pending")
+  challengerScore Int      @default(0) @map("challenger_score")
+  challengedScore Int      @default(0) @map("challenged_score")
+  winnerId        String?  @map("winner_id") @db.Uuid
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  challenger User         @relation("DuelChallenger", fields: [challengerId], references: [id])
+  challenged User         @relation("DuelChallenged", fields: [challengedId], references: [id])
+  answers    DuelAnswer[]
+
+  @@map("duels")
+}
+
+model DuelAnswer {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  duelId      String   @map("duel_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  questionIdx Int      @map("question_idx")
+  answer      Int
+  isCorrect   Boolean  @map("is_correct")
+  answeredAt  DateTime @default(now()) @map("answered_at")
+
+  duel Duel @relation(fields: [duelId], references: [id])
+
+  @@unique([duelId, userId, questionIdx])
+  @@map("duel_answers")
+}
+
+model GroupChallenge {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  groupAId  String   @map("group_a_id") @db.Uuid
+  groupBId  String   @map("group_b_id") @db.Uuid
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  groupAXp  Int      @default(0) @map("group_a_xp")
+  groupBXp  Int      @default(0) @map("group_b_xp")
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("group_challenges")
+}
+
+model GroupMessage {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  groupId   String    @map("group_id") @db.Uuid
+  senderId  String    @map("sender_id") @db.Uuid
+  content   String    @db.VarChar(200)
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedBy String?   @map("deleted_by") @db.Uuid
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  sender    User              @relation("GroupMessages", fields: [senderId], references: [id])
+  reactions MessageReaction[]
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+model MessageReaction {
+  id        String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  messageId String @map("message_id") @db.Uuid
+  userId    String @map("user_id") @db.Uuid
+  emoji     String
+
+  message GroupMessage @relation(fields: [messageId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+  @@map("message_reactions")
+}
+
+model ChatBan {
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  bannedBy  String    @map("banned_by") @db.Uuid
+  reason    String
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("chat_bans")
 }
