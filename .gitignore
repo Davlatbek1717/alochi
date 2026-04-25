@@ -6,3 +6,4 @@ dist
 *.local
 .playwright-mcp/
 .claude/
+.worktrees
