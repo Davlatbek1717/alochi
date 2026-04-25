@@ -22,7 +22,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     try {
       const raw = localStorage.getItem('user');
-      if (raw) setUser(JSON.parse(raw) as UserInfo);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        if (parsed && typeof parsed.id === 'string' && typeof parsed.role === 'string') {
+          setUser(parsed as unknown as UserInfo);
+        }
+      }
     } catch {
       // ignore parse errors
     }
@@ -35,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <p className="text-sm font-semibold text-gray-900 truncate max-w-[70%]">
           {user?.name ?? '...'}
         </p>
