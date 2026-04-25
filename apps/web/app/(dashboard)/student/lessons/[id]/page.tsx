@@ -73,6 +73,7 @@ export default function LessonPage() {
   const [step, setStep] = useState<Step>('video');
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -101,10 +102,15 @@ export default function LessonPage() {
     if (!lesson || completing) return;
     const token = localStorage.getItem('accessToken') ?? '';
     setCompleting(true);
+    setSessionError(false);
     try {
       await apiRequest(`/progress/${lesson.id}/complete-session`, { method: 'POST' }, token);
+      const progressRes = await apiRequest<ProgressEntry[]>('/progress/my', {}, token);
+      const updated = progressRes.data.find((p) => p.lessonId === lesson.id);
+      if (updated) setProgress(updated);
+      setStep('done');
     } catch {
-      // non-blocking
+      setSessionError(true);
     } finally {
       setCompleting(false);
     }
@@ -146,7 +152,6 @@ export default function LessonPage() {
 
   async function handleCycleComplete() {
     await completeSession();
-    setStep('done');
   }
 
   if (loading) {
@@ -268,13 +273,29 @@ export default function LessonPage() {
             onLookAway={restartCycle}
             onSilenceTooLong={restartCycle}
           />
-          <button
-            onClick={handleCycleComplete}
-            disabled={completing}
-            className="w-full bg-green-600 text-white py-3 rounded-xl font-medium disabled:opacity-50"
-          >
-            {completing ? 'Saqlanmoqda...' : '✅ Topshirish — Sessiyani yakunlash'}
-          </button>
+          {sessionError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
+              <p className="text-red-600 text-sm font-medium">
+                Sessiyani saqlashda xato yuz berdi. Qayta urinib ko&apos;ring.
+              </p>
+              <button
+                onClick={completeSession}
+                disabled={completing}
+                className="w-full bg-red-600 text-white py-2 rounded-xl font-medium text-sm disabled:opacity-50"
+              >
+                {completing ? 'Saqlanmoqda...' : 'Qayta urinish'}
+              </button>
+            </div>
+          )}
+          {!sessionError && (
+            <button
+              onClick={handleCycleComplete}
+              disabled={completing}
+              className="w-full bg-green-600 text-white py-3 rounded-xl font-medium disabled:opacity-50"
+            >
+              {completing ? 'Saqlanmoqda...' : '✅ Topshirish — Sessiyani yakunlash'}
+            </button>
+          )}
         </div>
       )}
 

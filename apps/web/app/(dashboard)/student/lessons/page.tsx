@@ -103,7 +103,7 @@ export default function LessonsListPage() {
               const prev = lessons.find((l) => l.orderNumber === lesson.orderNumber - 1);
               if (!prev) return false;
               const prevProgress = progress[prev.id];
-              return !prevProgress?.homeCompleted;
+              return !prevProgress?.academyCompleted;
             })();
 
             return (
