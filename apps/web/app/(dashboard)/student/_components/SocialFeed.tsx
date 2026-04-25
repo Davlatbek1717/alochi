@@ -15,9 +15,11 @@ function relativeTime(isoDate: string): string {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return '';
   const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return 'Hozirgina';
   const diffMin = Math.floor(diffMs / 60000);
   const diffHour = Math.floor(diffMs / 3600000);
   const diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'Hozirgina';
   if (diffMin < 60) return `${diffMin} daqiqa oldin`;
   if (diffHour < 24) return `${diffHour} soat oldin`;
   return `${diffDay} kun oldin`;
@@ -25,12 +27,16 @@ function relativeTime(isoDate: string): string {
 
 function eventLabel(item: FeedItem): string {
   switch (item.eventType) {
-    case 'lesson_done':
-      return `${item.actorName} "${item.meta.lessonTitle as string}" darsini tugatdi! 📚`;
+    case 'lesson_done': {
+      const title = typeof item.meta.lessonTitle === 'string' ? item.meta.lessonTitle : '';
+      return `${item.actorName} "${title}" darsini tugatdi! 📚`;
+    }
     case 'duel_won':
       return `${item.actorName} duelda g'olib bo'ldi! ⚔️`;
-    case 'streak_milestone':
-      return `${item.actorName} ${item.meta.streak as number} kunlik streak! 🔥`;
+    case 'streak_milestone': {
+      const streak = typeof item.meta.streak === 'number' ? item.meta.streak : '?';
+      return `${item.actorName} ${streak} kunlik streak! 🔥`;
+    }
     default:
       return `${item.actorName} faol bo'ldi`;
   }
@@ -46,7 +52,7 @@ export function SocialFeed() {
 
     apiRequest<FeedItem[]>('/social/feed', {}, token)
       .then((res) => {
-        if (!cancelled) setFeed(res.data);
+        if (!cancelled) setFeed(res.data ?? []);
       })
       .catch(() => {
         if (!cancelled) setFeed([]);
