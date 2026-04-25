@@ -48,8 +48,9 @@ model Branch {
   workStartTime    String @default("09:00") @map("work_start_time")
   lateGraceMinutes Int    @default(5) @map("late_grace_minutes")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  users  User[]
+  tenant  Tenant         @relation(fields: [tenantId], references: [id])
+  users   User[]
+  devices BranchDevice[]
 
   @@index([tenantId])
   @@map("branches")
@@ -82,6 +83,8 @@ model User {
   studentPayments    Payment[]             @relation("StudentPayments")
   delegationsFrom    Delegation[]          @relation("DelegationFrom")
   delegationsTo      Delegation[]          @relation("DelegationTo")
+  faceEmbeddings     FaceEmbedding[]       @relation("FaceEmbeddings")
+  faceRecognitionLogs FaceRecognitionLog[] @relation("FaceRecognitionLogs")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -364,4 +367,54 @@ model DelegationAuditLog {
 
   @@index([delegationId])
   @@map("delegation_audit_log")
+}
+
+// ---- FACE ID ----
+// MUHIM: Prisma VECTOR tipini to'liq qo'llamaydi — raw SQL ishlatamiz
+// Bu model faqat dokumentatsiya uchun; actual CRUD raw query bilan
+
+model FaceEmbedding {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  enrolledAt  DateTime @default(now()) @map("enrolled_at")
+  enrolledVia String   @map("enrolled_via")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  user        User     @relation("FaceEmbeddings", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("face_embeddings")
+}
+
+model FaceRecognitionLog {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  branchId       String    @map("branch_id") @db.Uuid
+  deviceId       String    @map("device_id")
+  matchedUserId  String?   @map("matched_user_id") @db.Uuid
+  confidence     Float?
+  method         String
+  result         String
+  livenessPassd  Boolean?  @map("liveness_passed")
+  attemptedAt    DateTime  @default(now()) @map("attempted_at")
+
+  matchedUser    User?     @relation("FaceRecognitionLogs", fields: [matchedUserId], references: [id])
+
+  @@index([branchId, attemptedAt])
+  @@map("face_recognition_log")
+}
+
+model BranchDevice {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  branchId      String    @map("branch_id") @db.Uuid
+  deviceName    String    @map("device_name")
+  deviceToken   String    @unique @map("device_token")
+  lastCacheSync DateTime? @map("last_cache_sync")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  branch        Branch    @relation(fields: [branchId], references: [id])
+
+  @@map("branch_devices")
 }
