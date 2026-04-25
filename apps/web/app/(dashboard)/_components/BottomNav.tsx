@@ -2,13 +2,13 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-const NAV_TABS: Record<string, { href: string; icon: string; label: string }[]> = {
+const NAV_TABS: Record<string, { href: string; icon: string; label: string; action?: string }[]> = {
   student: [
     { href: '/student',         icon: '🏠', label: 'Bosh'      },
     { href: '/student/lessons', icon: '📚', label: 'Darslar'   },
     { href: '/student/friends', icon: '👥', label: "Do'stlar"  },
     { href: '/student/duel',    icon: '⚔️', label: 'Duel'      },
-    { href: '/student/profile', icon: '👤', label: 'Profil'    },
+    { href: '/student/profile', icon: '👤', label: 'Profil', action: 'logout' },
   ],
   mentor: [
     { href: '/mentor',            icon: '🏠', label: 'Bosh'    },
@@ -60,13 +60,13 @@ export default function BottomNav() {
   const tabs = NAV_TABS[role] ?? [];
   if (tabs.length === 0) return null;
 
-  function handleTabClick(href: string) {
-    if (href === '/student/profile') {
+  function handleTabClick(tab: { href: string; action?: string }) {
+    if (tab.action === 'logout') {
       localStorage.clear();
       router.push('/login');
       return;
     }
-    router.push(href);
+    router.push(tab.href);
   }
 
   return (
@@ -79,7 +79,8 @@ export default function BottomNav() {
           return (
             <button
               key={tab.href}
-              onClick={() => handleTabClick(tab.href)}
+              onClick={() => handleTabClick(tab)}
+              aria-current={isActive ? 'page' : undefined}
               className={`relative flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center px-2 rounded-lg transition-colors ${
                 isActive ? 'text-indigo-600' : 'text-gray-400'
               }`}
