@@ -3,11 +3,12 @@ import { XpService } from './xp.service';
 import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
 import { CertificatesService } from './certificates.service';
+import { CityService } from './city.service';
 import { GamificationController } from './gamification.controller';
 
 @Module({
-  providers: [XpService, StreakService, QuestService, CertificatesService],
+  providers: [XpService, StreakService, QuestService, CertificatesService, CityService],
   controllers: [GamificationController],
-  exports: [XpService, StreakService, QuestService, CertificatesService],
+  exports: [XpService, StreakService, QuestService, CertificatesService, CityService],
 })
 export class GamificationModule {}

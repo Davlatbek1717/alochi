@@ -1,8 +1,31 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { apiRequest } from '@/lib/api';
 
 type DelegationStatus = 'active' | 'pending' | 'completed' | 'rejected' | 'cancelled';
+
+type ApiDelegation = {
+  id: string;
+  status: DelegationStatus;
+  fromUser: { name: string };
+  toUser: { name: string };
+  delegatedRole: string;
+  reason: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+type Delegation = {
+  id: string;
+  status: DelegationStatus;
+  from: string;
+  to: string;
+  role: string;
+  startsAt: string;
+  endsAt: string;
+  reason: string;
+};
 
 const STATUS_CONFIG: Record<DelegationStatus, { icon: string; color: string; label: string }> = {
   active: { icon: '🟢', color: 'text-green-700 bg-green-50', label: 'Faol' },
@@ -12,27 +35,49 @@ const STATUS_CONFIG: Record<DelegationStatus, { icon: string; color: string; lab
   cancelled: { icon: '🚫', color: 'text-gray-700 bg-gray-100', label: 'Bekor qilindi' },
 };
 
-const MOCK_DELEGATIONS = [
-  {
-    id: '1', status: 'active' as DelegationStatus,
-    from: 'Nodira Karimova', to: 'Alisher Toshev',
-    role: 'Filadmin', startsAt: '3-may', endsAt: '10-may',
-    reason: "Filadmin ta'tilda",
-  },
-  {
-    id: '2', status: 'pending' as DelegationStatus,
-    from: 'Bobur Yusupov', to: 'Kamola Nazarova',
-    role: 'Manager', startsAt: '5-may', endsAt: '8-may',
-    reason: 'Kasalxonada',
-  },
-];
+function formatDate(isoDate: string): string {
+  try {
+    return new Date(isoDate).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+  } catch {
+    return isoDate;
+  }
+}
 
 export default function DelegationsPage() {
   const [activeTab, setActiveTab] = useState<DelegationStatus | 'all'>('all');
+  const [delegations, setDelegations] = useState<Delegation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+
+    async function fetchDelegations() {
+      try {
+        const res = await apiRequest<ApiDelegation[]>('/delegations', {}, token);
+        const mapped: Delegation[] = res.data.map((d) => ({
+          id: d.id,
+          status: d.status,
+          from: d.fromUser.name,
+          to: d.toUser.name,
+          role: d.delegatedRole,
+          startsAt: formatDate(d.startsAt),
+          endsAt: formatDate(d.endsAt),
+          reason: d.reason,
+        }));
+        setDelegations(mapped);
+      } catch {
+        // keep empty list on error
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDelegations();
+  }, []);
 
   const filtered = activeTab === 'all'
-    ? MOCK_DELEGATIONS
-    : MOCK_DELEGATIONS.filter((d) => d.status === activeTab);
+    ? delegations
+    : delegations.filter((d) => d.status === activeTab);
 
   return (
     <div className="space-y-4">
@@ -60,37 +105,41 @@ export default function DelegationsPage() {
         ))}
       </div>
 
-      <div className="space-y-3">
-        {filtered.map((d) => {
-          const s = STATUS_CONFIG[d.status];
-          return (
-            <div key={d.id} className="bg-white rounded-xl p-4 shadow-sm">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>
-                      {s.icon} {s.label}
-                    </span>
-                    <span className="text-sm text-gray-500">{d.role} vakolati</span>
+      {loading ? (
+        <p className="text-center text-gray-400 py-8">Yuklanmoqda...</p>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((d) => {
+            const s = STATUS_CONFIG[d.status];
+            return (
+              <div key={d.id} className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>
+                        {s.icon} {s.label}
+                      </span>
+                      <span className="text-sm text-gray-500">{d.role} vakolati</span>
+                    </div>
+                    <p className="font-semibold mt-1">{d.from} → {d.to}</p>
+                    <p className="text-sm text-gray-500">{d.startsAt} – {d.endsAt}</p>
+                    <p className="text-sm text-gray-600 mt-1">&quot;{d.reason}&quot;</p>
                   </div>
-                  <p className="font-semibold mt-1">{d.from} → {d.to}</p>
-                  <p className="text-sm text-gray-500">{d.startsAt} – {d.endsAt}</p>
-                  <p className="text-sm text-gray-600 mt-1">&quot;{d.reason}&quot;</p>
+                  <Link
+                    href={`/delegations/${d.id}`}
+                    className="text-indigo-600 text-sm font-medium"
+                  >
+                    Ko&apos;rish →
+                  </Link>
                 </div>
-                <Link
-                  href={`/delegations/${d.id}`}
-                  className="text-indigo-600 text-sm font-medium"
-                >
-                  Ko&apos;rish →
-                </Link>
               </div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-400 py-8">Delegatsiya topilmadi</p>
-        )}
-      </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="text-center text-gray-400 py-8">Delegatsiya topilmadi</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { apiRequest } from '@/lib/api';
 
 const MOCK_STUDENTS = [
   { id: '1', name: 'Sardor Rahimov', status: 'green' as Status, attendance: true },
@@ -15,9 +16,19 @@ const STATUS_COLORS: Record<Status, string> = {
   red: 'bg-red-100 text-red-700',
 };
 
+type AttendanceRecord = {
+  studentId: string;
+  status: 'present' | 'absent';
+  markedBy: string;
+  tenantId: string;
+  branchId: string;
+  date: string;
+};
+
 export default function MentorGroupPage() {
   const [students, setStudents] = useState(MOCK_STUDENTS);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   function updateStatus(id: string, status: Status) {
     setStudents((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
@@ -28,8 +39,29 @@ export default function MentorGroupPage() {
   }
 
   async function saveAll() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaveError('');
+    const token = localStorage.getItem('accessToken') ?? '';
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+
+    const records: AttendanceRecord[] = students.map((s) => ({
+      studentId: s.id,
+      status: s.attendance ? 'present' : 'absent',
+      markedBy: user.id ?? '',
+      tenantId: user.tenantId ?? '',
+      branchId: user.tenantId ?? '',
+      date: new Date().toISOString().split('T')[0],
+    }));
+
+    try {
+      await apiRequest('/attendance/students/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ records }),
+      }, token);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
+    }
   }
 
   return (
@@ -43,6 +75,10 @@ export default function MentorGroupPage() {
           {saved ? '✅ Saqlandi' : 'Saqlash'}
         </button>
       </div>
+
+      {saveError && (
+        <p className="text-red-500 text-sm">{saveError}</p>
+      )}
 
       <div className="space-y-2">
         {students.map((student) => (

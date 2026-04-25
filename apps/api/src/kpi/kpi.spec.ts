@@ -1,0 +1,103 @@
+import { Test } from '@nestjs/testing';
+import { KpiService } from './kpi.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+const mockPrisma = {
+  kpiScore: {
+    create: jest.fn(),
+    aggregate: jest.fn(),
+    findMany: jest.fn(),
+  },
+};
+
+describe('KpiService', () => {
+  let service: KpiService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        KpiService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get(KpiService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  describe('award', () => {
+    it('creates a kpi score record', async () => {
+      const dto = { tenantId: 't1', userId: 'u1', score: 10, reason: 'lesson' };
+      const record = { id: 'kpi-1', ...dto, date: new Date() };
+      mockPrisma.kpiScore.create.mockResolvedValue(record);
+
+      const result = await service.award(dto);
+
+      expect(result).toEqual(record);
+      expect(mockPrisma.kpiScore.create).toHaveBeenCalledTimes(1);
+      const callData = mockPrisma.kpiScore.create.mock.calls[0][0].data;
+      expect(callData.userId).toBe('u1');
+      expect(callData.score).toBe(10);
+      expect(callData.reason).toBe('lesson');
+    });
+
+    it('passes optional taskId and delegationId when provided', async () => {
+      const dto = { tenantId: 't1', userId: 'u1', score: 5, reason: 'task', taskId: 'task-1', delegationId: 'del-1' };
+      mockPrisma.kpiScore.create.mockResolvedValue({ id: 'kpi-2', ...dto });
+
+      await service.award(dto);
+
+      const callData = mockPrisma.kpiScore.create.mock.calls[0][0].data;
+      expect(callData.taskId).toBe('task-1');
+      expect(callData.delegationId).toBe('del-1');
+    });
+  });
+
+  describe('getDailyTotal', () => {
+    it('returns the summed score for the day', async () => {
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: 35 } });
+
+      const total = await service.getDailyTotal('u1', new Date('2026-04-25'));
+
+      expect(total).toBe(35);
+      expect(mockPrisma.kpiScore.aggregate).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns 0 when there are no scores for the day', async () => {
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: null } });
+
+      const total = await service.getDailyTotal('u1', new Date('2026-04-25'));
+
+      expect(total).toBe(0);
+    });
+
+    it('queries within the correct day boundaries', async () => {
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: 0 } });
+      const date = new Date('2026-04-25T12:00:00Z');
+
+      await service.getDailyTotal('u1', date);
+
+      const whereClause = mockPrisma.kpiScore.aggregate.mock.calls[0][0].where;
+      expect(whereClause.date.gte.getHours()).toBe(0);
+      expect(whereClause.date.lte.getHours()).toBe(23);
+    });
+  });
+
+  describe('getMonthlyTotal', () => {
+    it('returns the summed score for the month', async () => {
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: 120 } });
+
+      const total = await service.getMonthlyTotal('u1', 2026, 4);
+
+      expect(total).toBe(120);
+    });
+
+    it('returns 0 when there are no scores for the month', async () => {
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: null } });
+
+      const total = await service.getMonthlyTotal('u1', 2026, 4);
+
+      expect(total).toBe(0);
+    });
+  });
+});
