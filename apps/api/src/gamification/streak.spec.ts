@@ -1,0 +1,127 @@
+import { Test } from '@nestjs/testing';
+import { StreakService } from './streak.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+const mockPrisma = {
+  studentXp: {
+    findUnique: jest.fn(),
+    upsert: jest.fn(),
+    update: jest.fn(),
+  },
+};
+
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+describe('StreakService', () => {
+  let service: StreakService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        StreakService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
+    }).compile();
+    service = module.get(StreakService);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  describe('recordActivity', () => {
+    it('creates a streak of 1 when student has no existing record', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue(null);
+      mockPrisma.studentXp.upsert.mockResolvedValue({ studentId: 's1', currentStreak: 1 });
+
+      const result = await service.recordActivity('s1');
+
+      expect(mockPrisma.studentXp.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ currentStreak: 1 }),
+        }),
+      );
+      expect(result.currentStreak).toBe(1);
+    });
+
+    it('increments streak by 1 when last activity was yesterday', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 5,
+        longestStreak: 5,
+        shieldCount: 0,
+        lastActivity: daysAgo(1),
+      });
+      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 6 });
+
+      const result = await service.recordActivity('s1');
+
+      const updateData = mockPrisma.studentXp.update.mock.calls[0][0].data;
+      expect(updateData.currentStreak).toBe(6);
+      expect(result.currentStreak).toBe(6);
+    });
+
+    it('resets streak to 1 when gap is more than 1 day and no shield', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 10,
+        longestStreak: 10,
+        shieldCount: 0,
+        lastActivity: daysAgo(3),
+      });
+      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 1 });
+
+      await service.recordActivity('s1');
+
+      const updateData = mockPrisma.studentXp.update.mock.calls[0][0].data;
+      expect(updateData.currentStreak).toBe(1);
+    });
+
+    it('uses shield and keeps streak when gap is exactly 2 days and shieldCount > 0', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 8,
+        longestStreak: 8,
+        shieldCount: 2,
+        lastActivity: daysAgo(2),
+      });
+      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 9, shieldCount: 1 });
+
+      await service.recordActivity('s1');
+
+      const updateData = mockPrisma.studentXp.update.mock.calls[0][0].data;
+      expect(updateData.currentStreak).toBe(9);
+      expect(updateData.shieldCount).toBe(1);
+    });
+
+    it('returns existing record unchanged when activity is recorded on the same day', async () => {
+      const xp = { studentId: 's1', currentStreak: 4, longestStreak: 4, shieldCount: 0, lastActivity: new Date() };
+      mockPrisma.studentXp.findUnique.mockResolvedValue(xp);
+
+      const result = await service.recordActivity('s1');
+
+      expect(mockPrisma.studentXp.update).not.toHaveBeenCalled();
+      expect(mockPrisma.studentXp.upsert).not.toHaveBeenCalled();
+      expect(result).toBe(xp);
+    });
+
+    it('awards a shield when streak reaches a multiple of 7', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 6,
+        longestStreak: 6,
+        shieldCount: 0,
+        lastActivity: daysAgo(1),
+      });
+      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 7, shieldCount: 1 });
+
+      await service.recordActivity('s1');
+
+      const updateData = mockPrisma.studentXp.update.mock.calls[0][0].data;
+      expect(updateData.currentStreak).toBe(7);
+      expect(updateData.shieldCount).toBe(1);
+    });
+  });
+});
