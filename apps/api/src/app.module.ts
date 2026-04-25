@@ -4,6 +4,8 @@ import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
+import { loggerConfig } from './common/logger.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { TenantsModule } from './tenants/tenants.module';
@@ -31,6 +33,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    LoggerModule.forRoot(loggerConfig),
     ThrottlerModule.forRoot([
       { name: 'auth', ttl: 60000, limit: 5 },
       { name: 'default', ttl: 60000, limit: 100 },
