@@ -305,7 +305,7 @@ export default function LessonPage() {
           <h2 className="text-xl font-bold text-gray-800">Sessiya yakunlandi!</h2>
           <p className="text-gray-500 text-sm">
             {progress
-              ? `${progress.sessionCount + 1}/${lesson.nRepetitions} sessiya bajarildi`
+              ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
               : 'Jarayoningiz saqlandi'}
           </p>
           <div className="flex gap-3 justify-center">
