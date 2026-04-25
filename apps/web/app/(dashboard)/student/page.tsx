@@ -22,6 +22,11 @@ type XpData = {
   nextLevelXp: number;
 };
 
+type StreakData = {
+  streak: number;
+  hasShield: boolean;
+};
+
 type CityData = {
   level: number;
   buildings: string[];
@@ -29,24 +34,13 @@ type CityData = {
   nextLevelAt: number;
 };
 
-const STATIC_DATA = {
-  streak: 12,
-  hasShield: true,
-  cityName: 'Shaharcha',
-  lessonProgress: 47,
-  statuses: {
-    english: 'green',
-    personal: 'yellow',
-    critical: 'green',
-  },
-};
-
-const STATUS_EMOJI: Record<string, string> = { green: '🟢', yellow: '🟡', red: '🔴' };
-
 export default function StudentDashboard() {
   const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
   const [quests, setQuests] = useState<Quest[]>([]);
   const [cityData, setCityData] = useState<CityData | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [hasShield, setHasShield] = useState(false);
+  const [lessonProgress, setLessonProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,14 +48,19 @@ export default function StudentDashboard() {
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
+          apiRequest<StreakData>('/gamification/streak', {}, token),
+          apiRequest<unknown[]>('/progress/my', {}, token),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
         setCityData(cityRes.data);
+        setStreak(streakRes.data.streak);
+        setHasShield(streakRes.data.hasShield);
+        setLessonProgress(progressRes.data.length);
       } catch {
         // keep defaults on error
       } finally {
@@ -71,8 +70,6 @@ export default function StudentDashboard() {
 
     fetchData();
   }, []);
-
-  const d = STATIC_DATA;
 
   if (loading) {
     return (
@@ -87,10 +84,10 @@ export default function StudentDashboard() {
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
         <div className="flex justify-between items-start">
           <div>
-            <p className="text-white/70 text-sm">🏙️ {d.cityName}</p>
-            <p className="text-2xl font-bold mt-1">Dars #{d.lessonProgress} / 500</p>
+            <p className="text-white/70 text-sm">🏙️ Shaharcha</p>
+            <p className="text-2xl font-bold mt-1">Dars #{lessonProgress} / 500</p>
           </div>
-          <StreakBadge streak={d.streak} hasShield={d.hasShield} />
+          <StreakBadge streak={streak} hasShield={hasShield} />
         </div>
         <div className="mt-3">
           <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
@@ -101,16 +98,13 @@ export default function StudentDashboard() {
         {[
           { label: 'Ingliz tili', key: 'english' },
           { label: 'Shaxsiy', key: 'personal' },
-          { label: "Tanqidiy", key: 'critical' },
-        ].map((s) => {
-          const status = d.statuses[s.key as keyof typeof d.statuses];
-          return (
-            <div key={s.key} className="bg-white rounded-xl p-3 text-center shadow-sm">
-              <p className="text-2xl">{STATUS_EMOJI[status] ?? '⚪'}</p>
-              <p className="text-xs text-gray-500 mt-1">{s.label}</p>
-            </div>
-          );
-        })}
+          { label: 'Tanqidiy', key: 'critical' },
+        ].map((s) => (
+          <div key={s.key} className="bg-white rounded-xl p-3 text-center shadow-sm">
+            <p className="text-2xl">⚪</p>
+            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
+          </div>
+        ))}
       </div>
 
       <DailyQuests quests={quests} />
