@@ -11,15 +11,27 @@ function extractVideoId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+interface YTPlayer {
+  getPlaybackRate: () => number;
+  setPlaybackRate: (rate: number) => void;
+  getPlayerState: () => number;
+  getDuration: () => number;
+  getCurrentTime: () => number;
+  destroy: () => void;
+}
+
 declare global {
   interface Window {
-    YT: any;
+    YT: {
+      Player: new (el: HTMLElement | null, config: object) => YTPlayer;
+      PlayerState: { PLAYING: number };
+    };
     onYouTubeIframeAPIReady: () => void;
   }
 }
 
 export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const watchedRef = useRef(0);
   const completedRef = useRef(false);

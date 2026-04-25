@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useState } from 'react';
 
 type DelegationStatus = 'active' | 'pending' | 'completed' | 'rejected' | 'cancelled';
@@ -37,12 +38,12 @@ export default function DelegationsPage() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Delegatsiyalar</h1>
-        <a
+        <Link
           href="/delegations/new"
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
         >
           + Yangi
-        </a>
+        </Link>
       </div>
 
       <div className="flex gap-2 border-b pb-2">
@@ -76,12 +77,12 @@ export default function DelegationsPage() {
                   <p className="text-sm text-gray-500">{d.startsAt} – {d.endsAt}</p>
                   <p className="text-sm text-gray-600 mt-1">&quot;{d.reason}&quot;</p>
                 </div>
-                <a
+                <Link
                   href={`/delegations/${d.id}`}
                   className="text-indigo-600 text-sm font-medium"
                 >
                   Ko&apos;rish →
-                </a>
+                </Link>
               </div>
             </div>
           );
