@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
-import { WarningsService } from '../src/warnings/warnings.service';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { WarningsService } from './warnings.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const mockPrisma = {
@@ -113,7 +113,7 @@ describe('WarningsService', () => {
       expect(result.activeCount).toBe(2);
     });
 
-    it('preserves existing status when student was not blocked_warning', async () => {
+    it('does not change status when cancelled student was not blocked_warning', async () => {
       const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(1);

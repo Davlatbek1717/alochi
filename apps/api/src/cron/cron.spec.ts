@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
-import { CronService } from '../src/cron/cron.service';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { CronService } from './cron.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 const mockPrisma = {
   paymentSetting: {
@@ -66,10 +66,10 @@ describe('CronService', () => {
 
   describe('runPaymentBlock', () => {
     it('skips tenants whose paymentEndDay does not match today', async () => {
-      const today = new Date();
-      const differentDay = today.getDate() === 1 ? 2 : 1;
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
       mockPrisma.paymentSetting.findMany.mockResolvedValue([
-        { tenantId: 't1', paymentEndDay: differentDay },
+        { tenantId: 't1', paymentEndDay: tomorrow.getDate() === 1 ? 2 : 1 },
       ]);
 
       await service.runPaymentBlock();
