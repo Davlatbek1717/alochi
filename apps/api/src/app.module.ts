@@ -17,6 +17,7 @@ import { CronModule } from './cron/cron.module';
 import { DelegationsModule } from './delegations/delegations.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AiModule } from './ai/ai.module';
+import { FaceModule } from './face/face.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -39,6 +40,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     DelegationsModule,
     TelegramModule,
     AiModule,
+    FaceModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
