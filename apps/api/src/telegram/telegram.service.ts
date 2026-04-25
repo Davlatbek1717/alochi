@@ -1,9 +1,9 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot } from 'grammy';
 
 @Injectable()
-export class TelegramService implements OnModuleInit {
+export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private bot: Bot | null = null;
   private readonly logger = new Logger(TelegramService.name);
 
@@ -52,6 +52,12 @@ export class TelegramService implements OnModuleInit {
     this.bot.command('statistika', async (ctx) => {
       await ctx.reply("📊 Statistika: (profil bog'langandan so'ng ko'rsatiladi)");
     });
+  }
+
+  async onModuleDestroy() {
+    if (this.bot) {
+      await this.bot.stop();
+    }
   }
 
   async sendMessage(telegramId: string | bigint, text: string) {

@@ -1,5 +1,6 @@
 import anthropic
 import os
+import re
 from typing import Optional
 import json
 
@@ -104,4 +105,9 @@ score: 0.0 dan 1.0 gacha"""
             messages=[{"role": "user", "content": prompt}],
         )
 
-        return json.loads(response.content[0].text)
+        raw = response.content[0].text
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip())
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Claude returned non-JSON output: {raw[:200]}") from exc

@@ -26,6 +26,7 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
   async function sendQuestion(question: string) {
     if (!question.trim() || loading) return;
 
+    const historySnapshot = messages;
     const userMsg: Message = { role: 'user', content: question };
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
@@ -39,10 +40,11 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
         body: JSON.stringify({
           lesson_context: lessonContext,
           question,
-          conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
+          conversation_history: historySnapshot.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
     } catch {

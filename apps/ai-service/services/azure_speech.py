@@ -11,11 +11,16 @@ class AzureSpeechService:
 
     def check_pronunciation(self, word_en: str, audio_base64: str) -> dict:
         audio_bytes = base64.b64decode(audio_base64)
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            f.write(audio_bytes)
-            tmp_path = f.name
+        MAX_AUDIO_BYTES = 2 * 1024 * 1024  # 2 MB
+        if len(audio_bytes) > MAX_AUDIO_BYTES:
+            raise ValueError(f"Audio hajmi juda katta: {len(audio_bytes)} bayt (max {MAX_AUDIO_BYTES})")
 
+        tmp_path = None
         try:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                f.write(audio_bytes)
+                tmp_path = f.name
+
             speech_config = speechsdk.SpeechConfig(
                 subscription=self.key,
                 region=self.region,
@@ -62,4 +67,5 @@ class AzureSpeechService:
                     "feedback": "Ovoz aniqlanmadi — qayta urining",
                 }
         finally:
-            os.unlink(tmp_path)
+            if tmp_path:
+                os.unlink(tmp_path)

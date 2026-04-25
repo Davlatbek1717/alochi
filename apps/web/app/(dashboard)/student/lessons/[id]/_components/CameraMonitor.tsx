@@ -39,6 +39,7 @@ export function CameraMonitor({ onLookAway, onSilenceTooLong }: CameraMonitorPro
   useEffect(() => {
     let cameraInstance: { stop: () => void } | null = null;
     let mpInstance: { close: () => void } | null = null;
+    let stream: MediaStream | null = null;
 
     async function init() {
       const { FaceDetection } = await import(
@@ -74,7 +75,7 @@ export function CameraMonitor({ onLookAway, onSilenceTooLong }: CameraMonitorPro
 
       mpInstance = mp;
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraReady(true);
@@ -102,6 +103,7 @@ export function CameraMonitor({ onLookAway, onSilenceTooLong }: CameraMonitorPro
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (cameraInstance) cameraInstance.stop();
       if (mpInstance) mpInstance.close();
+      stream?.getTracks().forEach((t) => t.stop());
     };
   }, [showWarning, onSilenceTooLong]);
 
