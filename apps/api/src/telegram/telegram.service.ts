@@ -1,13 +1,21 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot } from 'grammy';
+import { ParentHandler } from './handlers/parent.handler';
+import { StudentHandler } from './handlers/student.handler';
+import { StaffHandler } from './handlers/staff.handler';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private bot: Bot | null = null;
   private readonly logger = new Logger(TelegramService.name);
 
-  constructor(private config: ConfigService) {}
+  constructor(
+    private config: ConfigService,
+    private parentHandler: ParentHandler,
+    private studentHandler: StudentHandler,
+    private staffHandler: StaffHandler,
+  ) {}
 
   async onModuleInit() {
     const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
@@ -51,6 +59,46 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
     this.bot.command('statistika', async (ctx) => {
       await ctx.reply("📊 Statistika: (profil bog'langandan so'ng ko'rsatiladi)");
+    });
+
+    this.bot.command('status', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.parentHandler.handleStatus(ctx, telegramId);
+    });
+
+    this.bot.command('progress', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.parentHandler.handleProgress(ctx, telegramId);
+    });
+
+    this.bot.command('payment', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.parentHandler.handlePayment(ctx, telegramId);
+    });
+
+    this.bot.command('lesson', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.studentHandler.handleLesson(ctx, telegramId);
+    });
+
+    this.bot.command('xp', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.studentHandler.handleXp(ctx, telegramId);
+    });
+
+    this.bot.command('streak', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.studentHandler.handleStreak(ctx, telegramId);
+    });
+
+    this.bot.command('attendance', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.staffHandler.handleAttendance(ctx, telegramId);
+    });
+
+    this.bot.command('kpi', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.staffHandler.handleKpi(ctx, telegramId);
     });
   }
 
