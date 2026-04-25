@@ -1,4 +1,19 @@
 'use client';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '@/lib/api';
+import { XpBar } from '../student/_components/XpBar';
+import { StreakBadge } from '../student/_components/StreakBadge';
+
+type XpData = {
+  totalXp: number;
+  level: string;
+  nextLevelXp: number;
+};
+
+type StreakData = {
+  streak: number;
+  hasShield: boolean;
+};
 
 const RED_STUDENTS = [
   { id: '1', name: 'Sardor Rahimov', note: '3 kun kelmadi', days: 3 },
@@ -10,13 +25,44 @@ const YELLOW_STUDENTS = [
 ];
 
 export default function ManagerDashboard() {
+  const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
+  const [streak, setStreak] = useState(0);
+  const [hasShield, setHasShield] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+
+    async function fetchData() {
+      try {
+        const [xpRes, streakRes] = await Promise.all([
+          apiRequest<XpData>('/gamification/xp', {}, token),
+          apiRequest<StreakData>('/gamification/streak', {}, token),
+        ]);
+        setXpData(xpRes.data);
+        setStreak(streakRes.data.streak);
+        setHasShield(streakRes.data.hasShield);
+      } catch {
+        // keep defaults on error
+      }
+    }
+
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manager Paneli</h1>
 
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
+        <div className="flex justify-between items-start mb-3">
+          <StreakBadge streak={streak} hasShield={hasShield} />
+        </div>
+        <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-          <h2 className="font-semibold text-red-700">🔴 Qizil O&apos;quvchilar ({RED_STUDENTS.length})</h2>
+          <h2 className="font-semibold text-red-700">🔴 Qizil O&apos;quvchilar (?)</h2>
         </div>
         <div className="divide-y">
           {RED_STUDENTS.map((s) => (
