@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from routers import ai_tutor
 
 app = FastAPI(title="A'lochi AI Service", version="1.0.0")
 
@@ -10,6 +11,8 @@ app.add_middleware(
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
+
+app.include_router(ai_tutor.router, prefix="/ai/tutor", tags=["AI Tutor"])
 
 
 @app.get("/health")
