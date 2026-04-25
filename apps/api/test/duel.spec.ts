@@ -26,6 +26,7 @@ describe('DuelService', () => {
       ]),
     },
     duel: {
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue({ id: 'duel-1', questions: [] }),
       findUnique: jest.fn(),
     },
@@ -35,7 +36,10 @@ describe('DuelService', () => {
     },
   };
 
-  const service = new DuelService(mockPrisma as any);
+  const mockXp = { award: jest.fn().mockResolvedValue({}) };
+  const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
+
+  const service = new DuelService(mockPrisma as any, mockXp as any, mockFeedEvent as any);
 
   it('selects questions from shared completed lessons', async () => {
     mockPrisma.studentProgress.findMany
@@ -46,7 +50,7 @@ describe('DuelService', () => {
     expect(mockPrisma.lessonComponent.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          lesson: { id: { in: expect.arrayContaining(['l-1']) } },
+          lessonId: { in: expect.arrayContaining(['l-1']) },
         }),
       }),
     );
@@ -59,6 +63,6 @@ describe('DuelService', () => {
 
     await expect(
       service.create('challenger', 'challenged', 'tenant-id'),
-    ).rejects.toThrow('umumiy');
+    ).rejects.toThrow('Umumiy');
   });
 });

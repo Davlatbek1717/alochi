@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FeedEventService } from '../social/feed-event.service';
 
 @Injectable()
 export class ProgressService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private feedEvent: FeedEventService,
+  ) {}
 
   private async getEffectiveN(studentId: string, lessonId: string, tenantId: string): Promise<number> {
     const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
@@ -47,10 +51,26 @@ export class ProgressService {
   }
 
   async markAcademyCompleted(studentId: string, lessonId: string) {
-    return this.prisma.studentProgress.update({
+    const result = await this.prisma.studentProgress.update({
       where: { studentId_lessonId: { studentId, lessonId } },
       data: { academyCompleted: true, completedAt: new Date() },
     });
+
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { title: true, tenantId: true },
+    });
+
+    if (lesson) {
+      this.feedEvent
+        .emit(lesson.tenantId, studentId, 'lesson_done', {
+          lessonId,
+          lessonTitle: lesson.title,
+        })
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   async getStudentProgress(studentId: string) {

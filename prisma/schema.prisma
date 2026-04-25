@@ -95,6 +95,7 @@ model User {
   challengerDuels    Duel[]              @relation("DuelChallenger")
   challengedDuels    Duel[]              @relation("DuelChallenged")
   groupMessages      GroupMessage[]      @relation("GroupMessages")
+  feedEvents         SocialFeedEvent[]   @relation("FeedEventActor")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -597,4 +598,18 @@ model ChatBan {
   createdAt DateTime  @default(now()) @map("created_at")
 
   @@map("chat_bans")
+}
+
+model SocialFeedEvent {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  eventType String   @map("event_type")
+  meta      Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  actor User @relation("FeedEventActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("social_feed_events")
 }

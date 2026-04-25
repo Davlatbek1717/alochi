@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
 type Friend = {
@@ -28,6 +29,8 @@ export default function FriendsPage() {
   const [sendMsg, setSendMsg] = useState('');
 
   const [responding, setResponding] = useState<string | null>(null);
+  const [challenging, setChallenging] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -69,6 +72,22 @@ export default function FriendsPage() {
       alert(err instanceof Error ? err.message : 'Xato yuz berdi');
     } finally {
       setResponding(null);
+    }
+  }
+
+  async function handleChallenge(friendId: string) {
+    const token = localStorage.getItem('accessToken') ?? '';
+    setChallenging(friendId);
+    try {
+      const res = await apiRequest<{ id: string }>('/social/duels', {
+        method: 'POST',
+        body: JSON.stringify({ challengedId: friendId }),
+      }, token);
+      router.push(`/student/duel/${res.data.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+    } finally {
+      setChallenging(null);
     }
   }
 
@@ -205,6 +224,13 @@ export default function FriendsPage() {
                 <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
                   {f.role}
                 </span>
+              <button
+                onClick={() => handleChallenge(f.id)}
+                disabled={challenging === f.id}
+                className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+              >
+                {challenging === f.id ? '...' : '⚡ Duel'}
+              </button>
               </li>
             ))}
           </ul>

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { io, Socket } from 'socket.io-client';
 import { apiRequest } from '@/lib/api';
 
 type Reaction = {
@@ -16,7 +17,7 @@ type Message = {
   reactions?: Reaction[];
 };
 
-const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
+const EMOJIS = ['👍', '❤️', '💪', '🔥', '🎉'];
 
 export default function GroupChatPage() {
   const params = useParams();
@@ -29,7 +30,7 @@ export default function GroupChatPage() {
   const [connected, setConnected] = useState(false);
   const [reactingTo, setReactingTo] = useState<string | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -49,26 +50,31 @@ export default function GroupChatPage() {
     fetchMessages();
 
     const token = localStorage.getItem('accessToken') ?? '';
-    const ws = new WebSocket(`ws://localhost:3001/social?token=${token}&groupId=${groupId}`);
-    wsRef.current = ws;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-    ws.onopen = () => setConnected(true);
-    ws.onclose = () => setConnected(false);
-    ws.onerror = () => setConnected(false);
+    const socket = io(`${apiUrl}/social`, {
+      auth: { token },
+    });
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data as string);
-        if (data.type === 'message') {
-          setMessages((prev) => [...prev, data.message as Message]);
-        }
-      } catch {
-        // ignore parse errors
-      }
-    };
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      setConnected(true);
+      socket.emit('chat:join', { groupId });
+    });
+
+    socket.on('disconnect', () => setConnected(false));
+
+    socket.on('chat:message', (msg: Message) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on('chat:error', (data: { message: string }) => {
+      alert(data.message);
+    });
 
     return () => {
-      ws.close();
+      socket.disconnect();
     };
   }, [groupId, fetchMessages]);
 
@@ -77,8 +83,8 @@ export default function GroupChatPage() {
   }, [messages]);
 
   function sendMessage() {
-    if (!input.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: 'message', content: input.trim() }));
+    if (!input.trim() || !connected) return;
+    socketRef.current?.emit('chat:send', { groupId, content: input.trim() });
     setInput('');
   }
 
@@ -102,7 +108,7 @@ export default function GroupChatPage() {
             return {
               ...m,
               reactions: m.reactions?.map((r) =>
-                r.emoji === emoji ? { ...r, count: r.count + 1 } : r
+                r.emoji === emoji ? { ...r, count: r.count + 1 } : r,
               ),
             };
           }
@@ -110,10 +116,10 @@ export default function GroupChatPage() {
             ...m,
             reactions: [...(m.reactions ?? []), { emoji, count: 1 }],
           };
-        })
+        }),
       );
     } catch {
-      // ignore reaction errors
+      setReactingTo(messageId);
     }
   }
 
@@ -135,8 +141,14 @@ export default function GroupChatPage() {
 
   if (error) {
     return (
-      <div className="max-w-lg mx-auto py-10">
+      <div className="max-w-lg mx-auto py-10 text-center space-y-3">
         <p className="text-red-500">{error}</p>
+        <button
+          onClick={() => { setError(''); fetchMessages(); }}
+          className="text-indigo-600 text-sm underline"
+        >
+          Qayta urinish
+        </button>
       </div>
     );
   }
@@ -190,10 +202,7 @@ export default function GroupChatPage() {
               {msg.reactions && msg.reactions.length > 0 && (
                 <div className="flex gap-1 ml-1 flex-wrap">
                   {msg.reactions.map((r) => (
-                    <span
-                      key={r.emoji}
-                      className="bg-gray-100 text-xs px-2 py-0.5 rounded-full"
-                    >
+                    <span key={r.emoji} className="bg-gray-100 text-xs px-2 py-0.5 rounded-full">
                       {r.emoji} {r.count}
                     </span>
                   ))}

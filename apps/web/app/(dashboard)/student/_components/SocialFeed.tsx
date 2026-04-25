@@ -1,27 +1,46 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 import { apiRequest } from '@/lib/api';
 
-interface FeedItem {
-  userId: string;
-  userName: string;
-  lessonId: string;
-  lessonTitle: string;
-  sessionCount: number;
-  homeCompleted: boolean;
-  lastActivityAt: string;
-}
+type FeedItem = {
+  id: string;
+  actorId: string;
+  actorName: string;
+  eventType: string;
+  meta: Record<string, unknown>;
+  createdAt: string;
+};
 
 function relativeTime(isoDate: string): string {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return '';
   const diffMs = Date.now() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMs < 0) return 'Hozirgina';
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'Hozirgina';
   if (diffMin < 60) return `${diffMin} daqiqa oldin`;
-  const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `${diffHour} soat oldin`;
-  const diffDay = Math.floor(diffHour / 24);
   return `${diffDay} kun oldin`;
+}
+
+function eventLabel(item: FeedItem): string {
+  switch (item.eventType) {
+    case 'lesson_done': {
+      const title = typeof item.meta.lessonTitle === 'string' ? item.meta.lessonTitle : '';
+      return `${item.actorName} "${title}" darsini tugatdi! 📚`;
+    }
+    case 'duel_won':
+      return `${item.actorName} duelda g'olib bo'ldi! ⚔️`;
+    case 'streak_milestone': {
+      const streak = typeof item.meta.streak === 'number' ? item.meta.streak : '?';
+      return `${item.actorName} ${streak} kunlik streak! 🔥`;
+    }
+    default:
+      return `${item.actorName} faol bo'ldi`;
+  }
 }
 
 export function SocialFeed() {
@@ -31,34 +50,78 @@ export function SocialFeed() {
   useEffect(() => {
     let cancelled = false;
     const token = localStorage.getItem('accessToken') ?? '';
+
     apiRequest<FeedItem[]>('/social/feed', {}, token)
-      .then((res) => { if (!cancelled) setFeed(res.data); })
-      .catch(() => { if (!cancelled) setFeed([]); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .then((res) => {
+        if (!cancelled) setFeed(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setFeed([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+    const socket = io(`${apiUrl}/social`, { auth: { token } });
+
+    socket.on('feed:event', (event: { type: string; data: { actorId: string; actorName: string; meta: Record<string, unknown>; createdAt: string } }) => {
+      setFeed((prev) => [
+        {
+          id: `live-${Date.now()}`,
+          actorId: event.data.actorId,
+          actorName: event.data.actorName,
+          eventType: event.type,
+          meta: event.data.meta,
+          createdAt: event.data.createdAt,
+        },
+        ...prev.slice(0, 19),
+      ]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p className="text-sm text-gray-400 text-center">Yuklanmoqda...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm space-y-2">
-      <h3 className="font-semibold">👥 Do&apos;stlar Lentasi</h3>
-      {loading ? (
-        <p className="text-sm text-gray-400 py-2">Yuklanmoqda...</p>
-      ) : feed.length === 0 ? (
-        <p className="text-sm text-gray-400 py-2">Do&apos;stlaringiz hali faol emas</p>
+    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+      <h2 className="font-semibold text-gray-700 mb-3 text-sm">Do&apos;stlar lentasi</h2>
+
+      {feed.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">
+          Do&apos;stlaringiz hali faol emas
+        </p>
       ) : (
-        feed.map((item) => (
-          <div key={`${item.userId}:${item.lessonId}`} className="flex items-center gap-3 py-2 border-b last:border-0">
-            <span className="text-xl">📚</span>
-            <div className="flex-1">
-              <p className="text-sm">
-                <span className="font-medium">{item.userName}</span> —{' '}
-                <span className="italic">{item.lessonTitle}</span> darsini tugatdi.{' '}
-                <span className="text-gray-500">{item.sessionCount} marta o&apos;rganilgan</span>
-              </p>
-              <p className="text-xs text-gray-400">{relativeTime(item.lastActivityAt)}</p>
-            </div>
-          </div>
-        ))
+        <ul className="space-y-3">
+          {feed.map((item) => (
+            <li key={`${item.actorId}:${item.id}`} className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
+                {item.actorName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 leading-snug">{eventLabel(item)}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{relativeTime(item.createdAt)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

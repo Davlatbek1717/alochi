@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
 type DuelQuestion = {
@@ -50,15 +50,30 @@ function useCountdown(expiresAt: string | undefined) {
   return timeLeft;
 }
 
+function getCurrentUserId(): string {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.userId ?? payload.sub ?? '') as string;
+  } catch {
+    return '';
+  }
+}
+
 export default function DuelPage() {
   const params = useParams();
   const id = params?.id as string;
+  const router = useRouter();
+  void router;
 
   const [duel, setDuel] = useState<Duel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [answering, setAnswering] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [responding, setResponding] = useState(false);
+
+  const currentUserId = useMemo(() => getCurrentUserId(), []);
 
   const timeLeft = useCountdown(duel?.expiresAt);
 
@@ -95,6 +110,23 @@ export default function DuelPage() {
     } finally {
       setAnswering(false);
       setSelectedAnswer(null);
+    }
+  }
+
+  async function handleRespond(accept: boolean) {
+    if (!duel || responding) return;
+    const token = localStorage.getItem('accessToken') ?? '';
+    setResponding(true);
+    try {
+      await apiRequest(`/social/duels/${id}/respond`, {
+        method: 'PATCH',
+        body: JSON.stringify({ accept }),
+      }, token);
+      await fetchDuel();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+    } finally {
+      setResponding(false);
     }
   }
 
@@ -161,13 +193,37 @@ export default function DuelPage() {
         )}
       </div>
 
-      {duel.status === 'pending' && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-100">
-          <p className="text-4xl mb-3">⏳</p>
-          <p className="font-medium text-gray-700">Raqib qabul qilishini kutmoqdamiz</p>
-          <p className="text-sm text-gray-400 mt-1">So&apos;rov yuborildi</p>
-        </div>
-      )}
+      {duel.status === 'pending' && (() => {
+        const isChallenged = currentUserId === duel.challengedId;
+        return isChallenged ? (
+          <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-100 space-y-4">
+            <p className="text-4xl">⚡</p>
+            <p className="font-medium text-gray-700">{duel.challengerName} sizi duelga chaqirdi!</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => handleRespond(true)}
+                disabled={responding}
+                className="bg-green-500 text-white px-6 py-2 rounded-xl font-medium disabled:opacity-50"
+              >
+                ✅ Qabul qilish
+              </button>
+              <button
+                onClick={() => handleRespond(false)}
+                disabled={responding}
+                className="bg-red-100 text-red-600 px-6 py-2 rounded-xl font-medium disabled:opacity-50"
+              >
+                ❌ Rad etish
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-100">
+            <p className="text-4xl mb-3">⏳</p>
+            <p className="font-medium text-gray-700">Raqib qabul qilishini kutmoqdamiz</p>
+            <p className="text-sm text-gray-400 mt-1">So&apos;rov yuborildi</p>
+          </div>
+        );
+      })()}
 
       {duel.status === 'active' && currentQuestion && (
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">

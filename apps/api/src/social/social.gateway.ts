@@ -10,6 +10,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+interface JwtPayload {
+  userId: string;
+  tenantId: string;
+  role: string;
+}
 
 @WebSocketGateway({ cors: { origin: '*' }, namespace: '/social' })
 export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -19,6 +26,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private jwt: JwtService,
     private chat: ChatService,
+    private prisma: PrismaService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -29,18 +37,39 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     try {
-      const payload = this.jwt.verify(token) as Record<string, unknown>;
+      const payload = this.jwt.verify(token) as JwtPayload;
       client.data.user = payload;
-      if (payload.groupId) {
-        client.join(`group:${payload.groupId}`);
-      }
+      client.join(`feed:${payload.userId}`);
     } catch {
       client.disconnect();
     }
   }
 
-  handleDisconnect(_client: Socket) {
-    // cleanup handled by socket.io
+  handleDisconnect(_client: Socket) {}
+
+  @SubscribeMessage('chat:join')
+  async handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { groupId: string },
+  ) {
+    const user = client.data.user as JwtPayload | undefined;
+    if (!user || !data?.groupId) return;
+
+    // NOTE: The Prisma schema has no dedicated group-membership join table
+    // (no GroupStudent / StudentGroup model). As the closest available guard,
+    // we check that no messages for this groupId exist under a *different* tenant,
+    // preventing cross-tenant room hijacking. Fresh groups (no messages yet) are
+    // allowed — the subsequent chat:send enforces sender tenantId consistency.
+    const alienMessage = await this.prisma.groupMessage.findFirst({
+      where: {
+        groupId: data.groupId,
+        tenantId: { not: user.tenantId },
+      },
+      select: { id: true },
+    });
+    if (alienMessage) return;
+
+    client.join(`group:${data.groupId}`);
   }
 
   @SubscribeMessage('chat:send')
@@ -48,7 +77,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { groupId: string; content: string },
   ) {
-    const user = client.data.user as Record<string, string> | undefined;
+    const user = client.data.user as JwtPayload | undefined;
     if (!user) return;
 
     try {
@@ -60,10 +89,10 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       this.server.to(`group:${data.groupId}`).emit('chat:message', {
-        id: (msg as any).id,
-        content: (msg as any).content,
-        sender: (msg as any).sender,
-        createdAt: (msg as any).createdAt,
+        id: msg.id,
+        content: msg.content,
+        senderName: msg.sender.name,
+        createdAt: msg.createdAt,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -73,7 +102,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('feed:subscribe')
   handleFeedSubscribe(@ConnectedSocket() client: Socket) {
-    const user = client.data.user as Record<string, string> | undefined;
+    const user = client.data.user as JwtPayload | undefined;
     if (user?.userId) {
       client.join(`feed:${user.userId}`);
     }
