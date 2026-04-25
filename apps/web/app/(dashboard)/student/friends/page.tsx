@@ -29,6 +29,7 @@ export default function FriendsPage() {
   const [sendMsg, setSendMsg] = useState('');
 
   const [responding, setResponding] = useState<string | null>(null);
+  const [challenging, setChallenging] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -76,6 +77,7 @@ export default function FriendsPage() {
 
   async function handleChallenge(friendId: string) {
     const token = localStorage.getItem('accessToken') ?? '';
+    setChallenging(friendId);
     try {
       const res = await apiRequest<{ id: string }>('/social/duels', {
         method: 'POST',
@@ -84,6 +86,8 @@ export default function FriendsPage() {
       router.push(`/student/duel/${res.data.id}`);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+    } finally {
+      setChallenging(null);
     }
   }
 
@@ -222,9 +226,10 @@ export default function FriendsPage() {
                 </span>
               <button
                 onClick={() => handleChallenge(f.id)}
-                className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium"
+                disabled={challenging === f.id}
+                className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
               >
-                ⚡ Duel
+                {challenging === f.id ? '...' : '⚡ Duel'}
               </button>
               </li>
             ))}

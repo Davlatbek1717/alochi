@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
@@ -71,6 +71,9 @@ export default function DuelPage() {
   const [error, setError] = useState('');
   const [answering, setAnswering] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [responding, setResponding] = useState(false);
+
+  const currentUserId = useMemo(() => getCurrentUserId(), []);
 
   const timeLeft = useCountdown(duel?.expiresAt);
 
@@ -111,8 +114,9 @@ export default function DuelPage() {
   }
 
   async function handleRespond(accept: boolean) {
-    if (!duel) return;
+    if (!duel || responding) return;
     const token = localStorage.getItem('accessToken') ?? '';
+    setResponding(true);
     try {
       await apiRequest(`/social/duels/${id}/respond`, {
         method: 'PATCH',
@@ -121,6 +125,8 @@ export default function DuelPage() {
       await fetchDuel();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+    } finally {
+      setResponding(false);
     }
   }
 
@@ -188,8 +194,7 @@ export default function DuelPage() {
       </div>
 
       {duel.status === 'pending' && (() => {
-        const myId = getCurrentUserId();
-        const isChallenged = myId === duel.challengedId;
+        const isChallenged = currentUserId === duel.challengedId;
         return isChallenged ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-100 space-y-4">
             <p className="text-4xl">⚡</p>
@@ -197,13 +202,15 @@ export default function DuelPage() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => handleRespond(true)}
-                className="bg-green-500 text-white px-6 py-2 rounded-xl font-medium"
+                disabled={responding}
+                className="bg-green-500 text-white px-6 py-2 rounded-xl font-medium disabled:opacity-50"
               >
                 ✅ Qabul qilish
               </button>
               <button
                 onClick={() => handleRespond(false)}
-                className="bg-red-100 text-red-600 px-6 py-2 rounded-xl font-medium"
+                disabled={responding}
+                className="bg-red-100 text-red-600 px-6 py-2 rounded-xl font-medium disabled:opacity-50"
               >
                 ❌ Rad etish
               </button>
