@@ -2,7 +2,10 @@ import { Controller, Get, Param, Post, Body, Request, UnauthorizedException } fr
 import { CacheService } from './cache.service';
 import { FaceService } from './face.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('face')
+@ApiBearerAuth()
 @Controller('face')
 export class FaceController {
   constructor(

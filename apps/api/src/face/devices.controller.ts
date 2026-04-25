@@ -1,7 +1,10 @@
 import { Controller, Post, Get, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { DevicesService } from './devices.service';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('devices')
+@ApiBearerAuth()
 @Controller('devices')
 @UseGuards(JwtAuthGuard)
 export class DevicesController {

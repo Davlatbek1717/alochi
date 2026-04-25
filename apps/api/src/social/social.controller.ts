@@ -6,7 +6,10 @@ import { DuelService } from './duel.service';
 import { ChatService } from './chat.service';
 import { FriendsService } from './friends.service';
 import { ChallengeService } from './challenge.service';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('social')
+@ApiBearerAuth()
 @Controller('social')
 @UseGuards(JwtAuthGuard)
 export class SocialController {

@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 interface AwardKpiBodyDto {
   userId: string;
@@ -13,6 +14,8 @@ interface AwardKpiBodyDto {
   delegationId?: string;
 }
 
+@ApiTags('kpi')
+@ApiBearerAuth()
 @Controller('kpi')
 @UseGuards(JwtAuthGuard)
 export class KpiController {

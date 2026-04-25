@@ -6,7 +6,10 @@ import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
 import { CertificatesService } from './certificates.service';
 import { CityService } from './city.service';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('gamification')
+@ApiBearerAuth()
 @Controller('gamification')
 @UseGuards(JwtAuthGuard)
 export class GamificationController {

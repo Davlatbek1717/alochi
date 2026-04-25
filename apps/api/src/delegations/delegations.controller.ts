@@ -4,7 +4,10 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('delegations')
+@ApiBearerAuth()
 @Controller('delegations')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DelegationsController {
