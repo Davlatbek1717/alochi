@@ -35,6 +35,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
   ],
   student: [
     { label: 'Bosh sahifa', href: '/student' },
+    { label: "Darslar", href: '/student/lessons' },
     { label: "Do'stlar", href: '/student/friends' },
   ],
 };
