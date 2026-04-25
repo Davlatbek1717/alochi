@@ -1,98 +1,104 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/api';
 
-interface StaffAttendanceRecord {
+type StaffRecord = {
   id: string;
   userId: string;
-  arrivalTime: string;
-  method: 'face_auto' | 'manual' | string;
+  loginTime: string | null;
   isLate: boolean;
-  isConfirmed: boolean;
-  user: {
-    id: string;
-    name: string;
-  };
-}
+  recognitionMethod: string | null;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  user: { id: string; name: string };
+};
 
-interface User {
-  id: string;
-  tenantId: string;
-}
-
-function toISODateString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function formatTime(isoString: string): string {
+function getBranchIdFromToken(): string | null {
   try {
-    return new Date(isoString).toLocaleTimeString('uz-UZ', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
+    return typeof payload.branchId === 'string' ? payload.branchId : null;
   } catch {
-    return isoString;
+    return null;
   }
 }
 
+function formatTime(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '—';
+  }
+}
+
+const TODAY = new Date().toISOString().split('T')[0];
+
 export default function FiladminAttendancePage() {
-  const [date, setDate] = useState<string>(toISODateString(new Date()));
-  const [records, setRecords] = useState<StaffAttendanceRecord[]>([]);
+  const [date, setDate] = useState(TODAY);
+  const [records, setRecords] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirming, setConfirming] = useState<string | null>(null);
-  const [confirmedIds, setConfirmedIds] = useState<Set<string>>(new Set());
 
-  function fetchAttendance(selectedDate: string) {
-    setLoading(true);
-    setError('');
-    const token = localStorage.getItem('accessToken') ?? '';
-    const user: User = JSON.parse(localStorage.getItem('user') ?? '{}');
-    const branchId = user.tenantId ?? '';
+  const branchId = getBranchIdFromToken();
 
-    apiRequest<StaffAttendanceRecord[]>(
-      `/attendance/staff/${branchId}/${selectedDate}`,
-      {},
-      token,
-    )
-      .then((res) => setRecords(res.data))
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : 'Xatolik yuz berdi');
-        setRecords([]);
-      })
-      .finally(() => setLoading(false));
-  }
+  const loadRecords = useCallback(
+    async (selectedDate: string) => {
+      if (!branchId) return;
+      setLoading(true);
+      setError('');
+      try {
+        const token = localStorage.getItem('accessToken') ?? '';
+        const res = await apiRequest<StaffRecord[]>(
+          `/attendance/staff/${branchId}/${selectedDate}`,
+          {},
+          token,
+        );
+        setRecords(res.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [branchId],
+  );
 
   useEffect(() => {
-    fetchAttendance(date);
-  }, [date]);
+    loadRecords(date);
+  }, [date, loadRecords]);
 
-  async function handleConfirm(userId: string) {
+  async function confirmStaff(userId: string) {
     setConfirming(userId);
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      const user: User = JSON.parse(localStorage.getItem('user') ?? '{}');
       await apiRequest(
         `/attendance/staff/confirm/${userId}`,
-        {
-          method: 'POST',
-          body: JSON.stringify({ confirmedBy: user.id, date }),
-        },
+        { method: 'POST', body: JSON.stringify({ date }) },
         token,
       );
-      setConfirmedIds((prev) => new Set([...prev, userId]));
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik yuz berdi');
+      setRecords((prev) =>
+        prev.map((r) =>
+          r.userId === userId ? { ...r, confirmedAt: new Date().toISOString() } : r,
+        ),
+      );
+    } catch {
+      // User can retry by clicking the button again
     } finally {
       setConfirming(null);
     }
   }
 
-  function isConfirmed(record: StaffAttendanceRecord): boolean {
-    return record.isConfirmed || confirmedIds.has(record.userId);
+  if (!branchId) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-gray-900">Xodimlar Davomati</h1>
+        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
+          <p className="text-red-500">Filial topilmadi. Administrator bilan bog&#39;laning.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -102,98 +108,116 @@ export default function FiladminAttendancePage() {
         <input
           type="date"
           value={date}
+          max={TODAY}
           onChange={(e) => setDate(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => loadRecords(date)}
+            className="ml-4 underline text-sm font-medium"
+          >
+            Qayta urinish
+          </button>
+        </div>
       )}
 
       {loading ? (
-        <div className="text-gray-500 p-6">Yuklanmoqda...</div>
-      ) : records.length === 0 ? (
-        <div className="bg-white rounded-xl p-10 text-center text-gray-500 shadow-sm">
-          <p className="text-4xl mb-2">📋</p>
-          <p className="font-medium">Bugun davomat yo&apos;q</p>
-        </div>
-      ) : (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                  Xodim nomi
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                  Kelish vaqti
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                  Usul
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                  Tasdiqlash
-                </th>
+                {['Xodim', 'Kirish vaqti', 'Usul', 'Kechikdi', 'Tasdiqlangan'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <tr key={i} className="border-t border-gray-100">
+                  {[1, 2, 3, 4, 5].map((j) => (
+                    <td key={j} className="px-4 py-3">
+                      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : records.length === 0 && !error ? (
+        <div className="bg-white rounded-xl p-10 text-center text-gray-500 shadow-sm">
+          <p className="text-4xl mb-2">📋</p>
+          <p className="font-medium">Bu kun uchun davomat yo&apos;q</p>
+        </div>
+      ) : !error ? (
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                {['Xodim', 'Kirish vaqti', 'Usul', 'Kechikdi', 'Tasdiqlangan'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y">
-              {records.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {record.user?.name ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {formatTime(record.arrivalTime)}
-                  </td>
+              {records.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-900">{r.user.name}</td>
+                  <td className="px-4 py-3 text-gray-600">{formatTime(r.loginTime)}</td>
                   <td className="px-4 py-3">
-                    {record.method === 'face_auto' ? (
+                    {r.recognitionMethod === 'face_id' ? (
                       <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
-                        🤖 Face ID
+                        📷 Face ID
                       </span>
-                    ) : (
+                    ) : r.recognitionMethod === 'manual' ? (
                       <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full font-medium">
-                        ✋ Qo&apos;lda
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {record.isLate ? (
-                      <span className="inline-flex items-center gap-1 text-sm text-red-600 font-medium">
-                        🔴 Kech
+                        ✍️ Qo&apos;lda
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                        🟢 O&apos;z vaqtida
-                      </span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleConfirm(record.userId)}
-                      disabled={isConfirmed(record) || confirming === record.userId}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        isConfirmed(record)
-                          ? 'bg-green-100 text-green-700 cursor-default'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
-                      }`}
-                    >
-                      {confirming === record.userId
-                        ? '...'
-                        : isConfirmed(record)
-                        ? '✓ Tasdiqlangan'
-                        : 'Tasdiqlash'}
-                    </button>
+                    {r.loginTime && r.isLate ? (
+                      <span className="text-red-600 font-medium">🔴 Kech</span>
+                    ) : r.loginTime ? (
+                      <span className="text-green-600 font-medium">🟢 O&apos;z vaqtida</span>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {!r.loginTime ? (
+                      <span className="text-gray-400">Kelmagan</span>
+                    ) : r.confirmedAt ? (
+                      <span className="text-green-600 font-medium">
+                        ✓ {formatTime(r.confirmedAt)}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => confirmStaff(r.userId)}
+                        disabled={confirming === r.userId}
+                        className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      >
+                        {confirming === r.userId ? '...' : 'Tasdiqlash'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
