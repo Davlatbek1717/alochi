@@ -120,7 +120,7 @@ export default function StudentDashboard() {
 
       <SocialFeed />
 
-      <div className="fixed bottom-20 left-0 right-0 px-4 max-w-lg mx-auto">
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto">
         <Link
           href="/student/lessons/current"
           className="block w-full bg-indigo-600 text-white py-4 rounded-2xl text-center font-bold shadow-lg"

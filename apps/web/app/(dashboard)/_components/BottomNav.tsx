@@ -75,7 +75,9 @@ export default function BottomNav() {
         {tabs.map((tab) => {
           const isActive =
             pathname === tab.href ||
-            (tab.href !== '/' && pathname.startsWith(tab.href + '/'));
+            (tab.href.length > 1 &&
+              !tabs.some((t) => t !== tab && t.href.startsWith(tab.href + '/')) &&
+              pathname.startsWith(tab.href + '/'));
           return (
             <button
               key={tab.href}
