@@ -4,6 +4,7 @@ import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
 import { AiTutor } from './_components/AiTutor';
+import { CameraMonitor } from './_components/CameraMonitor';
 
 const MOCK_LESSON = {
   id: '1',
@@ -94,10 +95,14 @@ export default function LessonPage() {
       )}
 
       {step === 'academy' && (
-        <div className="bg-green-50 rounded-xl p-6 text-center">
-          <div className="text-4xl mb-2">🎓</div>
-          <h2 className="font-bold text-lg">Akademiyaga boring!</h2>
-          <p className="text-gray-600">Uy qismi tugadi. Tester siz kelganizda belgilaydi.</p>
+        <div className="space-y-4">
+          <CameraMonitor
+            onLookAway={() => { setStep('video'); setVideoCompleted(false); }}
+            onSilenceTooLong={() => { setStep('video'); setVideoCompleted(false); }}
+          />
+          <p className="text-center text-sm text-gray-500">
+            Kamera oldida topshirishingizni kutmoqdamiz...
+          </p>
         </div>
       )}
     </div>
