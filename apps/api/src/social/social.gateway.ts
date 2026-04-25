@@ -50,9 +50,9 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { groupId: string },
   ) {
-    if (data?.groupId) {
-      client.join(`group:${data.groupId}`);
-    }
+    const user = client.data.user as JwtPayload | undefined;
+    if (!user || !data?.groupId) return;
+    client.join(`group:${data.groupId}`);
   }
 
   @SubscribeMessage('chat:send')
@@ -74,7 +74,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`group:${data.groupId}`).emit('chat:message', {
         id: msg.id,
         content: msg.content,
-        senderName: (msg as any).sender?.name ?? 'Unknown',
+        senderName: msg.sender.name,
         createdAt: msg.createdAt,
       });
     } catch (err: unknown) {
