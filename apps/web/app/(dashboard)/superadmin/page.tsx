@@ -1,8 +1,32 @@
+import Link from 'next/link';
+
 export default function SuperadminDashboard() {
   return (
-    <div>
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Superadmin Paneli</h1>
-      <p className="text-gray-500 mt-1">Plan 2 da to&apos;liq qilinadi.</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link
+          href="/superadmin/lessons"
+          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
+        >
+          <div className="text-3xl mb-2">📚</div>
+          <h2 className="font-semibold text-gray-900">Darslar</h2>
+          <p className="text-sm text-gray-500 mt-1">Dars yaratish, tahrirlash, nashr qilish</p>
+        </Link>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed">
+          <div className="text-3xl mb-2">👥</div>
+          <h2 className="font-semibold text-gray-900">Foydalanuvchilar</h2>
+          <p className="text-sm text-gray-500 mt-1">Tez kunda</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed">
+          <div className="text-3xl mb-2">🏢</div>
+          <h2 className="font-semibold text-gray-900">Filiallar</h2>
+          <p className="text-sm text-gray-500 mt-1">Tez kunda</p>
+        </div>
+      </div>
     </div>
   );
 }
