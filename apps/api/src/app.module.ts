@@ -21,6 +21,8 @@ import { FaceModule } from './face/face.module';
 import { GamificationModule } from './gamification/gamification.module';
 import { SocialModule } from './social/social.module';
 import { StudentStatusModule } from './student-status/status.module';
+import { KpiModule } from './kpi/kpi.module';
+import { AttendanceModule } from './attendance/attendance.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -47,6 +49,8 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     GamificationModule,
     SocialModule,
     StudentStatusModule,
+    KpiModule,
+    AttendanceModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
