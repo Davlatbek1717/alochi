@@ -24,6 +24,7 @@ import { SocialModule } from './social/social.module';
 import { StudentStatusModule } from './student-status/status.module';
 import { KpiModule } from './kpi/kpi.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { HealthModule } from './health/health.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -56,6 +57,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     StudentStatusModule,
     KpiModule,
     AttendanceModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
