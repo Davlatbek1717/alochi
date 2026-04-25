@@ -5,6 +5,7 @@ import { XpService } from './xp.service';
 import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
 import { CertificatesService } from './certificates.service';
+import { CityService } from './city.service';
 
 @Controller('gamification')
 @UseGuards(JwtAuthGuard)
@@ -14,6 +15,7 @@ export class GamificationController {
     private streak: StreakService,
     private quest: QuestService,
     private certificates: CertificatesService,
+    private cityService: CityService,
   ) {}
 
   @Get('xp')
@@ -44,5 +46,10 @@ export class GamificationController {
   @Post('streak/activity')
   recordActivity(@Request() req: any) {
     return this.streak.recordActivity(req.user.userId);
+  }
+
+  @Get('city')
+  getCityLevel(@Request() req: any) {
+    return this.cityService.getCityLevel(req.user.userId);
   }
 }
