@@ -98,6 +98,6 @@ export class SocialController {
 
   @Get('feed')
   getFeed(@Request() req: any) {
-    return this.friends.getFeed(req.user.userId);
+    return this.friends.getFeed(req.user.userId, req.user.tenantId);
   }
 }
