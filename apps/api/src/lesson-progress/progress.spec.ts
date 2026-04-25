@@ -2,10 +2,12 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { FeedEventService } from '../social/feed-event.service';
 
 const mockPrisma = {
   lesson: {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
   },
   studentLessonConfig: {
     findUnique: jest.fn(),
@@ -18,6 +20,10 @@ const mockPrisma = {
   },
 };
 
+const mockFeedEvent = {
+  emit: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('ProgressService', () => {
   let service: ProgressService;
 
@@ -26,6 +32,7 @@ describe('ProgressService', () => {
       providers: [
         ProgressService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: FeedEventService, useValue: mockFeedEvent },
       ],
     }).compile();
     service = module.get(ProgressService);
@@ -66,6 +73,7 @@ describe('ProgressService', () => {
   describe('markAcademyCompleted', () => {
     it('sets academyCompleted to true', async () => {
       mockPrisma.studentProgress.update.mockResolvedValue({ academyCompleted: true });
+      mockPrisma.lesson.findUnique.mockResolvedValue({ title: 'Test Lesson', tenantId: 't-1' });
 
       const result = await service.markAcademyCompleted('s-1', 'l-1');
 
