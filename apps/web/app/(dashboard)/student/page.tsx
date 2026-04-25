@@ -5,6 +5,7 @@ import { XpBar } from './_components/XpBar';
 import { StreakBadge } from './_components/StreakBadge';
 import { DailyQuests } from './_components/DailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
+import VirtualCity from './_components/VirtualCity';
 import { apiRequest } from '@/lib/api';
 
 type Quest = {
@@ -19,6 +20,13 @@ type XpData = {
   totalXp: number;
   level: string;
   nextLevelXp: number;
+};
+
+type CityData = {
+  level: number;
+  buildings: string[];
+  lessonsCompleted: number;
+  nextLevelAt: number;
 };
 
 const STATIC_DATA = {
@@ -38,6 +46,7 @@ const STATUS_EMOJI: Record<string, string> = { green: '🟢', yellow: '🟡', re
 export default function StudentDashboard() {
   const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
   const [quests, setQuests] = useState<Quest[]>([]);
+  const [cityData, setCityData] = useState<CityData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,12 +54,14 @@ export default function StudentDashboard() {
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
+          apiRequest<CityData>('/gamification/city', {}, token),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
+        setCityData(cityRes.data);
       } catch {
         // keep defaults on error
       } finally {
@@ -103,6 +114,15 @@ export default function StudentDashboard() {
       </div>
 
       <DailyQuests quests={quests} />
+
+      {cityData && (
+        <VirtualCity
+          level={cityData.level}
+          buildings={cityData.buildings}
+          lessonsCompleted={cityData.lessonsCompleted}
+          nextLevelAt={cityData.nextLevelAt}
+        />
+      )}
 
       <SocialFeed />
 
