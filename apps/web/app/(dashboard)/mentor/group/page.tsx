@@ -1,12 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '@/lib/api';
-
-const MOCK_STUDENTS = [
-  { id: '1', name: 'Sardor Rahimov', status: 'green' as Status, attendance: true },
-  { id: '2', name: 'Malika Yusupova', status: 'yellow' as Status, attendance: false },
-  { id: '3', name: 'Jasur Mirzayev', status: 'red' as Status, attendance: true },
-];
 
 type Status = 'green' | 'yellow' | 'red';
 
@@ -14,6 +8,18 @@ const STATUS_COLORS: Record<Status, string> = {
   green: 'bg-green-100 text-green-700',
   yellow: 'bg-yellow-100 text-yellow-700',
   red: 'bg-red-100 text-red-700',
+};
+
+type LocalStudent = {
+  id: string;
+  name: string;
+  status: Status;
+  attendance: boolean;
+};
+
+type ApiStudent = {
+  id: string;
+  name: string;
 };
 
 type AttendanceRecord = {
@@ -25,23 +31,60 @@ type AttendanceRecord = {
   date: string;
 };
 
+function getGroupIdFromToken(): string | null {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { groupId?: string };
+    return payload.groupId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function MentorGroupPage() {
-  const [students, setStudents] = useState(MOCK_STUDENTS);
+  const [students, setStudents] = useState<LocalStudent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
 
+  const loadStudents = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      const groupId = getGroupIdFromToken();
+      if (!groupId) throw new Error('Guruh topilmadi');
+      const res = await apiRequest<ApiStudent[]>(`/users/group/${groupId}`, {}, token);
+      setStudents(
+        res.data.map((s) => ({ ...s, status: 'green' as Status, attendance: true })),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStudents();
+  }, [loadStudents]);
+
   function updateStatus(id: string, status: Status) {
-    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
   }
 
   function toggleAttendance(id: string) {
-    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, attendance: !s.attendance } : s));
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, attendance: !s.attendance } : s)));
   }
 
   async function saveAll() {
     setSaveError('');
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
+      id?: string;
+      tenantId?: string;
+    };
 
     const records: AttendanceRecord[] = students.map((s) => ({
       studentId: s.id,
@@ -64,10 +107,43 @@ export default function MentorGroupPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-9 w-20 bg-gray-200 rounded-lg animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-4 h-16 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Guruh</h1>
+        <div className="bg-white rounded-xl p-6 text-center">
+          <p className="text-red-500 mb-3">{error}</p>
+          <button
+            onClick={loadStudents}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium"
+          >
+            Qayta urinish
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">5A Guruh</h1>
+        <h1 className="text-2xl font-bold">Guruh</h1>
         <button
           onClick={saveAll}
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium"
@@ -76,9 +152,7 @@ export default function MentorGroupPage() {
         </button>
       </div>
 
-      {saveError && (
-        <p className="text-red-500 text-sm">{saveError}</p>
-      )}
+      {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
 
       <div className="space-y-2">
         {students.map((student) => (
@@ -86,7 +160,9 @@ export default function MentorGroupPage() {
             <button
               onClick={() => toggleAttendance(student.id)}
               className={`w-10 h-10 rounded-full border-2 font-bold text-sm ${
-                student.attendance ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-gray-400'
+                student.attendance
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : 'border-gray-300 text-gray-400'
               }`}
             >
               {student.attendance ? '✓' : '✗'}
