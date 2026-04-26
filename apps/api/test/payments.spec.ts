@@ -105,9 +105,9 @@ describe('PaymentsService', () => {
       const result = await service.getBranchPaymentStatus('b1', 't1', '2025-04');
 
       expect(result).toHaveLength(2);
-      expect(result.find((r) => r.id === 's1')?.hasPaid).toBe(true);
-      expect(result.find((r) => r.id === 's2')?.hasPaid).toBe(false);
-      expect(result.find((r) => r.id === 's2')?.payment).toBeNull();
+      expect(result.find((r: { id: string }) => r.id === 's1')?.hasPaid).toBe(true);
+      expect(result.find((r: { id: string }) => r.id === 's2')?.hasPaid).toBe(false);
+      expect(result.find((r: { id: string }) => r.id === 's2')?.payment).toBeNull();
     });
   });
 
