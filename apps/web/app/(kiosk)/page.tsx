@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaceScanner } from './_components/FaceScanner';
 import { AttendanceResult } from './_components/AttendanceResult';
 
@@ -45,12 +45,13 @@ async function idbPut(db: IDBDatabase, key: string, value: FaceCache): Promise<v
 }
 
 function isCacheStale(cache: FaceCache): boolean {
-  if (!cache.generated_at) return false;
+  if (!cache.generated_at) return true;
   const ageHours = (Date.now() - new Date(cache.generated_at).getTime()) / 3600000;
   return ageHours > STALE_HOURS;
 }
 
 export default function KioskPage() {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [kioskState, setKioskState] = useState<KioskState>('loading');
   const [cache, setCache] = useState<FaceCache>({
     embeddings: [],
@@ -97,9 +98,12 @@ export default function KioskPage() {
         const data = (await res.json()) as FaceCache;
         if (db) await idbPut(db, branchId, data);
         setCache(data);
+        setIsOffline(false);
+        setIsStale(false);
         setKioskState('scanning');
         return;
-      } catch {
+      } catch (fetchErr) {
+        console.error('[KioskPage] loadCache network error:', fetchErr);
         // Network failed — try IDB fallback
         if (db) {
           const cached = await idbGet(db, branchId);
@@ -113,10 +117,19 @@ export default function KioskPage() {
         }
         setLoadError("Tarmoq yo'q va kesh ham mavjud emas. Internetga ulaning.");
         setKioskState('error');
+      } finally {
+        db?.close();
       }
     }
 
     loadCache();
+
+    const handleOnline = () => loadCache();
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   async function handleMatched(userId: string, name: string, isLate: boolean, minutes: number) {
@@ -132,7 +145,7 @@ export default function KioskPage() {
         const msg = (json as { message?: string }).message ?? '';
         if (res.status === 409 || msg.toLowerCase().includes('allaqachon')) {
           setLoadError(`${name}: Bugun allaqachon belgilangansiz`);
-          setTimeout(() => { setLoadError(''); setKioskState('scanning'); }, 3000);
+          timerRef.current = setTimeout(() => { setLoadError(''); setKioskState('scanning'); }, 3000);
           return;
         }
         throw new Error(msg || "Belgilab bo'lmadi");
@@ -142,7 +155,7 @@ export default function KioskPage() {
       setKioskState('success');
     } catch (err: unknown) {
       setLoadError(err instanceof Error ? err.message : 'Xato');
-      setTimeout(() => { setLoadError(''); setKioskState('scanning'); }, 3000);
+      timerRef.current = setTimeout(() => { setLoadError(''); setKioskState('scanning'); }, 3000);
     }
   }
 
