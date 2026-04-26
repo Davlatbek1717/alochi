@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiRequest } from '@/lib/api';
 
 const REASON_TYPES = [
@@ -9,12 +9,48 @@ const REASON_TYPES = [
   { value: 'other', label: 'Boshqa' },
 ];
 
+type Student = { id: string; name: string };
+
+function getTokenPayload(): { userId: string; branchId: string; tenantId: string } {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as {
+      sub?: string;
+      branchId?: string;
+      tenantId?: string;
+    };
+    return {
+      userId: payload.sub ?? '',
+      branchId: payload.branchId ?? '',
+      tenantId: payload.tenantId ?? '',
+    };
+  } catch {
+    return { userId: '', branchId: '', tenantId: '' };
+  }
+}
+
 export default function WarningsPage() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [reasonType, setReasonType] = useState('');
   const [reasonText, setReasonText] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const { branchId } = getTokenPayload();
+    if (!branchId) return;
+
+    apiRequest(`/users/by-branch/${branchId}`, {}, token)
+      .then((res: any) => {
+        const list: Array<{ id: string; name: string; role: string }> = res?.data ?? res ?? [];
+        setStudents(list.filter((u) => u.role === 'student'));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingStudents(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,20 +58,23 @@ export default function WarningsPage() {
     setError('');
 
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+    const { userId, tenantId } = getTokenPayload();
 
     try {
       await apiRequest('/warnings', {
         method: 'POST',
         body: JSON.stringify({
-          tenantId: user.tenantId ?? '',
+          tenantId,
           studentId: selectedStudent,
-          givenBy: user.id ?? '',
+          givenBy: userId,
           reasonType,
           reasonText,
         }),
       }, token);
       setSubmitted(true);
+      setSelectedStudent('');
+      setReasonType('');
+      setReasonText('');
       setTimeout(() => setSubmitted(false), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
@@ -54,10 +93,16 @@ export default function WarningsPage() {
             onChange={(e) => setSelectedStudent(e.target.value)}
             className="w-full border rounded-lg px-3 py-2"
             required
+            disabled={loadingStudents}
           >
-            <option value="">Tanlang...</option>
-            <option value="s1">Sardor Rahimov</option>
-            <option value="s2">Malika Yusupova</option>
+            <option value="">
+              {loadingStudents ? 'Yuklanmoqda...' : "O'quvchi tanlang..."}
+            </option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
 
