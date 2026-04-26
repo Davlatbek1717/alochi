@@ -14,6 +14,9 @@ const mockPrisma = {
     findUnique: jest.fn(),
     upsert: jest.fn(),
   },
+  branch: {
+    findMany: jest.fn(),
+  },
 };
 
 describe('PaymentsService', () => {
@@ -122,6 +125,53 @@ describe('PaymentsService', () => {
         create: { tenantId: 't1', paymentStartDay: 1, paymentEndDay: 25, updatedBy: 'admin1' },
         update: { paymentStartDay: 1, paymentEndDay: 25, updatedBy: 'admin1' },
       });
+    });
+  });
+
+  describe('getBranchSummary', () => {
+    it('returns per-branch totals for paid, unpaid, and blocked students', async () => {
+      mockPrisma.branch.findMany.mockResolvedValue([
+        { id: 'b1', name: 'Toshkent' },
+        { id: 'b2', name: 'Samarqand' },
+      ]);
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 's1', branchId: 'b1', status: 'active' },
+        { id: 's2', branchId: 'b1', status: 'blocked_payment' },
+        { id: 's3', branchId: 'b1', status: 'active' },
+        { id: 's4', branchId: 'b2', status: 'active' },
+      ]);
+      mockPrisma.payment.findMany.mockResolvedValue([
+        { studentId: 's1', amount: 500000 },
+        { studentId: 's4', amount: 600000 },
+      ]);
+
+      const result = await service.getBranchSummary('t1', '2026-04');
+
+      expect(result).toHaveLength(2);
+
+      const b1 = result.find((r) => r.branchId === 'b1')!;
+      expect(b1.branchName).toBe('Toshkent');
+      expect(b1.total).toBe(3);
+      expect(b1.paid).toBe(1);
+      expect(b1.blocked).toBe(1);
+      expect(b1.unpaid).toBe(1);
+      expect(b1.totalCollected).toBe(500000);
+
+      const b2 = result.find((r) => r.branchId === 'b2')!;
+      expect(b2.paid).toBe(1);
+      expect(b2.totalCollected).toBe(600000);
+    });
+
+    it('returns zero counts for a branch with no students', async () => {
+      mockPrisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Empty Branch' }]);
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      mockPrisma.payment.findMany.mockResolvedValue([]);
+
+      const result = await service.getBranchSummary('t1', '2026-04');
+
+      expect(result[0].total).toBe(0);
+      expect(result[0].paid).toBe(0);
+      expect(result[0].totalCollected).toBe(0);
     });
   });
 });

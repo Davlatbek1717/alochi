@@ -25,13 +25,22 @@ export class PaymentsController {
   }
 
   @Get('branch/:branchId')
-  @Roles(UserRole.filadmin, UserRole.manager)
+  @Roles(UserRole.filadmin, UserRole.manager, UserRole.superadmin)
   getBranchStatus(
     @Param('branchId') branchId: string,
     @Query('month') month: string,
     @Request() req: any,
   ) {
     return this.payments.getBranchPaymentStatus(branchId, req.user.tenantId, month);
+  }
+
+  @Get('summary')
+  @Roles(UserRole.superadmin)
+  getBranchSummary(
+    @Query('month') month: string,
+    @Request() req: any,
+  ) {
+    return this.payments.getBranchSummary(req.user.tenantId, month);
   }
 
   @Get('student/:studentId')

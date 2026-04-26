@@ -1,6 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+interface BranchPaymentSummary {
+  branchId: string;
+  branchName: string;
+  total: number;
+  paid: number;
+  unpaid: number;
+  blocked: number;
+  totalCollected: number;
+}
+
 interface MarkPaidDto {
   tenantId: string;
   studentId: string;
@@ -68,6 +78,48 @@ export class PaymentsService {
       where: { tenantId },
       create: { tenantId, paymentStartDay: startDay, paymentEndDay: endDay, updatedBy },
       update: { paymentStartDay: startDay, paymentEndDay: endDay, updatedBy },
+    });
+  }
+
+  async getBranchSummary(tenantId: string, month: string): Promise<BranchPaymentSummary[]> {
+    const branches = await this.prisma.branch.findMany({
+      where: { tenantId },
+      select: { id: true, name: true },
+    });
+
+    const students = await this.prisma.user.findMany({
+      where: { tenantId, role: 'student', status: { not: 'inactive' } },
+      select: { id: true, branchId: true, status: true },
+    });
+
+    const payments = await this.prisma.payment.findMany({
+      where: { tenantId, month },
+      select: { studentId: true, amount: true },
+    });
+
+    const paymentMap = new Map(payments.map((p) => [p.studentId, p.amount]));
+
+    return branches.map((branch) => {
+      const branchStudents = students.filter((s) => s.branchId === branch.id);
+      const paidStudents = branchStudents.filter((s) => paymentMap.has(s.id));
+      const blockedStudents = branchStudents.filter((s) => s.status === 'blocked_payment');
+      const unpaidStudents = branchStudents.filter(
+        (s) => !paymentMap.has(s.id) && s.status !== 'blocked_payment',
+      );
+      const totalCollected = paidStudents.reduce(
+        (sum, s) => sum + (paymentMap.get(s.id) ?? 0),
+        0,
+      );
+
+      return {
+        branchId: branch.id,
+        branchName: branch.name,
+        total: branchStudents.length,
+        paid: paidStudents.length,
+        unpaid: unpaidStudents.length,
+        blocked: blockedStudents.length,
+        totalCollected,
+      };
     });
   }
 }
