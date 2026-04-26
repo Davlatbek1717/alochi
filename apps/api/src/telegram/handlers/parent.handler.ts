@@ -9,7 +9,7 @@ export class ParentHandler {
   async handleStatus(ctx: Context, telegramId: bigint): Promise<void> {
     try {
       const child = await this.prisma.user.findFirst({
-        where: { parentTelegramId: telegramId.toString() } as never,
+        where: { parentTelegramId: telegramId.toString() },
       });
       if (!child) {
         await ctx.reply("Hisob bog'lanmagan. /start orqali boshlang.");
@@ -40,7 +40,7 @@ export class ParentHandler {
   async handleProgress(ctx: Context, telegramId: bigint): Promise<void> {
     try {
       const child = await this.prisma.user.findFirst({
-        where: { parentTelegramId: telegramId.toString() } as never,
+        where: { parentTelegramId: telegramId.toString() },
       });
       if (!child) {
         await ctx.reply("Hisob bog'lanmagan. /start orqali boshlang.");
@@ -77,7 +77,7 @@ export class ParentHandler {
   async handlePayment(ctx: Context, telegramId: bigint): Promise<void> {
     try {
       const child = await this.prisma.user.findFirst({
-        where: { parentTelegramId: telegramId.toString() } as never,
+        where: { parentTelegramId: telegramId.toString() },
       });
       if (!child) {
         await ctx.reply("Hisob bog'lanmagan. /start orqali boshlang.");

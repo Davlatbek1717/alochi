@@ -67,9 +67,10 @@ model User {
   login        String
   passwordHash String     @map("password_hash")
   status       UserStatus @default(active)
-  telegramId   BigInt?    @map("telegram_id")
-  birthDate    DateTime?  @map("birth_date")
-  createdAt    DateTime   @default(now()) @map("created_at")
+  telegramId       BigInt?    @map("telegram_id")
+  birthDate        DateTime?  @map("birth_date")
+  parentTelegramId String?    @map("parent_telegram_id")
+  createdAt        DateTime   @default(now()) @map("created_at")
 
   tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch          Branch?               @relation(fields: [branchId], references: [id], onDelete: SetNull)
