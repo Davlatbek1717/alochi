@@ -29,6 +29,13 @@ const NAV_CARDS = [
     description: 'Xodimlarga ball berish',
     bg: 'bg-purple-50',
   },
+  {
+    href: '/filadmin/devices',
+    icon: '📱',
+    title: 'Planshetlar',
+    description: 'Kiosk qurilmalarni boshqarish',
+    bg: 'bg-pink-50',
+  },
 ];
 
 export default function FiladminDashboard() {
