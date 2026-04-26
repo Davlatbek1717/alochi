@@ -10,10 +10,17 @@ const STATUS_COLORS: Record<Status, string> = {
   red: 'bg-red-100 text-red-700',
 };
 
+const STATUS_UZ: Record<Status, string> = {
+  green: 'yashil',
+  yellow: 'sariq',
+  red: 'qizil',
+};
+
 type LocalStudent = {
   id: string;
   name: string;
   status: Status;
+  note: string;
   attendance: boolean;
 };
 
@@ -57,7 +64,7 @@ export default function MentorGroupPage() {
       if (!groupId) throw new Error('Guruh topilmadi');
       const res = await apiRequest<ApiStudent[]>(`/users/group/${groupId}`, {}, token);
       setStudents(
-        res.data.map((s) => ({ ...s, status: 'green' as Status, attendance: true })),
+        res.data.map((s) => ({ ...s, status: 'green' as Status, note: '', attendance: true })),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
@@ -71,7 +78,11 @@ export default function MentorGroupPage() {
   }, [loadStudents]);
 
   function updateStatus(id: string, status: Status) {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status, note: status === 'green' ? '' : s.note } : s)));
+  }
+
+  function updateNote(id: string, note: string) {
+    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, note } : s)));
   }
 
   function toggleAttendance(id: string) {
@@ -86,13 +97,15 @@ export default function MentorGroupPage() {
       tenantId?: string;
     };
 
+    const today = new Date().toISOString().split('T')[0];
+
     const records: AttendanceRecord[] = students.map((s) => ({
       studentId: s.id,
       status: s.attendance ? 'present' : 'absent',
       markedBy: user.id ?? '',
       tenantId: user.tenantId ?? '',
       branchId: user.tenantId ?? '',
-      date: new Date().toISOString().split('T')[0],
+      date: today,
     }));
 
     try {
@@ -100,6 +113,21 @@ export default function MentorGroupPage() {
         method: 'POST',
         body: JSON.stringify({ records }),
       }, token);
+
+      await Promise.all(
+        students.map((s) =>
+          apiRequest('/status', {
+            method: 'POST',
+            body: JSON.stringify({
+              studentId: s.id,
+              date: today,
+              personalStatus: STATUS_UZ[s.status],
+              personalNote: s.note || undefined,
+            }),
+          }, token),
+        ),
+      );
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
@@ -156,37 +184,49 @@ export default function MentorGroupPage() {
 
       <div className="space-y-2">
         {students.map((student) => (
-          <div key={student.id} className="bg-white rounded-xl p-4 shadow-sm flex items-center gap-4">
-            <button
-              onClick={() => toggleAttendance(student.id)}
-              className={`w-10 h-10 rounded-full border-2 font-bold text-sm ${
-                student.attendance
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-gray-300 text-gray-400'
-              }`}
-            >
-              {student.attendance ? '✓' : '✗'}
-            </button>
+          <div key={student.id} className="bg-white rounded-xl p-4 shadow-sm space-y-2">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => toggleAttendance(student.id)}
+                className={`w-10 h-10 rounded-full border-2 font-bold text-sm shrink-0 ${
+                  student.attendance
+                    ? 'bg-green-500 border-green-500 text-white'
+                    : 'border-gray-300 text-gray-400'
+                }`}
+              >
+                {student.attendance ? '✓' : '✗'}
+              </button>
 
-            <div className="flex-1">
-              <p className="font-medium">{student.name}</p>
+              <div className="flex-1">
+                <p className="font-medium">{student.name}</p>
+              </div>
+
+              <div className="flex gap-1">
+                {(['green', 'yellow', 'red'] as Status[]).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => updateStatus(student.id, s)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                      student.status === s
+                        ? STATUS_COLORS[s] + ' ring-2 ring-offset-1'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {s === 'green' ? '🟢' : s === 'yellow' ? '🟡' : '🔴'}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-1">
-              {(['green', 'yellow', 'red'] as Status[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => updateStatus(student.id, s)}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
-                    student.status === s
-                      ? STATUS_COLORS[s] + ' ring-2 ring-offset-1'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {s === 'green' ? '🟢' : s === 'yellow' ? '🟡' : '🔴'}
-                </button>
-              ))}
-            </div>
+            {student.status !== 'green' && (
+              <input
+                type="text"
+                placeholder="Izoh (ixtiyoriy)..."
+                value={student.note}
+                onChange={(e) => updateNote(student.id, e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            )}
           </div>
         ))}
       </div>
