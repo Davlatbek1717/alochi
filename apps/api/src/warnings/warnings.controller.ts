@@ -25,6 +25,12 @@ export class WarningsController {
     return this.warnings.cancel(id, req.user.userId, reason);
   }
 
+  @Get('my')
+  @Roles(UserRole.student)
+  getMyWarnings(@Request() req: any) {
+    return this.warnings.findByStudent(req.user.userId);
+  }
+
   @Get('student/:studentId')
   @Roles(UserRole.filadmin, UserRole.manager, UserRole.mentor)
   getByStudent(@Param('studentId') studentId: string) {

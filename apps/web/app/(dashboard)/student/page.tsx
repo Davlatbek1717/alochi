@@ -40,6 +40,14 @@ type StatusData = {
   criticalStatus?: string;
 };
 
+type Warning = {
+  id: string;
+  reasonType: string;
+  reasonText: string;
+  isCancelled: boolean;
+  createdAt: string;
+};
+
 const STATUS_COLOR: Record<string, string> = {
   yashil: '🟢',
   sariq: '🟡',
@@ -56,19 +64,21 @@ export default function StudentDashboard() {
   const [lessonProgress, setLessonProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
+  const [warnings, setWarnings] = useState<Warning[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
           apiRequest<unknown[]>('/progress/my', {}, token),
           apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
+          apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -77,6 +87,7 @@ export default function StudentDashboard() {
         setHasShield(streakRes.data.hasShield);
         setLessonProgress(progressRes.data.length);
         setStatusData(statusRes.data);
+        setWarnings(warningsRes.data ?? []);
       } catch {
         // keep defaults on error
       } finally {
@@ -95,6 +106,8 @@ export default function StudentDashboard() {
     );
   }
 
+  const activeWarnings = warnings.filter((w) => !w.isCancelled);
+
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-20">
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
@@ -109,6 +122,21 @@ export default function StudentDashboard() {
           <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
         </div>
       </div>
+
+      {activeWarnings.length > 0 && (
+        <div className={`rounded-xl p-3 flex items-start gap-3 ${activeWarnings.length >= 3 ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
+          <span className="text-xl shrink-0">{activeWarnings.length >= 3 ? '🔴' : '⚠️'}</span>
+          <div className="flex-1">
+            <p className={`font-semibold text-sm ${activeWarnings.length >= 3 ? 'text-red-700' : 'text-yellow-700'}`}>
+              {activeWarnings.length >= 3 ? 'Hisobingiz bloklangan' : `${activeWarnings.length} ta ogohlantirish`}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {activeWarnings[0].reasonText}
+              {activeWarnings.length > 1 && ` va yana ${activeWarnings.length - 1} ta`}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         {[
