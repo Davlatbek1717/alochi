@@ -53,4 +53,46 @@ export class CronFaceService {
       this.logger.warn(`Stale cache: ${device.deviceName} (${device.branch.name})`);
     }
   }
+
+  @Cron('0 9 * * 1', { name: 'face_enrollment_reminder' })
+  async sendEnrollmentReminder() {
+    this.logger.log('Face ID: enrollment reminder boshlanmoqda...');
+
+    const branches = await this.prisma.branch.findMany({
+      include: {
+        users: {
+          where: {
+            status: 'active',
+            role: { in: ['mentor', 'manager', 'filadmin', 'tester'] },
+          },
+          select: {
+            id: true,
+            name: true,
+            faceEmbeddings: {
+              where: { isActive: true },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    let total = 0;
+    for (const branch of branches) {
+      const unenrolled = branch.users.filter(
+        (u: { id: string; name: string; faceEmbeddings: { id: string }[] }) => u.faceEmbeddings.length === 0,
+      );
+      if (unenrolled.length === 0) continue;
+
+      total += unenrolled.length;
+      this.logger.warn(
+        `Branch ${branch.name}: ${unenrolled.length} ta xodim yuz ro'yxatidan o'tmagan: ` +
+          unenrolled.map((u: { name: string }) => u.name).join(', '),
+      );
+    }
+
+    if (total > 0) {
+      this.logger.log(`Enrollment reminder: jami ${total} ta xodim`);
+    }
+  }
 }
