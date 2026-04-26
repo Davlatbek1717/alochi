@@ -23,6 +23,7 @@ const NAV_TABS: Record<string, { href: string; icon: string; label: string; acti
   manager: [
     { href: '/manager',             icon: '🏠', label: 'Bosh'        },
     { href: '/manager/students',    icon: '👥', label: "O'quvchilar" },
+    { href: '/manager/payments',    icon: '💰', label: "To'lovlar"   },
     { href: '/manager/delegations', icon: '📋', label: 'Delegatsiya' },
   ],
   filadmin: [
