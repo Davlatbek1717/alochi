@@ -60,13 +60,21 @@ export class StatusService {
   }
 
   async getRedStudents(tenantId: string) {
+    return this.getStudentsByColor(tenantId, 'qizil');
+  }
+
+  async getYellowStudents(tenantId: string) {
+    return this.getStudentsByColor(tenantId, 'sariq');
+  }
+
+  private getStudentsByColor(tenantId: string, color: string) {
     return this.prisma.studentStatus.findMany({
       where: {
         student: { tenantId },
         OR: [
-          { englishStatus: 'qizil' },
-          { personalStatus: 'qizil' },
-          { criticalStatus: 'qizil' },
+          { englishStatus: color },
+          { personalStatus: color },
+          { criticalStatus: color },
         ],
       },
       orderBy: { date: 'desc' },

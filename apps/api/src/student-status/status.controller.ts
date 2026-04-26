@@ -52,6 +52,12 @@ export class StatusController {
     return this.statusService.getRedStudents(req.user.tenantId);
   }
 
+  @Get('yellow-students')
+  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
+  getYellowStudents(@Request() req: AuthRequest) {
+    return this.statusService.getYellowStudents(req.user.tenantId);
+  }
+
   @Get('history/:studentId')
   @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
   getHistory(@Param('studentId') studentId: string) {

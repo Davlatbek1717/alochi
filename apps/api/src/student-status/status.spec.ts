@@ -118,11 +118,11 @@ describe('StatusService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             student: { tenantId: 't1' },
-            OR: expect.arrayContaining([
+            OR: [
               { englishStatus: 'qizil' },
               { personalStatus: 'qizil' },
               { criticalStatus: 'qizil' },
-            ]),
+            ],
           }),
           distinct: ['studentId'],
         }),
@@ -134,6 +134,46 @@ describe('StatusService', () => {
     it('returns empty array when no students have qizil status', async () => {
       mockPrisma.studentStatus.findMany.mockResolvedValue([]);
       const result = await service.getRedStudents('t1');
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getYellowStudents', () => {
+    it('returns students whose latest record has at least one sariq status', async () => {
+      const yellowStudents = [
+        {
+          id: 's2',
+          studentId: 'u2',
+          englishStatus: 'sariq',
+          personalStatus: 'yashil',
+          criticalStatus: 'yashil',
+          student: { id: 'u2', name: 'Zulfiya Karimova' },
+        },
+      ];
+      mockPrisma.studentStatus.findMany.mockResolvedValue(yellowStudents);
+
+      const result = await service.getYellowStudents('t1');
+
+      expect(mockPrisma.studentStatus.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            student: { tenantId: 't1' },
+            OR: [
+              { englishStatus: 'sariq' },
+              { personalStatus: 'sariq' },
+              { criticalStatus: 'sariq' },
+            ],
+          }),
+          distinct: ['studentId'],
+        }),
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].student.name).toBe('Zulfiya Karimova');
+    });
+
+    it('returns empty array when no students have sariq status', async () => {
+      mockPrisma.studentStatus.findMany.mockResolvedValue([]);
+      const result = await service.getYellowStudents('t1');
       expect(result).toHaveLength(0);
     });
   });
