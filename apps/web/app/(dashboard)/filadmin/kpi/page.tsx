@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 
@@ -29,11 +29,25 @@ export default function FiladminKpiPage() {
 
   const [todayTotal, setTodayTotal] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [statsError, setStatsError] = useState(false);
+
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
-    const branchId: string = user.branchId ?? '';
+    let branchId = '';
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
+      branchId = user.branchId ?? '';
+    } catch {
+      // malformed JSON — branchId stays empty, users list will show error
+    }
 
     async function load() {
       const [usersRes, todayRes] = await Promise.allSettled([
@@ -44,12 +58,15 @@ export default function FiladminKpiPage() {
       if (usersRes.status === 'fulfilled') {
         setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
       } else {
+        console.error('[KPI] Failed to load branch users:', usersRes.reason);
         setUsersError('Xodimlar yuklanmadi');
       }
       setLoadingUsers(false);
 
       if (todayRes.status === 'fulfilled') {
         setTodayTotal(todayRes.value.data ?? 0);
+      } else {
+        setStatsError(true);
       }
       setLoadingStats(false);
     }
@@ -74,7 +91,7 @@ export default function FiladminKpiPage() {
       setSelectedUserId('');
       setReason('');
       setTodayTotal((prev) => prev + score);
-      setTimeout(() => setSuccess(false), 3000);
+      successTimerRef.current = setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
@@ -96,6 +113,8 @@ export default function FiladminKpiPage() {
         <p className="text-sm font-medium text-gray-500 mb-1">Bugun berilgan jami</p>
         {loadingStats ? (
           <div className="h-8 w-24 bg-gray-100 rounded animate-pulse" />
+        ) : statsError ? (
+          <p className="text-3xl font-bold text-gray-400">—</p>
         ) : (
           <p className="text-3xl font-bold text-indigo-600">{todayTotal} ball</p>
         )}
@@ -165,9 +184,12 @@ export default function FiladminKpiPage() {
               min={1}
               max={50}
               value={score}
-              onChange={(e) =>
-                setScore(Math.min(50, Math.max(1, Number(e.target.value))))
-              }
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (Number.isFinite(val) && val > 0) {
+                  setScore(Math.min(50, Math.max(1, val)));
+                }
+              }}
               className="w-20 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             />
             <span className="text-sm text-gray-400">/ 50 maksimal</span>
