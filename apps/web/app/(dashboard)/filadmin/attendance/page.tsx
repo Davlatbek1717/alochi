@@ -32,6 +32,58 @@ function formatTime(iso: string | null): string {
   }
 }
 
+function lateMinutes(loginTime: string | null): number {
+  if (!loginTime) return 0;
+  const login = new Date(loginTime);
+  const cutoff = new Date(login);
+  cutoff.setHours(9, 0, 0, 0);
+  return Math.max(0, Math.round((login.getTime() - cutoff.getTime()) / 60000));
+}
+
+function methodBadge(method: string | null) {
+  if (method === 'face_auto') {
+    return (
+      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
+        👁 Yuz
+      </span>
+    );
+  }
+  if (method === 'manual') {
+    return (
+      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full font-medium">
+        🔑 Qo&apos;lda
+      </span>
+    );
+  }
+  if (method === 'admin') {
+    return (
+      <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">
+        👤 Admin
+      </span>
+    );
+  }
+  return <span className="text-gray-400">—</span>;
+}
+
+function exportCsv(records: StaffRecord[], date: string) {
+  const header = ['Xodim', 'Kirish vaqti', 'Usul', 'Kechikish', 'Tasdiqlangan'];
+  const rows = records.map((r) => [
+    r.user.name,
+    formatTime(r.loginTime),
+    r.recognitionMethod ?? '—',
+    r.isLate ? `+${lateMinutes(r.loginTime)} daq` : "O'z vaqtida",
+    r.confirmedAt ? formatTime(r.confirmedAt) : "Yo'q",
+  ]);
+  const csv = [header, ...rows].map((row) => row.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `attendance_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 const TODAY = new Date().toISOString().split('T')[0];
 
 export default function FiladminAttendancePage() {
@@ -84,7 +136,7 @@ export default function FiladminAttendancePage() {
         ),
       );
     } catch {
-      // User can retry by clicking the button again
+      // user can retry
     } finally {
       setConfirming(null);
     }
@@ -105,22 +157,29 @@ export default function FiladminAttendancePage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-gray-900">Xodimlar Davomati</h1>
-        <input
-          type="date"
-          value={date}
-          max={TODAY}
-          onChange={(e) => setDate(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+        <div className="flex items-center gap-3">
+          <input
+            type="date"
+            value={date}
+            max={TODAY}
+            onChange={(e) => setDate(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {records.length > 0 && (
+            <button
+              onClick={() => exportCsv(records, date)}
+              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              📥 Eksport
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
         <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
           <span>{error}</span>
-          <button
-            onClick={() => loadRecords(date)}
-            className="ml-4 underline text-sm font-medium"
-          >
+          <button onClick={() => loadRecords(date)} className="ml-4 underline text-sm font-medium">
             Qayta urinish
           </button>
         </div>
@@ -131,15 +190,13 @@ export default function FiladminAttendancePage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['Xodim', 'Kirish vaqti', 'Usul', 'Kechikdi', 'Tasdiqlangan'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                    {h}
-                  </th>
+                {['Xodim', 'Kirish', 'Usul', 'Kechikish', 'Tasdiqlangan'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {[1, 2, 3, 4, 5].map((i) => (
+              {[1, 2, 3, 4].map((i) => (
                 <tr key={i} className="border-t border-gray-100">
                   {[1, 2, 3, 4, 5].map((j) => (
                     <td key={j} className="px-4 py-3">
@@ -161,10 +218,8 @@ export default function FiladminAttendancePage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['Xodim', 'Kirish vaqti', 'Usul', 'Kechikdi', 'Tasdiqlangan'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">
-                    {h}
-                  </th>
+                {['Xodim', 'Kirish', 'Usul', 'Kechikish', 'Tasdiqlangan'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -173,35 +228,21 @@ export default function FiladminAttendancePage() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{r.user.name}</td>
                   <td className="px-4 py-3 text-gray-600">{formatTime(r.loginTime)}</td>
+                  <td className="px-4 py-3">{methodBadge(r.recognitionMethod)}</td>
                   <td className="px-4 py-3">
-                    {r.recognitionMethod === 'face_id' ? (
-                      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
-                        📷 Face ID
-                      </span>
-                    ) : r.recognitionMethod === 'manual' ? (
-                      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full font-medium">
-                        ✍️ Qo&apos;lda
-                      </span>
-                    ) : (
+                    {!r.loginTime ? (
                       <span className="text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {r.loginTime && r.isLate ? (
-                      <span className="text-red-600 font-medium">🔴 Kech</span>
-                    ) : r.loginTime ? (
-                      <span className="text-green-600 font-medium">🟢 O&apos;z vaqtida</span>
+                    ) : r.isLate ? (
+                      <span className="text-red-600 font-medium">⏰ +{lateMinutes(r.loginTime)} daq</span>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-green-600 font-medium">✅ O&apos;z vaqtida</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {!r.loginTime ? (
                       <span className="text-gray-400">Kelmagan</span>
                     ) : r.confirmedAt ? (
-                      <span className="text-green-600 font-medium">
-                        ✓ {formatTime(r.confirmedAt)}
-                      </span>
+                      <span className="text-green-600 font-medium">✓ {formatTime(r.confirmedAt)}</span>
                     ) : (
                       <button
                         onClick={() => confirmStaff(r.userId)}
