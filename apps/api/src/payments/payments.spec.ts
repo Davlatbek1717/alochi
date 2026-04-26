@@ -173,5 +173,42 @@ describe('PaymentsService', () => {
       expect(result[0].paid).toBe(0);
       expect(result[0].totalCollected).toBe(0);
     });
+
+    it('counts a blocked_payment student who has paid as paid, not blocked', async () => {
+      mockPrisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Test' }]);
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 's1', branchId: 'b1', status: 'blocked_payment' },
+        { id: 's2', branchId: 'b1', status: 'active' },
+      ]);
+      // s1 has paid even though still blocked_payment status
+      mockPrisma.payment.findMany.mockResolvedValue([{ studentId: 's1', amount: 300000 }]);
+
+      const result = await service.getBranchSummary('t1', '2026-04');
+
+      const b1 = result[0];
+      expect(b1.total).toBe(2);
+      expect(b1.paid).toBe(1);   // s1 paid
+      expect(b1.blocked).toBe(0); // s1 should NOT be in blocked (paid takes precedence)
+      expect(b1.unpaid).toBe(1);  // s2 is unpaid
+      expect(b1.paid + b1.unpaid + b1.blocked).toBe(b1.total);
+    });
+
+    it('passes tenantId to all three Prisma queries', async () => {
+      mockPrisma.branch.findMany.mockResolvedValue([]);
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      mockPrisma.payment.findMany.mockResolvedValue([]);
+
+      await service.getBranchSummary('tenant-xyz', '2026-04');
+
+      expect(mockPrisma.branch.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+      );
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+      );
+      expect(mockPrisma.payment.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+      );
+    });
   });
 });

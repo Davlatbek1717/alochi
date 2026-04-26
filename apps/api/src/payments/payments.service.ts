@@ -102,7 +102,9 @@ export class PaymentsService {
     return branches.map((branch) => {
       const branchStudents = students.filter((s) => s.branchId === branch.id);
       const paidStudents = branchStudents.filter((s) => paymentMap.has(s.id));
-      const blockedStudents = branchStudents.filter((s) => s.status === 'blocked_payment');
+      const blockedStudents = branchStudents.filter(
+        (s) => !paymentMap.has(s.id) && s.status === 'blocked_payment',
+      );
       const unpaidStudents = branchStudents.filter(
         (s) => !paymentMap.has(s.id) && s.status !== 'blocked_payment',
       );
