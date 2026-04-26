@@ -10,6 +10,7 @@ interface Lesson {
   title: string;
   orderNumber: number;
   nRepetitions: number;
+  maxNOverride: number;
   type: string;
 }
 
@@ -50,6 +51,11 @@ export default function StudentProfilePage() {
   const { id: studentId } = useParams<{ id: string }>();
   const router = useRouter();
 
+  type StatusRecord = {
+    id: string; date: string; englishStatus: string; personalStatus: string; criticalStatus: string;
+    personalNote?: string; givenBy?: string;
+  };
+
   const [studentName, setStudentName] = useState('');
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [status, setStatus] = useState<StudentStatus | null>(null);
@@ -58,6 +64,9 @@ export default function StudentProfilePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<StatusRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -88,6 +97,17 @@ export default function StudentProfilePage() {
 
     load();
   }, [studentId]);
+
+  async function loadHistory() {
+    if (historyLoading || history.length > 0) { setShowHistory(true); return; }
+    setHistoryLoading(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const res = await apiRequest<StatusRecord[]>(`/status/history/${studentId}`, {}, token);
+      setHistory(res.data);
+    } catch { /* ignore */ }
+    finally { setHistoryLoading(false); setShowHistory(true); }
+  }
 
   function showToast(msg: string) {
     setToast(msg);
@@ -206,19 +226,19 @@ export default function StudentProfilePage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{lesson.title}</p>
                     <p className="text-xs text-gray-400">
-                      Standart: {lesson.nRepetitions} marta &bull; {lesson.type}
+                      Standart: {lesson.nRepetitions} marta &bull; Maks: {lesson.maxNOverride} &bull; {lesson.type}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
                       min={1}
-                      max={20}
+                      max={lesson.maxNOverride}
                       value={overrides[lesson.id] ?? lesson.nRepetitions}
                       onChange={(e) =>
                         setOverrides((prev) => ({
                           ...prev,
-                          [lesson.id]: Math.min(20, Math.max(1, Number(e.target.value))),
+                          [lesson.id]: Math.min(lesson.maxNOverride, Math.max(1, Number(e.target.value))),
                         }))
                       }
                       className="w-16 border border-gray-300 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -234,6 +254,52 @@ export default function StudentProfilePage() {
                 </div>
               ))}
           </div>
+        )}
+      </div>
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <button
+          onClick={() => showHistory ? setShowHistory(false) : loadHistory()}
+          className="w-full px-5 py-4 flex items-center justify-between text-left border-b border-gray-100"
+        >
+          <h2 className="font-semibold">Status tarixi</h2>
+          <span className="text-gray-400 text-sm">{showHistory ? '▲' : '▼'}</span>
+        </button>
+
+        {showHistory && (
+          historyLoading ? (
+            <p className="p-5 text-sm text-gray-400">Yuklanmoqda...</p>
+          ) : history.length === 0 ? (
+            <p className="p-5 text-sm text-gray-400">Tarix yo&apos;q</p>
+          ) : (
+            <div className="divide-y">
+              {history.map((h) => (
+                <div key={h.id} className="px-5 py-3 flex flex-wrap gap-x-4 gap-y-1 items-start">
+                  <span className="text-xs text-gray-400 w-24 shrink-0">
+                    {new Date(h.date).toLocaleDateString('uz-UZ')}
+                  </span>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { label: 'ING', val: h.englishStatus },
+                      { label: 'SHAXS', val: h.personalStatus },
+                      { label: 'TANQ', val: h.criticalStatus },
+                    ].map(({ label, val }) => (
+                      <span key={label} className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        val === 'yashil' ? 'bg-green-100 text-green-700' :
+                        val === 'sariq'  ? 'bg-yellow-100 text-yellow-700' :
+                        val === 'qizil'  ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>
+                        {label}: {val ?? '—'}
+                      </span>
+                    ))}
+                  </div>
+                  {h.personalNote && (
+                    <p className="text-xs text-gray-500 w-full ml-24">{h.personalNote}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
