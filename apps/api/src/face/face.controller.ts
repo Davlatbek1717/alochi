@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { isAxiosError } from 'axios';
 import * as bcrypt from 'bcrypt';
 import { firstValueFrom } from 'rxjs';
 import { CacheService } from './cache.service';
@@ -65,10 +66,14 @@ export class FaceController {
         }),
       );
       return data;
-    } catch (err: any) {
-      const status = err?.response?.status ?? HttpStatus.BAD_GATEWAY;
-      const message = err?.response?.data?.detail ?? 'AI servisi bilan aloqa yo\'q';
-      throw new HttpException(message, status);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        throw new HttpException(
+          err.response?.data?.detail ?? "AI servisi bilan aloqa yo'q",
+          err.response?.status ?? HttpStatus.BAD_GATEWAY,
+        );
+      }
+      throw new HttpException("AI servisi bilan aloqa yo'q", HttpStatus.BAD_GATEWAY);
     }
   }
 
@@ -95,10 +100,14 @@ export class FaceController {
         }),
       );
       return data;
-    } catch (err: any) {
-      const status = err?.response?.status ?? HttpStatus.BAD_GATEWAY;
-      const message = err?.response?.data?.detail ?? 'AI servisi bilan aloqa yo\'q';
-      throw new HttpException(message, status);
+    } catch (err: unknown) {
+      if (isAxiosError(err)) {
+        throw new HttpException(
+          err.response?.data?.detail ?? "AI servisi bilan aloqa yo'q",
+          err.response?.status ?? HttpStatus.BAD_GATEWAY,
+        );
+      }
+      throw new HttpException("AI servisi bilan aloqa yo'q", HttpStatus.BAD_GATEWAY);
     }
   }
 
