@@ -30,7 +30,12 @@ export class AuthService {
     });
 
     if (!user) throw new UnauthorizedException('Login yoki parol noto\'g\'ri');
-    if (user.status !== UserStatus.active) throw new UnauthorizedException('Profilingiz bloklangan');
+    if (user.status === UserStatus.blocked_warning)
+      throw new UnauthorizedException('Profilingiz 3 ta ogohlantirish sababli bloklangan. Filadmin bilan bog\'laning.');
+    if (user.status === UserStatus.blocked_payment)
+      throw new UnauthorizedException('To\'lov amalga oshirilmagan. Iltimos, to\'lovni to\'lang.');
+    if (user.status !== UserStatus.active)
+      throw new UnauthorizedException('Profilingiz bloklangan');
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
     if (!match) throw new UnauthorizedException('Login yoki parol noto\'g\'ri');

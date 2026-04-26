@@ -14,6 +14,6 @@ export async function apiRequest<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
   const json = await res.json();
 
-  if (!res.ok) throw new Error(json.error ?? 'So\'rov bajarilmadi');
+  if (!res.ok) throw new Error(json.message ?? json.error ?? 'So\'rov bajarilmadi');
   return json;
 }
