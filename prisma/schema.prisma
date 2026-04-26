@@ -99,6 +99,7 @@ model User {
   feedEvents         SocialFeedEvent[]   @relation("FeedEventActor")
   tasksCreated       Task[]              @relation("TaskCreator")
   tasksAssigned      Task[]              @relation("TaskAssignee")
+  notifications      Notification[]
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -625,6 +626,22 @@ model ChatKeyword {
 
   @@unique([tenantId, word])
   @@map("chat_keywords")
+}
+
+model Notification {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String
+  isRead    Boolean  @default(false) @map("is_read")
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
 }
 
 model Task {

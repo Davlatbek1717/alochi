@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from './_components/BottomNav';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
+import { NotificationBell } from './_components/NotificationBell';
 
 interface UserInfo {
   id: string;
@@ -46,12 +47,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-sm font-semibold text-gray-900 truncate max-w-[70%]">
             {user?.name ?? '...'}
           </p>
-          <button
-            onClick={handleLogout}
-            className="text-xs text-red-500 hover:text-red-700 font-medium"
-          >
-            Chiqish
-          </button>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <button
+              onClick={handleLogout}
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
+            >
+              Chiqish
+            </button>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 pb-24">{children}</main>
         <BottomNav />
