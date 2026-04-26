@@ -14,6 +14,111 @@ interface BranchPaymentSummary {
   totalCollected: number;
 }
 
+interface PaymentSettings {
+  paymentStartDay: number;
+  paymentEndDay: number;
+}
+
+function PaymentSettingsPanel() {
+  const [settings, setSettings] = useState<PaymentSettings | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [startDay, setStartDay] = useState('');
+  const [endDay, setEndDay] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    apiRequest<PaymentSettings>('/payments/settings', {}, token)
+      .then((res) => {
+        setSettings(res.data);
+        setStartDay(String(res.data?.paymentStartDay ?? 1));
+        setEndDay(String(res.data?.paymentEndDay ?? 25));
+      })
+      .catch(() => {
+        setStartDay('1');
+        setEndDay('25');
+      });
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const res = await apiRequest<PaymentSettings>('/payments/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ startDay: Number(startDay), endDay: Number(endDay) }),
+      }, token);
+      setSettings(res.data);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold text-gray-700">To&apos;lov muddati sozlamalari</h2>
+        {!editing && (
+          <button onClick={() => setEditing(true)} className="text-sm text-indigo-600 hover:underline">
+            Tahrirlash
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="space-y-3">
+          <div className="flex gap-4">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Boshlanish kuni</label>
+              <input
+                type="number" min={1} max={28}
+                value={startDay}
+                onChange={(e) => setStartDay(e.target.value)}
+                className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Tugash kuni</label>
+              <input
+                type="number" min={1} max={31}
+                value={endDay}
+                onChange={(e) => setEndDay(e.target.value)}
+                className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </div>
+          </div>
+          {error && <p className="text-red-500 text-xs">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={save}
+              disabled={saving}
+              className="bg-indigo-600 text-white text-sm px-4 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {saving ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="text-sm text-gray-500 px-3 py-1.5 rounded-lg border"
+            >
+              Bekor
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-gray-600">
+          Har oyning <span className="font-medium text-indigo-700">{settings?.paymentStartDay ?? '—'}</span> dan{' '}
+          <span className="font-medium text-indigo-700">{settings?.paymentEndDay ?? '—'}</span> gacha
+        </p>
+      )}
+    </div>
+  );
+}
+
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -88,6 +193,8 @@ function SuperadminPaymentsContent() {
         <h1 className="text-2xl font-bold">To&apos;lov Hisoboti</h1>
         <MonthPicker value={month} onChange={handleMonthChange} />
       </div>
+
+      <PaymentSettingsPanel />
 
       {error ? (
         <div className="bg-white rounded-xl shadow-sm p-5">

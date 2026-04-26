@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -47,5 +47,25 @@ export class PaymentsController {
   @Roles(UserRole.filadmin, UserRole.manager)
   getStudentPayments(@Param('studentId') studentId: string) {
     return this.payments.getStudentPayments(studentId);
+  }
+
+  @Get('settings')
+  @Roles(UserRole.superadmin)
+  getSettings(@Request() req: any) {
+    return this.payments.getSettingForTenant(req.user.tenantId);
+  }
+
+  @Put('settings')
+  @Roles(UserRole.superadmin)
+  updateSettings(
+    @Body() body: { startDay: number; endDay: number },
+    @Request() req: any,
+  ) {
+    return this.payments.updateSettings(
+      req.user.tenantId,
+      body.startDay,
+      body.endDay,
+      req.user.userId,
+    );
   }
 }
