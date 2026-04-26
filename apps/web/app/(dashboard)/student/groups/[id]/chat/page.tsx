@@ -17,6 +17,15 @@ type Message = {
   reactions?: Reaction[];
 };
 
+type Challenge = {
+  id: string;
+  groupAId: string;
+  groupBId: string;
+  groupAXp: number;
+  groupBXp: number;
+  endDate: string;
+};
+
 const EMOJIS = ['👍', '❤️', '💪', '🔥', '🎉'];
 
 export default function GroupChatPage() {
@@ -29,6 +38,7 @@ export default function GroupChatPage() {
   const [input, setInput] = useState('');
   const [connected, setConnected] = useState(false);
   const [reactingTo, setReactingTo] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -36,8 +46,12 @@ export default function GroupChatPage() {
   const fetchMessages = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
     try {
-      const res = await apiRequest<Message[]>(`/social/groups/${groupId}/messages`, {}, token);
-      setMessages(res.data);
+      const [msgRes, chalRes] = await Promise.all([
+        apiRequest<Message[]>(`/social/groups/${groupId}/messages`, {}, token),
+        apiRequest<Challenge>(`/social/challenges/active/${groupId}`, {}, token).catch(() => null),
+      ]);
+      setMessages(msgRes.data);
+      if (chalRes) setChallenge(chalRes.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xabarlarni yuklashda xato');
     } finally {
@@ -71,6 +85,10 @@ export default function GroupChatPage() {
 
     socket.on('chat:error', (data: { message: string }) => {
       alert(data.message);
+    });
+
+    socket.on('challenge:update', (data: { groupAXp: number; groupBXp: number }) => {
+      setChallenge((prev) => prev ? { ...prev, ...data } : prev);
     });
 
     return () => {
@@ -153,8 +171,39 @@ export default function GroupChatPage() {
     );
   }
 
+  const isGroupA = challenge?.groupAId === groupId;
+  const myXp = challenge ? (isGroupA ? challenge.groupAXp : challenge.groupBXp) : 0;
+  const theirXp = challenge ? (isGroupA ? challenge.groupBXp : challenge.groupAXp) : 0;
+  const total = myXp + theirXp || 1;
+  const daysLeft = challenge
+    ? Math.max(0, Math.ceil((new Date(challenge.endDate).getTime() - Date.now()) / 86_400_000))
+    : 0;
+
   return (
     <div className="max-w-lg mx-auto flex flex-col h-[calc(100vh-80px)]">
+      {challenge && (
+        <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs font-semibold text-indigo-700">⚔️ Guruh musobaqasi</span>
+            <span className="text-xs text-indigo-500">{daysLeft} kun qoldi</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs mb-1">
+            <span className="font-medium text-indigo-700 w-16 text-right">{myXp} XP</span>
+            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all"
+                style={{ width: `${(myXp / total) * 100}%` }}
+              />
+            </div>
+            <span className="font-medium text-gray-500 w-16">{theirXp} XP</span>
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span className="text-indigo-600 font-medium">Sizning guruh</span>
+            <span>Raqib guruh</span>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`} />

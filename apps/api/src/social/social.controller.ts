@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, UseGuards, Request,
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -117,5 +117,23 @@ export class SocialController {
   @Roles(UserRole.student)
   getFeed(@Request() req: any) {
     return this.friends.getFeed(req.user.userId, req.user.tenantId);
+  }
+
+  @Post('keywords')
+  @Roles(UserRole.superadmin)
+  addKeyword(@Body() body: { word: string }, @Request() req: any) {
+    return this.chat.createKeyword(req.user.tenantId, body.word);
+  }
+
+  @Get('keywords')
+  @Roles(UserRole.superadmin)
+  getKeywords(@Request() req: any) {
+    return this.chat.getKeywords(req.user.tenantId);
+  }
+
+  @Delete('keywords/:id')
+  @Roles(UserRole.superadmin)
+  deleteKeyword(@Param('id') id: string, @Request() req: any) {
+    return this.chat.deleteKeyword(id, req.user.tenantId);
   }
 }

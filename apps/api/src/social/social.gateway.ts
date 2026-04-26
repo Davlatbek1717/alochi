@@ -113,4 +113,17 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`feed:${id}`).emit('feed:event', event);
     }
   }
+
+  emitDuelChallenge(toUserId: string, duelId: string, challengerName: string) {
+    this.server.to(`feed:${toUserId}`).emit('duel:challenged', { duelId, challengerName });
+  }
+
+  emitDuelResult(toUserId: string, result: { won: boolean; xpEarned: number; score: string }) {
+    this.server.to(`feed:${toUserId}`).emit('duel:result', result);
+  }
+
+  emitChallengeUpdate(groupAId: string, groupBId: string, update: { groupAXp: number; groupBXp: number }) {
+    this.server.to(`group:${groupAId}`).emit('challenge:update', update);
+    this.server.to(`group:${groupBId}`).emit('challenge:update', update);
+  }
 }

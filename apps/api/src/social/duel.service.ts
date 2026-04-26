@@ -1,7 +1,8 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { XpService } from '../gamification/xp.service';
 import { FeedEventService } from './feed-event.service';
+import { SocialGateway } from './social.gateway';
 
 @Injectable()
 export class DuelService {
@@ -9,6 +10,7 @@ export class DuelService {
     private prisma: PrismaService,
     private xp: XpService,
     private feedEvent: FeedEventService,
+    @Inject(forwardRef(() => SocialGateway)) private gateway: SocialGateway,
   ) {}
 
   async create(challengerId: string, challengedId: string, tenantId: string) {
@@ -58,7 +60,7 @@ export class DuelService {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    return this.prisma.duel.create({
+    const duel = await this.prisma.duel.create({
       data: {
         challengerId,
         challengedId,
@@ -68,6 +70,14 @@ export class DuelService {
         expiresAt,
       },
     });
+
+    const challenger = await this.prisma.user.findUnique({
+      where: { id: challengerId },
+      select: { name: true },
+    });
+    this.gateway.emitDuelChallenge(challengedId, duel.id, challenger?.name ?? '');
+
+    return duel;
   }
 
   async respond(duelId: string, userId: string, accept: boolean) {
@@ -148,6 +158,11 @@ export class DuelService {
             this.xp.award(loserId, 'DUEL_PARTICIPATE'),
           ]);
 
+          const score = `${freshDuel.challengerScore}-${freshDuel.challengedScore}`;
+
+          this.gateway.emitDuelResult(winnerId, { won: true, xpEarned: 50, score });
+          this.gateway.emitDuelResult(loserId, { won: false, xpEarned: 10, score });
+
           const winner = await this.prisma.user.findUnique({
             where: { id: winnerId },
             select: { tenantId: true },
@@ -156,7 +171,7 @@ export class DuelService {
             this.feedEvent
               .emit(winner.tenantId, winnerId, 'duel_won', {
                 opponentId: loserId,
-                score: `${freshDuel.challengerScore}-${freshDuel.challengedScore}`,
+                score,
               })
               .catch(() => {});
           }

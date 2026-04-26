@@ -68,6 +68,7 @@ model User {
   passwordHash String     @map("password_hash")
   status       UserStatus @default(active)
   telegramId   BigInt?    @map("telegram_id")
+  birthDate    DateTime?  @map("birth_date")
   createdAt    DateTime   @default(now()) @map("created_at")
 
   tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -612,4 +613,14 @@ model SocialFeedEvent {
 
   @@index([actorId, createdAt(sort: Desc)])
   @@map("social_feed_events")
+}
+
+model ChatKeyword {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  word      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([tenantId, word])
+  @@map("chat_keywords")
 }

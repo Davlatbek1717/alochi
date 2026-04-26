@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from './_components/BottomNav';
+import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
 
 interface UserInfo {
   id: string;
@@ -39,20 +40,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900 truncate max-w-[70%]">
-          {user?.name ?? '...'}
-        </p>
-        <button
-          onClick={handleLogout}
-          className="text-xs text-red-500 hover:text-red-700 font-medium"
-        >
-          Chiqish
-        </button>
-      </header>
-      <main className="flex-1 overflow-y-auto p-4 pb-24">{children}</main>
-      <BottomNav />
-    </div>
+    <DuelNotificationProvider>
+      <div className="flex flex-col min-h-screen bg-gray-50">
+        <header className="sticky top-0 z-50 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-900 truncate max-w-[70%]">
+            {user?.name ?? '...'}
+          </p>
+          <button
+            onClick={handleLogout}
+            className="text-xs text-red-500 hover:text-red-700 font-medium"
+          >
+            Chiqish
+          </button>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 pb-24">{children}</main>
+        <BottomNav />
+      </div>
+    </DuelNotificationProvider>
   );
 }

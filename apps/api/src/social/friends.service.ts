@@ -7,6 +7,18 @@ export class FriendsService {
   constructor(private prisma: PrismaService) {}
 
   async sendRequest(userId: string, friendId: string, branchId: string): Promise<Friendship> {
+    const sender = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { birthDate: true } as never,
+    }) as { birthDate?: Date | null } | null;
+
+    if (sender?.birthDate) {
+      const ageDays = (Date.now() - sender.birthDate.getTime()) / 86_400_000;
+      if (ageDays < 13 * 365.25) {
+        throw new ForbiddenException("Do'stlik faqat 13+ yoshlilarga ruxsat");
+      }
+    }
+
     const existing = await this.prisma.friendship.findUnique({
       where: { userId_friendId: { userId, friendId } },
     });

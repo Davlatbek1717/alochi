@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_MESSAGE_LENGTH = 200;
@@ -13,10 +13,63 @@ interface SendMessageDto {
 }
 
 @Injectable()
-export class ChatService {
-  private blockedKeywords: string[] = [];
+export class ChatService implements OnModuleInit {
+  private keywordCache = new Map<string, Set<string>>();
 
   constructor(private prisma: PrismaService) {}
+
+  async onModuleInit() {
+    await this.reloadKeywords();
+  }
+
+  async reloadKeywords() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const keywords = await (this.prisma as any).chatKeyword.findMany({
+      select: { tenantId: true, word: true },
+    });
+    this.keywordCache.clear();
+    for (const kw of keywords as { tenantId: string; word: string }[]) {
+      if (!this.keywordCache.has(kw.tenantId)) {
+        this.keywordCache.set(kw.tenantId, new Set());
+      }
+      this.keywordCache.get(kw.tenantId)!.add(kw.word.toLowerCase());
+    }
+  }
+
+  addKeywordToCache(tenantId: string, word: string) {
+    if (!this.keywordCache.has(tenantId)) {
+      this.keywordCache.set(tenantId, new Set());
+    }
+    this.keywordCache.get(tenantId)!.add(word.toLowerCase());
+  }
+
+  removeKeywordFromCache(tenantId: string, word: string) {
+    this.keywordCache.get(tenantId)?.delete(word.toLowerCase());
+  }
+
+  async createKeyword(tenantId: string, word: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kw = await (this.prisma as any).chatKeyword.create({
+      data: { tenantId, word: word.trim().toLowerCase() },
+    });
+    this.addKeywordToCache(tenantId, word);
+    return kw;
+  }
+
+  getKeywords(tenantId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (this.prisma as any).chatKeyword.findMany({
+      where: { tenantId },
+      orderBy: { word: 'asc' },
+    });
+  }
+
+  async deleteKeyword(id: string, tenantId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kw = await (this.prisma as any).chatKeyword.delete({ where: { id } });
+    this.removeKeywordFromCache(tenantId, kw.word);
+    return kw;
+  }
 
   async sendMessage(dto: SendMessageDto) {
     if (dto.content.length > MAX_MESSAGE_LENGTH) {
@@ -26,9 +79,12 @@ export class ChatService {
     }
 
     const lowerContent = dto.content.toLowerCase();
-    for (const kw of this.blockedKeywords) {
-      if (lowerContent.includes(kw.toLowerCase())) {
-        throw new BadRequestException("Xabar taqiqlangan so'z o'z ichiga oldi");
+    const tenantKeywords = this.keywordCache.get(dto.tenantId);
+    if (tenantKeywords) {
+      for (const kw of tenantKeywords) {
+        if (lowerContent.includes(kw)) {
+          throw new BadRequestException("Xabar taqiqlangan so'z o'z ichiga oldi");
+        }
       }
     }
 
@@ -109,7 +165,4 @@ export class ChatService {
     });
   }
 
-  updateKeywords(keywords: string[]) {
-    this.blockedKeywords = keywords;
-  }
 }
