@@ -1,150 +1,223 @@
 'use client';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { XpBar } from '../student/_components/XpBar';
-import { StreakBadge } from '../student/_components/StreakBadge';
-import { DailyQuests } from '../student/_components/DailyQuests';
-import { SocialFeed } from '../student/_components/SocialFeed';
-import VirtualCity from '../student/_components/VirtualCity';
+import { useEffect, useState, useCallback } from 'react';
 import { apiRequest } from '@/lib/api';
 
-type Quest = {
-  questType: string;
-  targetValue: number;
-  progress: number;
-  completed: boolean;
-  xpReward: number;
-};
+interface Student {
+  id: string;
+  name: string;
+}
 
-type XpData = {
-  totalXp: number;
-  level: string;
-  nextLevelXp: number;
-};
+interface AttendanceRecord {
+  studentId: string;
+  status: string;
+  student: { id: string; name: string };
+}
 
-type StreakData = {
-  streak: number;
-  hasShield: boolean;
-};
+type QueueStatus = 'waiting' | 'testing' | 'done' | 'absent';
 
-type CityData = {
-  level: number;
-  buildings: string[];
-  lessonsCompleted: number;
-  nextLevelAt: number;
-};
+interface StudentRow {
+  id: string;
+  name: string;
+  attendance: 'present' | 'absent' | null;
+  queue: QueueStatus;
+}
 
-type StatusData = {
-  englishStatus?: string;
-  personalStatus?: string;
-  criticalStatus?: string;
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  yashil: '🟢',
-  sariq: '🟡',
-  qizil: '🔴',
-  '': '⚪',
-};
-
-export default function TesterDashboard() {
-  const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const [cityData, setCityData] = useState<CityData | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [hasShield, setHasShield] = useState(false);
-  const [lessonProgress, setLessonProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [statusData, setStatusData] = useState<StatusData | null>(null);
-
-  useEffect(() => {
+function getBranchIdFromToken(): string | null {
+  try {
     const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string; tenantId?: string };
+    return payload.branchId ?? null;
+  } catch {
+    return null;
+  }
+}
 
-    async function fetchData() {
-      try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes] = await Promise.all([
-          apiRequest<XpData>('/gamification/xp', {}, token),
-          apiRequest<Quest[]>('/gamification/quests', {}, token),
-          apiRequest<CityData>('/gamification/city', {}, token),
-          apiRequest<StreakData>('/gamification/streak', {}, token),
-          apiRequest<unknown[]>('/progress/my', {}, token),
-          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
-        ]);
-        setXpData(xpRes.data);
-        setQuests(questsRes.data);
-        setCityData(cityRes.data);
-        setStreak(streakRes.data.streak);
-        setHasShield(streakRes.data.hasShield);
-        setLessonProgress(progressRes.data.length);
-        setStatusData(statusRes.data);
-      } catch {
-        // keep defaults on error
-      } finally {
-        setLoading(false);
-      }
+function getTenantIdFromToken(): string | null {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { tenantId?: string };
+    return payload.tenantId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const QUEUE_LABEL: Record<QueueStatus, string> = {
+  waiting: 'Navbatda',
+  testing: 'Topshirmoqda',
+  done: 'Tugadi',
+  absent: 'Kelmadi',
+};
+
+const QUEUE_COLOR: Record<QueueStatus, string> = {
+  waiting: 'bg-yellow-50 border-yellow-200',
+  testing: 'bg-blue-50 border-blue-200',
+  done: 'bg-green-50 border-green-200',
+  absent: 'bg-gray-50 border-gray-200',
+};
+
+const BADGE_COLOR: Record<QueueStatus, string> = {
+  waiting: 'bg-yellow-100 text-yellow-700',
+  testing: 'bg-blue-100 text-blue-700',
+  done: 'bg-green-100 text-green-700',
+  absent: 'bg-gray-100 text-gray-500',
+};
+
+export default function TesterPage() {
+  const [rows, setRows] = useState<StudentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    const token = localStorage.getItem('accessToken') ?? '';
+    const branchId = getBranchIdFromToken();
+    if (!branchId) { setError('Branch topilmadi'); setLoading(false); return; }
+
+    try {
+      const [studentsRes, attendanceRes] = await Promise.all([
+        apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token),
+        apiRequest<AttendanceRecord[]>(`/attendance/students/${branchId}/${today}`, {}, token)
+          .catch(() => ({ data: [] as AttendanceRecord[] })),
+      ]);
+
+      const attendanceMap = new Map(attendanceRes.data.map((a) => [a.studentId, a.status]));
+
+      setRows(
+        studentsRes.data.map((s) => {
+          const att = attendanceMap.get(s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            attendance: att === 'present' ? 'present' : att === 'absent' ? 'absent' : null,
+            queue: att === 'present' ? 'waiting' : att === 'absent' ? 'absent' : 'waiting',
+          };
+        }),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Yuklab bo\'lmadi');
+    } finally {
+      setLoading(false);
     }
+  }, [today]);
 
-    fetchData();
-  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function markPresent(studentId: string) {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const branchId = getBranchIdFromToken();
+    const tenantId = getTenantIdFromToken();
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
+
+    try {
+      await apiRequest('/attendance/students/bulk', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: today,
+          records: [{ studentId, status: 'present', markedBy: user.id ?? '', tenantId, branchId }],
+        }),
+      }, token);
+      setRows((prev) =>
+        prev.map((r) => (r.id === studentId ? { ...r, attendance: 'present', queue: 'waiting' } : r)),
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xatolik');
+    }
+  }
+
+  function setQueue(studentId: string, queue: QueueStatus) {
+    setRows((prev) => prev.map((r) => (r.id === studentId ? { ...r, queue } : r)));
+  }
+
+  const arrived = rows.filter((r) => r.attendance === 'present');
+  const notArrived = rows.filter((r) => r.attendance !== 'present');
+  const testingNow = rows.find((r) => r.queue === 'testing');
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto flex items-center justify-center py-20">
-        <p className="text-gray-500">Yuklanmoqda...</p>
+      <div className="space-y-3 max-w-lg">
+        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+        {[1, 2, 3, 4].map((i) => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-4 pb-20">
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-white/70 text-sm">🏙️ Shaharcha</p>
-            <p className="text-2xl font-bold mt-1">Dars #{lessonProgress} / 500</p>
-          </div>
-          <StreakBadge streak={streak} hasShield={hasShield} />
-        </div>
-        <div className="mt-3">
-          <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
-        </div>
+    <div className="space-y-5 max-w-lg">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Bugungi navbat</h1>
+        <span className="text-sm text-gray-400">{today}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Ingliz tili', field: 'englishStatus' as const },
-          { label: 'Shaxsiy', field: 'personalStatus' as const },
-          { label: 'Tanqidiy', field: 'criticalStatus' as const },
-        ].map((s) => (
-          <div key={s.field} className="bg-white rounded-xl p-3 text-center shadow-sm">
-            <p className="text-2xl">
-              {STATUS_COLOR[statusData?.[s.field] ?? ''] ?? '⚪'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      <DailyQuests quests={quests} />
-
-      {cityData && (
-        <VirtualCity
-          level={cityData.level}
-          buildings={cityData.buildings}
-          lessonsCompleted={cityData.lessonsCompleted}
-          nextLevelAt={cityData.nextLevelAt}
-        />
+      {testingNow && (
+        <div className="bg-blue-600 rounded-2xl p-4 text-white">
+          <p className="text-blue-200 text-xs font-medium uppercase tracking-wide mb-1">Hozir topshirmoqda</p>
+          <p className="text-xl font-bold">{testingNow.name}</p>
+          <button
+            onClick={() => setQueue(testingNow.id, 'done')}
+            className="mt-3 bg-white text-blue-600 text-sm font-semibold px-4 py-1.5 rounded-lg"
+          >
+            Tugatdi ✓
+          </button>
+        </div>
       )}
 
-      <SocialFeed />
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          Kelganlar — {arrived.length}/{rows.length}
+        </p>
+        {arrived.length === 0 ? (
+          <p className="text-sm text-gray-400">Hali hech kim kelmadi</p>
+        ) : (
+          <div className="space-y-2">
+            {arrived.map((s) => (
+              <div key={s.id} className={`rounded-xl p-3 border flex items-center gap-3 ${QUEUE_COLOR[s.queue]}`}>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-800">{s.name}</p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE_COLOR[s.queue]}`}>
+                  {QUEUE_LABEL[s.queue]}
+                </span>
+                {s.queue === 'waiting' && (
+                  <button
+                    onClick={() => setQueue(s.id, 'testing')}
+                    disabled={!!testingNow}
+                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg disabled:opacity-40"
+                  >
+                    Topshirsin
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto">
-        <Link
-          href="/tester/lessons/current"
-          className="block w-full bg-indigo-600 text-white py-4 rounded-2xl text-center font-bold shadow-lg"
-        >
-          ▶️ Bugungi Darsni Boshlash
-        </Link>
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+          Kutilmoqda — {notArrived.length} ta
+        </p>
+        {notArrived.length === 0 ? (
+          <p className="text-sm text-gray-400">Barchasi keldi</p>
+        ) : (
+          <div className="space-y-2">
+            {notArrived.map((s) => (
+              <div key={s.id} className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
+                <p className="flex-1 text-gray-700">{s.name}</p>
+                <button
+                  onClick={() => markPresent(s.id)}
+                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-lg font-medium"
+                >
+                  Keldi
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export class AttendanceController {
   // ── Student attendance ───────────────────────────────────────────────────────
 
   @Post('students/bulk')
-  @Roles(UserRole.mentor)
+  @Roles(UserRole.mentor, UserRole.tester)
   markBulk(@Body() body: { records: Array<{ studentId: string; status: string }> }, @Request() req: any) {
     const { tenantId, branchId, userId } = req.user as { tenantId: string; branchId: string; userId: string };
     const date: string = (body as any).date ?? new Date().toISOString().split('T')[0];
@@ -37,7 +37,7 @@ export class AttendanceController {
   }
 
   @Get('students/:branchId/:date')
-  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
+  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin, UserRole.tester)
   getDailyList(@Param('branchId') branchId: string, @Param('date') date: string) {
     return this.studentsService.getDailyList(branchId, date);
   }
