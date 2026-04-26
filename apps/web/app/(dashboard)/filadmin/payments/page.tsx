@@ -12,8 +12,8 @@ function getBranchAndToken(): { branchId: string; token: string } {
   const token = localStorage.getItem('accessToken') ?? '';
   let branchId = '';
   try {
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
-    branchId = user.branchId ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
+    branchId = payload.branchId ?? '';
   } catch {
     // branchId stays empty
   }
