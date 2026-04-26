@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -84,5 +85,25 @@ export class UsersService {
   ) {
     await this.findById(id, tenantId);
     return this.prisma.user.update({ where: { id }, data: { status } });
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: {
+        id: true, name: true, login: true, role: true, tenantId: true,
+        parentTelegramId: true,
+        faceEmbeddings: { where: { isActive: true }, select: { id: true } },
+      },
+    });
+    return {
+      id: user.id,
+      name: user.name,
+      login: user.login,
+      role: user.role,
+      tenantId: user.tenantId,
+      faceEnrolled: user.faceEmbeddings.length > 0,
+      parentTelegramLinked: user.parentTelegramId !== null,
+    };
   }
 }

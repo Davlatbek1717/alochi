@@ -24,6 +24,11 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 export class UsersController {
   constructor(private users: UsersService) {}
 
+  @Get('my-profile')
+  async myProfile(@Request() req: any) {
+    return this.users.getProfile(req.user.userId);
+  }
+
   @Post()
   @Roles(UserRole.superadmin, UserRole.filadmin)
   create(@Body() dto: CreateUserDto) {
