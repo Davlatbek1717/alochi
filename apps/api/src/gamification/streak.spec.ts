@@ -124,4 +124,42 @@ describe('StreakService', () => {
       expect(updateData.shieldCount).toBe(1);
     });
   });
+
+  describe('getStudentStreak', () => {
+    it('returns streak 0 and hasShield false when no XP record exists', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue(null);
+
+      const result = await service.getStudentStreak('s1');
+
+      expect(result).toEqual({ streak: 0, hasShield: false });
+    });
+
+    it('returns current streak and hasShield false when shieldCount is 0', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 5,
+        longestStreak: 5,
+        shieldCount: 0,
+        lastActivity: daysAgo(1),
+      });
+
+      const result = await service.getStudentStreak('s1');
+
+      expect(result).toEqual({ streak: 5, hasShield: false });
+    });
+
+    it('returns current streak and hasShield true when shieldCount is greater than 0', async () => {
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 3,
+        longestStreak: 7,
+        shieldCount: 2,
+        lastActivity: daysAgo(1),
+      });
+
+      const result = await service.getStudentStreak('s1');
+
+      expect(result).toEqual({ streak: 3, hasShield: true });
+    });
+  });
 });

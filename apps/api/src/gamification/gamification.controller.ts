@@ -46,6 +46,11 @@ export class GamificationController {
     res.send(buffer);
   }
 
+  @Get('streak')
+  getMyStreak(@Request() req: any) {
+    return this.streak.getStudentStreak(req.user.userId);
+  }
+
   @Post('streak/activity')
   recordActivity(@Request() req: any) {
     return this.streak.recordActivity(req.user.userId);

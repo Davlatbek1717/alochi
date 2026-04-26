@@ -68,4 +68,10 @@ export class StreakService {
       data: { currentStreak: 1, lastActivity: today },
     });
   }
+
+  async getStudentStreak(studentId: string): Promise<{ streak: number; hasShield: boolean }> {
+    const xp = await this.prisma.studentXp.findUnique({ where: { studentId } });
+    if (!xp) return { streak: 0, hasShield: false };
+    return { streak: xp.currentStreak, hasShield: xp.shieldCount > 0 };
+  }
 }
