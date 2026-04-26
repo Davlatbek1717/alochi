@@ -228,97 +228,97 @@
 ### 17.1 Face ID — pgvector + Python Servisi
 **Spec:** `docs/superpowers/specs/2026-04-24-face-id-attendance-design.md` §3, §7 &nbsp; **Muhimlik:** ⚪
 
-- [ ] PostgreSQL `pgvector` extension o'rnatish (`CREATE EXTENSION IF NOT EXISTS vector;`)
-- [ ] `face_embeddings.embedding` maydonini `VECTOR(128)` tipiga o'zgartirish (`@db.Vector(128)`)
-- [ ] `CREATE INDEX idx_face_embeddings_user ON face_embeddings(user_id) WHERE is_active = TRUE` migratsiyaga qo'shish
-- [ ] `face_recognition_log` ga `liveness_passed BOOLEAN` ustun qo'shish (migratsiya)
-- [ ] `AI Service (FastAPI)` da Python `face_recognition` (dlib) moduli yaratish:
+- [x] PostgreSQL `pgvector` extension o'rnatish (`CREATE EXTENSION IF NOT EXISTS vector;`)
+- [x] `face_embeddings.embedding` maydonini `VECTOR(128)` tipiga o'zgartirish (`@db.Vector(128)`)
+- [x] `CREATE INDEX idx_face_embeddings_user ON face_embeddings(user_id) WHERE is_active = TRUE` migratsiyaga qo'shish
+- [x] `face_recognition_log` ga `liveness_passed BOOLEAN` ustun qo'shish (migratsiya)
+- [x] `AI Service (FastAPI)` da Python `face_recognition` (dlib) moduli yaratish:
   - `POST /recognize` — 128-dim vektor qabul qiladi, DB bilan solishtiradi, `{ userId, confidence }` qaytaradi
   - `GET /health` — servis sog'ligi
-- [ ] `apps/api/src/face/face.service.ts` da `POST /face/recognize` → Python servisi ga HTTP so'rov
-- [ ] Python servisi `Dockerfile` + `docker-compose.yml` ga qo'shish
-- [ ] Commit
+- [x] `apps/api/src/face/face.service.ts` da `POST /face/recognize` → Python servisi ga HTTP so'rov
+- [x] Python servisi `Dockerfile` + `docker-compose.yml` ga qo'shish
+- [x] Commit
 
 ### 17.2 Face ID — Liveness Detection (Anti-Spoofing)
 **Spec:** §12.3 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `apps/web/app/(kiosk)/_components/FaceScanner.tsx` da EAR (Eye Aspect Ratio) hisoblash logikasi
-- [ ] Yuz aniqlanganda (confidence ≥ 60%): ko'z pirpiratish challenge ishga tushirish
+- [x] `apps/web/app/(kiosk)/_components/FaceScanner.tsx` da EAR (Eye Aspect Ratio) hisoblash logikasi
+- [x] Yuz aniqlanganda (confidence ≥ 60%): ko'z pirpiratish challenge ishga tushirish
   - Ko'rsatma: `"Ko'zingizni yumib oching"`
   - 2 soniya ichida `EAR < 0.25` → `EAR > 0.25` o'tish = liveness ✅
   - 3 marta fail → `result: 'spoof_attempt'` log + qo'lda loginni taklif qilish
-- [ ] `face_recognition_log` da `liveness_passed` to'ldirish
-- [ ] Unit test: EAR kalkulyatsiya funksiyasi
-- [ ] Commit
+- [x] `face_recognition_log` da `liveness_passed` to'ldirish
+- [x] Unit test: EAR kalkulyatsiya funksiyasi
+- [x] Commit
 
 ### 17.3 Face ID — Kiosk PWA To'liq Integratsiya
 **Spec:** §4.3, §6.1, §9 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `apps/web/app/(kiosk)/_components/FaceScanner.tsx` da planshet IndexedDB keshi boshqaruvi
+- [x] `apps/web/app/(kiosk)/_components/FaceScanner.tsx` da planshet IndexedDB keshi boshqaruvi
   - `GET /face/cache/:branchId` → `idb.set('face_cache', data)` saqlash
   - Offline rejim: internet yo'q bo'lsa keshdan ishlash, log offline queue ga
   - Kesh yoshi tekshiruvi: 2+ kun eski bo'lsa UI da sariq banner
-- [ ] Bir xodim 2 marta kirmoqchi bo'lganda: `"Siz bugun 09:02 da belgilangansiz"` xabari
-- [ ] Yorug'lik past bo'lganda (`< 200 lux` — brightness API) `"Yorug'lik yetarli emas"` va qo'lda loginni taklif qilish
-- [ ] PWA manifest (`manifest.json`) — Android Chrome kiosk mode uchun
-- [ ] Commit
+- [x] Bir xodim 2 marta kirmoqchi bo'lganda: `"Siz bugun 09:02 da belgilangansiz"` xabari
+- [x] Yorug'lik past bo'lganda (`< 200 lux` — brightness API) `"Yorug'lik yetarli emas"` va qo'lda loginni taklif qilish
+- [x] PWA manifest (`manifest.json`) — Android Chrome kiosk mode uchun
+- [x] Commit
 
 ### 17.4 Face ID — Qurilma (Device) Boshqaruvi
 **Spec:** §7 — `/devices` endpointlari &nbsp; **Muhimlik:** ⚪
 
-- [ ] `apps/api/src/face/face.controller.ts` ga qo'shish:
+- [x] `apps/api/src/face/face.controller.ts` ga qo'shish:
   - `POST /devices` — Yangi planshet ro'yxatga olish (device_name, branch_id → device_token JWT)
   - `GET /devices/:branchId` — Filial planshetlari ro'yxati
   - `PATCH /devices/:id/deactivate` — Planshetni o'chirish
   - `GET /devices/:id/status` — Holat + oxirgi kesh sync vaqti
-- [ ] Device JWT — 90 kunlik muddati, `device_id` payload da
-- [ ] `apps/web/app/(dashboard)/filadmin/devices/page.tsx` — Planshetlar boshqaruvi:
+- [x] Device JWT — 90 kunlik muddati, `device_id` payload da
+- [x] `apps/web/app/(dashboard)/filadmin/devices/page.tsx` — Planshetlar boshqaruvi:
   - Ro'yxat (device_name, oxirgi kesh, holat)
   - "Yangi planshet qo'shish" tugmasi → token ko'rsatiladi (bir marta)
   - "O'chirish" → deactivate
-- [ ] Commit
+- [x] Commit
 
 ### 17.5 Face ID — Cron Joblar
 **Spec:** §8 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `cron.service.ts` ga `runFaceCacheGeneration()` qo'shish (`@Cron('0 23 * * *')` — har kecha 23:00):
+- [x] `cron.service.ts` ga `runFaceCacheGeneration()` qo'shish (`@Cron('0 23 * * *')` — har kecha 23:00):
   - Har filial uchun faol xodimlar `face_embeddings` ni paketlash
   - `branch_devices.last_cache_sync` yangilash
   - Paket endpoint orqali planshet yuklab olishi uchun tayyor
-- [ ] `cron.service.ts` ga `runStaleCacheAlert()` qo'shish (`@Cron('0 8 * * *')` — har ertalab 08:00):
+- [x] `cron.service.ts` ga `runStaleCacheAlert()` qo'shish (`@Cron('0 8 * * *')` — har ertalab 08:00):
   - `last_cache_sync < now - 2 days` bo'lgan planshetlar → Filadminga Telegram alert
-- [ ] `cron.service.ts` ga `runEnrollmentReminder()` qo'shish (`@Cron('0 9 * * 1')` — dushanba 09:00):
+- [x] `cron.service.ts` ga `runEnrollmentReminder()` qo'shish (`@Cron('0 9 * * 1')` — dushanba 09:00):
   - Enrollment qilmagan xodimlar → Filadminga haftalik ro'yxat
-- [ ] Unit testlar
-- [ ] Commit
+- [x] Unit testlar
+- [x] Commit
 
 ### 17.6 Face ID — Filadmin Davomat Jadvali Yangilash
 **Spec:** §6.3 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `apps/web/app/(dashboard)/filadmin/attendance/page.tsx` da `recognition_method` ustun qo'shish:
+- [x] `apps/web/app/(dashboard)/filadmin/attendance/page.tsx` da `recognition_method` ustun qo'shish:
   - `👁 Yuz` — `face_auto`
   - `🔑 Qo'lda` — `manual`
   - `👤 Admin` — `admin`
-- [ ] Kech kelish daqiqasi ko'rsatish: `⏰ +14 daq`
-- [ ] CSV eksport tugmasi (`Eksport` → `attendance_YYYY-MM-DD.csv`)
-- [ ] Commit
+- [x] Kech kelish daqiqasi ko'rsatish: `⏰ +14 daq`
+- [x] CSV eksport tugmasi (`Eksport` → `attendance_YYYY-MM-DD.csv`)
+- [x] Commit
 
 ---
 
 ### 17.7 Telegram — Ota-ona Telegram ID Bog'lash
 **Spec:** §16.1, §16.4 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `users` jadvaliga `parent_telegram_id TEXT` maydoni qo'shish (allaqachon bor ekan — tekshirish)
-- [ ] Bot deep link: `/start tenant_id:student_id` formatida
-- [ ] `TelegramService` da `/start` handlerda `parent_telegram_id` ni foydalanuvchi profiliga bog'lash
-- [ ] Xodimlar uchun: `/start staff:user_id` formatida bog'lanish
-- [ ] Foydalanuvchi profil sahifasida Telegram bog'lanish holati ko'rsatish + havola generatsiya tugmasi
-- [ ] Commit
+- [x] `users` jadvaliga `parent_telegram_id TEXT` maydoni qo'shish (allaqachon bor ekan — tekshirish)
+- [x] Bot deep link: `/start tenant_id:student_id` formatida
+- [x] `TelegramService` da `/start` handlerda `parent_telegram_id` ni foydalanuvchi profiliga bog'lash
+- [x] Xodimlar uchun: `/start staff:user_id` formatida bog'lanish
+- [x] Foydalanuvchi profil sahifasida Telegram bog'lanish holati ko'rsatish + havola generatsiya tugmasi
+- [x] Commit
 
 ### 17.8 Telegram — Kunlik Hisobot (Ota-ona)
 **Spec:** §16.1 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `cron.service.ts` ga `runDailyParentReport()` qo'shish (`@Cron('0 20 * * *')` — har kuni 20:00):
+- [x] `cron.service.ts` ga `runDailyParentReport()` qo'shish (`@Cron('0 20 * * *')` — har kuni 20:00):
   - Bugun dars tamomlaganlar → har ota-onaga xabar:
     ```
     📚 A'lochi — Kunlik Hisobot
@@ -327,26 +327,26 @@
     📊 Ingliz tili: [🟢/🟡/🔴]
     🔥 Streak: [N] kun
     ```
-- [ ] O'quvchi 2 kun kelmasa → ota-onaga eslatma
-- [ ] Yangi sertifikat olganda → darhol tabriknoma
-- [ ] Commit
+- [x] O'quvchi 2 kun kelmasa → ota-onaga eslatma
+- [x] Yangi sertifikat olganda → darhol tabriknoma
+- [x] Commit
 
 ### 17.9 Telegram — Xodimlar Uchun Bot Buyruqlari
 **Spec:** §16.3 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `StaffHandler` da qo'shish:
+- [x] `StaffHandler` da qo'shish:
   - `/vazifalar` — bugungi vazifalar ro'yxati
   - Manager: yangi qizil/sariq o'quvchi notification
   - Filadmin: kunlik filial hisoboti (`@Cron('0 8 * * *')`)
-- [ ] Mentor: guruh davomati tezkor belgilash — bot orqali inline tugmalar bilan
-- [ ] Commit
+- [x] Mentor: guruh davomati tezkor belgilash — bot orqali inline tugmalar bilan
+- [x] Commit
 
 ---
 
 ### 17.10 AI — Adaptiv O'qitish (Spaced Repetition)
 **Spec:** §15 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `prisma/schema.prisma` ga `SpacedRepetitionItem` modeli qo'shish:
+- [x] `prisma/schema.prisma` ga `SpacedRepetitionItem` modeli qo'shish:
   ```prisma
   model SpacedRepetitionItem {
     id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -358,64 +358,64 @@
     @@map("spaced_repetition")
   }
   ```
-- [ ] SM-2 algoritmini backend da implement qilish (`apps/api/src/ai/sm2.service.ts`)
-- [ ] Lug'at topshirishda to'g'ri/xato natijani SM-2 ga uzatish
-- [ ] `GET /ai/daily-review` — Bugun takrorlanishi kerak so'zlar
-- [ ] O'quvchi panelida "Kunlik Takrorlash" bo'limi qo'shish
-- [ ] Commit
+- [x] SM-2 algoritmini backend da implement qilish (`apps/api/src/ai/sm2.service.ts`)
+- [x] Lug'at topshirishda to'g'ri/xato natijani SM-2 ga uzatish
+- [x] `GET /ai/daily-review` — Bugun takrorlanishi kerak so'zlar
+- [x] O'quvchi panelida "Kunlik Takrorlash" bo'limi qo'shish
+- [x] Commit
 
 ### 17.11 AI — Xato Tahlili va Mentor Notification
 **Spec:** §15.1 &nbsp; **Muhimlik:** ⚪
 
-- [ ] Har sessiyadan keyin xatolarni tahlil qiluvchi AI Service endpoint (`POST /ai/analyze-errors`)
-- [ ] Claude API ga xato pattern yuborish → javobda zaif tomonlar ro'yxati
-- [ ] Xato 3 marta takrorlansa → Mentorga notification:
+- [x] Har sessiyadan keyin xatolarni tahlil qiluvchi AI Service endpoint (`POST /ai/analyze-errors`)
+- [x] Claude API ga xato pattern yuborish → javobda zaif tomonlar ro'yxati
+- [x] Xato 3 marta takrorlansa → Mentorga notification:
   `"[Ism] 'Present Perfect' ni 3 marta xato qildi"`
-- [ ] Manager/Mentor panelida har o'quvchi uchun AI tavsiyasi bloki
-- [ ] Commit
+- [x] Manager/Mentor panelida har o'quvchi uchun AI tavsiyasi bloki
+- [x] Commit
 
 ---
 
 ### 17.12 Virtual Shahar — Dars Progressiga Bog'lash
 **Spec:** §17.1 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `VirtualCity` komponentida dars sanasiga qarab qurilish unlocking logikasi:
+- [x] `VirtualCity` komponentida dars sanasiga qarab qurilish unlocking logikasi:
   - 1–50 dars → Qishloq (uy, ko'cha, daraxt)
   - 51–150 dars → Shaharcha (maktab, do'kon, park)
   - 151–300 dars → Shahar (kutubxona, teatr, maydon)
   - 301–500 dars → Metropolis (aeroporti, universitet, minora)
-- [ ] Yangi qurilish unlockda animatsiya + lenta voqeasi
-- [ ] `GET /gamification/city` — joriy qurilishlar + keyingi unlock qachon
-- [ ] Commit
+- [x] Yangi qurilish unlockda animatsiya + lenta voqeasi
+- [x] `GET /gamification/city` — joriy qurilishlar + keyingi unlock qachon
+- [x] Commit
 
 ---
 
 ### 17.13 Milliy Reyting — Anonim Leaderboard
 **Spec:** §17.2 (ijtimoiy daraja tizimi) &nbsp; **Muhimlik:** ⚪
 
-- [ ] `GET /leaderboard/national?period=weekly|monthly` — barcha tenantlar bo'yicha anonim reyting
+- [x] `GET /leaderboard/national?period=weekly|monthly` — barcha tenantlar bo'yicha anonim reyting
   - O'quvchi ismi ko'rsatilmaydi: `"O'quvchi #1247"` formatida
   - Faqat XP va streak ko'rsatiladi
-- [ ] `GET /leaderboard/branch` — Filial ichida to'liq profil bilan reyting
-- [ ] O'quvchi panelida `[🏆 Reyting]` tab (bottom nav da allaqachon bor)
-- [ ] Commit
+- [x] `GET /leaderboard/branch` — Filial ichida to'liq profil bilan reyting
+- [x] O'quvchi panelida `[🏆 Reyting]` tab (bottom nav da allaqachon bor)
+- [x] Commit
 
 ---
 
 ### 17.14 Manager — 200%+ O'quvchilar
 **Spec:** §3.3.2 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `GET /status/high-performers` — barcha statuslari `yashil` bo'lgan, dars progressi 90%+ o'quvchilar
-- [ ] Manager dashboardga "200%+ O'quvchilar" bloki qo'shish
-- [ ] Har bir o'quvchi uchun qiyinroq topshiriq berish imkoniyati (N ni oshirish + maxsus vazifa)
-- [ ] Commit
+- [x] `GET /status/high-performers` — barcha statuslari `yashil` bo'lgan, dars progressi 90%+ o'quvchilar
+- [x] Manager dashboardga "200%+ O'quvchilar" bloki qo'shish
+- [x] Har bir o'quvchi uchun qiyinroq topshiriq berish imkoniyati (N ni oshirish + maxsus vazifa)
+- [x] Commit
 
 ---
 
 ### 17.15 Turnirlar
 **Spec:** umumiy gamifikatsiya bo'limi &nbsp; **Muhimlik:** ⚪
 
-- [ ] `prisma/schema.prisma` ga `Tournament` modeli:
+- [x] `prisma/schema.prisma` ga `Tournament` modeli:
   ```prisma
   model Tournament {
     id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -428,11 +428,11 @@
     @@map("tournaments")
   }
   ```
-- [ ] `POST /tournaments` — Superadmin yaratadi
-- [ ] `POST /tournaments/:id/register` — O'quvchi ro'yxatdan o'tadi
-- [ ] `GET /tournaments` — Kelayotgan + faol turnirlar
-- [ ] Turnir bracket/jadvali frontend da
-- [ ] Commit
+- [x] `POST /tournaments` — Superadmin yaratadi
+- [x] `POST /tournaments/:id/register` — O'quvchi ro'yxatdan o'tadi
+- [x] `GET /tournaments` — Kelayotgan + faol turnirlar
+- [x] Turnir bracket/jadvali frontend da
+- [x] Commit
 
 ---
 
@@ -488,7 +488,7 @@ Hafta 4 — Polish va production:
 | 14 | Status tarixi UI | 3 | ✅ |
 | 15 | Production (E2E + Nginx) | 7 | ✅ |
 | 16 | Kichik tuzatishlar | 7 | ✅ |
-| 17 | Faza 2 | 13 | ⚪ |
+| 17 | Faza 2 | 13 | ✅ |
 | — | **MVP jami (1–16)** | **~103** | **100%** |
 
 ---
