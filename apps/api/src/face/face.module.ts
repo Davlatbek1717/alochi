@@ -5,8 +5,10 @@ import { FaceController } from './face.controller';
 import { FaceService } from './face.service';
 import { DevicesService } from './devices.service';
 import { DevicesController } from './devices.controller';
+import { AttendanceModule } from '../attendance/attendance.module';
 
 @Module({
+  imports: [AttendanceModule],
   controllers: [FaceController, DevicesController],
   providers: [CacheService, CronFaceService, FaceService, DevicesService],
   exports: [CacheService, FaceService, DevicesService],
