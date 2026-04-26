@@ -24,6 +24,11 @@ export class BranchesService {
     return branch;
   }
 
+  async update(id: string, tenantId: string, data: { name?: string }) {
+    await this.findById(id, tenantId);
+    return this.prisma.branch.update({ where: { id }, data });
+  }
+
   async assignFiladmin(branchId: string, filadminId: string, tenantId: string) {
     await this.findById(branchId, tenantId);
     return this.prisma.branch.update({

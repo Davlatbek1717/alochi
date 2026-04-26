@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -29,6 +30,16 @@ export class UsersController {
     return this.users.create(dto);
   }
 
+  @Get()
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  findAll(
+    @Query('branchId') branchId: string,
+    @Query('role') role: UserRole,
+    @Request() req: any,
+  ) {
+    return this.users.findAll(req.user.tenantId, branchId, role);
+  }
+
   @Get('by-branch/:branchId')
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager, UserRole.mentor)
   findByBranch(@Param('branchId') branchId: string, @Request() req: any) {
@@ -39,6 +50,12 @@ export class UsersController {
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.users.findById(id, req.user.tenantId);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  update(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+    return this.users.update(id, req.user.tenantId, data);
   }
 
   @Patch(':id/status')

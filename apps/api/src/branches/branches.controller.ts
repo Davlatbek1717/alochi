@@ -12,14 +12,26 @@ export class BranchesController {
 
   @Post()
   @Roles(UserRole.superadmin)
-  create(@Body() body: { tenantId: string; name: string }) {
-    return this.branches.create(body.tenantId, { name: body.name });
+  create(@Body() body: { name: string }, @Request() req: any) {
+    return this.branches.create(req.user.tenantId, { name: body.name });
+  }
+
+  @Get()
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  findAll(@Request() req: any) {
+    return this.branches.findByTenant(req.user.tenantId);
   }
 
   @Get('by-tenant/:tenantId')
   @Roles(UserRole.superadmin, UserRole.filadmin)
   findByTenant(@Param('tenantId') tenantId: string) {
     return this.branches.findByTenant(tenantId);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.superadmin)
+  update(@Param('id') id: string, @Body() body: { name: string }, @Request() req: any) {
+    return this.branches.update(id, req.user.tenantId, { name: body.name });
   }
 
   @Patch(':id/filadmin')

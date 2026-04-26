@@ -56,6 +56,27 @@ export class UsersService {
     return user;
   }
 
+  async findAll(tenantId: string, branchId?: string, role?: UserRole) {
+    return this.prisma.user.findMany({
+      where: {
+        tenantId,
+        ...(branchId ? { branchId } : {}),
+        ...(role ? { role } : {}),
+      },
+      select: { id: true, name: true, role: true, status: true, phone: true, login: true, branchId: true },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async update(
+    id: string,
+    tenantId: string,
+    data: { name?: string; phone?: string; branchId?: string; role?: UserRole },
+  ) {
+    await this.findById(id, tenantId);
+    return this.prisma.user.update({ where: { id }, data });
+  }
+
   async updateStatus(
     id: string,
     tenantId: string,

@@ -24,17 +24,23 @@ export default function SuperadminDashboard() {
           <p className="text-sm text-gray-500 mt-1">Qarzdorlar hisoboti, filial statistikasi</p>
         </Link>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed">
+        <Link
+          href="/superadmin/users"
+          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
+        >
           <div className="text-3xl mb-2">👥</div>
           <h2 className="font-semibold text-gray-900">Foydalanuvchilar</h2>
-          <p className="text-sm text-gray-500 mt-1">Tez kunda</p>
-        </div>
+          <p className="text-sm text-gray-500 mt-1">Yaratish, tahrirlash, faollashtirish</p>
+        </Link>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed">
+        <Link
+          href="/superadmin/branches"
+          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
+        >
           <div className="text-3xl mb-2">🏢</div>
           <h2 className="font-semibold text-gray-900">Filiallar</h2>
-          <p className="text-sm text-gray-500 mt-1">Tez kunda</p>
-        </div>
+          <p className="text-sm text-gray-500 mt-1">Qo&apos;shish, nomini o&apos;zgartirish</p>
+        </Link>
       </div>
     </div>
   );
