@@ -11,6 +11,7 @@ type Reaction = {
 
 type Message = {
   id: string;
+  senderId: string;
   senderName: string;
   content: string;
   createdAt: string;
@@ -39,6 +40,8 @@ export default function GroupChatPage() {
   const [connected, setConnected] = useState(false);
   const [reactingTo, setReactingTo] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [userRole, setUserRole] = useState('');
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -58,6 +61,16 @@ export default function GroupChatPage() {
       setLoading(false);
     }
   }, [groupId]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('user');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as { role?: string };
+        setUserRole(parsed.role ?? '');
+      } catch { /* ignore */ }
+    }
+  }, []);
 
   useEffect(() => {
     if (!groupId) return;
@@ -141,6 +154,34 @@ export default function GroupChatPage() {
     }
   }
 
+  const isModerator = userRole === 'mentor' || userRole === 'filadmin' || userRole === 'superadmin';
+
+  async function deleteMsg(msgId: string) {
+    const token = localStorage.getItem('accessToken') ?? '';
+    setMenuFor(null);
+    try {
+      await apiRequest(`/social/groups/${groupId}/messages/${msgId}`, { method: 'DELETE' }, token);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato');
+    }
+  }
+
+  async function banSender(senderId: string) {
+    const token = localStorage.getItem('accessToken') ?? '';
+    setMenuFor(null);
+    if (!confirm("Bu foydalanuvchini 24 soatga ban qilasizmi?")) return;
+    try {
+      await apiRequest(`/social/groups/${groupId}/ban/${senderId}`, {
+        method: 'POST',
+        body: JSON.stringify({ hours: 24 }),
+      }, token);
+      alert("Foydalanuvchi 24 soatga ban qilindi");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Xato');
+    }
+  }
+
   function formatTime(iso: string) {
     try {
       return new Date(iso).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' });
@@ -220,18 +261,46 @@ export default function GroupChatPage() {
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className="space-y-1">
-              <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-2 shadow-sm border border-gray-100 inline-block max-w-[85%]">
-                <p className="text-xs text-indigo-600 font-medium mb-0.5">{msg.senderName}</p>
-                <p className="text-sm text-gray-800">{msg.content}</p>
-                <div className="flex items-center justify-between gap-2 mt-1">
-                  <p className="text-xs text-gray-400">{formatTime(msg.createdAt)}</p>
-                  <button
-                    onClick={() => setReactingTo(reactingTo === msg.id ? null : msg.id)}
-                    className="text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    😊
-                  </button>
+              <div className="relative inline-block max-w-[85%]">
+                <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-2 shadow-sm border border-gray-100">
+                  <p className="text-xs text-indigo-600 font-medium mb-0.5">{msg.senderName}</p>
+                  <p className="text-sm text-gray-800">{msg.content}</p>
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-xs text-gray-400">{formatTime(msg.createdAt)}</p>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setReactingTo(reactingTo === msg.id ? null : msg.id)}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        😊
+                      </button>
+                      {isModerator && (
+                        <button
+                          onClick={() => setMenuFor(menuFor === msg.id ? null : msg.id)}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          ⚙️
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                {menuFor === msg.id && isModerator && (
+                  <div className="absolute right-0 top-full mt-1 z-10 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden text-sm">
+                    <button
+                      onClick={() => deleteMsg(msg.id)}
+                      className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
+                    >
+                      🗑 O&apos;chirish
+                    </button>
+                    <button
+                      onClick={() => banSender(msg.senderId)}
+                      className="block w-full text-left px-4 py-2 text-orange-600 hover:bg-orange-50"
+                    >
+                      🚫 Ban (24h)
+                    </button>
+                  </div>
+                )}
               </div>
 
               {reactingTo === msg.id && (

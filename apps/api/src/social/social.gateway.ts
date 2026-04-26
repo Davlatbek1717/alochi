@@ -90,6 +90,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(`group:${data.groupId}`).emit('chat:message', {
         id: msg.id,
+        senderId: msg.senderId,
         content: msg.content,
         senderName: msg.sender.name,
         createdAt: msg.createdAt,

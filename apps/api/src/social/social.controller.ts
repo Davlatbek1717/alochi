@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request,
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -62,6 +62,29 @@ export class SocialController {
   @Get('groups/:groupId/messages')
   getGroupMessages(@Param('groupId') groupId: string) {
     return this.chat.getGroupMessages(groupId);
+  }
+
+  @Delete('groups/:groupId/messages/:msgId')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
+  deleteGroupMessage(
+    @Param('msgId') msgId: string,
+    @Request() req: any,
+  ) {
+    return this.chat.deleteMessage(msgId, req.user.userId);
+  }
+
+  @Post('groups/:groupId/ban/:studentId')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
+  banStudent(
+    @Param('studentId') studentId: string,
+    @Body() body: { reason?: string; hours?: number },
+    @Request() req: any,
+  ) {
+    if (studentId === req.user.userId) throw new ForbiddenException('O\'zingizni ban qila olmaysiz');
+    const expiresAt = body.hours
+      ? new Date(Date.now() + body.hours * 3_600_000)
+      : new Date(Date.now() + 24 * 3_600_000);
+    return this.chat.banUser(studentId, req.user.userId, body.reason ?? 'Moderator tomonidan', expiresAt);
   }
 
   @Post('messages/:id/react')
