@@ -14,16 +14,17 @@ const NAV_TABS: Record<string, { href: string; icon: string; label: string; acti
     { href: '/mentor',            icon: '🏠', label: 'Bosh'    },
     { href: '/mentor/group',      icon: '👨‍🎓', label: 'Guruh'  },
     { href: '/mentor/attendance', icon: '📊', label: 'Davomat' },
+    { href: '/mentor/tasks',      icon: '📋', label: 'Vazifalar' },
   ],
   tester: [
-    { href: '/mentor',            icon: '🏠', label: 'Bosh'    },
-    { href: '/mentor/group',      icon: '👨‍🎓', label: 'Guruh'  },
-    { href: '/mentor/attendance', icon: '📊', label: 'Davomat' },
+    { href: '/tester',            icon: '🏠', label: 'Bosh'    },
+    { href: '/tester/tasks',      icon: '📋', label: 'Vazifalar' },
   ],
   manager: [
     { href: '/manager',             icon: '🏠', label: 'Bosh'        },
     { href: '/manager/students',    icon: '👥', label: "O'quvchilar" },
     { href: '/manager/payments',    icon: '💰', label: "To'lovlar"   },
+    { href: '/manager/tasks',       icon: '📋', label: 'Vazifalar'   },
     { href: '/manager/delegations', icon: '📋', label: 'Delegatsiya' },
   ],
   filadmin: [
@@ -31,6 +32,7 @@ const NAV_TABS: Record<string, { href: string; icon: string; label: string; acti
     { href: '/filadmin/attendance', icon: '✅', label: 'Davomat'        },
     { href: '/filadmin/payments',   icon: '💰', label: "To'lovlar"      },
     { href: '/filadmin/warnings',   icon: '⚠️', label: 'Ogohlantirish' },
+    { href: '/filadmin/tasks',      icon: '📋', label: 'Vazifalar'      },
   ],
   superadmin: [
     { href: '/superadmin',          icon: '🏠', label: 'Bosh'             },

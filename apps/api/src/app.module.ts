@@ -27,6 +27,7 @@ import { StudentStatusModule } from './student-status/status.module';
 import { KpiModule } from './kpi/kpi.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { HealthModule } from './health/health.module';
+import { TasksModule } from './tasks/tasks.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -61,6 +62,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     KpiModule,
     AttendanceModule,
     HealthModule,
+    TasksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

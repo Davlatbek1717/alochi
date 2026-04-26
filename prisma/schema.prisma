@@ -97,6 +97,8 @@ model User {
   challengedDuels    Duel[]              @relation("DuelChallenged")
   groupMessages      GroupMessage[]      @relation("GroupMessages")
   feedEvents         SocialFeedEvent[]   @relation("FeedEventActor")
+  tasksCreated       Task[]              @relation("TaskCreator")
+  tasksAssigned      Task[]              @relation("TaskAssignee")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -623,4 +625,27 @@ model ChatKeyword {
 
   @@unique([tenantId, word])
   @@map("chat_keywords")
+}
+
+model Task {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  branchId    String    @map("branch_id") @db.Uuid
+  createdBy   String    @map("created_by") @db.Uuid
+  assignedTo  String    @map("assigned_to") @db.Uuid
+  title       String
+  description String?
+  checklist   Json      @default("[]")
+  deadline    DateTime?
+  kpiBall     Int       @default(0) @map("kpi_ball")
+  status      String    @default("sent")
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  creator  User @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  assignee User @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: Cascade)
+
+  @@index([assignedTo, status])
+  @@index([createdBy])
+  @@map("tasks")
 }
