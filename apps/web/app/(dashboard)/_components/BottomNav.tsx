@@ -34,6 +34,7 @@ const NAV_TABS: Record<string, { href: string; icon: string; label: string; acti
   ],
   superadmin: [
     { href: '/superadmin',          icon: '🏠', label: 'Bosh'             },
+    { href: '/superadmin/payments', icon: '💰', label: "To'lovlar"        },
     { href: '/superadmin/branches', icon: '🏢', label: 'Filiallar'        },
     { href: '/superadmin/users',    icon: '👤', label: 'Foydalanuvchilar' },
   ],

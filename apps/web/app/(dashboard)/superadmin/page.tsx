@@ -15,6 +15,15 @@ export default function SuperadminDashboard() {
           <p className="text-sm text-gray-500 mt-1">Dars yaratish, tahrirlash, nashr qilish</p>
         </Link>
 
+        <Link
+          href="/superadmin/payments"
+          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
+        >
+          <div className="text-3xl mb-2">💰</div>
+          <h2 className="font-semibold text-gray-900">To&apos;lovlar</h2>
+          <p className="text-sm text-gray-500 mt-1">Qarzdorlar hisoboti, filial statistikasi</p>
+        </Link>
+
         <div className="bg-white rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed">
           <div className="text-3xl mb-2">👥</div>
           <h2 className="font-semibold text-gray-900">Foydalanuvchilar</h2>
