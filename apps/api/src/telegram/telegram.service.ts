@@ -4,6 +4,7 @@ import { Bot } from 'grammy';
 import { ParentHandler } from './handlers/parent.handler';
 import { StudentHandler } from './handlers/student.handler';
 import { StaffHandler } from './handlers/staff.handler';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -12,6 +13,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private config: ConfigService,
+    private prisma: PrismaService,
     private parentHandler: ParentHandler,
     private studentHandler: StudentHandler,
     private staffHandler: StaffHandler,
@@ -43,13 +45,35 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (!this.bot) return;
 
     this.bot.command('start', async (ctx) => {
-      const tenantId = ctx.match;
-      if (tenantId) {
-        await ctx.reply(
-          "A'lochi platformasiga xush kelibsiz! 🎓\n\nTizimga kirgach profilingiz Telegramga bog'lanadi.",
-        );
+      const payload = ctx.match?.trim();
+      const telegramId = ctx.from?.id;
+
+      if (payload && payload.includes(':') && telegramId) {
+        const [tenantId, studentId] = payload.split(':');
+        try {
+          const student = await this.prisma.user.findFirst({
+            where: { id: studentId, tenantId, role: 'student' },
+            select: { id: true, name: true },
+          });
+          if (student) {
+            await this.prisma.user.update({
+              where: { id: studentId },
+              data: { parentTelegramId: String(telegramId) },
+            });
+            await ctx.reply(
+              `✅ Muvaffaqiyatli bog'landi!\nFarzand: ${student.name}\n\n` +
+              `/status — bugungi holat\n/progress — oylik progress\n/payment — to'lov holati`,
+            );
+            return;
+          }
+        } catch (err) {
+          this.logger.error(`Telegram parent link: ${err}`);
+        }
+        await ctx.reply("Havola topilmadi yoki eskirgan.");
       } else {
-        await ctx.reply("Iltimos, o'quv markazingiz havolasi orqali boshlang.");
+        await ctx.reply(
+          "A'lochi platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
+        );
       }
     });
 
