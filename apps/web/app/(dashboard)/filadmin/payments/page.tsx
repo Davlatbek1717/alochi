@@ -1,112 +1,127 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
+import MonthPicker from '../../_components/MonthPicker';
+import DebtorsTable, { BranchStudent } from '../../_components/DebtorsTable';
 
-type StudentPayment = {
-  id: string;
-  name: string;
-  status: string;
-  paid: boolean;
-  amount?: number;
-  paidAt?: string;
-};
+function currentMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
 
-const INITIAL_STUDENTS: StudentPayment[] = [
-  { id: 's1', name: 'Sardor Rahimov', status: 'blocked_payment', paid: false },
-  { id: 's2', name: 'Malika Yusupova', status: 'active', paid: true, amount: 500000, paidAt: '2026-05-03' },
-  { id: 's3', name: 'Jasur Mirzayev', status: 'active', paid: false },
-];
+function getBranchAndToken(): { branchId: string; token: string } {
+  const token = localStorage.getItem('accessToken') ?? '';
+  let branchId = '';
+  try {
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
+    branchId = user.branchId ?? '';
+  } catch {
+    // branchId stays empty
+  }
+  return { branchId, token };
+}
 
-export default function PaymentsPage() {
-  const [students, setStudents] = useState<StudentPayment[]>(INITIAL_STUDENTS);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [amount, setAmount] = useState('');
-  const [payError, setPayError] = useState('');
+export default function FiladminPaymentsPage() {
+  const [month, setMonth] = useState(currentMonth());
+  const [students, setStudents] = useState<BranchStudent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
 
-  async function markPaid(id: string) {
-    if (!amount) return;
-    setPayError('');
-
-    const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
-
+  async function fetchStudents(selectedMonth: string) {
+    const { branchId, token } = getBranchAndToken();
+    if (!branchId) {
+      setError('Filial biriktirilmagan');
+      setLoading(false);
+      return;
+    }
+    setFetching(true);
     try {
-      await apiRequest('/payments', {
+      const res = await apiRequest<BranchStudent[]>(
+        `/payments/branch/${branchId}?month=${selectedMonth}`,
+        {},
+        token,
+      );
+      setStudents(res.data);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+    } finally {
+      setLoading(false);
+      setFetching(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchStudents(month);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleMonthChange(m: string) {
+    setMonth(m);
+    fetchStudents(m);
+  }
+
+  async function handleMarkPaid(studentId: string, amount: number) {
+    const { token } = getBranchAndToken();
+    let tenantId = '';
+    let recordedBy = '';
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
+        tenantId?: string;
+        id?: string;
+      };
+      tenantId = user.tenantId ?? '';
+      recordedBy = user.id ?? '';
+    } catch {
+      // keep empty
+    }
+    await apiRequest(
+      '/payments',
+      {
         method: 'POST',
         body: JSON.stringify({
-          tenantId: user.tenantId ?? '',
-          studentId: id,
-          recordedBy: user.id ?? '',
-          month: '2026-05',
-          amount: parseInt(amount),
+          tenantId,
+          studentId,
+          recordedBy,
+          month,
+          amount,
           paidAt: new Date().toISOString(),
         }),
-      }, token);
-
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.id === id
-            ? { ...s, paid: true, status: 'active', amount: parseInt(amount), paidAt: 'Bugun' }
-            : s,
-        ),
-      );
-      setSelected(null);
-      setAmount('');
-    } catch (err) {
-      setPayError(err instanceof Error ? err.message : "To'lovni saqlashda xatolik");
-    }
+      },
+      token,
+    );
+    await fetchStudents(month);
   }
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">To&apos;lov Holati — 2026-may</h1>
-
-      {payError && <p className="text-red-500 text-sm">{payError}</p>}
-
-      <div className="space-y-2">
-        {students.map((s) => (
-          <div key={s.id} className="bg-white rounded-xl p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{s.name}</p>
-                <p className={`text-sm ${s.paid ? 'text-green-600' : s.status === 'blocked_payment' ? 'text-red-600' : 'text-gray-500'}`}>
-                  {s.paid
-                    ? `✅ To'ladi — ${s.amount?.toLocaleString()} so'm (${s.paidAt})`
-                    : s.status === 'blocked_payment'
-                    ? "🔒 Bloklangan — to'lov kutilmoqda"
-                    : "⏳ Hali to'lamagan"}
-                </p>
-              </div>
-              {!s.paid && (
-                <button
-                  onClick={() => setSelected(s.id)}
-                  className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm"
-                >
-                  To&apos;lov qabul
-                </button>
-              )}
-            </div>
-
-            {selected === s.id && (
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Summa (so'm)"
-                  className="flex-1 border rounded-lg px-3 py-2 text-sm"
-                />
-                <button
-                  onClick={() => markPaid(s.id)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm"
-                >
-                  Saqlash
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold">To&apos;lov Holati</h1>
+        <MonthPicker value={month} onChange={handleMonthChange} />
       </div>
+
+      {error ? (
+        <div className="bg-white rounded-xl shadow-sm p-5">
+          <p className="text-red-500 text-sm">{error}</p>
+          <button
+            onClick={() => fetchStudents(month)}
+            className="mt-2 text-sm text-indigo-600 hover:underline"
+          >
+            Qayta urinish
+          </button>
+        </div>
+      ) : (
+        <div
+          className={`bg-white rounded-xl shadow-sm overflow-hidden transition-opacity ${fetching ? 'opacity-50' : ''}`}
+        >
+          <DebtorsTable
+            students={students}
+            readOnly={false}
+            onMarkPaid={handleMarkPaid}
+            loading={loading}
+          />
+        </div>
+      )}
     </div>
   );
 }
