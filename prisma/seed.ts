@@ -173,6 +173,55 @@ async function main() {
     },
   });
 
+  // Lessons 3–5
+  await prisma.lesson.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000103' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000103',
+      tenantId: testTenant.id,
+      title: 'Present Continuous — Ish davomida',
+      type: LessonType.english,
+      orderNumber: 3,
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      nRepetitions: 3,
+      maxNOverride: 10,
+      isPublished: true,
+    },
+  });
+
+  await prisma.lesson.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000104' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000104',
+      tenantId: testTenant.id,
+      title: 'Future Simple — Kelajak zamonasi',
+      type: LessonType.english,
+      orderNumber: 4,
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      nRepetitions: 4,
+      maxNOverride: 12,
+      isPublished: true,
+    },
+  });
+
+  await prisma.lesson.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000105' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000105',
+      tenantId: testTenant.id,
+      title: 'Present Perfect — Tajriba va yutuqlar',
+      type: LessonType.english,
+      orderNumber: 5,
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      nRepetitions: 5,
+      maxNOverride: 15,
+      isPublished: true,
+    },
+  });
+
   // StudentXp for student1
   await prisma.studentXp.upsert({
     where: { studentId: student1.id },
@@ -187,7 +236,45 @@ async function main() {
     },
   });
 
-  console.log('✅ Seed bajarildi: 7 foydalanuvchi (6 rol), 2 dars, 1 MCQ, 1 XP yozuvi');
+  // Group Challenge (demo groups A vs B)
+  const groupAId = '00000000-0000-0000-0001-000000000001';
+  const groupBId = '00000000-0000-0000-0001-000000000002';
+  await prisma.groupChallenge.upsert({
+    where: { id: '00000000-0000-0000-0002-000000000001' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0002-000000000001',
+      tenantId: testTenant.id,
+      groupAId,
+      groupBId,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: 'active',
+      groupAXp: 120,
+      groupBXp: 80,
+    },
+  });
+
+  // Active Duel: student1 vs student2
+  const student2Id = '00000000-0000-0000-0000-000000000016';
+  await prisma.duel.upsert({
+    where: { id: '00000000-0000-0000-0003-000000000001' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0003-000000000001',
+      challengerId: student1.id,
+      challengedId: student2Id,
+      tenantId: testTenant.id,
+      questions: [
+        { question: 'She ___ English every day.', options: ['study', 'studies', 'studying', 'studied'], correctIndex: 1 },
+        { question: 'They ___ to school now.', options: ['go', 'goes', 'are going', 'went'], correctIndex: 2 },
+      ],
+      status: 'active',
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+
+  console.log('✅ Seed bajarildi: 7 foydalanuvchi (6 rol), 5 dars, 1 MCQ, 1 XP, 1 guruh challenge, 1 faol duel');
 }
 
 main().finally(() => prisma.$disconnect());

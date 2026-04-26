@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CronService {
@@ -10,6 +11,7 @@ export class CronService {
   constructor(
     private prisma: PrismaService,
     private telegram: TelegramService,
+    private notifications: NotificationsService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -122,6 +124,46 @@ export class CronService {
       }
 
       this.logger.log(`Tenant ${setting.tenantId}: ${unpaidStudents.length} ta eslatma yuborildi`);
+    }
+  }
+
+  @Cron('0 9 * * *', { name: 'delegation_reminder' })
+  async runDelegationReminder() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 59, 999);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const delegations = await this.prisma.delegation.findMany({
+      where: {
+        status: 'active',
+        endsAt: { gte: todayEnd, lte: tomorrow },
+      },
+      include: {
+        fromUser: { select: { id: true, name: true } },
+        toUser: { select: { id: true, name: true } },
+      },
+    });
+
+    for (const d of delegations) {
+      await this.notifications.send(
+        d.fromUser.id,
+        'delegation',
+        'Delegatsiya tugayapti',
+        `${d.toUser.name} ga delegatsiyangiz ertaga tugaydi.`,
+      ).catch(() => {});
+
+      await this.notifications.send(
+        d.toUser.id,
+        'delegation',
+        'Delegatsiya tugayapti',
+        `${d.fromUser.name} dan delegatsiya ertaga tugaydi.`,
+      ).catch(() => {});
+    }
+
+    if (delegations.length > 0) {
+      this.logger.log(`${delegations.length} delegatsiya eslatmasi yuborildi`);
     }
   }
 
