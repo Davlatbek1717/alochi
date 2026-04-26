@@ -167,6 +167,61 @@ export class CronService {
     }
   }
 
+  @Cron('0 20 * * *', { name: 'daily_parent_report' })
+  async runDailyParentReport() {
+    this.logger.log('Cron: daily parent report boshlanmoqda...');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const students = await this.prisma.user.findMany({
+      where: {
+        role: 'student',
+        status: 'active',
+        parentTelegramId: { not: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        parentTelegramId: true,
+        studentXp: { select: { totalXp: true, currentStreak: true } },
+        studentStatuses: {
+          where: { date: { gte: today, lt: tomorrow } },
+          orderBy: { date: 'desc' },
+          take: 1,
+          select: { englishStatus: true, personalStatus: true, criticalStatus: true },
+        },
+        studentProgress: {
+          where: { completedAt: { gte: today, lt: tomorrow }, academyCompleted: true },
+          select: { id: true },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const student of students) {
+      if (!student.parentTelegramId) continue;
+      const status = student.studentStatuses[0];
+      const message = this.telegram.formatDailyReport({
+        studentName: student.name,
+        date: today.toLocaleDateString('uz-UZ'),
+        lessons: student.studentProgress.length,
+        englishStatus: status?.englishStatus ?? 'nomalum',
+        personalStatus: status?.personalStatus ?? 'nomalum',
+        criticalStatus: status?.criticalStatus ?? 'nomalum',
+        studyMinutes: student.studentProgress.length * 15,
+        streak: student.studentXp?.currentStreak ?? 0,
+        totalXp: student.studentXp?.totalXp ?? 0,
+      });
+      await this.telegram.sendMessage(student.parentTelegramId, message).catch(() => {});
+      sent++;
+    }
+
+    this.logger.log(`Daily parent report: ${sent} ta ota-onaga yuborildi`);
+  }
+
   async triggerPaymentUnblockManually() {
     return this.runPaymentUnblock();
   }
