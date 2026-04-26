@@ -1,5 +1,11 @@
-import { Controller, Get, Param, Post, Body, Request, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller, Get, Param, Post, Body, Request,
+  UnauthorizedException, HttpException, HttpStatus,
+} from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { firstValueFrom } from 'rxjs';
 import { CacheService } from './cache.service';
 import { FaceService } from './face.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,7 +21,13 @@ export class FaceController {
     private faceService: FaceService,
     private prisma: PrismaService,
     private staffAttendance: AttendanceStaffService,
+    private httpService: HttpService,
+    private config: ConfigService,
   ) {}
+
+  private get aiUrl(): string {
+    return this.config.get<string>('AI_SERVICE_URL') ?? 'http://localhost:8000';
+  }
 
   @Get('cache/:branchId')
   async getCache(@Param('branchId') branchId: string, @Request() req: any) {
@@ -40,8 +52,24 @@ export class FaceController {
   }
 
   @Post('enroll')
-  enroll(@Body() body: { userId: string; tenantId: string; enrolledVia: string }) {
-    return this.faceService.enroll(body.userId, body.tenantId, body.enrolledVia);
+  async enroll(
+    @Body() body: { user_id: string; tenant_id: string; images_base64: string[]; enrolled_via?: string },
+  ) {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post(`${this.aiUrl}/face/enroll`, {
+          user_id: body.user_id,
+          tenant_id: body.tenant_id,
+          images_base64: body.images_base64,
+          enrolled_via: body.enrolled_via ?? 'web',
+        }),
+      );
+      return data;
+    } catch (err: any) {
+      const status = err?.response?.status ?? HttpStatus.BAD_GATEWAY;
+      const message = err?.response?.data?.detail ?? 'AI servisi bilan aloqa yo\'q';
+      throw new HttpException(message, status);
+    }
   }
 
   @Get('enrollments/:userId')
@@ -49,10 +77,33 @@ export class FaceController {
     return this.faceService.getEnrollments(userId);
   }
 
-  @Post('face-checkin')
-  async faceCheckin(
-    @Body() body: { userId: string; deviceToken: string },
+  @Post('recognize')
+  async recognize(
+    @Body() body: { image_base64: string; tenant_id: string; branch_id: string; deviceToken: string },
   ) {
+    const device = await this.prisma.branchDevice.findUnique({
+      where: { deviceToken: body.deviceToken },
+    });
+    if (!device) throw new UnauthorizedException('Device ruxsatsiz');
+
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post(`${this.aiUrl}/face/recognize`, {
+          image_base64: body.image_base64,
+          tenant_id: body.tenant_id,
+          branch_id: body.branch_id,
+        }),
+      );
+      return data;
+    } catch (err: any) {
+      const status = err?.response?.status ?? HttpStatus.BAD_GATEWAY;
+      const message = err?.response?.data?.detail ?? 'AI servisi bilan aloqa yo\'q';
+      throw new HttpException(message, status);
+    }
+  }
+
+  @Post('face-checkin')
+  async faceCheckin(@Body() body: { userId: string; deviceToken: string }) {
     const device = await this.prisma.branchDevice.findUnique({
       where: { deviceToken: body.deviceToken },
       include: { branch: true },
@@ -67,9 +118,7 @@ export class FaceController {
   }
 
   @Post('manual-checkin')
-  async manualCheckin(
-    @Body() body: { login: string; password: string; deviceToken: string },
-  ) {
+  async manualCheckin(@Body() body: { login: string; password: string; deviceToken: string }) {
     const device = await this.prisma.branchDevice.findUnique({
       where: { deviceToken: body.deviceToken },
       include: { branch: true },
@@ -86,10 +135,5 @@ export class FaceController {
 
     const record = await this.staffAttendance.checkIn(user.id, user.tenantId, device.branchId, 'manual');
     return { name: user.name, isLate: record.isLate };
-  }
-
-  @Post('recognize')
-  async recognize(@Body() body: { imageBase64: string; deviceToken: string }) {
-    return { message: 'Server fallback (AI Service orqali)' };
   }
 }
