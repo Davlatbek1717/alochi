@@ -24,6 +24,45 @@ type StatusStudent = {
   criticalStatus: string;
 };
 
+function StudentRow({ s, color }: { s: StatusStudent; color: 'red' | 'yellow' }) {
+  return (
+    <div className="p-4 flex items-center justify-between">
+      <div>
+        <p className="font-medium">{s.student.name}</p>
+        <p className="text-sm text-gray-500">
+          {[s.englishStatus, s.personalStatus, s.criticalStatus]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      </div>
+      <Link
+        href={`/manager/students/${s.student.id}`}
+        className={`px-3 py-1 rounded-lg text-sm text-white ${
+          color === 'red' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-yellow-600 hover:bg-yellow-700'
+        }`}
+      >
+        Ko&apos;rish
+      </Link>
+    </div>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <>
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="p-4 flex items-center justify-between animate-pulse">
+          <div className="space-y-2">
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-3 w-20 bg-gray-100 rounded" />
+          </div>
+          <div className="h-8 w-16 bg-gray-200 rounded-lg" />
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function ManagerDashboard() {
   const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
   const [streak, setStreak] = useState(0);
@@ -57,45 +96,6 @@ export default function ManagerDashboard() {
 
     fetchData();
   }, []);
-
-  function StudentRow({ s, color }: { s: StatusStudent; color: 'red' | 'yellow' }) {
-    return (
-      <div className="p-4 flex items-center justify-between">
-        <div>
-          <p className="font-medium">{s.student.name}</p>
-          <p className="text-sm text-gray-500">
-            {[s.englishStatus, s.personalStatus, s.criticalStatus]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-        </div>
-        <Link
-          href={`/manager/students/${s.student.id}`}
-          className={`px-3 py-1 rounded-lg text-sm text-white ${
-            color === 'red' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-yellow-600 hover:bg-yellow-700'
-          }`}
-        >
-          Ko&apos;rish
-        </Link>
-      </div>
-    );
-  }
-
-  function SkeletonRows() {
-    return (
-      <>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 flex items-center justify-between animate-pulse">
-            <div className="space-y-2">
-              <div className="h-4 w-32 bg-gray-200 rounded" />
-              <div className="h-3 w-20 bg-gray-100 rounded" />
-            </div>
-            <div className="h-8 w-16 bg-gray-200 rounded-lg" />
-          </div>
-        ))}
-      </>
-    );
-  }
 
   return (
     <div className="space-y-6">

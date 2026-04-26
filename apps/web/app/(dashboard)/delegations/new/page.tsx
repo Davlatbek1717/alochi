@@ -1,9 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
-export default function NewDelegationPage() {
+function NewDelegationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedRecipient, setSelectedRecipient] = useState('');
@@ -109,5 +109,13 @@ export default function NewDelegationPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function NewDelegationPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewDelegationForm />
+    </Suspense>
   );
 }
