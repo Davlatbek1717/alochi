@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private telegram: TelegramService,
+  ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
   async runPaymentBlock() {
@@ -77,6 +81,47 @@ export class CronService {
 
     if (result.count > 0) {
       this.logger.log(`${result.count} delegatsiya avtomatik yakunlandi`);
+    }
+  }
+
+  @Cron('0 9 * * *', { name: 'payment_reminder' })
+  async runPaymentReminder() {
+    this.logger.log('Cron: payment reminder boshlanmoqda...');
+
+    const settings = await this.prisma.paymentSetting.findMany();
+    const today = new Date();
+
+    for (const setting of settings) {
+      if (today.getDate() !== setting.paymentEndDay - 2) continue;
+
+      const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      const paidIds = (
+        await this.prisma.payment.findMany({
+          where: { tenantId: setting.tenantId, month },
+          select: { studentId: true },
+        })
+      ).map((p) => p.studentId);
+
+      const unpaidStudents = await this.prisma.user.findMany({
+        where: {
+          tenantId: setting.tenantId,
+          role: 'student',
+          status: 'active',
+          id: { notIn: paidIds },
+          telegramId: { not: null },
+        },
+        select: { name: true, telegramId: true },
+      });
+
+      const daysLeft = setting.paymentEndDay - today.getDate();
+      for (const student of unpaidStudents) {
+        await this.telegram.sendMessage(
+          student.telegramId!,
+          this.telegram.formatPaymentReminder(student.name, daysLeft),
+        );
+      }
+
+      this.logger.log(`Tenant ${setting.tenantId}: ${unpaidStudents.length} ta eslatma yuborildi`);
     }
   }
 

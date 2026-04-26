@@ -2,6 +2,7 @@ import {
   Injectable, BadRequestException, ForbiddenException, NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface CreateDelegationDto {
   tenantId: string;
@@ -19,7 +20,10 @@ const ALLOWED_DELEGATED_ROLES = ['filadmin', 'manager'];
 
 @Injectable()
 export class DelegationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   async create(dto: CreateDelegationDto) {
     if (!dto.reason.trim()) throw new BadRequestException('Sabab majburiy');
@@ -44,6 +48,15 @@ export class DelegationsService {
         actionType: 'delegation_created',
         meta: { reason: dto.reason, permissions: dto.permissions },
       },
+    });
+
+    const fromUser = await this.prisma.user.findUnique({ where: { id: dto.fromUserId }, select: { name: true } });
+    this.events.emit('delegation.created', {
+      toUserId: dto.toUserId,
+      fromUserName: fromUser?.name ?? '',
+      role: dto.delegatedRole,
+      endsAt: dto.endsAt.toISOString().split('T')[0],
+      reason: dto.reason,
     });
 
     return delegation;
@@ -91,6 +104,15 @@ export class DelegationsService {
       }),
     ]);
 
+    if (action === 'rejected') {
+      const toUser = await this.prisma.user.findUnique({ where: { id: responderId }, select: { name: true } });
+      this.events.emit('delegation.rejected', {
+        fromUserId: delegation.fromUserId,
+        toUserName: toUser?.name ?? '',
+        reason: reason ?? '',
+      });
+    }
+
     return updated;
   }
 
@@ -113,6 +135,13 @@ export class DelegationsService {
         data: { delegationId, actorId: cancelledBy, actionType: 'cancelled', meta: { reason } },
       }),
     ]);
+
+    const fromUser = await this.prisma.user.findUnique({ where: { id: cancelledBy }, select: { name: true } });
+    this.events.emit('delegation.cancelled', {
+      toUserId: delegation.toUserId,
+      fromUserName: fromUser?.name ?? '',
+      reason,
+    });
 
     return updated;
   }
