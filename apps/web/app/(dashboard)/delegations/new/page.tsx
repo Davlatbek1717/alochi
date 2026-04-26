@@ -1,14 +1,15 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 
 export default function NewDelegationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState(searchParams.get('reason') ?? '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
