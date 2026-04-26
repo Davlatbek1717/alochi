@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-interface BranchPaymentSummary {
+export interface BranchPaymentSummary {
   branchId: string;
   branchName: string;
   total: number;
