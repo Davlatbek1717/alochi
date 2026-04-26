@@ -136,4 +136,58 @@ describe('DelegationsService', () => {
       await expect(service.cancel('missing', 'user-from', 'reason')).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('findOne', () => {
+    const fullDelegation = {
+      id: 'del-1',
+      ...baseDto,
+      status: 'active',
+      fromUser: { name: 'Ali' },
+      toUser: { name: 'Vali' },
+      responses: [],
+      auditLogs: [],
+    };
+
+    it('returns delegation with relations when it exists', async () => {
+      mockPrisma.delegation.findUnique.mockResolvedValue(fullDelegation);
+
+      const result = await service.findOne('del-1');
+
+      expect(result).toEqual(fullDelegation);
+      expect(mockPrisma.delegation.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'del-1' } }),
+      );
+    });
+
+    it('throws NotFoundException when delegation does not exist', async () => {
+      mockPrisma.delegation.findUnique.mockResolvedValue(null);
+
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('exportToPdf', () => {
+    it('returns a Buffer for an existing delegation', async () => {
+      mockPrisma.delegation.findUnique.mockResolvedValue({
+        id: 'del-1',
+        ...baseDto,
+        status: 'active',
+        cancelReason: null,
+        fromUser: { name: 'Ali' },
+        toUser: { name: 'Vali' },
+        responses: [],
+        auditLogs: [
+          {
+            performedAt: new Date('2026-05-01T10:00:00Z'),
+            actionType: 'delegation_created',
+          },
+        ],
+      });
+
+      const result = await service.exportToPdf('del-1');
+
+      expect(result).toBeInstanceOf(Buffer);
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
 });

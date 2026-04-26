@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Body, Param, Res, UseGuards, Request } from '@nestjs/common';
+import { Response } from 'express';
 import { DelegationsService } from './delegations.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -30,9 +31,24 @@ export class DelegationsController {
     return this.delegations.findForUser(req.user.userId);
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.delegations.findOne(id);
+  }
+
   @Get(':id/audit')
   getAudit(@Param('id') id: string) {
     return this.delegations.getAuditLog(id);
+  }
+
+  @Get(':id/export')
+  async exportPdf(@Param('id') id: string, @Res() res: Response) {
+    const buffer = await this.delegations.exportToPdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="delegation-${id}.pdf"`,
+    });
+    res.send(buffer);
   }
 
   @Post(':id/respond')

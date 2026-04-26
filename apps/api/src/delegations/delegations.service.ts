@@ -131,6 +131,77 @@ export class DelegationsService {
     });
   }
 
+  async findOne(delegationId: string) {
+    const delegation = await this.prisma.delegation.findUnique({
+      where: { id: delegationId },
+      include: {
+        fromUser: { select: { name: true } },
+        toUser: { select: { name: true } },
+        responses: true,
+        auditLogs: { orderBy: { performedAt: 'asc' } },
+      },
+    });
+    if (!delegation) throw new NotFoundException('Delegatsiya topilmadi');
+    return delegation;
+  }
+
+  async exportToPdf(delegationId: string): Promise<Buffer> {
+    const delegation = await this.findOne(delegationId);
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+    const statusLabel: Record<string, string> = {
+      pending: 'Kutilmoqda',
+      active: 'Faol',
+      rejected: 'Rad etilgan',
+      cancelled: 'Bekor qilingan',
+      completed: 'Yakunlangan',
+    };
+
+    const row = (label: string, value: string) => {
+      doc.fontSize(11).font('Helvetica-Bold').text(`${label}: `, { continued: true });
+      doc.font('Helvetica').text(value);
+    };
+
+    doc.fontSize(22).font('Helvetica-Bold').text("Delegatsiya Hujjati", { align: 'center' });
+    doc.moveDown(0.5);
+    doc.fontSize(10).font('Helvetica').fillColor('gray').text(`ID: ${delegation.id}`, { align: 'center' });
+    doc.fillColor('black').moveDown(1.5);
+
+    row('Kim tomonidan', delegation.fromUser.name);
+    row('Kimga', delegation.toUser.name);
+    row('Delegatsiya roli', delegation.delegatedRole);
+    row('Sabab', delegation.reason);
+    row('Boshlanish', delegation.startsAt.toLocaleDateString('uz-UZ'));
+    row('Tugash', delegation.endsAt.toLocaleDateString('uz-UZ'));
+    row('Holat', statusLabel[delegation.status] ?? delegation.status);
+
+    if (delegation.cancelReason) {
+      row('Bekor qilish sababi', delegation.cancelReason);
+    }
+
+    if (delegation.auditLogs.length > 0) {
+      doc.moveDown(1.5);
+      doc.fontSize(14).font('Helvetica-Bold').text('Audit logi');
+      doc.moveDown(0.5);
+
+      for (const log of delegation.auditLogs) {
+        const time = log.performedAt.toLocaleString('uz-UZ');
+        doc.fontSize(10).font('Helvetica').text(`• [${time}] ${log.actionType}`, { indent: 10 });
+      }
+    }
+
+    doc.end();
+    return new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+  }
+
   async getAuditLog(delegationId: string) {
     return this.prisma.delegationAuditLog.findMany({
       where: { delegationId },
