@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
 import { XpBar } from '../student/_components/XpBar';
@@ -15,39 +16,86 @@ type StreakData = {
   hasShield: boolean;
 };
 
-const RED_STUDENTS = [
-  { id: '1', name: 'Sardor Rahimov', note: '3 kun kelmadi', days: 3 },
-  { id: '2', name: 'Anvar Karimov', note: 'Status qizil 5 kun', days: 5 },
-];
-
-const YELLOW_STUDENTS = [
-  { id: '3', name: 'Dilnoza Ergasheva', note: 'Dars bajarish pastlashdi', days: 2 },
-];
+type StatusStudent = {
+  studentId: string;
+  student: { id: string; name: string };
+  englishStatus: string;
+  personalStatus: string;
+  criticalStatus: string;
+};
 
 export default function ManagerDashboard() {
   const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
   const [streak, setStreak] = useState(0);
   const [hasShield, setHasShield] = useState(false);
+  const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
+  const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, streakRes] = await Promise.all([
+        const [xpRes, streakRes, redRes, yellowRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
+          apiRequest<StatusStudent[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
+          apiRequest<StatusStudent[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
         ]);
         setXpData(xpRes.data);
         setStreak(streakRes.data.streak);
         setHasShield(streakRes.data.hasShield);
+        setRedStudents(redRes.data);
+        setYellowStudents(yellowRes.data);
       } catch {
         // keep defaults on error
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchData();
   }, []);
+
+  function StudentRow({ s, color }: { s: StatusStudent; color: 'red' | 'yellow' }) {
+    return (
+      <div className="p-4 flex items-center justify-between">
+        <div>
+          <p className="font-medium">{s.student.name}</p>
+          <p className="text-sm text-gray-500">
+            {[s.englishStatus, s.personalStatus, s.criticalStatus]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </div>
+        <Link
+          href={`/manager/students/${s.student.id}`}
+          className={`px-3 py-1 rounded-lg text-sm text-white ${
+            color === 'red' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-yellow-600 hover:bg-yellow-700'
+          }`}
+        >
+          Ko&apos;rish
+        </Link>
+      </div>
+    );
+  }
+
+  function SkeletonRows() {
+    return (
+      <>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="p-4 flex items-center justify-between animate-pulse">
+            <div className="space-y-2">
+              <div className="h-4 w-32 bg-gray-200 rounded" />
+              <div className="h-3 w-20 bg-gray-100 rounded" />
+            </div>
+            <div className="h-8 w-16 bg-gray-200 rounded-lg" />
+          </div>
+        ))}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -62,39 +110,35 @@ export default function ManagerDashboard() {
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-          <h2 className="font-semibold text-red-700">🔴 Qizil O&apos;quvchilar (?)</h2>
+          <h2 className="font-semibold text-red-700">
+            🔴 Qizil O&apos;quvchilar ({loading ? '…' : redStudents.length})
+          </h2>
         </div>
         <div className="divide-y">
-          {RED_STUDENTS.map((s) => (
-            <div key={s.id} className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-medium">{s.name}</p>
-                <p className="text-sm text-gray-500">{s.note}</p>
-              </div>
-              <button className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm">
-                1:1 Sessiya
-              </button>
-            </div>
-          ))}
+          {loading ? (
+            <SkeletonRows />
+          ) : redStudents.length === 0 ? (
+            <p className="p-4 text-sm text-gray-400">Qizil o&apos;quvchilar yo&apos;q</p>
+          ) : (
+            redStudents.map((s) => <StudentRow key={s.studentId} s={s} color="red" />)
+          )}
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
-          <h2 className="font-semibold text-yellow-700">🟡 Sariq O&apos;quvchilar ({YELLOW_STUDENTS.length})</h2>
+          <h2 className="font-semibold text-yellow-700">
+            🟡 Sariq O&apos;quvchilar ({loading ? '…' : yellowStudents.length})
+          </h2>
         </div>
         <div className="divide-y">
-          {YELLOW_STUDENTS.map((s) => (
-            <div key={s.id} className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-medium">{s.name}</p>
-                <p className="text-sm text-gray-500">{s.note}</p>
-              </div>
-              <button className="bg-yellow-600 text-white px-3 py-1 rounded-lg text-sm">
-                Kuzatish
-              </button>
-            </div>
-          ))}
+          {loading ? (
+            <SkeletonRows />
+          ) : yellowStudents.length === 0 ? (
+            <p className="p-4 text-sm text-gray-400">Sariq o&apos;quvchilar yo&apos;q</p>
+          ) : (
+            yellowStudents.map((s) => <StudentRow key={s.studentId} s={s} color="yellow" />)
+          )}
         </div>
       </div>
     </div>
