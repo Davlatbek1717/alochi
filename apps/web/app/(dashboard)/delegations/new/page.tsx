@@ -1,7 +1,16 @@
 'use client';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
+
+type BranchUser = {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  phone: string;
+  login: string;
+};
 
 function NewDelegationForm() {
   const router = useRouter();
@@ -12,6 +21,25 @@ function NewDelegationForm() {
   const [reason, setReason] = useState(searchParams.get('reason') ?? '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [staffUsers, setStaffUsers] = useState<BranchUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    let branchId = '';
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
+      branchId = user.branchId ?? '';
+    } catch {
+      // malformed JSON — branchId stays empty
+    }
+
+    apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token)
+      .then((res) => setStaffUsers(res.data.filter((u) => u.role !== 'student')))
+      .catch(() => {})
+      .finally(() => setLoadingUsers(false));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,12 +86,18 @@ function NewDelegationForm() {
           <select
             value={selectedRecipient}
             onChange={(e) => setSelectedRecipient(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
+            disabled={loadingUsers}
+            className="w-full border rounded-lg px-3 py-2 disabled:bg-gray-50"
             required
           >
-            <option value="">Tanlang...</option>
-            <option value="user_alisher">Alisher Toshev (Manager)</option>
-            <option value="user_kamola">Kamola Nazarova (Mentor)</option>
+            <option value="">
+              {loadingUsers ? 'Yuklanmoqda...' : 'Tanlang...'}
+            </option>
+            {staffUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.role})
+              </option>
+            ))}
           </select>
         </div>
 
