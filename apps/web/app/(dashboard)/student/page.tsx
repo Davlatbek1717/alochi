@@ -41,6 +41,8 @@ type StatusData = {
   criticalStatus?: string;
 };
 
+type ReviewItem = { word: string; easeFactor: number; interval: number };
+
 type Warning = {
   id: string;
   reasonType: string;
@@ -66,13 +68,14 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
+  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
@@ -80,6 +83,7 @@ export default function StudentDashboard() {
           apiRequest<unknown[]>('/progress/my', {}, token),
           apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
           apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
+          apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -89,6 +93,7 @@ export default function StudentDashboard() {
         setLessonProgress(progressRes.data.length);
         setStatusData(statusRes.data);
         setWarnings(warningsRes.data ?? []);
+        setReviewItems(reviewRes.data ?? []);
       } catch {
         // keep defaults on error
       } finally {
@@ -164,6 +169,29 @@ export default function StudentDashboard() {
           nextLevelAt={cityData?.nextLevelAt ?? null}
           name={cityData?.name}
         />
+      )}
+
+      {reviewItems.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          <h2 className="font-bold text-gray-800">🔁 Kunlik Takrorlash</h2>
+          <p className="text-sm text-gray-500">{reviewItems.length} ta so&apos;z takrorlanishi kerak</p>
+          <div className="flex flex-wrap gap-2">
+            {reviewItems.slice(0, 10).map((item) => (
+              <span
+                key={item.word}
+                className="bg-indigo-50 text-indigo-700 text-sm px-3 py-1 rounded-full border border-indigo-100"
+              >
+                {item.word}
+              </span>
+            ))}
+          </div>
+          <a
+            href="/student/lessons"
+            className="block text-center text-sm text-indigo-600 font-medium hover:underline"
+          >
+            Darslarga o&apos;tish →
+          </a>
+        </div>
       )}
 
       <SocialFeed />
