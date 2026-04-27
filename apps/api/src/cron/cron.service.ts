@@ -222,6 +222,81 @@ export class CronService {
     this.logger.log(`Daily parent report: ${sent} ta ota-onaga yuborildi`);
   }
 
+  @Cron('0 8 * * *', { name: 'manager_morning_alert' })
+  async runManagerMorningAlert() {
+    this.logger.log('Cron: manager morning alert boshlanmoqda...');
+
+    const managers = await this.prisma.user.findMany({
+      where: { role: 'manager', status: 'active', telegramId: { not: null } },
+      select: { id: true, name: true, telegramId: true, branchId: true, tenantId: true },
+    });
+
+    for (const manager of managers) {
+      if (!manager.telegramId) continue;
+
+      const [redCount, yellowCount] = await Promise.all([
+        this.prisma.studentStatus.count({
+          where: {
+            student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
+            OR: [{ englishStatus: 'qizil' }, { personalStatus: 'qizil' }, { criticalStatus: 'qizil' }],
+          },
+        }),
+        this.prisma.studentStatus.count({
+          where: {
+            student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
+            OR: [{ englishStatus: 'sariq' }, { personalStatus: 'sariq' }, { criticalStatus: 'sariq' }],
+          },
+        }),
+      ]);
+
+      if (redCount === 0 && yellowCount === 0) continue;
+
+      const msg =
+        `🔔 Ertalabki hisobot:\n` +
+        `🔴 Qizil o'quvchilar: ${redCount}\n` +
+        `🟡 Sariq o'quvchilar: ${yellowCount}\n\n` +
+        `Batafsil: /manager/students`;
+
+      await this.telegram.sendMessage(manager.telegramId, msg).catch(() => {});
+    }
+  }
+
+  @Cron('0 8 * * *', { name: 'filadmin_daily_report' })
+  async runFiladminDailyReport() {
+    this.logger.log('Cron: filadmin daily report boshlanmoqda...');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const filadmins = await this.prisma.user.findMany({
+      where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+      select: { id: true, telegramId: true, branchId: true, tenantId: true },
+    });
+
+    for (const fa of filadmins) {
+      if (!fa.telegramId || !fa.branchId) continue;
+
+      const [staffCount, presentCount, studentCount] = await Promise.all([
+        this.prisma.user.count({
+          where: { branchId: fa.branchId, role: { in: ['mentor', 'manager', 'tester'] }, status: 'active' },
+        }),
+        this.prisma.attendanceStaff.count({
+          where: { date: today, user: { branchId: fa.branchId }, loginTime: { not: null } },
+        }),
+        this.prisma.user.count({
+          where: { branchId: fa.branchId, role: 'student', status: 'active' },
+        }),
+      ]);
+
+      const msg =
+        `📊 Bugungi filial hisoboti:\n\n` +
+        `👥 Xodimlar: ${presentCount}/${staffCount} keldi\n` +
+        `🎓 Jami o'quvchilar: ${studentCount}`;
+
+      await this.telegram.sendMessage(fa.telegramId, msg).catch(() => {});
+    }
+  }
+
   async triggerPaymentUnblockManually() {
     return this.runPaymentUnblock();
   }
