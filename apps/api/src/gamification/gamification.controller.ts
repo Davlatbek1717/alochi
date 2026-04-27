@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Res, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Res, UseGuards, Request } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { XpService } from './xp.service';
@@ -6,6 +6,7 @@ import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
 import { CertificatesService } from './certificates.service';
 import { CityService } from './city.service';
+import { LeaderboardService } from './leaderboard.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('gamification')
@@ -19,6 +20,7 @@ export class GamificationController {
     private quest: QuestService,
     private certificates: CertificatesService,
     private cityService: CityService,
+    private leaderboard: LeaderboardService,
   ) {}
 
   @Get('xp')
@@ -59,5 +61,15 @@ export class GamificationController {
   @Get('city')
   getCityLevel(@Request() req: any) {
     return this.cityService.getCityLevel(req.user.userId);
+  }
+
+  @Get('leaderboard/branch')
+  getBranchLeaderboard(@Request() req: any) {
+    return this.leaderboard.getBranchLeaderboard(req.user.branchId);
+  }
+
+  @Get('leaderboard/national')
+  getNationalLeaderboard(@Query('period') period: 'weekly' | 'monthly' = 'weekly') {
+    return this.leaderboard.getNationalLeaderboard(period);
   }
 }
