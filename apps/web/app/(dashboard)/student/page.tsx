@@ -32,6 +32,7 @@ type CityData = {
   buildings: string[];
   lessonsCompleted: number;
   nextLevelAt: number;
+  name?: string;
 };
 
 type StatusData = {
@@ -157,10 +158,11 @@ export default function StudentDashboard() {
 
       {cityData && (
         <VirtualCity
-          level={cityData.level}
-          buildings={cityData.buildings}
-          lessonsCompleted={cityData.lessonsCompleted}
-          nextLevelAt={cityData.nextLevelAt}
+          level={cityData?.level ?? 1}
+          buildings={cityData?.buildings ?? []}
+          lessonsCompleted={cityData?.lessonsCompleted ?? 0}
+          nextLevelAt={cityData?.nextLevelAt ?? 50}
+          name={cityData?.name}
         />
       )}
 

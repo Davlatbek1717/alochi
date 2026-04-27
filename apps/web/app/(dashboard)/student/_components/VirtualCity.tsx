@@ -5,9 +5,22 @@ type VirtualCityProps = {
   buildings: string[];
   lessonsCompleted: number;
   nextLevelAt: number;
+  name?: string;
 };
 
 const BUILDING_EMOJIS: Record<string, string> = {
+  uy: '🏠',
+  kocha: '🛤️',
+  daraxt: '🌳',
+  maktab: '🏫',
+  dokon: '🏪',
+  park: '🌲',
+  kutubxona: '📚',
+  teatr: '🎭',
+  maydon: '⛲',
+  aeroporti: '✈️',
+  universitet: '🎓',
+  minora: '🗼',
   tent: '⛺',
   house: '🏠',
   shop: '🏪',
@@ -16,6 +29,18 @@ const BUILDING_EMOJIS: Record<string, string> = {
 };
 
 const BUILDING_NAMES: Record<string, string> = {
+  uy: 'Uy',
+  kocha: "Ko'cha",
+  daraxt: 'Daraxt',
+  maktab: 'Maktab',
+  dokon: "Do'kon",
+  park: 'Park',
+  kutubxona: 'Kutubxona',
+  teatr: 'Teatr',
+  maydon: 'Maydon',
+  aeroporti: 'Aeroporti',
+  universitet: 'Universitet',
+  minora: 'Minora',
   tent: 'Palatka',
   house: 'Uy',
   shop: "Do'kon",
@@ -23,14 +48,16 @@ const BUILDING_NAMES: Record<string, string> = {
   castle: "Qal'a",
 };
 
-export default function VirtualCity({ level, buildings, lessonsCompleted, nextLevelAt }: VirtualCityProps) {
-  const progress = nextLevelAt > 0 ? Math.min((lessonsCompleted / nextLevelAt) * 100, 100) : 0;
+export default function VirtualCity({ level, buildings, lessonsCompleted, nextLevelAt, name }: VirtualCityProps) {
+  const progress = nextLevelAt > 0 ? Math.min((lessonsCompleted / nextLevelAt) * 100, 100) : 100;
 
   return (
     <div className="bg-gradient-to-b from-sky-100 to-green-50 rounded-2xl p-4 space-y-3 border border-sky-200">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-gray-800">🏙️ Shahar darajasi: {level}</h2>
-        <span className="text-xs text-gray-500">{lessonsCompleted}/{nextLevelAt} XP</span>
+        <h2 className="font-bold text-gray-800">
+          🏙️ {name ?? `Daraja ${level}`}
+        </h2>
+        <span className="text-xs text-gray-500">{lessonsCompleted}/{nextLevelAt} dars</span>
       </div>
 
       <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -47,7 +74,7 @@ export default function VirtualCity({ level, buildings, lessonsCompleted, nextLe
           {buildings.map((building, idx) => (
             <div
               key={`${building}-${idx}`}
-              className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100"
+              className="bg-white rounded-xl p-3 text-center shadow-sm border border-gray-100 animate-fade-in"
             >
               <p className="text-3xl">{BUILDING_EMOJIS[building] ?? '🏗️'}</p>
               <p className="text-xs text-gray-600 mt-1 font-medium">
