@@ -65,4 +65,50 @@ export class StaffHandler {
       await ctx.reply('Xatolik yuz berdi');
     }
   }
+
+  async handleVazifalar(ctx: Context, telegramId: bigint): Promise<void> {
+    try {
+      const staff = await this.prisma.user.findFirst({
+        where: { telegramId },
+        select: { id: true, name: true },
+      });
+      if (!staff) { await ctx.reply('Profil topilmadi.'); return; }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const tasks = await this.prisma.task.findMany({
+        where: {
+          assignedTo: staff.id,
+          status: { not: 'completed' },
+          OR: [
+            { deadline: null },
+            { deadline: { gte: today, lt: tomorrow } },
+          ],
+        },
+        orderBy: { deadline: 'asc' },
+        take: 10,
+        select: { title: true, status: true, deadline: true },
+      });
+
+      if (tasks.length === 0) {
+        await ctx.reply("✅ Bugun vazifa yo'q");
+        return;
+      }
+
+      const lines = tasks.map((t, i) => {
+        const icon = t.status === 'sent' ? '📋' : '🔄';
+        const deadline = t.deadline
+          ? ` (${t.deadline.toLocaleDateString('uz-UZ')})`
+          : '';
+        return `${icon} ${i + 1}. ${t.title}${deadline}`;
+      });
+
+      await ctx.reply(`📋 Bugungi vazifalar:\n\n${lines.join('\n')}`);
+    } catch {
+      await ctx.reply('Xatolik yuz berdi');
+    }
+  }
 }
