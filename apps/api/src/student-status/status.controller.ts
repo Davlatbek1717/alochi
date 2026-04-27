@@ -11,6 +11,7 @@ interface AuthRequest extends Request {
     userId: string;
     tenantId: string;
     role: UserRole;
+    branchId?: string | null;
   };
 }
 
@@ -61,7 +62,7 @@ export class StatusController {
   @Get('high-performers')
   @Roles(UserRole.manager, UserRole.filadmin)
   getHighPerformers(@Request() req: AuthRequest) {
-    return this.statusService.getHighPerformers(req.user.tenantId);
+    return this.statusService.getHighPerformers(req.user.tenantId, req.user.branchId);
   }
 
   @Get('history/:studentId')

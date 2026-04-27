@@ -85,14 +85,20 @@ export class StatusService {
     });
   }
 
-  async getHighPerformers(tenantId: string) {
+  async getHighPerformers(tenantId: string, branchId?: string | null) {
     const totalLessons = await this.prisma.lesson.count({
       where: { tenantId, isPublished: true },
     });
+    if (totalLessons === 0) return [];
     const threshold = Math.floor(totalLessons * 0.9);
 
     const students = await this.prisma.user.findMany({
-      where: { tenantId, role: 'student', status: 'active' },
+      where: {
+        tenantId,
+        role: 'student',
+        status: 'active',
+        ...(branchId ? { branchId } : {}),
+      },
       select: {
         id: true,
         name: true,
