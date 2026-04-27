@@ -176,7 +176,7 @@ export default function StudentDashboard() {
           <h2 className="font-bold text-gray-800">🔁 Kunlik Takrorlash</h2>
           <p className="text-sm text-gray-500">{reviewItems.length} ta so&apos;z takrorlanishi kerak</p>
           <div className="flex flex-wrap gap-2">
-            {reviewItems.slice(0, 10).map((item) => (
+            {reviewItems.slice(0, 6).map((item) => (
               <span
                 key={item.word}
                 className="bg-indigo-50 text-indigo-700 text-sm px-3 py-1 rounded-full border border-indigo-100"
@@ -184,15 +184,39 @@ export default function StudentDashboard() {
                 {item.word}
               </span>
             ))}
+            {reviewItems.length > 6 && (
+              <span className="bg-gray-50 text-gray-500 text-sm px-3 py-1 rounded-full border border-gray-100">
+                +{reviewItems.length - 6} ta
+              </span>
+            )}
           </div>
-          <a
-            href="/student/lessons"
-            className="block text-center text-sm text-indigo-600 font-medium hover:underline"
+          <Link
+            href="/student/review"
+            className="block text-center text-sm bg-indigo-600 text-white py-2.5 rounded-xl font-semibold"
           >
-            Darslarga o&apos;tish →
-          </a>
+            Takrorlashni boshlash →
+          </Link>
         </div>
       )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/student/review"
+          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
+        >
+          <span className="text-2xl">🔁</span>
+          <p className="font-bold text-sm text-gray-800">Takrorlash</p>
+          <p className="text-xs text-gray-500">Spaced repetition</p>
+        </Link>
+        <Link
+          href="/student/errors"
+          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
+        >
+          <span className="text-2xl">📊</span>
+          <p className="font-bold text-sm text-gray-800">Xato tahlili</p>
+          <p className="text-xs text-gray-500">AI tavsiyalar</p>
+        </Link>
+      </div>
 
       <SocialFeed />
 
