@@ -226,6 +226,11 @@ export class CronService {
   async runManagerMorningAlert() {
     this.logger.log('Cron: manager morning alert boshlanmoqda...');
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
     const managers = await this.prisma.user.findMany({
       where: { role: 'manager', status: 'active', telegramId: { not: null } },
       select: { id: true, name: true, telegramId: true, branchId: true, tenantId: true },
@@ -237,12 +242,14 @@ export class CronService {
       const [redCount, yellowCount] = await Promise.all([
         this.prisma.studentStatus.count({
           where: {
+            date: { gte: today, lt: tomorrow },
             student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
             OR: [{ englishStatus: 'qizil' }, { personalStatus: 'qizil' }, { criticalStatus: 'qizil' }],
           },
         }),
         this.prisma.studentStatus.count({
           where: {
+            date: { gte: today, lt: tomorrow },
             student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
             OR: [{ englishStatus: 'sariq' }, { personalStatus: 'sariq' }, { criticalStatus: 'sariq' }],
           },
@@ -267,6 +274,8 @@ export class CronService {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
     const filadmins = await this.prisma.user.findMany({
       where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
@@ -281,7 +290,7 @@ export class CronService {
           where: { branchId: fa.branchId, role: { in: ['mentor', 'manager', 'tester'] }, status: 'active' },
         }),
         this.prisma.attendanceStaff.count({
-          where: { date: today, user: { branchId: fa.branchId }, loginTime: { not: null } },
+          where: { date: { gte: today, lt: tomorrow }, user: { branchId: fa.branchId }, loginTime: { not: null } },
         }),
         this.prisma.user.count({
           where: { branchId: fa.branchId, role: 'student', status: 'active' },
