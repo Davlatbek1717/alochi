@@ -334,19 +334,19 @@
 ### 17.9 Telegram — Xodimlar Uchun Bot Buyruqlari
 **Spec:** §16.3 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `StaffHandler` da qo'shish:
+- [x] `StaffHandler` da qo'shish:
   - `/vazifalar` — bugungi vazifalar ro'yxati
   - Manager: yangi qizil/sariq o'quvchi notification
   - Filadmin: kunlik filial hisoboti (`@Cron('0 8 * * *')`)
-- [ ] Mentor: guruh davomati tezkor belgilash — bot orqali inline tugmalar bilan
-- [ ] Commit
+- [x] Mentor: guruh davomati tezkor belgilash — bot orqali inline tugmalar bilan
+- [x] Commit
 
 ---
 
 ### 17.10 AI — Adaptiv O'qitish (Spaced Repetition)
 **Spec:** §15 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `prisma/schema.prisma` ga `SpacedRepetitionItem` modeli qo'shish:
+- [x] `prisma/schema.prisma` ga `SpacedRepetitionItem` modeli qo'shish:
   ```prisma
   model SpacedRepetitionItem {
     id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -358,64 +358,64 @@
     @@map("spaced_repetition")
   }
   ```
-- [ ] SM-2 algoritmini backend da implement qilish (`apps/api/src/ai/sm2.service.ts`)
-- [ ] Lug'at topshirishda to'g'ri/xato natijani SM-2 ga uzatish
-- [ ] `GET /ai/daily-review` — Bugun takrorlanishi kerak so'zlar
-- [ ] O'quvchi panelida "Kunlik Takrorlash" bo'limi qo'shish
-- [ ] Commit
+- [x] SM-2 algoritmini backend da implement qilish (`apps/api/src/ai/sm2.service.ts`)
+- [x] Lug'at topshirishda to'g'ri/xato natijani SM-2 ga uzatish
+- [x] `GET /ai/daily-review` — Bugun takrorlanishi kerak so'zlar
+- [x] O'quvchi panelida "Kunlik Takrorlash" bo'limi qo'shish
+- [x] Commit
 
 ### 17.11 AI — Xato Tahlili va Mentor Notification
 **Spec:** §15.1 &nbsp; **Muhimlik:** ⚪
 
-- [ ] Har sessiyadan keyin xatolarni tahlil qiluvchi AI Service endpoint (`POST /ai/analyze-errors`)
-- [ ] Claude API ga xato pattern yuborish → javobda zaif tomonlar ro'yxati
-- [ ] Xato 3 marta takrorlansa → Mentorga notification:
+- [x] Har sessiyadan keyin xatolarni tahlil qiluvchi AI Service endpoint (`POST /ai/analyze-errors`)
+- [x] Claude API ga xato pattern yuborish → javobda zaif tomonlar ro'yxati
+- [x] Xato 3 marta takrorlansa → Mentorga notification:
   `"[Ism] 'Present Perfect' ni 3 marta xato qildi"`
-- [ ] Manager/Mentor panelida har o'quvchi uchun AI tavsiyasi bloki
-- [ ] Commit
+- [x] Manager/Mentor panelida har o'quvchi uchun AI tavsiyasi bloki
+- [x] Commit
 
 ---
 
 ### 17.12 Virtual Shahar — Dars Progressiga Bog'lash
 **Spec:** §17.1 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `VirtualCity` komponentida dars sanasiga qarab qurilish unlocking logikasi:
+- [x] `VirtualCity` komponentida dars sanasiga qarab qurilish unlocking logikasi:
   - 1–50 dars → Qishloq (uy, ko'cha, daraxt)
   - 51–150 dars → Shaharcha (maktab, do'kon, park)
   - 151–300 dars → Shahar (kutubxona, teatr, maydon)
   - 301–500 dars → Metropolis (aeroporti, universitet, minora)
-- [ ] Yangi qurilish unlockda animatsiya + lenta voqeasi
-- [ ] `GET /gamification/city` — joriy qurilishlar + keyingi unlock qachon
-- [ ] Commit
+- [x] Yangi qurilish unlockda animatsiya + lenta voqeasi
+- [x] `GET /gamification/city` — joriy qurilishlar + keyingi unlock qachon
+- [x] Commit
 
 ---
 
 ### 17.13 Milliy Reyting — Anonim Leaderboard
 **Spec:** §17.2 (ijtimoiy daraja tizimi) &nbsp; **Muhimlik:** ⚪
 
-- [ ] `GET /leaderboard/national?period=weekly|monthly` — barcha tenantlar bo'yicha anonim reyting
+- [x] `GET /leaderboard/national?period=weekly|monthly` — barcha tenantlar bo'yicha anonim reyting
   - O'quvchi ismi ko'rsatilmaydi: `"O'quvchi #1247"` formatida
   - Faqat XP va streak ko'rsatiladi
-- [ ] `GET /leaderboard/branch` — Filial ichida to'liq profil bilan reyting
-- [ ] O'quvchi panelida `[🏆 Reyting]` tab (bottom nav da allaqachon bor)
-- [ ] Commit
+- [x] `GET /leaderboard/branch` — Filial ichida to'liq profil bilan reyting
+- [x] O'quvchi panelida `[🏆 Reyting]` tab (bottom nav da allaqachon bor)
+- [x] Commit
 
 ---
 
 ### 17.14 Manager — 200%+ O'quvchilar
 **Spec:** §3.3.2 &nbsp; **Muhimlik:** ⚪
 
-- [ ] `GET /status/high-performers` — barcha statuslari `yashil` bo'lgan, dars progressi 90%+ o'quvchilar
-- [ ] Manager dashboardga "200%+ O'quvchilar" bloki qo'shish
-- [ ] Har bir o'quvchi uchun qiyinroq topshiriq berish imkoniyati (N ni oshirish + maxsus vazifa)
-- [ ] Commit
+- [x] `GET /status/high-performers` — barcha statuslari `yashil` bo'lgan, dars progressi 90%+ o'quvchilar
+- [x] Manager dashboardga "200%+ O'quvchilar" bloki qo'shish
+- [x] Har bir o'quvchi uchun qiyinroq topshiriq berish imkoniyati (N ni oshirish + maxsus vazifa)
+- [x] Commit
 
 ---
 
 ### 17.15 Turnirlar
 **Spec:** umumiy gamifikatsiya bo'limi &nbsp; **Muhimlik:** ⚪
 
-- [ ] `prisma/schema.prisma` ga `Tournament` modeli:
+- [x] `prisma/schema.prisma` ga `Tournament` modeli:
   ```prisma
   model Tournament {
     id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -428,11 +428,11 @@
     @@map("tournaments")
   }
   ```
-- [ ] `POST /tournaments` — Superadmin yaratadi
-- [ ] `POST /tournaments/:id/register` — O'quvchi ro'yxatdan o'tadi
-- [ ] `GET /tournaments` — Kelayotgan + faol turnirlar
-- [ ] Turnir bracket/jadvali frontend da
-- [ ] Commit
+- [x] `POST /tournaments` — Superadmin yaratadi
+- [x] `POST /tournaments/:id/register` — O'quvchi ro'yxatdan o'tadi
+- [x] `GET /tournaments` — Kelayotgan + faol turnirlar
+- [x] Turnir bracket/jadvali frontend da
+- [x] Commit
 
 ---
 
