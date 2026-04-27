@@ -36,6 +36,7 @@ model Tenant {
   users        User[]
   lessons      Lesson[]
   certificates Certificate[]
+  tournaments  Tournament[] @relation("TenantTournaments")
 
   @@map("tenants")
 }
@@ -101,6 +102,9 @@ model User {
   tasksCreated       Task[]              @relation("TaskCreator")
   tasksAssigned      Task[]              @relation("TaskAssignee")
   notifications      Notification[]
+  spacedRepetitionItems   SpacedRepetitionItem[]   @relation("SpacedRepetitionItems")
+  errorLogs               ErrorLog[]               @relation("ErrorLogs")
+  tournamentRegistrations TournamentRegistration[] @relation("TournamentRegistrations")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -146,6 +150,7 @@ model Lesson {
   components_data LessonComponent[]
   progress        StudentProgress[]
   studentConfigs  StudentLessonConfig[]
+  errorLogs       ErrorLog[]            @relation("ErrorLogs")
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, isPublished])
@@ -666,4 +671,74 @@ model Task {
   @@index([assignedTo, status])
   @@index([createdBy])
   @@map("tasks")
+}
+
+// ---- SPACED REPETITION ----
+
+model SpacedRepetitionItem {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  word        String
+  easeFactor  Float    @default(2.5) @map("ease_factor")
+  interval    Int      @default(1)
+  repetitions Int      @default(0)
+  nextReview  DateTime @default(now()) @map("next_review")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  student User @relation("SpacedRepetitionItems", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, word])
+  @@index([studentId, nextReview])
+  @@map("spaced_repetition")
+}
+
+// ---- ERROR LOG ----
+
+model ErrorLog {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  lessonId   String   @map("lesson_id") @db.Uuid
+  question   String
+  errorCount Int      @default(1) @map("error_count")
+  notified   Boolean  @default(false)
+  lastError  DateTime @default(now()) @map("last_error")
+
+  student User   @relation("ErrorLogs", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation("ErrorLogs", fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId, question])
+  @@index([studentId, errorCount])
+  @@map("error_logs")
+}
+
+// ---- TOURNAMENT ----
+
+model Tournament {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  title       String
+  type        String   @default("1v1")
+  status      String   @default("upcoming")
+  startsAt    DateTime @map("starts_at")
+  endsAt      DateTime @map("ends_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant   @relation("TenantTournaments", fields: [tenantId], references: [id], onDelete: Cascade)
+  registrations TournamentRegistration[]
+
+  @@index([tenantId, status])
+  @@map("tournaments")
+}
+
+model TournamentRegistration {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tournamentId String   @map("tournament_id") @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  registeredAt DateTime @default(now()) @map("registered_at")
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  student    User       @relation("TournamentRegistrations", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, studentId])
+  @@map("tournament_registrations")
 }
