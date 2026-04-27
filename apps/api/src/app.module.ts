@@ -29,6 +29,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { HealthModule } from './health/health.module';
 import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { TournamentsModule } from './tournaments/tournaments.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -65,6 +66,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     HealthModule,
     TasksModule,
     NotificationsModule,
+    TournamentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
