@@ -126,8 +126,8 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.bot.command('vazifalar', async (ctx) => {
-      const telegramId = ctx.from?.id ? BigInt(ctx.from.id) : null;
-      if (telegramId) await this.staffHandler.handleVazifalar(ctx, telegramId);
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.staffHandler.handleVazifalar(ctx, telegramId);
     });
   }
 

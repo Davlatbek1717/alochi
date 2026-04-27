@@ -70,7 +70,7 @@ export class StaffHandler {
     try {
       const staff = await this.prisma.user.findFirst({
         where: { telegramId },
-        select: { id: true, name: true },
+        select: { id: true },
       });
       if (!staff) { await ctx.reply('Profil topilmadi.'); return; }
 
@@ -85,7 +85,7 @@ export class StaffHandler {
           status: { not: 'completed' },
           OR: [
             { deadline: null },
-            { deadline: { gte: today, lt: tomorrow } },
+            { deadline: { lt: tomorrow } },
           ],
         },
         orderBy: { deadline: 'asc' },
