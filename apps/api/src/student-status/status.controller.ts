@@ -58,6 +58,12 @@ export class StatusController {
     return this.statusService.getYellowStudents(req.user.tenantId);
   }
 
+  @Get('high-performers')
+  @Roles(UserRole.manager, UserRole.filadmin)
+  getHighPerformers(@Request() req: AuthRequest) {
+    return this.statusService.getHighPerformers(req.user.tenantId);
+  }
+
   @Get('history/:studentId')
   @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
   getHistory(@Param('studentId') studentId: string) {

@@ -84,4 +84,46 @@ export class StatusService {
       },
     });
   }
+
+  async getHighPerformers(tenantId: string) {
+    const totalLessons = await this.prisma.lesson.count({
+      where: { tenantId, isPublished: true },
+    });
+    const threshold = Math.floor(totalLessons * 0.9);
+
+    const students = await this.prisma.user.findMany({
+      where: { tenantId, role: 'student', status: 'active' },
+      select: {
+        id: true,
+        name: true,
+        studentStatuses: {
+          orderBy: { date: 'desc' },
+          take: 1,
+          select: { englishStatus: true, personalStatus: true, criticalStatus: true },
+        },
+        studentProgress: {
+          where: { academyCompleted: true },
+          select: { id: true },
+        },
+      },
+    });
+
+    return students
+      .filter((s) => {
+        const status = s.studentStatuses[0];
+        if (!status) return false;
+        const allGreen =
+          status.englishStatus === 'yashil' &&
+          status.personalStatus === 'yashil' &&
+          status.criticalStatus === 'yashil';
+        const progressOk = s.studentProgress.length >= threshold;
+        return allGreen && progressOk;
+      })
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        lessonsCompleted: s.studentProgress.length,
+        totalLessons,
+      }));
+  }
 }

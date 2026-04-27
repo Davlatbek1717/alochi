@@ -24,6 +24,13 @@ type StatusStudent = {
   criticalStatus: string;
 };
 
+type HighPerformer = {
+  id: string;
+  name: string;
+  lessonsCompleted: number;
+  totalLessons: number;
+};
+
 function StudentRow({ s, color }: { s: StatusStudent; color: 'red' | 'yellow' }) {
   return (
     <div className="p-4 flex items-center justify-between">
@@ -69,6 +76,7 @@ export default function ManagerDashboard() {
   const [hasShield, setHasShield] = useState(false);
   const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
+  const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -76,17 +84,19 @@ export default function ManagerDashboard() {
 
     async function fetchData() {
       try {
-        const [xpRes, streakRes, redRes, yellowRes] = await Promise.all([
+        const [xpRes, streakRes, redRes, yellowRes, highRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
           apiRequest<StatusStudent[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
           apiRequest<StatusStudent[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
+          apiRequest<HighPerformer[]>('/status/high-performers', {}, token).catch(() => ({ data: [] as HighPerformer[] })),
         ]);
         setXpData(xpRes.data);
         setStreak(streakRes.data.streak);
         setHasShield(streakRes.data.hasShield);
         setRedStudents(redRes.data);
         setYellowStudents(yellowRes.data);
+        setHighPerformers(highRes.data ?? []);
       } catch {
         // keep defaults on error
       } finally {
@@ -141,6 +151,36 @@ export default function ManagerDashboard() {
           )}
         </div>
       </div>
+
+      {highPerformers.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+            <span className="text-xl">🏆</span>
+            <h2 className="font-bold text-gray-800">200%+ O&apos;quvchilar</h2>
+            <span className="ml-auto bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-full">
+              {highPerformers.length}
+            </span>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {highPerformers.map((s) => (
+              <div key={s.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-gray-900">{s.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {s.lessonsCompleted}/{s.totalLessons} dars · barcha statuslar 🟢
+                  </p>
+                </div>
+                <Link
+                  href={`/manager/students/${s.id}`}
+                  className="px-3 py-1 rounded-lg text-sm text-white bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Ko&apos;rish
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
