@@ -3,10 +3,12 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
+import Anthropic from '@anthropic-ai/sdk';
 
 @Injectable()
 export class AiService {
   private readonly aiServiceUrl: string;
+  private anthropic: Anthropic;
 
   constructor(
     private http: HttpService,
@@ -14,6 +16,7 @@ export class AiService {
     private prisma: PrismaService,
   ) {
     this.aiServiceUrl = this.config.get('AI_SERVICE_URL', 'http://localhost:8000');
+    this.anthropic = new Anthropic({ apiKey: this.config.get('ANTHROPIC_API_KEY', '') });
   }
 
   async askTutor(
@@ -113,5 +116,51 @@ export class AiService {
       select: { word: true, easeFactor: true, interval: true },
     });
     return items;
+  }
+
+  async recordError(studentId: string, lessonId: string, question: string) {
+    const updated = await this.prisma.errorLog.upsert({
+      where: { studentId_lessonId_question: { studentId, lessonId, question } },
+      update: { errorCount: { increment: 1 }, lastError: new Date() },
+      create: { studentId, lessonId, question, errorCount: 1 },
+    });
+    return updated;
+  }
+
+  async analyzeErrors(studentId: string): Promise<{ weakAreas: string[]; recommendation: string }> {
+    const errors = await this.prisma.errorLog.findMany({
+      where: { studentId, errorCount: { gte: 2 } },
+      orderBy: { errorCount: 'desc' },
+      take: 10,
+      select: { question: true, errorCount: true },
+    });
+
+    if (errors.length === 0) {
+      return { weakAreas: [], recommendation: "Hozircha xatolar yo'q." };
+    }
+
+    const errorList = errors.map((e) => `"${e.question}" (${e.errorCount} marta xato)`).join('\n');
+
+    const message = await this.anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      messages: [
+        {
+          role: 'user',
+          content:
+            `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
+            `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
+            `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
+        },
+      ],
+    });
+
+    try {
+      const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
+      const parsed = JSON.parse(text) as { weakAreas: string[]; recommendation: string };
+      return parsed;
+    } catch {
+      return { weakAreas: ["Grammatika", "Lug'at"], recommendation: "Qayta ko'rib chiqing." };
+    }
   }
 }
