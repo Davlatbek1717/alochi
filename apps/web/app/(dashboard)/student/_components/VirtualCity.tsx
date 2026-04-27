@@ -4,7 +4,7 @@ type VirtualCityProps = {
   level: number;
   buildings: string[];
   lessonsCompleted: number;
-  nextLevelAt: number;
+  nextLevelAt: number | null;
   name?: string;
 };
 
@@ -49,7 +49,11 @@ const BUILDING_NAMES: Record<string, string> = {
 };
 
 export default function VirtualCity({ level, buildings, lessonsCompleted, nextLevelAt, name }: VirtualCityProps) {
-  const progress = nextLevelAt > 0 ? Math.min((lessonsCompleted / nextLevelAt) * 100, 100) : 100;
+  const progress = nextLevelAt == null
+    ? 100
+    : nextLevelAt > 0
+      ? Math.min((lessonsCompleted / nextLevelAt) * 100, 100)
+      : 100;
 
   return (
     <div className="bg-gradient-to-b from-sky-100 to-green-50 rounded-2xl p-4 space-y-3 border border-sky-200">
@@ -57,7 +61,7 @@ export default function VirtualCity({ level, buildings, lessonsCompleted, nextLe
         <h2 className="font-bold text-gray-800">
           🏙️ {name ?? `Daraja ${level}`}
         </h2>
-        <span className="text-xs text-gray-500">{lessonsCompleted}/{nextLevelAt} dars</span>
+        <span className="text-xs text-gray-500">{lessonsCompleted}/{nextLevelAt ?? '∞'} dars</span>
       </div>
 
       <div className="w-full bg-gray-200 rounded-full h-2.5">

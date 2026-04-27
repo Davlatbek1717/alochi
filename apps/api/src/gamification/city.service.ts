@@ -32,7 +32,7 @@ export class CityService {
     level: number;
     name: string;
     lessonsCompleted: number;
-    nextLevelAt: number;
+    nextLevelAt: number | null;
     buildings: string[];
   }> {
     const lessonsCompleted = await this.prisma.studentProgress.count({
@@ -42,7 +42,7 @@ export class CityService {
     const current = CITY_LEVELS.find((l) => lessonsCompleted >= l.min && lessonsCompleted <= l.max)
       ?? CITY_LEVELS[CITY_LEVELS.length - 1];
     const nextLevel = CITY_LEVELS.find((l) => l.level === current.level + 1);
-    const nextLevelAt = nextLevel ? nextLevel.min : current.max;
+    const nextLevelAt = nextLevel ? nextLevel.min : null;
 
     return {
       level: current.level,

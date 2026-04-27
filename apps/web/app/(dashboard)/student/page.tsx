@@ -31,7 +31,7 @@ type CityData = {
   level: number;
   buildings: string[];
   lessonsCompleted: number;
-  nextLevelAt: number;
+  nextLevelAt: number | null;
   name?: string;
 };
 
@@ -161,7 +161,7 @@ export default function StudentDashboard() {
           level={cityData?.level ?? 1}
           buildings={cityData?.buildings ?? []}
           lessonsCompleted={cityData?.lessonsCompleted ?? 0}
-          nextLevelAt={cityData?.nextLevelAt ?? 50}
+          nextLevelAt={cityData?.nextLevelAt ?? null}
           name={cityData?.name}
         />
       )}
