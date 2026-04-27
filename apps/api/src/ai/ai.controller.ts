@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, Request, UseGuards } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -39,5 +39,20 @@ export class AiController {
   @Roles(UserRole.student)
   checkPronunciation(@Body() body: { wordEn: string; audioBase64: string }) {
     return this.ai.checkPronunciation(body.wordEn, body.audioBase64);
+  }
+
+  @Post('spaced-repetition/answer')
+  @Roles(UserRole.student)
+  recordAnswer(
+    @Body() body: { word: string; correct: boolean },
+    @Request() req: any,
+  ) {
+    return this.ai.recordSpacedAnswer(req.user.userId, body.word, body.correct);
+  }
+
+  @Get('spaced-repetition/daily-review')
+  @Roles(UserRole.student)
+  getDailyReview(@Request() req: any) {
+    return this.ai.getDailyReview(req.user.userId);
   }
 }
