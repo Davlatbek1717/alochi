@@ -5,7 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LeaderboardService {
   constructor(private prisma: PrismaService) {}
 
-  async getBranchLeaderboard(branchId: string) {
+  async getBranchLeaderboard(branchId: string | null | undefined) {
+    if (!branchId) return [];
     const rows = await this.prisma.studentXp.findMany({
       where: { student: { branchId, role: 'student', status: 'active' } },
       orderBy: { totalXp: 'desc' },
@@ -22,14 +23,20 @@ export class LeaderboardService {
     }));
   }
 
-  async getNationalLeaderboard(period: 'weekly' | 'monthly') {
+  async getNationalLeaderboard(period: 'weekly' | 'monthly', tenantId: string) {
     const since = new Date();
     if (period === 'weekly') since.setDate(since.getDate() - 7);
     else since.setMonth(since.getMonth() - 1);
 
+    const tenantStudentIds = await this.prisma.user.findMany({
+      where: { tenantId, role: 'student' },
+      select: { id: true },
+    });
+    const studentIds = tenantStudentIds.map((u) => u.id);
+
     const rows = await this.prisma.xpEvent.groupBy({
       by: ['studentId'],
-      where: { createdAt: { gte: since } },
+      where: { createdAt: { gte: since }, studentId: { in: studentIds } },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
       take: 100,

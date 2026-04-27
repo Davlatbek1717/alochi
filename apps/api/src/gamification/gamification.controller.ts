@@ -69,7 +69,7 @@ export class GamificationController {
   }
 
   @Get('leaderboard/national')
-  getNationalLeaderboard(@Query('period') period: 'weekly' | 'monthly' = 'weekly') {
-    return this.leaderboard.getNationalLeaderboard(period);
+  getNationalLeaderboard(@Query('period') period: 'weekly' | 'monthly' = 'weekly', @Request() req: any) {
+    return this.leaderboard.getNationalLeaderboard(period, req.user.tenantId);
   }
 }
