@@ -216,6 +216,14 @@ export default function StudentDashboard() {
           <p className="font-bold text-sm text-gray-800">Xato tahlili</p>
           <p className="text-xs text-gray-500">AI tavsiyalar</p>
         </Link>
+        <Link
+          href="/student/tournaments"
+          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
+        >
+          <span className="text-2xl">🏆</span>
+          <p className="font-bold text-sm text-gray-800">Turnirlar</p>
+          <p className="text-xs text-gray-500">Musobaqalar</p>
+        </Link>
       </div>
 
       <SocialFeed />

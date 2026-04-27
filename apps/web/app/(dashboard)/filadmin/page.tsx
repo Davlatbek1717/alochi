@@ -36,6 +36,13 @@ const NAV_CARDS = [
     description: 'Kiosk qurilmalarni boshqarish',
     bg: 'bg-pink-50',
   },
+  {
+    href: '/filadmin/tournaments',
+    icon: '🏆',
+    title: 'Turnirlar',
+    description: "Musobaqalarni boshqarish",
+    bg: 'bg-amber-50',
+  },
 ];
 
 export default function FiladminDashboard() {
