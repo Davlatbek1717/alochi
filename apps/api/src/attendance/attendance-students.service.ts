@@ -44,7 +44,7 @@ export class AttendanceStudentsService {
         eventType: 'attendance_marked',
         studentId: r.studentId,
         branchId: r.branchId,
-        data: { status: r.status, date: r.date },
+        data: { isPresent: r.status === 'present', isLate: r.status === 'late' },
       }).catch(() => {});
     }
     return results;

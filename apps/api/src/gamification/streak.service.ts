@@ -41,6 +41,8 @@ export class StreakService {
       return xp;
     }
 
+    const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
+
     if (daysSinceLast === 1) {
       const newStreak = xp.currentStreak + 1;
       const updated = await this.prisma.studentXp.update({
@@ -52,7 +54,6 @@ export class StreakService {
           shieldCount: newStreak % 7 === 0 ? xp.shieldCount + 1 : xp.shieldCount,
         },
       });
-      const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
       if (user) {
         this.analytics.logEvent({
           tenantId: user.tenantId,
@@ -75,7 +76,6 @@ export class StreakService {
           lastActivity: today,
         },
       });
-      const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
       if (user) {
         this.analytics.logEvent({
           tenantId: user.tenantId,

@@ -51,15 +51,12 @@ export class ProgressService {
       },
     });
 
-    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
-    if (lesson) {
-      this.analytics.logEvent({
-        tenantId,
-        eventType: homeCompleted ? 'lesson_completed' : 'lesson_session',
-        studentId,
-        data: { lessonId, sessionCount: newCount },
-      }).catch(() => {});
-    }
+    this.analytics.logEvent({
+      tenantId,
+      eventType: homeCompleted ? 'lesson_completed' : 'lesson_failed',
+      studentId,
+      data: { lessonId, sessionCount: newCount },
+    }).catch(() => {});
     return progress;
   }
 
