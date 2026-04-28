@@ -171,7 +171,7 @@ export default function GroupChatPage() {
     : 0;
 
   return (
-    <div className="flex flex-col h-screen bg-[#f7f4ef]">
+    <div className="flex flex-col h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-4 relative overflow-hidden shrink-0">
         <div
