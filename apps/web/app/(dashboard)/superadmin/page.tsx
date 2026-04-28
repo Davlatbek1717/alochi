@@ -19,9 +19,9 @@ export default function SuperadminDashboard() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none overflow-hidden"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="flex items-start gap-4 mb-5 relative z-10">
@@ -38,7 +38,7 @@ export default function SuperadminDashboard() {
         </div>
 
         {/* Stat bar */}
-        <div className="grid grid-cols-3 gap-2 mb-[-20px] relative z-10">
+        <div className="grid grid-cols-3 gap-2 relative z-10">
           {[
             { label: 'Filiallar', value: '—', color: 'text-[#0d9488]' },
             { label: 'Darslar',   value: '—', color: 'text-violet-400' },

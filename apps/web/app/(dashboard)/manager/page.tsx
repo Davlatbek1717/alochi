@@ -58,7 +58,7 @@ export default function ManagerDashboard() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
@@ -74,7 +74,7 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Alert badge */}
-        <div className={`rounded-2xl p-4 mb-[-20px] relative z-10 flex items-center gap-4 ${alertCount > 0 ? 'bg-[#e11d48]/10 border border-[#e11d48]/20' : 'bg-[#0d9488]/10 border border-[#0d9488]/20'}`}>
+        <div className={`rounded-2xl p-4 relative z-10 flex items-center gap-4 ${alertCount > 0 ? 'bg-[#e11d48]/10 border border-[#e11d48]/20' : 'bg-[#0d9488]/10 border border-[#0d9488]/20'}`}>
           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${alertCount > 0 ? 'bg-[#e11d48]/15 border border-[#e11d48]/30' : 'bg-[#0d9488]/15 border border-[#0d9488]/30'}`}>
             <AlertCircle size={22} className={alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'} />
           </div>

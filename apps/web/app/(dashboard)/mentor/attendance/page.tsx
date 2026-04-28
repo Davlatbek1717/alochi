@@ -129,7 +129,7 @@ export default function MentorAttendancePage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
@@ -166,7 +166,7 @@ export default function MentorAttendancePage() {
 
           {/* Stats row */}
           {!loading && students.length > 0 && (
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 mb-[-20px] grid grid-cols-3 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 grid grid-cols-3 gap-3">
               <div className="text-center">
                 <p className="text-emerald-400 text-xl font-black font-mono">{presentCount}</p>
                 <p className="text-[#94a3b8] text-xs">Keldi</p>

@@ -130,7 +130,7 @@ export default function MentorGroupPage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
           className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
@@ -141,7 +141,7 @@ export default function MentorGroupPage() {
             <p className="text-white text-xl font-bold">Guruh</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 mb-[-20px] relative z-10">
+        <div className="grid grid-cols-2 gap-2 relative z-10">
           <div className="bg-[#162032] rounded-[14px] p-3">
             <Users size={14} className="text-[#0d9488] mb-1" />
             <p className="text-white text-xl font-black font-mono">{present}</p>
