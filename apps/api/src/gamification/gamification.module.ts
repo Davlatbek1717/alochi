@@ -6,8 +6,10 @@ import { CertificatesService } from './certificates.service';
 import { CityService } from './city.service';
 import { LeaderboardService } from './leaderboard.service';
 import { GamificationController } from './gamification.controller';
+import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
+  imports: [AnalyticsModule],
   providers: [XpService, StreakService, QuestService, CertificatesService, CityService, LeaderboardService],
   controllers: [GamificationController],
   exports: [XpService, StreakService, QuestService, CertificatesService, CityService, LeaderboardService],

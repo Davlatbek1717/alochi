@@ -7,8 +7,12 @@ describe('StreakService', () => {
       update: jest.fn().mockResolvedValue({}),
       upsert: jest.fn().mockResolvedValue({}),
     },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ tenantId: 'tenant-1' }),
+    },
   };
-  const service = new StreakService(mockPrisma as any);
+  const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
+  const service = new StreakService(mockPrisma as any, mockAnalytics as any);
 
   it('increments streak on consecutive day', async () => {
     const yesterday = new Date();

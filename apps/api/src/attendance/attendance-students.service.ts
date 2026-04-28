@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 interface MarkRecord {
   studentId: string;
@@ -12,7 +13,10 @@ interface MarkRecord {
 
 @Injectable()
 export class AttendanceStudentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private analytics: AnalyticsService,
+  ) {}
 
   async markBulk(records: MarkRecord[]) {
     const results = await Promise.all(
@@ -34,6 +38,15 @@ export class AttendanceStudentsService {
         }),
       ),
     );
+    for (const r of records) {
+      this.analytics.logEvent({
+        tenantId: r.tenantId,
+        eventType: 'attendance_marked',
+        studentId: r.studentId,
+        branchId: r.branchId,
+        data: { status: r.status, date: r.date },
+      }).catch(() => {});
+    }
     return results;
   }
 

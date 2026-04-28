@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class ProgressService {
   constructor(
     private prisma: PrismaService,
     private feedEvent: FeedEventService,
+    private analytics: AnalyticsService,
   ) {}
 
   private async getEffectiveN(studentId: string, lessonId: string, tenantId: string): Promise<number> {
@@ -31,7 +33,7 @@ export class ProgressService {
     const newCount = (current?.sessionCount ?? 0) + 1;
     const homeCompleted = newCount >= effectiveN;
 
-    return this.prisma.studentProgress.upsert({
+    const progress = await this.prisma.studentProgress.upsert({
       where: { studentId_lessonId: { studentId, lessonId } },
       create: {
         studentId,
@@ -48,6 +50,17 @@ export class ProgressService {
         ...(homeCompleted ? { completedAt: new Date() } : {}),
       },
     });
+
+    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
+    if (lesson) {
+      this.analytics.logEvent({
+        tenantId,
+        eventType: homeCompleted ? 'lesson_completed' : 'lesson_session',
+        studentId,
+        data: { lessonId, sessionCount: newCount },
+      }).catch(() => {});
+    }
+    return progress;
   }
 
   async markAcademyCompleted(studentId: string, lessonId: string) {

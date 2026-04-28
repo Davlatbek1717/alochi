@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 @Injectable()
 export class StreakService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private analytics: AnalyticsService,
+  ) {}
 
   private daysBetween(a: Date, b: Date): number {
     const msPerDay = 1000 * 60 * 60 * 24;
@@ -39,7 +43,7 @@ export class StreakService {
 
     if (daysSinceLast === 1) {
       const newStreak = xp.currentStreak + 1;
-      return this.prisma.studentXp.update({
+      const updated = await this.prisma.studentXp.update({
         where: { studentId },
         data: {
           currentStreak: newStreak,
@@ -48,11 +52,21 @@ export class StreakService {
           shieldCount: newStreak % 7 === 0 ? xp.shieldCount + 1 : xp.shieldCount,
         },
       });
+      const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
+      if (user) {
+        this.analytics.logEvent({
+          tenantId: user.tenantId,
+          eventType: 'streak_updated',
+          studentId,
+          data: { newStreak, oldStreak: xp.currentStreak },
+        }).catch(() => {});
+      }
+      return updated;
     }
 
     if (daysSinceLast === 2 && xp.shieldCount > 0) {
       const newStreak = xp.currentStreak + 1;
-      return this.prisma.studentXp.update({
+      const updated = await this.prisma.studentXp.update({
         where: { studentId },
         data: {
           currentStreak: newStreak,
@@ -61,6 +75,16 @@ export class StreakService {
           lastActivity: today,
         },
       });
+      const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
+      if (user) {
+        this.analytics.logEvent({
+          tenantId: user.tenantId,
+          eventType: 'streak_updated',
+          studentId,
+          data: { newStreak, oldStreak: xp.currentStreak },
+        }).catch(() => {});
+      }
+      return updated;
     }
 
     return this.prisma.studentXp.update({
