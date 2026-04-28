@@ -39,7 +39,8 @@ describe('DuelService', () => {
   const mockXp = { award: jest.fn().mockResolvedValue({}) };
   const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
 
-  const service = new DuelService(mockPrisma as any, mockXp as any, mockFeedEvent as any);
+  const mockGateway = { sendDuelUpdate: jest.fn() };
+  const service = new DuelService(mockPrisma as any, mockXp as any, mockFeedEvent as any, mockGateway as any);
 
   it('selects questions from shared completed lessons', async () => {
     mockPrisma.studentProgress.findMany

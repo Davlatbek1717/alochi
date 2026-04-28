@@ -94,10 +94,10 @@ export class TasksService {
         data: {
           userId: task.assignedTo,
           tenantId: task.tenantId,
-          branchId: task.branchId,
-          ball: task.kpiBall,
+          score: task.kpiBall,
           reason: `Vazifa: ${task.title}`,
-          givenBy: userId,
+          taskId: task.id,
+          date: new Date(),
         },
       });
       await this.xp.award(task.assignedTo, 'daily_quest', { taskId: task.id });

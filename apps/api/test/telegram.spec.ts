@@ -1,8 +1,24 @@
 import { TelegramService } from '../src/telegram/telegram.service';
 
 describe('TelegramService', () => {
+  const mockConfig = { get: () => undefined };
+  const mockPrisma = {};
+  const mockParentHandler = {};
+  const mockStudentHandler = {};
+  const mockStaffHandler = {};
+
+  function makeService() {
+    return new TelegramService(
+      mockConfig as any,
+      mockPrisma as any,
+      mockParentHandler as any,
+      mockStudentHandler as any,
+      mockStaffHandler as any,
+    );
+  }
+
   it('formats daily report correctly', () => {
-    const service = new TelegramService({ get: () => undefined } as any);
+    const service = makeService();
 
     const report = service.formatDailyReport({
       studentName: 'Alibek Rahimov',
@@ -22,7 +38,7 @@ describe('TelegramService', () => {
   });
 
   it('formats warning notification with block message when count >= 3', () => {
-    const service = new TelegramService({ get: () => undefined } as any);
+    const service = makeService();
     const msg = service.formatWarningNotification('Test User', 3, 'Darsga kelmadi');
     expect(msg).toContain('bloklandi');
     expect(msg).toContain('Test User');

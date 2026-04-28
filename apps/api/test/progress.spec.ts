@@ -18,7 +18,8 @@ describe('ProgressService', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  const service = new ProgressService(mockPrisma as any);
+  const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
+  const service = new ProgressService(mockPrisma as any, mockFeedEvent as any);
 
   it('increments session count and marks homeCompleted when reaching N', async () => {
     mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l1', nRepetitions: 3, maxNOverride: 10 });

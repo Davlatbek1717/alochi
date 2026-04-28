@@ -18,7 +18,8 @@ describe('DelegationsService', () => {
     },
   };
 
-  const service = new DelegationsService(mockPrisma as any);
+  const mockEvents = { emit: jest.fn() };
+  const service = new DelegationsService(mockPrisma as any, mockEvents as any);
 
   beforeEach(() => jest.clearAllMocks());
 
