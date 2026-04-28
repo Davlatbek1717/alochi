@@ -174,7 +174,10 @@ export default function StudentDashboard() {
 
       {reviewItems.length > 0 && (
         <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-          <h2 className="font-bold text-gray-800">🔁 Kunlik Takrorlash</h2>
+          <div className="flex items-center gap-2">
+            <RefreshCw size={16} className="text-[#0d9488]" />
+            <h2 className="font-bold text-gray-800">Kunlik Takrorlash</h2>
+          </div>
           <p className="text-sm text-gray-500">{reviewItems.length} ta so&apos;z takrorlanishi kerak</p>
           <div className="flex flex-wrap gap-2">
             {reviewItems.slice(0, 6).map((item) => (
