@@ -4,6 +4,7 @@ describe('ContentQualityService', () => {
   const mockPrisma = {
     lesson: {
       findMany: jest.fn().mockResolvedValue([]),
+      findFirst: jest.fn().mockResolvedValue({ id: 'lesson-1', tenantId: 'tenant-1' }),
     },
     studentProgress: {
       count: jest.fn().mockResolvedValue(0),
@@ -23,8 +24,7 @@ describe('ContentQualityService', () => {
     },
   };
 
-  const mockNotifications = { send: jest.fn().mockResolvedValue({}) };
-  const service = new ContentQualityService(mockPrisma as any, mockNotifications as any);
+  const service = new ContentQualityService(mockPrisma as any);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -57,7 +57,7 @@ describe('ContentQualityService', () => {
   });
 
   it('promoteVariant deactivates the losing variant', async () => {
-    await service.promoteVariant('lesson-1', 'A');
+    await service.promoteVariant('lesson-1', 'A', 'tenant-1');
     expect(mockPrisma.lessonVariant.updateMany).toHaveBeenCalledWith({
       where: { lessonId: 'lesson-1', variant: { not: 'A' } },
       data: { isActive: false },

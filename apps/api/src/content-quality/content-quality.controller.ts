@@ -27,19 +27,19 @@ export class ContentQualityController {
 
   @Post('lessons/:id/variant')
   @Roles(UserRole.superadmin)
-  createVariant(@Param('id') id: string, @Body() body: { config: object }) {
-    return this.cq.createVariant(id, body.config);
+  createVariant(@Param('id') id: string, @Body() body: { config: object }, @Request() req: any) {
+    return this.cq.createVariant(id, body.config, req.user.tenantId);
   }
 
   @Get('lessons/:id/ab-results')
   @Roles(UserRole.superadmin)
-  getABResults(@Param('id') id: string) {
-    return this.cq.getABResults(id);
+  getABResults(@Param('id') id: string, @Request() req: any) {
+    return this.cq.getABResults(id, req.user.tenantId);
   }
 
   @Post('lessons/:id/promote/:variant')
   @Roles(UserRole.superadmin)
-  promoteVariant(@Param('id') id: string, @Param('variant') variant: 'A' | 'B') {
-    return this.cq.promoteVariant(id, variant);
+  promoteVariant(@Param('id') id: string, @Param('variant') variant: 'A' | 'B', @Request() req: any) {
+    return this.cq.promoteVariant(id, variant, req.user.tenantId);
   }
 }

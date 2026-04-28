@@ -1,13 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ContentQualityService {
-  constructor(
-    private prisma: PrismaService,
-    private notifications: NotificationsService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
+
+  private async assertLessonOwnership(lessonId: string, tenantId: string): Promise<void> {
+    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
+    if (!lesson) throw new Error('Dars topilmadi yoki ruxsat yo\'q');
+  }
 
   async getLessonStats(tenantId: string) {
     const lessons = await this.prisma.lesson.findMany({
@@ -41,6 +42,9 @@ export class ContentQualityService {
   }
 
   async submitFeedback(studentId: string, lessonId: string, rating: number) {
+    if (rating < 1 || rating > 3) {
+      throw new BadRequestException('Rating 1, 2 yoki 3 bo\'lishi kerak');
+    }
     return this.prisma.lessonFeedback.upsert({
       where: { studentId_lessonId: { studentId, lessonId } },
       create: { studentId, lessonId, rating },
@@ -48,7 +52,8 @@ export class ContentQualityService {
     });
   }
 
-  async createVariant(lessonId: string, config: object) {
+  async createVariant(lessonId: string, config: object, tenantId: string) {
+    await this.assertLessonOwnership(lessonId, tenantId);
     return this.prisma.lessonVariant.create({
       data: { lessonId, variant: 'B', config },
     });
@@ -67,12 +72,19 @@ export class ContentQualityService {
     if (variants.length === 0) return null;
 
     const chosen = variants[Math.floor(Math.random() * variants.length)];
-    return this.prisma.studentVariantAssignment.create({
-      data: { studentId, lessonId, variantId: chosen.id },
-    });
+    try {
+      return await this.prisma.studentVariantAssignment.create({
+        data: { studentId, lessonId, variantId: chosen.id },
+      });
+    } catch {
+      return this.prisma.studentVariantAssignment.findUnique({
+        where: { studentId_lessonId: { studentId, lessonId } },
+      });
+    }
   }
 
-  async getABResults(lessonId: string) {
+  async getABResults(lessonId: string, tenantId: string) {
+    await this.assertLessonOwnership(lessonId, tenantId);
     const variants = await this.prisma.lessonVariant.findMany({
       where: { lessonId },
       select: { id: true, variant: true },
@@ -101,7 +113,8 @@ export class ContentQualityService {
     );
   }
 
-  async promoteVariant(lessonId: string, winner: 'A' | 'B') {
+  async promoteVariant(lessonId: string, winner: 'A' | 'B', tenantId: string) {
+    await this.assertLessonOwnership(lessonId, tenantId);
     await this.prisma.lessonVariant.updateMany({
       where: { lessonId, variant: { not: winner } },
       data: { isActive: false },
