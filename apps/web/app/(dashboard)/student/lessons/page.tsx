@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { BookOpen, Lock, CheckCircle, BookMarked } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type Lesson = {
@@ -25,20 +26,15 @@ export default function LessonsListPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-
     async function load() {
       try {
         const [lessonsRes, progressRes] = await Promise.all([
           apiRequest<Lesson[]>('/lessons', {}, token),
           apiRequest<Progress[]>('/progress/my', {}, token),
         ]);
-
         setLessons(lessonsRes.data.filter((l) => l.isPublished));
-
         const progressMap: Record<string, Progress> = {};
-        for (const p of progressRes.data) {
-          progressMap[p.lessonId] = p;
-        }
+        for (const p of progressRes.data) progressMap[p.lessonId] = p;
         setProgress(progressMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Xato yuz berdi');
@@ -46,7 +42,6 @@ export default function LessonsListPage() {
         setLoading(false);
       }
     }
-
     load();
   }, []);
 
@@ -59,91 +54,110 @@ export default function LessonsListPage() {
   }
 
   const STATUS_CONFIG = {
-    new: { label: 'Yangi', color: 'bg-gray-100 text-gray-600' },
-    in_progress: { label: "O'qilmoqda", color: 'bg-yellow-100 text-yellow-700' },
-    academy: { label: 'Akademiya kutilmoqda', color: 'bg-blue-100 text-blue-700' },
-    done: { label: 'Tugallangan', color: 'bg-green-100 text-green-700' },
+    new:         { label: 'Yangi',               badge: 'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]' },
+    in_progress: { label: "O'qilmoqda",           badge: 'bg-amber-50 text-amber-700 border border-amber-200' },
+    academy:     { label: 'Akademiya kutilmoqda', badge: 'bg-blue-50 text-blue-700 border border-blue-200' },
+    done:        { label: 'Tugallangan',          badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
   };
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto py-20 flex justify-center">
-        <p className="text-gray-500">Yuklanmoqda...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-2xl mx-auto py-10">
-        <p className="text-red-500">{error}</p>
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Darslar</h1>
-        <span className="text-sm text-gray-500">{lessons.length} ta dars</span>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-end justify-between">
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
+            <p className="text-white text-xl font-bold">Darslar</p>
+          </div>
+          <div className="bg-[#162032] rounded-[14px] px-3 py-2">
+            <p className="text-white text-lg font-black font-mono">{lessons.length}</p>
+            <p className="text-[#94a3b8] text-[10px]">Jami</p>
+          </div>
+        </div>
       </div>
 
-      {lessons.length === 0 ? (
-        <div className="bg-white rounded-2xl p-10 text-center shadow-sm">
-          <p className="text-4xl mb-3">📚</p>
-          <p className="text-gray-500">Hali darslar qo&apos;shilmagan</p>
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {lessons.map((lesson) => {
-            const status = getStatus(lesson);
-            const cfg = STATUS_CONFIG[status];
-            const p = progress[lesson.id];
-            const isLocked = lesson.orderNumber > 1 && (() => {
-              const prev = lessons.find((l) => l.orderNumber === lesson.orderNumber - 1);
-              if (!prev) return false;
-              const prevProgress = progress[prev.id];
-              return !prevProgress?.academyCompleted;
-            })();
+      <div className="px-4 pt-5 pb-6">
+        {error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm mb-4">{error}</div>
+        )}
 
-            return (
-              <li key={lesson.id}>
-                {isLocked ? (
-                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 opacity-60 cursor-not-allowed flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold shrink-0">
-                      🔒
+        {lessons.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <BookOpen size={40} className="text-[#94a3b8] mx-auto mb-3" />
+            <p className="text-[#0f172a] font-semibold">Hali darslar qo&apos;shilmagan</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {lessons.map((lesson) => {
+              const status = getStatus(lesson);
+              const cfg = STATUS_CONFIG[status];
+              const p = progress[lesson.id];
+              const isDone = status === 'done';
+              const isLocked = lesson.orderNumber > 1 && (() => {
+                const prev = lessons.find((l) => l.orderNumber === lesson.orderNumber - 1);
+                if (!prev) return false;
+                return !progress[prev.id]?.academyCompleted;
+              })();
+
+              if (isLocked) {
+                return (
+                  <li key={lesson.id}>
+                    <div className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] px-4 py-3 opacity-50 flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#f7f4ef] flex items-center justify-center shrink-0">
+                        <Lock size={16} className="text-[#94a3b8]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-[#94a3b8] font-medium">#{lesson.orderNumber}</p>
+                        <p className="text-sm text-[#94a3b8] truncate">{lesson.title}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-400">Dars #{lesson.orderNumber}</p>
-                      <p className="text-sm text-gray-400 truncate">{lesson.title}</p>
-                    </div>
-                  </div>
-                ) : (
+                  </li>
+                );
+              }
+
+              return (
+                <li key={lesson.id}>
                   <Link
                     href={`/student/lessons/${lesson.id}`}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-indigo-300 hover:shadow-md transition-all flex items-center gap-4"
+                    className={`bg-white rounded-[14px] border-[1.5px] px-4 py-3 flex items-center gap-3 ${
+                      isDone ? 'border-emerald-100' : 'border-[#ede9e1]'
+                    }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
-                      {lesson.orderNumber}
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
+                      isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-[#0f172a] text-white'
+                    }`}>
+                      {isDone ? <CheckCircle size={18} /> : <BookMarked size={16} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{lesson.title}</p>
+                      <p className={`text-sm font-semibold truncate ${isDone ? 'text-[#94a3b8]' : 'text-[#0f172a]'}`}>
+                        #{lesson.orderNumber} — {lesson.title}
+                      </p>
                       {p && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {p.sessionCount} ta sessiya bajarildi
-                        </p>
+                        <p className="text-xs text-[#94a3b8] mt-0.5">{p.sessionCount} ta sessiya</p>
                       )}
                     </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full shrink-0 ${cfg.color}`}>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${cfg.badge}`}>
                       {cfg.label}
                     </span>
                   </Link>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

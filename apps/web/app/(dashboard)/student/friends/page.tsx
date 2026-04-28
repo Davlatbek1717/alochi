@@ -1,20 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Users, UserPlus, Check, X, Swords, UserX } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
-type Friend = {
-  id: string;
-  name: string;
-  role: string;
-  status: string;
-};
+type Friend = { id: string; name: string; role: string; status: string };
+type PendingRequest = { id: string; name: string; role: string };
 
-type PendingRequest = {
-  id: string;
-  name: string;
-  role: string;
-};
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+}
 
 export default function FriendsPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -34,7 +29,6 @@ export default function FriendsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-
     async function fetchData() {
       try {
         const [friendsRes, pendingRes] = await Promise.all([
@@ -49,7 +43,6 @@ export default function FriendsPage() {
         setLoading(false);
       }
     }
-
     fetchData();
   }, []);
 
@@ -64,9 +57,7 @@ export default function FriendsPage() {
       setPending((prev) => prev.filter((r) => r.id !== id));
       if (accept) {
         const accepted = pending.find((r) => r.id === id);
-        if (accepted) {
-          setFriends((prev) => [...prev, { ...accepted, status: 'accepted' }]);
-        }
+        if (accepted) setFriends((prev) => [...prev, { ...accepted, status: 'accepted' }]);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Xato yuz berdi');
@@ -75,13 +66,13 @@ export default function FriendsPage() {
     }
   }
 
-  async function handleChallenge(friendId: string) {
+  async function handleChallenge(fId: string) {
     const token = localStorage.getItem('accessToken') ?? '';
-    setChallenging(friendId);
+    setChallenging(fId);
     try {
       const res = await apiRequest<{ id: string }>('/social/duels', {
         method: 'POST',
-        body: JSON.stringify({ challengedId: friendId }),
+        body: JSON.stringify({ challengedId: fId }),
       }, token);
       router.push(`/student/duel/${res.data.id}`);
     } catch (err) {
@@ -92,21 +83,16 @@ export default function FriendsPage() {
   }
 
   async function handleSendRequest() {
-    if (!friendId.trim() || !branchId.trim()) {
-      setSendMsg("Iltimos, barcha maydonlarni to'ldiring");
-      return;
-    }
+    if (!friendId.trim() || !branchId.trim()) { setSendMsg("Barcha maydonlarni to'ldiring"); return; }
     const token = localStorage.getItem('accessToken') ?? '';
-    setSending(true);
-    setSendMsg('');
+    setSending(true); setSendMsg('');
     try {
       await apiRequest('/social/friends/request', {
         method: 'POST',
         body: JSON.stringify({ friendId: friendId.trim(), branchId: branchId.trim() }),
       }, token);
       setSendMsg("So'rov yuborildi!");
-      setFriendId('');
-      setBranchId('');
+      setFriendId(''); setBranchId('');
       setShowForm(false);
     } catch (err) {
       setSendMsg(err instanceof Error ? err.message : 'Xato yuz berdi');
@@ -117,123 +103,151 @@ export default function FriendsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto py-20 flex justify-center">
-        <p className="text-gray-500">Yuklanmoqda...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-lg mx-auto py-10">
-        <p className="text-red-500">{error}</p>
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5 pb-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Do&apos;stlar</h1>
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium"
-        >
-          + Do&apos;st qo&apos;shish
-        </button>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-end justify-between">
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
+            <p className="text-white text-xl font-bold">Do&apos;stlar</p>
+          </div>
+          <button
+            onClick={() => setShowForm((v) => !v)}
+            className="flex items-center gap-1.5 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold"
+          >
+            <UserPlus size={16} /> Qo&apos;shish
+          </button>
+        </div>
       </div>
 
-      {showForm && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border border-gray-100">
-          <p className="font-medium text-sm text-gray-700">Yangi do&apos;st qo&apos;shish</p>
-          <input
-            type="text"
-            placeholder="Foydalanuvchi ID"
-            value={friendId}
-            onChange={(e) => setFriendId(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <input
-            type="text"
-            placeholder="Filial ID"
-            value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <button
-            onClick={handleSendRequest}
-            disabled={sending}
-            className="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50"
-          >
-            {sending ? 'Yuborilmoqda...' : "So'rov yuborish"}
-          </button>
-          {sendMsg && (
-            <p className={`text-sm ${sendMsg.includes('yuborildi') ? 'text-green-600' : 'text-red-500'}`}>
-              {sendMsg}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        {error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
+        )}
+
+        {/* Add friend form */}
+        {showForm && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st</p>
+            <input
+              type="text"
+              placeholder="Foydalanuvchi ID"
+              value={friendId}
+              onChange={(e) => setFriendId(e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+            />
+            <input
+              type="text"
+              placeholder="Filial ID"
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+            />
+            {sendMsg && (
+              <p className={`text-sm ${sendMsg.includes('yuborildi') ? 'text-emerald-600' : 'text-rose-500'}`}>{sendMsg}</p>
+            )}
+            <button
+              onClick={handleSendRequest}
+              disabled={sending}
+              className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl text-sm font-bold disabled:opacity-50"
+            >
+              {sending ? 'Yuborilmoqda...' : "So'rov yuborish"}
+            </button>
+          </div>
+        )}
+
+        {/* Pending requests */}
+        {pending.length > 0 && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              Kutilayotgan so&apos;rovlar — {pending.length}
             </p>
+            <div className="space-y-2">
+              {pending.map((req) => (
+                <div key={req.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-black text-sm shrink-0">
+                    {getInitials(req.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0f172a] truncate">{req.name}</p>
+                    <p className="text-[10px] text-[#94a3b8]">{req.role}</p>
+                  </div>
+                  <button
+                    onClick={() => handleRespond(req.id, true)}
+                    disabled={responding === req.id}
+                    className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center disabled:opacity-50"
+                  >
+                    <Check size={15} />
+                  </button>
+                  <button
+                    onClick={() => handleRespond(req.id, false)}
+                    disabled={responding === req.id}
+                    className="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center disabled:opacity-50"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Friends list */}
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+            Do&apos;stlarim — {friends.length}
+          </p>
+          {friends.length === 0 ? (
+            <div className="py-8 text-center">
+              <UserX size={32} className="text-[#94a3b8] mx-auto mb-2" />
+              <p className="text-sm text-[#94a3b8]">Hali do&apos;stlar yo&apos;q</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {friends.map((f) => (
+                <div key={f.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#0f172a]/10 flex items-center justify-center text-[#0f172a] font-black text-sm shrink-0">
+                    {getInitials(f.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0f172a] truncate">{f.name}</p>
+                    <p className="text-[10px] text-[#94a3b8]">{f.role}</p>
+                  </div>
+                  <button
+                    onClick={() => handleChallenge(f.id)}
+                    disabled={challenging === f.id}
+                    className="flex items-center gap-1.5 bg-[#0f172a] text-white text-xs font-bold px-3 py-1.5 rounded-xl disabled:opacity-50"
+                  >
+                    {challenging === f.id
+                      ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                      : <Swords size={12} />}
+                    Duel
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      )}
 
-      {pending.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border border-gray-100">
-          <h2 className="font-semibold text-gray-700">Kutilayotgan so&apos;rovlar ({pending.length})</h2>
-          {pending.map((req) => (
-            <div key={req.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-              <div>
-                <p className="font-medium text-sm">{req.name}</p>
-                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">
-                  {req.role}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleRespond(req.id, true)}
-                  disabled={responding === req.id}
-                  className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50"
-                >
-                  Qabul
-                </button>
-                <button
-                  onClick={() => handleRespond(req.id, false)}
-                  disabled={responding === req.id}
-                  className="bg-red-100 text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50"
-                >
-                  Rad etish
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <h2 className="font-semibold text-gray-700 mb-3">Do&apos;stlarim ({friends.length})</h2>
-        {friends.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">Hali do&apos;stlar yo&apos;q</p>
-        ) : (
-          <ul className="space-y-2">
-            {friends.map((f) => (
-              <li key={f.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
-                  {f.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{f.name}</p>
-                </div>
-                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
-                  {f.role}
-                </span>
-              <button
-                onClick={() => handleChallenge(f.id)}
-                disabled={challenging === f.id}
-                className="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
-              >
-                {challenging === f.id ? '...' : '⚡ Duel'}
-              </button>
-              </li>
-            ))}
-          </ul>
+        {/* Big add button if no friends and form not shown */}
+        {friends.length === 0 && pending.length === 0 && !showForm && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="w-full flex items-center justify-center gap-2 bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm"
+          >
+            <Users size={16} /> Do&apos;st qo&apos;shish
+          </button>
         )}
       </div>
     </div>

@@ -1,44 +1,40 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { Users, CheckCircle, XCircle, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type Status = 'green' | 'yellow' | 'red';
 
-const STATUS_COLORS: Record<Status, string> = {
-  green: 'bg-green-100 text-green-700',
-  yellow: 'bg-yellow-100 text-yellow-700',
-  red: 'bg-red-100 text-red-700',
+const STATUS_DOT: Record<Status, string> = {
+  green:  'bg-emerald-500',
+  yellow: 'bg-amber-400',
+  red:    'bg-rose-500',
+};
+
+const STATUS_RING: Record<Status, string> = {
+  green:  'ring-emerald-400',
+  yellow: 'ring-amber-400',
+  red:    'ring-rose-400',
 };
 
 const STATUS_UZ: Record<Status, string> = {
-  green: 'yashil',
-  yellow: 'sariq',
-  red: 'qizil',
+  green: 'yashil', yellow: 'sariq', red: 'qizil',
 };
 
-type LocalStudent = {
-  id: string;
-  name: string;
-  status: Status;
-  note: string;
-  attendance: boolean;
-};
-
-type ApiStudent = {
-  id: string;
-  name: string;
-  role: string;
-};
+type LocalStudent = { id: string; name: string; status: Status; note: string; attendance: boolean };
+type ApiStudent   = { id: string; name: string; role: string };
 
 function getBranchIdFromToken(): string | null {
   try {
     const token = localStorage.getItem('accessToken') ?? '';
     const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
     return payload.branchId ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
+}
+
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
 export default function MentorGroupPage() {
@@ -47,49 +43,42 @@ export default function MentorGroupPage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const loadStudents = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       const branchId = getBranchIdFromToken();
       if (!branchId) throw new Error('Filial topilmadi');
       const res = await apiRequest<ApiStudent[]>(`/users/by-branch/${branchId}`, {}, token);
-      const studentList = res.data
-        .filter((u) => u.role === 'student')
-        .map((s) => ({ ...s, status: 'green' as Status, note: '', attendance: true }));
-      setStudents(studentList);
+      setStudents(
+        res.data.filter((u) => u.role === 'student')
+          .map((s) => ({ ...s, status: 'green' as Status, note: '', attendance: true })),
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 
   function updateStatus(id: string, status: Status) {
-    setStudents((prev) =>
-      prev.map((s) => s.id === id ? { ...s, status, note: status === 'green' ? '' : s.note } : s),
-    );
+    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, status, note: status === 'green' ? '' : s.note } : s));
   }
-
   function updateNote(id: string, note: string) {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, note } : s)));
+    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, note } : s));
   }
-
   function toggleAttendance(id: string) {
-    setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, attendance: !s.attendance } : s)));
+    setStudents((prev) => prev.map((s) => s.id === id ? { ...s, attendance: !s.attendance } : s));
   }
 
   async function saveAll() {
-    setSaveError('');
+    setSaveError(''); setSaving(true);
     const token = localStorage.getItem('accessToken') ?? '';
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; tenantId?: string; branchId?: string };
     const branchId = getBranchIdFromToken() ?? user.branchId ?? '';
     const today = new Date().toISOString().split('T')[0];
-
     try {
       await apiRequest('/attendance/students/bulk', {
         method: 'POST',
@@ -97,57 +86,38 @@ export default function MentorGroupPage() {
           records: students.map((s) => ({
             studentId: s.id,
             status: s.attendance ? 'present' : 'absent',
-            markedBy: user.id ?? '',
-            tenantId: user.tenantId ?? '',
-            branchId,
-            date: today,
+            markedBy: user.id ?? '', tenantId: user.tenantId ?? '', branchId, date: today,
           })),
         }),
       }, token);
-
-      await Promise.all(
-        students.map((s) =>
-          apiRequest('/status', {
-            method: 'POST',
-            body: JSON.stringify({
-              studentId: s.id,
-              date: today,
-              personalStatus: STATUS_UZ[s.status],
-              personalNote: s.note || undefined,
-            }),
-          }, token),
-        ),
-      );
-
+      await Promise.all(students.map((s) =>
+        apiRequest('/status', {
+          method: 'POST',
+          body: JSON.stringify({ studentId: s.id, date: today, personalStatus: STATUS_UZ[s.status], personalNote: s.note || undefined }),
+        }, token),
+      ));
       localStorage.setItem(`attendance_marked_${today}`, '1');
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
-    }
+    } finally { setSaving(false); }
   }
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="h-8 w-32 bg-gray-200 rounded animate-pulse" />
-          <div className="h-9 w-20 bg-gray-200 rounded-lg animate-pulse" />
-        </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-xl p-4 h-16 animate-pulse" />
-        ))}
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Guruh</h1>
-        <div className="bg-white rounded-xl p-6 text-center">
-          <p className="text-red-500 mb-3">{error}</p>
-          <button onClick={loadStudents} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium">
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-3">
+          <p className="text-rose-500 text-sm">{error}</p>
+          <button onClick={loadStudents} className="bg-[#0f172a] text-white px-5 py-2.5 rounded-xl text-sm font-bold">
             Qayta urinish
           </button>
         </div>
@@ -155,63 +125,103 @@ export default function MentorGroupPage() {
     );
   }
 
+  const present = students.filter((s) => s.attendance).length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Guruh</h1>
-        <button onClick={saveAll} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium">
-          {saved ? '✅ Saqlandi' : 'Saqlash'}
-        </button>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 mb-5 flex items-start justify-between">
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Mentor</p>
+            <p className="text-white text-xl font-bold">Guruh</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-[-20px] relative z-10">
+          <div className="bg-[#162032] rounded-[14px] p-3">
+            <Users size={14} className="text-[#0d9488] mb-1" />
+            <p className="text-white text-xl font-black font-mono">{present}</p>
+            <p className="text-[#94a3b8] text-[10px] mt-0.5">Keldi</p>
+          </div>
+          <div className="bg-[#162032] rounded-[14px] p-3">
+            <Users size={14} className="text-[#94a3b8] mb-1" />
+            <p className="text-white text-xl font-black font-mono">{students.length}</p>
+            <p className="text-[#94a3b8] text-[10px] mt-0.5">Jami</p>
+          </div>
+        </div>
       </div>
 
-      {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
+      <div className="px-4 pt-8 pb-6 space-y-4">
+        {saveError && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{saveError}</div>
+        )}
 
-      <div className="space-y-2">
-        {students.map((student) => (
-          <div key={student.id} className="bg-white rounded-xl p-4 shadow-sm space-y-2">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => toggleAttendance(student.id)}
-                className={`w-10 h-10 rounded-full border-2 font-bold text-sm shrink-0 ${
-                  student.attendance ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 text-gray-400'
-                }`}
-              >
-                {student.attendance ? '✓' : '✗'}
-              </button>
+        <div className="space-y-2">
+          {students.map((student) => (
+            <div key={student.id} className={`bg-white rounded-[14px] border-[1.5px] p-4 space-y-3 ${
+              student.attendance ? 'border-[#ede9e1]' : 'border-[#ede9e1] opacity-60'
+            }`}>
+              <div className="flex items-center gap-3">
+                {/* Attendance toggle */}
+                <button
+                  onClick={() => toggleAttendance(student.id)}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    student.attendance ? 'bg-emerald-100 text-emerald-600' : 'bg-[#f7f4ef] text-[#94a3b8]'
+                  }`}
+                >
+                  {student.attendance ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                </button>
 
-              <div className="flex-1">
-                <p className="font-medium">{student.name}</p>
-                <Link href={`/mentor/students/${student.id}`} className="text-xs text-indigo-600 font-medium">
-                  Xato tahlili →
-                </Link>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#0f172a]">{student.name}</p>
+                  <Link href={`/mentor/students/${student.id}`} className="text-xs text-[#0d9488] font-medium">
+                    Xato tahlili
+                  </Link>
+                </div>
+
+                {/* Status dots */}
+                <div className="flex gap-1.5">
+                  {(['green', 'yellow', 'red'] as Status[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => updateStatus(student.id, s)}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                        student.status === s ? `bg-[#f7f4ef] ring-2 ring-offset-1 ${STATUS_RING[s]}` : 'bg-[#f7f4ef]'
+                      }`}
+                    >
+                      <div className={`w-3 h-3 rounded-full ${STATUS_DOT[s]}`} />
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex gap-1">
-                {(['green', 'yellow', 'red'] as Status[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => updateStatus(student.id, s)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
-                      student.status === s ? STATUS_COLORS[s] + ' ring-2 ring-offset-1' : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {s === 'green' ? '🟢' : s === 'yellow' ? '🟡' : '🔴'}
-                  </button>
-                ))}
-              </div>
+              {student.status !== 'green' && (
+                <input
+                  type="text"
+                  placeholder="Izoh (ixtiyoriy)..."
+                  value={student.note}
+                  onChange={(e) => updateNote(student.id, e.target.value)}
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+                />
+              )}
             </div>
+          ))}
+        </div>
 
-            {student.status !== 'green' && (
-              <input
-                type="text"
-                placeholder="Izoh (ixtiyoriy)..."
-                value={student.note}
-                onChange={(e) => updateNote(student.id, e.target.value)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-            )}
-          </div>
-        ))}
+        <button
+          onClick={saveAll}
+          disabled={saving}
+          className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {saving
+            ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : <Save size={16} />}
+          {saved ? 'Saqlandi' : saving ? 'Saqlanmoqda...' : 'Saqlash'}
+        </button>
       </div>
     </div>
   );

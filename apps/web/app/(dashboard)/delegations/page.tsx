@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { Plus, Circle, Clock, CheckCircle, XCircle, Ban, ChevronRight } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type DelegationStatus = 'active' | 'pending' | 'completed' | 'rejected' | 'cancelled';
@@ -27,12 +28,12 @@ type Delegation = {
   reason: string;
 };
 
-const STATUS_CONFIG: Record<DelegationStatus, { icon: string; color: string; label: string }> = {
-  active: { icon: '🟢', color: 'text-green-700 bg-green-50', label: 'Faol' },
-  pending: { icon: '⏳', color: 'text-yellow-700 bg-yellow-50', label: 'Kutilmoqda' },
-  completed: { icon: '✅', color: 'text-blue-700 bg-blue-50', label: 'Tugadi' },
-  rejected: { icon: '❌', color: 'text-red-700 bg-red-50', label: 'Rad etildi' },
-  cancelled: { icon: '🚫', color: 'text-gray-700 bg-gray-100', label: 'Bekor qilindi' },
+const STATUS_CONFIG: Record<DelegationStatus, { icon: React.ReactNode; badge: string; label: string }> = {
+  active:    { icon: <Circle size={10} className="fill-emerald-500 text-emerald-500" />, badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200', label: 'Faol' },
+  pending:   { icon: <Clock size={10} className="text-amber-500" />,                    badge: 'bg-amber-50 text-amber-700 border border-amber-200',       label: 'Kutilmoqda' },
+  completed: { icon: <CheckCircle size={10} className="text-blue-500" />,               badge: 'bg-blue-50 text-blue-700 border border-blue-200',           label: 'Tugadi' },
+  rejected:  { icon: <XCircle size={10} className="text-rose-500" />,                   badge: 'bg-rose-50 text-rose-700 border border-rose-200',           label: 'Rad etildi' },
+  cancelled: { icon: <Ban size={10} className="text-[#94a3b8]" />,                      badge: 'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]',       label: 'Bekor qilindi' },
 };
 
 function formatDate(isoDate: string): string {
@@ -50,96 +51,104 @@ export default function DelegationsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-
     async function fetchDelegations() {
       try {
         const res = await apiRequest<ApiDelegation[]>('/delegations', {}, token);
-        const mapped: Delegation[] = res.data.map((d) => ({
-          id: d.id,
-          status: d.status,
-          from: d.fromUser.name,
-          to: d.toUser.name,
+        setDelegations(res.data.map((d) => ({
+          id: d.id, status: d.status,
+          from: d.fromUser.name, to: d.toUser.name,
           role: d.delegatedRole,
-          startsAt: formatDate(d.startsAt),
-          endsAt: formatDate(d.endsAt),
+          startsAt: formatDate(d.startsAt), endsAt: formatDate(d.endsAt),
           reason: d.reason,
-        }));
-        setDelegations(mapped);
-      } catch {
-        // keep empty list on error
-      } finally {
-        setLoading(false);
-      }
+        })));
+      } catch { /* keep empty */ }
+      finally { setLoading(false); }
     }
-
     fetchDelegations();
   }, []);
 
-  const filtered = activeTab === 'all'
-    ? delegations
-    : delegations.filter((d) => d.status === activeTab);
+  const filtered = activeTab === 'all' ? delegations : delegations.filter((d) => d.status === activeTab);
+  const tabs = (['all', 'active', 'pending', 'completed', 'rejected'] as const);
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Delegatsiyalar</h1>
-        <Link
-          href="/delegations/new"
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
-          + Yangi
-        </Link>
-      </div>
-
-      <div className="flex gap-2 border-b pb-2">
-        {(['all', 'active', 'pending', 'completed', 'rejected'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1 rounded-lg text-sm ${
-              activeTab === tab ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-end justify-between">
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Manager</p>
+            <p className="text-white text-xl font-bold">Delegatsiyalar</p>
+          </div>
+          <Link
+            href="/delegations/new"
+            className="flex items-center gap-1.5 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold"
           >
-            {tab === 'all' ? 'Barchasi' : STATUS_CONFIG[tab]?.label}
-          </button>
-        ))}
+            <Plus size={16} /> Yangi
+          </Link>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="text-center text-gray-400 py-8">Yuklanmoqda...</p>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((d) => {
-            const s = STATUS_CONFIG[d.status];
-            return (
-              <div key={d.id} className="bg-white rounded-xl p-4 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>
-                        {s.icon} {s.label}
-                      </span>
-                      <span className="text-sm text-gray-500">{d.role} vakolati</span>
-                    </div>
-                    <p className="font-semibold mt-1">{d.from} → {d.to}</p>
-                    <p className="text-sm text-gray-500">{d.startsAt} – {d.endsAt}</p>
-                    <p className="text-sm text-gray-600 mt-1">&quot;{d.reason}&quot;</p>
-                  </div>
-                  <Link
-                    href={`/delegations/${d.id}`}
-                    className="text-indigo-600 text-sm font-medium"
-                  >
-                    Ko&apos;rish →
-                  </Link>
-                </div>
-              </div>
-            );
-          })}
-          {filtered.length === 0 && (
-            <p className="text-center text-gray-400 py-8">Delegatsiya topilmadi</p>
-          )}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        {/* Tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                activeTab === tab
+                  ? 'bg-[#0f172a] text-white'
+                  : 'bg-white text-[#64748b] border border-[#ede9e1]'
+              }`}
+            >
+              {tab === 'all' ? 'Barchasi' : STATUS_CONFIG[tab]?.label}
+            </button>
+          ))}
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <p className="text-[#64748b] text-sm">Delegatsiya topilmadi</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((d) => {
+              const s = STATUS_CONFIG[d.status];
+              return (
+                <div key={d.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${s.badge}`}>
+                          {s.icon} {s.label}
+                        </span>
+                        <span className="text-xs text-[#64748b] bg-[#f7f4ef] px-2 py-0.5 rounded-full">{d.role}</span>
+                      </div>
+                      <p className="font-semibold text-[#0f172a] text-sm">{d.from} → {d.to}</p>
+                      <p className="text-xs text-[#94a3b8]">{d.startsAt} – {d.endsAt}</p>
+                      <p className="text-xs text-[#64748b] italic">&quot;{d.reason}&quot;</p>
+                    </div>
+                    <Link
+                      href={`/delegations/${d.id}`}
+                      className="shrink-0 w-8 h-8 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a]"
+                    >
+                      <ChevronRight size={16} />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

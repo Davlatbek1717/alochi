@@ -1,11 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Plus, Trash2, ShieldAlert } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
-type Keyword = {
-  id: string;
-  word: string;
-};
+type Keyword = { id: string; word: string };
 
 export default function KeywordsPage() {
   const [keywords, setKeywords] = useState<Keyword[]>([]);
@@ -25,8 +23,7 @@ export default function KeywordsPage() {
   async function addKeyword() {
     const word = newWord.trim().toLowerCase();
     if (!word) return;
-    setSaving(true);
-    setError('');
+    setSaving(true); setError('');
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<Keyword>('/social/keywords', {
@@ -37,9 +34,7 @@ export default function KeywordsPage() {
       setNewWord('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xato');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   async function deleteKeyword(id: string, word: string) {
@@ -53,58 +48,84 @@ export default function KeywordsPage() {
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') addKeyword();
-  }
-
   return (
-    <div className="max-w-lg mx-auto space-y-4">
-      <h1 className="text-lg font-bold text-gray-900">Taqiqlangan so&apos;zlar</h1>
-
-      {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>
-      )}
-
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newWord}
-          onChange={(e) => setNewWord(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Yangi so'z qo'shing..."
-          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #e11d48 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
-        <button
-          onClick={addKeyword}
-          disabled={saving || !newWord.trim()}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 shrink-0"
-        >
-          {saving ? '...' : "Qo'sh"}
-        </button>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#e11d48]/20 flex items-center justify-center">
+              <ShieldAlert size={18} className="text-[#e11d48]" />
+            </div>
+            <div>
+              <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Superadmin</p>
+              <p className="text-white font-bold text-lg">Taqiqlangan so&apos;zlar</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
-        <p className="text-center text-gray-400 py-10">Yuklanmoqda...</p>
-      ) : keywords.length === 0 ? (
-        <p className="text-center text-gray-400 py-10">Taqiqlangan so&apos;zlar yo&apos;q</p>
-      ) : (
-        <div className="space-y-2">
-          {keywords.map((kw) => (
-            <div
-              key={kw.id}
-              className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-4 py-2.5 shadow-sm"
-            >
-              <span className="text-sm text-gray-800 font-mono">{kw.word}</span>
-              <button
-                onClick={() => deleteKeyword(kw.id, kw.word)}
-                className="text-red-500 hover:text-red-700 text-sm font-medium"
-              >
-                O&apos;chir
-              </button>
-            </div>
-          ))}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        {error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
+        )}
+
+        {/* Add form */}
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex gap-3">
+          <input
+            type="text"
+            value={newWord}
+            onChange={(e) => setNewWord(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addKeyword()}
+            placeholder="Yangi so'z qo'shing..."
+            className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+          />
+          <button
+            onClick={addKeyword}
+            disabled={saving || !newWord.trim()}
+            className="bg-[#0f172a] text-white px-4 py-3 rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
+          >
+            {saving
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <Plus size={16} />}
+            Qo&apos;sh
+          </button>
         </div>
-      )}
+
+        {loading ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-[50px] bg-white rounded-[14px] border border-[#ede9e1] animate-pulse" />
+            ))}
+          </div>
+        ) : keywords.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <ShieldAlert size={36} className="text-[#94a3b8] mx-auto mb-2" />
+            <p className="text-[#64748b] text-sm">Taqiqlangan so&apos;zlar yo&apos;q</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {keywords.map((kw) => (
+              <div
+                key={kw.id}
+                className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] px-4 py-3.5 flex items-center gap-3"
+              >
+                <span className="flex-1 text-sm text-[#0f172a] font-mono font-medium">{kw.word}</span>
+                <button
+                  onClick={() => deleteKeyword(kw.id, kw.word)}
+                  className="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-100"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
