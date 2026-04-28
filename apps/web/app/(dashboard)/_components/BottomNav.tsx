@@ -1,44 +1,53 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import {
+  Home, BookOpen, Users, Swords, User,
+  GraduationCap, BarChart2, ClipboardList,
+  CreditCard, AlertTriangle, Building2,
+  BookMarked, Send,
+} from 'lucide-react';
 
-const NAV_TABS: Record<string, { href: string; icon: string; label: string; action?: string }[]> = {
+type Tab = { href: string; icon: React.ReactNode; label: string; action?: string };
+
+const NAV_TABS: Record<string, Tab[]> = {
   student: [
-    { href: '/student',         icon: '🏠', label: 'Bosh'      },
-    { href: '/student/lessons', icon: '📚', label: 'Darslar'   },
-    { href: '/student/friends', icon: '👥', label: "Do'stlar"  },
-    { href: '/student/duel',    icon: '⚔️', label: 'Duel'      },
-    { href: '/student/profile', icon: '👤', label: 'Profil', action: 'logout' },
+    { href: '/student',         icon: <Home size={20} />,       label: 'Bosh'      },
+    { href: '/student/lessons', icon: <BookOpen size={20} />,   label: 'Darslar'   },
+    { href: '/student/friends', icon: <Users size={20} />,      label: "Do'stlar"  },
+    { href: '/student/duel',    icon: <Swords size={20} />,     label: 'Duel'      },
+    { href: '/student/profile', icon: <User size={20} />,       label: 'Profil', action: 'logout' },
   ],
   mentor: [
-    { href: '/mentor',            icon: '🏠', label: 'Bosh'    },
-    { href: '/mentor/group',      icon: '👨‍🎓', label: 'Guruh'  },
-    { href: '/mentor/attendance', icon: '📊', label: 'Davomat' },
-    { href: '/mentor/tasks',      icon: '📋', label: 'Vazifalar' },
+    { href: '/mentor',            icon: <Home size={20} />,         label: 'Bosh'      },
+    { href: '/mentor/group',      icon: <GraduationCap size={20} />,label: 'Guruh'     },
+    { href: '/mentor/attendance', icon: <BarChart2 size={20} />,    label: 'Davomat'   },
+    { href: '/mentor/tasks',      icon: <ClipboardList size={20} />,label: 'Vazifalar' },
   ],
   tester: [
-    { href: '/tester',            icon: '🏠', label: 'Bosh'    },
-    { href: '/tester/tasks',      icon: '📋', label: 'Vazifalar' },
+    { href: '/tester',       icon: <Home size={20} />,         label: 'Bosh'      },
+    { href: '/tester/tasks', icon: <ClipboardList size={20} />,label: 'Vazifalar' },
   ],
   manager: [
-    { href: '/manager',             icon: '🏠', label: 'Bosh'        },
-    { href: '/manager/students',    icon: '👥', label: "O'quvchilar" },
-    { href: '/manager/payments',    icon: '💰', label: "To'lovlar"   },
-    { href: '/manager/tasks',       icon: '📋', label: 'Vazifalar'   },
-    { href: '/manager/delegations', icon: '📋', label: 'Delegatsiya' },
+    { href: '/manager',             icon: <Home size={20} />,         label: 'Bosh'        },
+    { href: '/manager/students',    icon: <Users size={20} />,        label: "O'quvchilar" },
+    { href: '/manager/payments',    icon: <CreditCard size={20} />,   label: "To'lovlar"   },
+    { href: '/manager/tasks',       icon: <ClipboardList size={20} />,label: 'Vazifalar'   },
+    { href: '/manager/delegations', icon: <Send size={20} />,         label: 'Delegatsiya' },
   ],
   filadmin: [
-    { href: '/filadmin',            icon: '🏠', label: 'Bosh'           },
-    { href: '/filadmin/attendance', icon: '✅', label: 'Davomat'        },
-    { href: '/filadmin/payments',   icon: '💰', label: "To'lovlar"      },
-    { href: '/filadmin/warnings',   icon: '⚠️', label: 'Ogohlantirish' },
-    { href: '/filadmin/tasks',      icon: '📋', label: 'Vazifalar'      },
+    { href: '/filadmin',            icon: <Home size={20} />,          label: 'Bosh'          },
+    { href: '/filadmin/attendance', icon: <BarChart2 size={20} />,     label: 'Davomat'       },
+    { href: '/filadmin/payments',   icon: <CreditCard size={20} />,    label: "To'lovlar"     },
+    { href: '/filadmin/warnings',   icon: <AlertTriangle size={20} />, label: 'Ogohlantirish' },
+    { href: '/filadmin/tasks',      icon: <ClipboardList size={20} />, label: 'Vazifalar'     },
   ],
   superadmin: [
-    { href: '/superadmin',          icon: '🏠', label: 'Bosh'             },
-    { href: '/superadmin/payments', icon: '💰', label: "To'lovlar"        },
-    { href: '/superadmin/branches', icon: '🏢', label: 'Filiallar'        },
-    { href: '/superadmin/users',    icon: '👤', label: 'Foydalanuvchilar' },
+    { href: '/superadmin',          icon: <Home size={20} />,       label: 'Bosh'             },
+    { href: '/superadmin/payments', icon: <CreditCard size={20} />, label: "To'lovlar"        },
+    { href: '/superadmin/branches', icon: <Building2 size={20} />,  label: 'Filiallar'        },
+    { href: '/superadmin/users',    icon: <Users size={20} />,      label: 'Foydalanuvchilar' },
+    { href: '/superadmin/lessons',  icon: <BookMarked size={20} />, label: 'Darslar'          },
   ],
 };
 
@@ -64,7 +73,7 @@ export default function BottomNav() {
   const tabs = NAV_TABS[role] ?? [];
   if (tabs.length === 0) return null;
 
-  function handleTabClick(tab: { href: string; action?: string }) {
+  function handleTabClick(tab: Tab) {
     if (tab.action === 'logout') {
       localStorage.clear();
       router.push('/login');
@@ -94,8 +103,8 @@ export default function BottomNav() {
               {isActive && (
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-indigo-600 rounded-full" />
               )}
-              <span className="text-xl leading-none">{tab.icon}</span>
-              <span className="text-[10px] font-medium leading-none">{tab.label}</span>
+              {tab.icon}
+              <span className="text-[10px] font-medium leading-none mt-0.5">{tab.label}</span>
             </button>
           );
         })}
