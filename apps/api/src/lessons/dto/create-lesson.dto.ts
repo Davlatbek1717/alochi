@@ -39,4 +39,8 @@ export class CreateLessonDto {
   @IsBoolean()
   @IsOptional()
   vocabularyEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  hasExam?: boolean;
 }

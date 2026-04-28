@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { RefreshCw, BarChart2, Trophy } from 'lucide-react';
+import { RefreshCw, BarChart2, Trophy, GraduationCap } from 'lucide-react';
 import { XpBar } from './_components/XpBar';
 import { StreakBadge } from './_components/StreakBadge';
 import { DailyQuests } from './_components/DailyQuests';
@@ -227,6 +227,14 @@ export default function StudentDashboard() {
           <Trophy size={22} className="text-[#f59e0b]" />
           <p className="font-bold text-sm text-gray-800">Turnirlar</p>
           <p className="text-xs text-gray-500">Musobaqalar</p>
+        </Link>
+        <Link
+          href="/student/exams"
+          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
+        >
+          <GraduationCap size={22} className="text-[#7c3aed]" />
+          <p className="font-bold text-sm text-gray-800">Imtihonlar</p>
+          <p className="text-xs text-gray-500">Akademiyada</p>
         </Link>
       </div>
 

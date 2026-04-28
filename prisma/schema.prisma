@@ -91,6 +91,8 @@ model User {
   faceRecognitionLogs FaceRecognitionLog[] @relation("FaceRecognitionLogs")
   studentXp          StudentXp?          @relation("StudentXp")
   xpEvents           XpEvent[]           @relation("XpEvents")
+  examPermissions    ExamPermission[]    @relation("ExamStudent")
+  examsGranted       ExamPermission[]    @relation("ExamGranter")
   dailyQuests        DailyQuest[]        @relation("DailyQuests")
   certificates       Certificate[]       @relation("Certificates")
   friendsAsUser      Friendship[]        @relation("UserFriends")
@@ -142,6 +144,7 @@ model Lesson {
   nRepetitions Int        @default(3) @map("n_repetitions")
   maxNOverride Int        @default(10) @map("max_n_override")
   components   Json       @default("{}")
+  hasExam      Boolean    @default(false) @map("has_exam")
   isPublished  Boolean    @default(false) @map("is_published")
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
@@ -151,6 +154,7 @@ model Lesson {
   progress        StudentProgress[]
   studentConfigs  StudentLessonConfig[]
   errorLogs       ErrorLog[]            @relation("ErrorLogs")
+  examPermissions ExamPermission[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, isPublished])
@@ -741,4 +745,32 @@ model TournamentRegistration {
 
   @@unique([tournamentId, studentId])
   @@map("tournament_registrations")
+}
+
+// ---- EXAMS ----
+
+enum ExamStatus {
+  active
+  done
+  failed
+}
+
+model ExamPermission {
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId   String     @map("student_id") @db.Uuid
+  lessonId    String     @map("lesson_id") @db.Uuid
+  grantedBy   String     @map("granted_by") @db.Uuid
+  status      ExamStatus @default(active)
+  score       Int?
+  passed      Boolean?
+  grantedAt   DateTime   @default(now()) @map("granted_at")
+  completedAt DateTime?  @map("completed_at")
+
+  student User   @relation("ExamStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  granter User   @relation("ExamGranter", fields: [grantedBy], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId, status])
+  @@map("exam_permissions")
 }

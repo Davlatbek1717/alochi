@@ -1,12 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, RefreshCw, BookOpen } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, RefreshCw, BookOpen, Lock } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
 import { AiTutor } from './_components/AiTutor';
-import { CameraMonitor } from './_components/CameraMonitor';
 import { apiRequest } from '@/lib/api';
 
 type ComponentFlags = {
@@ -39,6 +38,7 @@ type Lesson = {
   title: string;
   youtubeUrl: string;
   nRepetitions: number;
+  hasExam: boolean;
   components: ComponentFlags;
   components_data: LessonComponent[];
 };
@@ -50,14 +50,13 @@ type ProgressEntry = {
   academyCompleted: boolean;
 };
 
-type Step = 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'academy' | 'done';
+type Step = 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'done';
 
 function buildSteps(components: ComponentFlags): Step[] {
   const steps: Step[] = ['video'];
   if (components.mcq) steps.push('mcq');
   if (components.word_order) steps.push('word_order');
   if (components.ai_tutor) steps.push('ai_tutor');
-  if (components.camera) steps.push('academy');
   steps.push('done');
   return steps;
 }
@@ -67,7 +66,6 @@ const STEP_LABELS: Record<Step, string> = {
   mcq: 'Test',
   word_order: "So'z",
   ai_tutor: 'AI',
-  academy: 'Akademiya',
   done: 'Tayyor',
 };
 
@@ -300,39 +298,6 @@ export default function LessonPage() {
           />
         )}
 
-        {step === 'academy' && (
-          <div className="space-y-4">
-            <CameraMonitor
-              onLookAway={restartCycle}
-              onSilenceTooLong={restartCycle}
-            />
-            {sessionError && (
-              <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 rounded-[18px] p-4 space-y-2">
-                <p className="text-[#e11d48] text-sm font-semibold">
-                  Sessiyani saqlashda xato yuz berdi. Qayta urinib ko&apos;ring.
-                </p>
-                <button
-                  onClick={completeSession}
-                  disabled={completing}
-                  className="w-full bg-[#e11d48] text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
-                >
-                  {completing ? 'Saqlanmoqda...' : 'Qayta urinish'}
-                </button>
-              </div>
-            )}
-            {!sessionError && (
-              <button
-                onClick={handleCycleComplete}
-                disabled={completing}
-                className="w-full bg-emerald-500 text-white py-4 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 size={18} />
-                {completing ? 'Saqlanmoqda...' : 'Topshirish — Sessiyani yakunlash'}
-              </button>
-            )}
-          </div>
-        )}
-
         {step === 'done' && (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
             <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
@@ -344,6 +309,14 @@ export default function LessonPage() {
                 ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
                 : 'Jarayoningiz saqlandi'}
             </p>
+            {lesson.hasExam && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+                <Lock size={16} className="text-amber-500 shrink-0" />
+                <p className="text-xs text-amber-700 font-medium">
+                  Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.
+                </p>
+              </div>
+            )}
             <div className="flex gap-3 justify-center">
               <button
                 onClick={restartCycle}

@@ -1,12 +1,13 @@
-﻿'use client';
+'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Clock, UserX, PlayCircle, Users } from 'lucide-react';
+import { CheckCircle, Clock, UserX, PlayCircle, Users, BookOpen, X, ChevronDown } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 interface Student { id: string; name: string; }
 interface AttendanceRecord { studentId: string; status: string; student: { id: string; name: string }; }
+interface Lesson { id: string; title: string; orderNumber: number; hasExam: boolean; }
 type QueueStatus = 'waiting' | 'testing' | 'done' | 'absent';
-interface StudentRow { id: string; name: string; attendance: 'present' | 'absent' | null; queue: QueueStatus; }
+interface StudentRow { id: string; name: string; attendance: 'present' | 'absent' | null; queue: QueueStatus; activeExamId?: string; }
 
 function getBranchIdFromToken(): string | null {
   try {
@@ -28,12 +29,22 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-const QUEUE_LABEL: Record<QueueStatus, string> = { waiting: 'Navbatda', testing: 'Topshirmoqda', done: 'Tugadi', absent: 'Kelmadi' };
+const QUEUE_LABEL: Record<QueueStatus, string> = {
+  waiting: 'Navbatda', testing: 'Topshirmoqda', done: 'Tugadi', absent: 'Kelmadi',
+};
 
 export default function TesterPage() {
   const [rows, setRows] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+
+  // Grant modal state
+  const [grantModal, setGrantModal] = useState<{ studentId: string; name: string } | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState('');
+  const [granting, setGranting] = useState(false);
+  const [grantError, setGrantError] = useState('');
+
   const today = new Date().toISOString().split('T')[0];
 
   const load = useCallback(async () => {
@@ -44,12 +55,15 @@ export default function TesterPage() {
     if (!branchId) { setError('Branch topilmadi'); setLoading(false); return; }
 
     try {
-      const [studentsRes, attendanceRes] = await Promise.all([
+      const [studentsRes, attendanceRes, lessonsRes] = await Promise.all([
         apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token),
         apiRequest<AttendanceRecord[]>(`/attendance/students/${branchId}/${today}`, {}, token)
           .catch(() => ({ data: [] as AttendanceRecord[] })),
+        apiRequest<Lesson[]>('/lessons', {}, token).catch(() => ({ data: [] as Lesson[] })),
       ]);
+
       const attendanceMap = new Map(attendanceRes.data.map((a) => [a.studentId, a.status]));
+      setLessons(lessonsRes.data.filter((l) => l.hasExam));
       setRows(studentsRes.data.map((s) => {
         const att = attendanceMap.get(s.id);
         return {
@@ -81,8 +95,35 @@ export default function TesterPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Xatolik'); }
   }
 
-  function setQueue(studentId: string, queue: QueueStatus) {
-    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue } : r));
+  function openGrantModal(student: StudentRow) {
+    setGrantModal({ studentId: student.id, name: student.name });
+    setSelectedLesson(lessons[0]?.id ?? '');
+    setGrantError('');
+  }
+
+  async function handleGrant() {
+    if (!grantModal || !selectedLesson) return;
+    setGranting(true);
+    setGrantError('');
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest('/exams/grant', {
+        method: 'POST',
+        body: JSON.stringify({ studentId: grantModal.studentId, lessonId: selectedLesson }),
+      }, token);
+      setRows((prev) => prev.map((r) =>
+        r.id === grantModal.studentId ? { ...r, queue: 'testing' } : r,
+      ));
+      setGrantModal(null);
+    } catch (err) {
+      setGrantError(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setGranting(false);
+    }
+  }
+
+  function setDone(studentId: string) {
+    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'done' } : r));
   }
 
   const arrived = rows.filter((r) => r.attendance === 'present');
@@ -141,7 +182,7 @@ export default function TesterPage() {
                 {getInitials(testingNow.name)}
               </div>
               <p className="text-white text-lg font-bold flex-1">{testingNow.name}</p>
-              <button onClick={() => setQueue(testingNow.id, 'done')}
+              <button onClick={() => setDone(testingNow.id)}
                 className="bg-emerald-500 text-white text-sm font-bold px-4 py-2 rounded-xl">
                 Tugatdi
               </button>
@@ -175,9 +216,12 @@ export default function TesterPage() {
                       'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]'
                     }`}>{QUEUE_LABEL[s.queue]}</span>
                     {isWaiting && (
-                      <button onClick={() => setQueue(s.id, 'testing')} disabled={!!testingNow}
-                        className="bg-[#0f172a] text-white text-xs font-bold px-3 py-1.5 rounded-xl disabled:opacity-30">
-                        Boshlash
+                      <button
+                        onClick={() => openGrantModal(s)}
+                        disabled={!!testingNow || lessons.length === 0}
+                        className="bg-[#0f172a] text-white text-xs font-bold px-3 py-1.5 rounded-xl disabled:opacity-30 flex items-center gap-1"
+                      >
+                        <BookOpen size={12} /> Boshlash
                       </button>
                     )}
                   </div>
@@ -212,10 +256,62 @@ export default function TesterPage() {
         {rows.length === 0 && !error && (
           <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
             <Users size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-[#0f172a] font-semibold">O'quvchilar topilmadi</p>
+            <p className="text-[#0f172a] font-semibold">O&apos;quvchilar topilmadi</p>
           </div>
         )}
       </div>
+
+      {/* Grant exam modal */}
+      {grantModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-0">
+          <div className="bg-white rounded-t-[24px] w-full max-w-lg p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[#0f172a] font-bold text-lg">Imtihon ruxsati</p>
+              <button onClick={() => setGrantModal(null)} className="w-8 h-8 flex items-center justify-center text-[#94a3b8]">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="bg-[#f7f4ef] rounded-xl px-4 py-3">
+              <p className="text-xs text-[#94a3b8] mb-0.5">O&apos;quvchi</p>
+              <p className="text-[#0f172a] font-semibold">{grantModal.name}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Dars tanlang</p>
+              <div className="relative">
+                <select
+                  value={selectedLesson}
+                  onChange={(e) => setSelectedLesson(e.target.value)}
+                  className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a] pr-10"
+                >
+                  {lessons.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      #{l.orderNumber} — {l.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              </div>
+            </div>
+
+            {grantError && (
+              <p className="text-rose-500 text-sm">{grantError}</p>
+            )}
+
+            <button
+              onClick={handleGrant}
+              disabled={granting || !selectedLesson}
+              className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {granting
+                ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <BookOpen size={16} />}
+              {granting ? 'Berilmoqda...' : "Imtihon ruxsatini ber"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

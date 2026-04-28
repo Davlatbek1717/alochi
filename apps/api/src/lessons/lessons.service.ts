@@ -12,17 +12,17 @@ export class LessonsService {
     });
     if (existing) throw new ConflictException(`${dto.orderNumber} tartib raqami allaqachon mavjud`);
 
-    const { mcqEnabled, wordOrderEnabled, vocabularyEnabled, type, ...data } = dto;
+    const { mcqEnabled, wordOrderEnabled, vocabularyEnabled, hasExam, type, ...data } = dto;
     return this.prisma.lesson.create({
       data: {
         ...data,
         type: type as any,
+        hasExam: hasExam ?? false,
         components: {
           mcq: mcqEnabled ?? false,
           word_order: wordOrderEnabled ?? false,
           vocabulary: vocabularyEnabled ?? false,
           ai_tutor: false,
-          camera: false,
         },
       },
     });

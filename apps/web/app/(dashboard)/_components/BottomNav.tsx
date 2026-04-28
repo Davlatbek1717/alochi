@@ -8,15 +8,16 @@ import {
   BookMarked, Send,
 } from 'lucide-react';
 
+
 type Tab = { href: string; icon: React.ReactNode; label: string; action?: string };
 
 const NAV_TABS: Record<string, Tab[]> = {
   student: [
-    { href: '/student',         icon: <Home size={20} />,       label: 'Bosh'      },
-    { href: '/student/lessons', icon: <BookOpen size={20} />,   label: 'Darslar'   },
-    { href: '/student/friends', icon: <Users size={20} />,      label: "Do'stlar"  },
-    { href: '/student/duel',    icon: <Swords size={20} />,     label: 'Duel'      },
-    { href: '/student/profile', icon: <User size={20} />,       label: 'Profil', action: 'logout' },
+    { href: '/student',         icon: <Home size={20} />,           label: 'Bosh'       },
+    { href: '/student/lessons', icon: <BookOpen size={20} />,       label: 'Darslar'    },
+    { href: '/student/exams',   icon: <GraduationCap size={20} />,  label: 'Imtihon'    },
+    { href: '/student/friends', icon: <Users size={20} />,          label: "Do'stlar"   },
+    { href: '/student/profile', icon: <User size={20} />,           label: 'Profil', action: 'logout' },
   ],
   mentor: [
     { href: '/mentor',            icon: <Home size={20} />,         label: 'Bosh'      },
