@@ -31,6 +31,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TournamentsModule } from './tournaments/tournaments.module';
 import { ExamsModule } from './exams/exams.module';
+import { ChurnModule } from './churn/churn.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
@@ -69,6 +70,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     NotificationsModule,
     TournamentsModule,
     ExamsModule,
+    ChurnModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
