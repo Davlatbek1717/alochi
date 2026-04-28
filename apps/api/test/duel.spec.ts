@@ -2,6 +2,9 @@ import { DuelService } from '../src/social/duel.service';
 
 describe('DuelService', () => {
   const mockPrisma = {
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ name: 'Test User', tenantId: 'tenant-1' }),
+    },
     studentProgress: {
       findMany: jest.fn(),
     },
@@ -39,7 +42,7 @@ describe('DuelService', () => {
   const mockXp = { award: jest.fn().mockResolvedValue({}) };
   const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
 
-  const mockGateway = { sendDuelUpdate: jest.fn() };
+  const mockGateway = { sendDuelUpdate: jest.fn(), emitDuelChallenge: jest.fn() };
   const service = new DuelService(mockPrisma as any, mockXp as any, mockFeedEvent as any, mockGateway as any);
 
   it('selects questions from shared completed lessons', async () => {

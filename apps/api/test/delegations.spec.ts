@@ -2,6 +2,9 @@ import { DelegationsService } from '../src/delegations/delegations.service';
 
 describe('DelegationsService', () => {
   const mockPrisma = {
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ name: 'Test User' }),
+    },
     delegation: {
       create: jest.fn().mockResolvedValue({ id: 'del-1', status: 'pending' }),
       findUnique: jest.fn(),
