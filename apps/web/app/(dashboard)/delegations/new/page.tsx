@@ -57,7 +57,7 @@ function NewDelegationForm() {
 
     const token = localStorage.getItem('accessToken') ?? '';
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-      tenantId?: string; id?: string;
+      tenantId?: string; id?: string; branchId?: string;
     };
 
     try {
@@ -65,7 +65,7 @@ function NewDelegationForm() {
         method: 'POST',
         body: JSON.stringify({
           tenantId: user.tenantId ?? '',
-          branchId: user.tenantId ?? '',
+          branchId: user.branchId ?? '',
           fromUserId: user.id ?? '',
           toUserId: selectedRecipient,
           delegatedRole: 'manager',
