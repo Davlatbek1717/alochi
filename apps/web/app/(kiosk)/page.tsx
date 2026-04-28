@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, WifiOff, RefreshCw, KeyRound, ScanFace, GraduationCap, ArrowLeft } from 'lucide-react';
 import { FaceScanner } from './_components/FaceScanner';
 import { AttendanceResult } from './_components/AttendanceResult';
 
@@ -193,23 +194,31 @@ export default function KioskPage() {
 
   if (kioskState === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <p className="text-lg animate-pulse">Yuklanmoqda...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mx-auto mb-4">
+            <GraduationCap size={28} className="text-white" />
+          </div>
+          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+        </div>
       </div>
     );
   }
 
   if (kioskState === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-6 text-center">
-        <div className="space-y-4">
-          <p className="text-4xl">⚠️</p>
-          <p className="text-lg font-medium">{loadError}</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0f172a] p-6">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-[#e11d48]/20 border border-[#e11d48]/30 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={28} className="text-[#e11d48]" />
+          </div>
+          <p className="text-white font-bold text-lg mb-2">Xatolik</p>
+          <p className="text-[#94a3b8] text-sm mb-6">{loadError}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-white text-gray-900 px-6 py-2 rounded-xl font-medium"
+            className="flex items-center gap-2 bg-white text-[#0f172a] px-6 py-3 rounded-xl font-bold mx-auto"
           >
-            Qayta urinish
+            <RefreshCw size={16} /> Qayta urinish
           </button>
         </div>
       </div>
@@ -218,7 +227,7 @@ export default function KioskPage() {
 
   if (kioskState === 'success' && result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[#0f172a]">
         <AttendanceResult
           name={result.name}
           time={result.time}
@@ -231,23 +240,31 @@ export default function KioskPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white gap-6 p-4">
-      <h1 className="text-2xl font-bold text-center">A&apos;lochi — Xodimlar Kirishi</h1>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#0f172a] gap-6 p-6">
+      {/* Logo */}
+      <div className="text-center mb-2">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mx-auto mb-3">
+          <GraduationCap size={24} className="text-white" />
+        </div>
+        <p className="text-white text-xl font-black">A&apos;lochi</p>
+        <p className="text-[#94a3b8] text-sm mt-0.5">Xodimlar Kirishi</p>
+      </div>
 
       {isOffline && (
-        <div className="bg-yellow-500/20 border border-yellow-400/50 rounded-xl px-4 py-2 text-yellow-300 text-sm text-center">
-          📴 Offline rejim — {isStale ? '⚠️ Kesh eskirgan (2+ kun)' : 'Lokal kesh ishlatilmoqda'}
+        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-400/20 rounded-xl px-4 py-2.5 text-amber-300 text-sm">
+          <WifiOff size={14} />
+          {isStale ? 'Kesh eskirgan (2+ kun)' : 'Offline — lokal kesh'}
         </div>
       )}
 
       {loadError && (
-        <div className="bg-red-500/20 border border-red-400/50 rounded-xl px-4 py-2 text-red-300 text-sm text-center">
-          {loadError}
+        <div className="flex items-center gap-2 bg-[#e11d48]/10 border border-[#e11d48]/20 rounded-xl px-4 py-2.5 text-[#e11d48] text-sm">
+          <AlertTriangle size={14} /> {loadError}
         </div>
       )}
 
       {kioskState === 'scanning' && (
-        <>
+        <div className="w-full max-w-sm flex flex-col items-center gap-4">
           <FaceScanner
             cachedEmbeddings={cache.embeddings}
             workStartTime={cache.work_start_time}
@@ -257,21 +274,28 @@ export default function KioskPage() {
           />
           <button
             onClick={() => setKioskState('manual_login')}
-            className="text-gray-400 text-sm underline"
+            className="flex items-center gap-2 text-[#94a3b8] hover:text-white text-sm transition-colors"
           >
-            🔑 Login bilan kirish
+            <KeyRound size={14} /> Login bilan kirish
           </button>
-        </>
+        </div>
       )}
 
       {kioskState === 'manual_login' && (
-        <form onSubmit={handleManualLogin} className="w-full max-w-sm space-y-4">
+        <form onSubmit={handleManualLogin} className="w-full max-w-sm space-y-3">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+              <KeyRound size={16} className="text-[#94a3b8]" />
+            </div>
+            <p className="text-white font-bold">Parol bilan kirish</p>
+          </div>
           <input
             value={manualLogin}
             onChange={(e) => setManualLogin(e.target.value)}
             placeholder="Login"
             autoComplete="username"
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            required
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-[#64748b] text-sm focus:outline-none focus:border-indigo-500"
           />
           <input
             type="password"
@@ -279,22 +303,28 @@ export default function KioskPage() {
             onChange={(e) => setManualPassword(e.target.value)}
             placeholder="Parol"
             autoComplete="current-password"
-            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            required
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-[#64748b] text-sm focus:outline-none focus:border-indigo-500"
           />
-          {manualError && <p className="text-red-400 text-sm text-center">{manualError}</p>}
+          {manualError && (
+            <p className="text-[#e11d48] text-sm text-center">{manualError}</p>
+          )}
           <button
             type="submit"
             disabled={manualLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-medium transition-colors disabled:opacity-50"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {manualLoading
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <KeyRound size={16} />}
             {manualLoading ? 'Kirish...' : 'Kirish'}
           </button>
           <button
             type="button"
             onClick={() => setKioskState('scanning')}
-            className="w-full text-gray-400 text-sm"
+            className="w-full flex items-center justify-center gap-2 text-[#64748b] hover:text-white text-sm transition-colors py-2"
           >
-            ← Yuz aniqlashga qaytish
+            <ScanFace size={14} /> <ArrowLeft size={12} /> Yuz aniqlashga qaytish
           </button>
         </form>
       )}
