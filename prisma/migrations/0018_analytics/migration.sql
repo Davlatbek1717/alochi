@@ -43,4 +43,4 @@ JOIN student_xp sx ON u.id = sx.student_id
 WHERE u.role = 'student' AND u.status = 'active'
 GROUP BY u.branch_id, u.tenant_id;
 
-CREATE UNIQUE INDEX branch_stats_mv_branch_idx ON branch_stats_mv(branch_id);
+CREATE UNIQUE INDEX branch_stats_mv_branch_idx ON branch_stats_mv(branch_id, tenant_id);

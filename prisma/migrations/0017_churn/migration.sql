@@ -14,3 +14,6 @@ CREATE INDEX "churn_scores_tenant_id_score_idx" ON "churn_scores"("tenant_id", "
 
 ALTER TABLE "churn_scores" ADD CONSTRAINT "churn_scores_student_id_fkey"
   FOREIGN KEY ("student_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "churn_scores" ADD CONSTRAINT "churn_scores_tenant_id_fkey"
+  FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;

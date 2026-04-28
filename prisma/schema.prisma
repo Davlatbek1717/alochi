@@ -38,6 +38,7 @@ model Tenant {
   certificates Certificate[]
   tournaments  Tournament[] @relation("TenantTournaments")
   adaptiveDifficultyConfig AdaptiveDifficultyConfig?
+  churnScores ChurnScore[] @relation("ChurnTenant")
 
   @@map("tenants")
 }
@@ -812,6 +813,7 @@ model AdaptiveDifficultyLog {
   lesson  Lesson @relation("AdaptiveLogs", fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
+  @@index([lessonId])
   @@map("adaptive_difficulty_logs")
 }
 
@@ -870,7 +872,8 @@ model ChurnScore {
   alertSent Boolean  @default(false) @map("alert_sent")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  student User @relation("ChurnScores", fields: [studentId], references: [id], onDelete: Cascade)
+  student User   @relation("ChurnScores", fields: [studentId], references: [id], onDelete: Cascade)
+  tenant  Tenant @relation("ChurnTenant", fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, score])
   @@map("churn_scores")

@@ -29,6 +29,7 @@ CREATE TABLE "adaptive_difficulty_logs" (
 );
 
 CREATE INDEX "adaptive_difficulty_logs_student_id_idx" ON "adaptive_difficulty_logs"("student_id");
+CREATE INDEX "adaptive_difficulty_logs_lesson_id_idx" ON "adaptive_difficulty_logs"("lesson_id");
 
 ALTER TABLE "adaptive_difficulty_logs" ADD CONSTRAINT "adaptive_difficulty_logs_student_id_fkey"
   FOREIGN KEY ("student_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
