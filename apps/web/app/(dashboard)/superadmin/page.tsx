@@ -1,64 +1,77 @@
-import Link from 'next/link';
+'use client';
+import { useRouter } from 'next/navigation';
+import {
+  BookMarked, CreditCard, Users, Building2,
+  ShieldOff, Trophy, ChevronRight, Shield,
+} from 'lucide-react';
+
+const NAV_CARDS = [
+  { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr',  color: 'hover:border-indigo-300 hover:bg-indigo-50' },
+  { href: '/superadmin/payments', icon: <CreditCard size={22} />, title: "To'lovlar",            desc: 'Qarzdorlar, filial statistika', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
+  { href: '/superadmin/users',    icon: <Users size={22} />,      title: 'Foydalanuvchilar',     desc: 'Yaratish, tahrirlash',          color: 'hover:border-violet-300 hover:bg-violet-50' },
+  { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "Qo'shish, boshqarish",          color: 'hover:border-blue-300 hover:bg-blue-50' },
+  { href: '/superadmin/keywords', icon: <ShieldOff size={22} />,  title: "Taqiqlangan so'zlar",  desc: 'Chat filtrlash',                color: 'hover:border-rose-300 hover:bg-rose-50' },
+  { href: '/filadmin/tournaments',icon: <Trophy size={22} />,     title: 'Turnirlar',            desc: 'Musobaqalar boshqaruvi',        color: 'hover:border-amber-300 hover:bg-amber-50' },
+];
 
 export default function SuperadminDashboard() {
+  const router = useRouter();
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Superadmin Paneli</h1>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="flex items-start gap-4 mb-5 relative z-10">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shrink-0">
+            <Shield size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-0.5">Tizim boshqaruvi</p>
+            <p className="text-white text-xl font-bold">Superadmin Paneli</p>
+            <p className="text-[#475569] text-xs mt-0.5 font-mono">
+              {new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Link
-          href="/superadmin/lessons"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
-        >
-          <div className="text-3xl mb-2">📚</div>
-          <h2 className="font-semibold text-gray-900">Darslar</h2>
-          <p className="text-sm text-gray-500 mt-1">Dars yaratish, tahrirlash, nashr qilish</p>
-        </Link>
+        {/* Stat bar */}
+        <div className="grid grid-cols-3 gap-2 mb-[-20px] relative z-10">
+          {[
+            { label: 'Filiallar', value: '—', color: 'text-[#0d9488]' },
+            { label: 'Darslar',   value: '—', color: 'text-violet-400' },
+            { label: 'Foydalanuvchilar', value: '—', color: 'text-[#f59e0b]' },
+          ].map((s) => (
+            <div key={s.label} className="bg-[#162032] rounded-[14px] p-3">
+              <p className={`text-xl font-black font-mono ${s.color}`}>{s.value}</p>
+              <p className="text-[#94a3b8] text-[10px] mt-0.5 leading-tight">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-        <Link
-          href="/superadmin/payments"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
-        >
-          <div className="text-3xl mb-2">💰</div>
-          <h2 className="font-semibold text-gray-900">To&apos;lovlar</h2>
-          <p className="text-sm text-gray-500 mt-1">Qarzdorlar hisoboti, filial statistikasi</p>
-        </Link>
-
-        <Link
-          href="/superadmin/users"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
-        >
-          <div className="text-3xl mb-2">👥</div>
-          <h2 className="font-semibold text-gray-900">Foydalanuvchilar</h2>
-          <p className="text-sm text-gray-500 mt-1">Yaratish, tahrirlash, faollashtirish</p>
-        </Link>
-
-        <Link
-          href="/superadmin/branches"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
-        >
-          <div className="text-3xl mb-2">🏢</div>
-          <h2 className="font-semibold text-gray-900">Filiallar</h2>
-          <p className="text-sm text-gray-500 mt-1">Qo&apos;shish, nomini o&apos;zgartirish</p>
-        </Link>
-
-        <Link
-          href="/superadmin/keywords"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-indigo-200"
-        >
-          <div className="text-3xl mb-2">🚫</div>
-          <h2 className="font-semibold text-gray-900">Taqiqlangan so&apos;zlar</h2>
-          <p className="text-sm text-gray-500 mt-1">Chat filtrlash uchun kalit so&apos;zlar</p>
-        </Link>
-
-        <Link
-          href="/filadmin/tournaments"
-          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-amber-200"
-        >
-          <div className="text-3xl mb-2">🏆</div>
-          <h2 className="font-semibold text-gray-900">Turnirlar</h2>
-          <p className="text-sm text-gray-500 mt-1">Musobaqalar yaratish va boshqarish</p>
-        </Link>
+      <div className="px-4 pt-8 pb-6">
+        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Navigatsiya</p>
+        <div className="grid grid-cols-2 gap-3">
+          {NAV_CARDS.map((card) => (
+            <button
+              key={card.href}
+              onClick={() => router.push(card.href)}
+              className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all text-left ${card.color}`}
+            >
+              <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
+                {card.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
+                <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.desc}</p>
+              </div>
+              <ChevronRight size={15} className="text-[#94a3b8] shrink-0" />
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

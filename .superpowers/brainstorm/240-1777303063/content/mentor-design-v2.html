@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mentor Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f7f4ef;
+    --cream-dark: #ede9e1;
+    --navy: #0f172a;
+    --navy-soft: #1e293b;
+    --navy-card: #162032;
+    --amber: #f59e0b;
+    --amber-light: #fbbf24;
+    --teal: #0d9488;
+    --rose: #e11d48;
+    --slate: #64748b;
+    --slate-light: #94a3b8;
+    --white: #ffffff;
+    --font: 'Sora', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--cream);
+    color: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    gap: 40px;
+    padding: 32px;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  /* ===== PHONE FRAME ===== */
+  .phone {
+    width: 375px;
+    background: var(--cream);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(15,23,42,0.25), 0 0 0 1px rgba(15,23,42,0.08);
+    flex-shrink: 0;
+  }
+
+  /* ===== TOP BAR ===== */
+  .top-bar {
+    background: var(--navy);
+    padding: 20px 20px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .top-bar::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .top-bar-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .greeting {
+    color: var(--slate-light);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .mentor-name {
+    color: var(--white);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  .date-chip {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--slate-light);
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 6px 10px;
+    border-radius: 20px;
+    margin-top: 4px;
+  }
+
+  /* KPI hero badge */
+  .kpi-hero {
+    background: linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: -20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+  }
+
+  .kpi-label {
+    color: var(--slate-light);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .kpi-value {
+    color: var(--amber);
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    font-family: var(--mono);
+  }
+
+  .kpi-sub {
+    color: rgba(245,158,11,0.6);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .kpi-ring {
+    width: 64px; height: 64px;
+    position: relative;
+  }
+
+  .kpi-ring svg {
+    transform: rotate(-90deg);
+  }
+
+  .kpi-ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--amber);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  /* ===== SCROLL BODY ===== */
+  .scroll-body {
+    background: var(--cream);
+    padding: 28px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--slate);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: -8px;
+  }
+
+  /* ===== STAT CARDS GRID ===== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-card {
+    background: var(--navy-card);
+    border-radius: 18px;
+    padding: 14px 12px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .stat-card:active { transform: scale(0.97); }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent-color, var(--amber));
+    opacity: 0.5;
+    border-radius: 0 0 18px 18px;
+  }
+
+  .stat-card.teal { --accent-color: var(--teal); }
+  .stat-card.rose { --accent-color: var(--rose); }
+  .stat-card.amber { --accent-color: var(--amber); }
+
+  .stat-icon {
+    font-size: 18px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .stat-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--white);
+    font-family: var(--mono);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--slate-light);
+    margin-top: 4px;
+    line-height: 1.3;
+  }
+
+  .stat-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 600;
+    background: rgba(16,185,129,0.15);
+    color: #10b981;
+    border-radius: 20px;
+    padding: 2px 6px;
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+
+  .stat-badge.warn {
+    background: rgba(225,29,72,0.15);
+    color: var(--rose);
+  }
+
+  .stat-badge.ok {
+    background: rgba(13,148,136,0.15);
+    color: var(--teal);
+  }
+
+  /* Attendance card — full width */
+  .stat-card.wide {
+    grid-column: span 3;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .attendance-dot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(13,148,136,0.15);
+    border: 2px solid var(--teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .attendance-dot.pending {
+    background: rgba(245,158,11,0.12);
+    border-color: var(--amber);
+  }
+
+  .attendance-info { flex: 1; }
+
+  .attendance-title {
+    color: var(--white);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .attendance-sub {
+    color: var(--slate-light);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .attendance-btn {
+    background: var(--teal);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+  }
+
+  .attendance-btn.ghost {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--slate-light);
+  }
+
+  /* ===== NAV CARDS ===== */
+  .nav-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .nav-card {
+    background: white;
+    border-radius: 18px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border: 1.5px solid var(--cream-dark);
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .nav-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--nav-color, #f0fdf4) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .nav-card:hover::before { opacity: 1; }
+  .nav-card:hover { border-color: var(--nav-border, #86efac); }
+
+  .nav-card.group { --nav-color: #f0fdf4; --nav-border: #86efac; }
+  .nav-card.att   { --nav-color: #eff6ff; --nav-border: #93c5fd; }
+  .nav-card.tasks { --nav-color: #fff7ed; --nav-border: #fed7aa; }
+  .nav-card.students { --nav-color: #fdf4ff; --nav-border: #d8b4fe; }
+
+  .nav-emoji {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: var(--cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav-text { position: relative; z-index: 1; }
+
+  .nav-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+
+  .nav-desc {
+    font-size: 11px;
+    color: var(--slate);
+    margin-top: 2px;
+  }
+
+  .nav-arrow {
+    margin-left: auto;
+    color: var(--slate-light);
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== BOTTOM NAV ===== */
+  .bottom-nav {
+    background: var(--navy);
+    padding: 12px 8px 20px;
+    display: flex;
+    justify-content: space-around;
+  }
+
+  .nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .nav-tab.active { background: rgba(245,158,11,0.12); }
+
+  .nav-tab-icon { font-size: 18px; }
+
+  .nav-tab-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .nav-tab.active .nav-tab-label { color: var(--amber); }
+
+  /* ===== PAGE 2: STUDENT DETAIL ===== */
+  .phone2 {
+    width: 375px;
+    background: var(--cream);
+    border-radius: 40px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(15,23,42,0.25), 0 0 0 1px rgba(15,23,42,0.08);
+    flex-shrink: 0;
+  }
+
+  .detail-header {
+    background: var(--navy);
+    padding: 20px 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .detail-header::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -30px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%);
+  }
+
+  .back-btn {
+    color: var(--slate-light);
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+  }
+
+  .student-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .student-avatar {
+    width: 52px; height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .student-name {
+    color: var(--white);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .student-meta {
+    display: flex;
+    gap: 8px;
+  }
+
+  .meta-chip {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--mono);
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.07);
+    color: var(--slate-light);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .detail-body {
+    padding: 20px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ai-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #1e293b 100%);
+    border: 1px solid rgba(139,92,246,0.2);
+    border-radius: 18px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-card::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%);
+  }
+
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(139,92,246,0.15);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #a78bfa;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-text {
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+
+  .weak-section-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: -4px;
+  }
+
+  .topics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .topic-row {
+    background: white;
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1.5px solid var(--cream-dark);
+  }
+
+  .topic-severity {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .topic-severity.high { background: var(--rose); box-shadow: 0 0 6px rgba(225,29,72,0.4); }
+  .topic-severity.mid  { background: var(--amber); box-shadow: 0 0 6px rgba(245,158,11,0.4); }
+  .topic-severity.low  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+
+  .topic-name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  .topic-errors {
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+    color: var(--slate);
+    background: var(--cream);
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--cream-dark);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 6px;
+    grid-column: 1/-1;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+  }
+
+  /* Label above phones */
+  .phone-label {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--slate);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .phone-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- PHONE 1: DASHBOARD -->
+<div class="phone-wrap">
+  <div class="phone-label">Mentor Dashboard</div>
+  <div class="phone">
+
+    <!-- TOP BAR (navy) -->
+    <div class="top-bar">
+      <div class="top-bar-inner">
+        <div>
+          <div class="greeting">Xush kelibsiz</div>
+          <div class="mentor-name">Aziz Mentor</div>
+          <div class="date-chip">27 APREL · DUSHANBA</div>
+        </div>
+        <div style="position:relative;z-index:1;">
+          <div style="width:40px;height:40px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;">🔔</div>
+        </div>
+      </div>
+
+      <!-- KPI Hero Card -->
+      <div class="kpi-hero">
+        <div>
+          <div class="kpi-label">Bugungi KPI</div>
+          <div class="kpi-value">24</div>
+          <div class="kpi-sub">+5 bugun · Oylik: 312</div>
+        </div>
+        <!-- Ring progress -->
+        <div class="kpi-ring">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(245,158,11,0.12)" stroke-width="5"/>
+            <circle cx="32" cy="32" r="26" fill="none" stroke="#f59e0b" stroke-width="5"
+              stroke-dasharray="163.4"
+              stroke-dashoffset="40"
+              stroke-linecap="round"/>
+          </svg>
+          <div class="kpi-ring-label">75%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCROLL BODY -->
+    <div class="scroll-body">
+
+      <!-- Stats -->
+      <div class="section-label">Statistika</div>
+      <div class="stats-grid">
+        <!-- Guruh -->
+        <div class="stat-card teal">
+          <span class="stat-icon">👥</span>
+          <div class="stat-num">18</div>
+          <div class="stat-label">Guruh a'zolari</div>
+          <span class="stat-badge ok">faol</span>
+        </div>
+
+        <!-- Vazifalar -->
+        <div class="stat-card rose">
+          <span class="stat-icon">📋</span>
+          <div class="stat-num">3</div>
+          <div class="stat-label">Kutilayotgan vazifa</div>
+          <span class="stat-badge warn">shoshilinch</span>
+        </div>
+
+        <!-- Oylik KPI -->
+        <div class="stat-card amber">
+          <span class="stat-icon">⭐</span>
+          <div class="stat-num">312</div>
+          <div class="stat-label">Oylik ball</div>
+          <span class="stat-badge">APR</span>
+        </div>
+
+        <!-- Attendance wide -->
+        <div class="stat-card wide teal">
+          <div class="attendance-dot">✅</div>
+          <div class="attendance-info">
+            <div class="attendance-title">Bugungi davomat belgilandi</div>
+            <div class="attendance-sub">16 keldi · 1 kelmadi · 1 kech</div>
+          </div>
+          <button class="attendance-btn ghost">Ko'rish</button>
+        </div>
+      </div>
+
+      <!-- Nav cards -->
+      <div class="section-label">Tezkor navigatsiya</div>
+      <div class="nav-grid">
+        <div class="nav-card group">
+          <div class="nav-emoji">👨‍🎓</div>
+          <div class="nav-text">
+            <div class="nav-title">Guruh</div>
+            <div class="nav-desc">Holat belgilash</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
+
+        <div class="nav-card att">
+          <div class="nav-emoji">📊</div>
+          <div class="nav-text">
+            <div class="nav-title">Davomat</div>
+            <div class="nav-desc">Kunlik qatnashish</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
+
+        <div class="nav-card tasks">
+          <div class="nav-emoji">📋</div>
+          <div class="nav-text">
+            <div class="nav-title">Vazifalar</div>
+            <div class="nav-desc">Mening topshiriqlar</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
+
+        <div class="nav-card students">
+          <div class="nav-emoji">🎓</div>
+          <div class="nav-text">
+            <div class="nav-title">O'quvchilar</div>
+            <div class="nav-desc">Xato tahlili</div>
+          </div>
+          <div class="nav-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+      <div class="nav-tab active">
+        <div class="nav-tab-icon">🏠</div>
+        <div class="nav-tab-label">Bosh</div>
+      </div>
+      <div class="nav-tab">
+        <div class="nav-tab-icon">👨‍🎓</div>
+        <div class="nav-tab-label">Guruh</div>
+      </div>
+      <div class="nav-tab">
+        <div class="nav-tab-icon">📊</div>
+        <div class="nav-tab-label">Davomat</div>
+      </div>
+      <div class="nav-tab">
+        <div class="nav-tab-icon">📋</div>
+        <div class="nav-tab-label">Vazifalar</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PHONE 2: STUDENT DETAIL -->
+<div class="phone-wrap">
+  <div class="phone-label">O'quvchi Xato Tahlili</div>
+  <div class="phone2">
+
+    <div class="detail-header">
+      <div class="back-btn">← Guruhga qaytish</div>
+      <div class="student-info">
+        <div class="student-avatar">AK</div>
+        <div>
+          <div class="student-name">Alisher Karimov</div>
+          <div class="student-meta">
+            <span class="meta-chip">🔴 qizil holat</span>
+            <span class="meta-chip">14 dars</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-body">
+
+      <!-- AI Tavsiya -->
+      <div class="ai-card">
+        <div class="ai-badge">✦ AI Tahlil</div>
+        <div class="ai-text">
+          Ushbu o'quvchi <strong style="color:#c4b5fd;">Present Continuous</strong> va <strong style="color:#c4b5fd;">so'z boyligi</strong> bo'yicha doimiy xatolar qilmoqda. Maxsus takrorlash mashqlari tavsiya etiladi.
+        </div>
+      </div>
+
+      <!-- Kuchsiz mavzular -->
+      <div class="weak-section-title">Kuchsiz mavzular</div>
+      <div class="topics-grid">
+
+        <div class="topic-row">
+          <div class="topic-severity high"></div>
+          <div class="topic-name">Present Continuous</div>
+          <div class="topic-errors">12 xato</div>
+        </div>
+        <div style="padding: 0 14px; margin-top: -4px;">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:80%;background:var(--rose);"></div>
+          </div>
+        </div>
+
+        <div class="topic-row">
+          <div class="topic-severity high"></div>
+          <div class="topic-name">Vocabulary</div>
+          <div class="topic-errors">9 xato</div>
+        </div>
+        <div style="padding: 0 14px; margin-top: -4px;">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:60%;background:var(--rose);"></div>
+          </div>
+        </div>
+
+        <div class="topic-row">
+          <div class="topic-severity mid"></div>
+          <div class="topic-name">Past Simple</div>
+          <div class="topic-errors">5 xato</div>
+        </div>
+        <div style="padding: 0 14px; margin-top: -4px;">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:33%;background:var(--amber);"></div>
+          </div>
+        </div>
+
+        <div class="topic-row">
+          <div class="topic-severity low"></div>
+          <div class="topic-name">Articles</div>
+          <div class="topic-errors">2 xato</div>
+        </div>
+        <div style="padding: 0 14px; margin-top: -4px;">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" style="width:13%;background:#10b981;"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action button -->
+      <div style="background:var(--navy);border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+        <div>
+          <div style="color:white;font-size:13px;font-weight:600;">Telegram orqali xabar yuborish</div>
+          <div style="color:var(--slate-light);font-size:11px;margin-top:2px;">Ota-onaga ogohlantirish</div>
+        </div>
+        <div style="width:36px;height:36px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">✉️</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

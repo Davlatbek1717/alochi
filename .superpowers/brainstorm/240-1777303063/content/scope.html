@@ -1,0 +1,108 @@
+<h2>Frontend — Qaysi qismdan boshlaymiz?</h2>
+<p class="subtitle">Mavjud sahifalar tahlili asosida eng muhim ishlarni aniqlaymiz</p>
+
+<div class="section">
+  <h3>✅ Allaqachon tayyor sahifalar</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;">
+      <div style="font-weight:600;color:#16a34a;margin-bottom:6px;">🎓 O'quvchi (Student)</div>
+      <div style="font-size:13px;color:#374151;line-height:1.8;">
+        Dashboard (XP, streak, quest)<br>
+        Darslar ro'yxati va player<br>
+        Do'stlar, Duel, Guruh chat<br>
+        Leaderboard, Turnirlar<br>
+        Profil, Yuz yozish
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;">
+      <div style="font-weight:600;color:#16a34a;margin-bottom:6px;">💼 Manager</div>
+      <div style="font-size:13px;color:#374151;line-height:1.8;">
+        Dashboard (qizil/sariq/200%+)<br>
+        O'quvchi detail sahifasi<br>
+        To'lovlar, Vazifalar, KPI<br>
+        Delegatsiyalar
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;">
+      <div style="font-weight:600;color:#16a34a;margin-bottom:6px;">🏢 Filadmin</div>
+      <div style="font-size:13px;color:#374151;line-height:1.8;">
+        Dashboard (nav kartalar)<br>
+        Davomat, To'lovlar<br>
+        Ogohlantirishlar, KPI<br>
+        Qurilmalar, Yuz ID
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px;">
+      <div style="font-weight:600;color:#16a34a;margin-bottom:6px;">⚙️ Superadmin</div>
+      <div style="font-size:13px;color:#374151;line-height:1.8;">
+        Darslar CRUD<br>
+        To'lovlar hisoboti<br>
+        Foydalanuvchilar<br>
+        Filiallar, Kalit so'zlar
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔴 Stub / To'ldirilmagan (Eng muhim ishlar)</h3>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;">
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px;display:flex;gap:14px;align-items:flex-start;">
+      <div style="font-size:24px;">👨‍🏫</div>
+      <div>
+        <div style="font-weight:700;color:#dc2626;">Mentor — STUB (bo'sh sahifalar)</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">Dashboard faqat "Plan 2 da to'liq qilinadi" deydi. Guruh, davomat, vazifalar, chat moderatsiya — hamma narsa to'ldirilishi kerak.</div>
+      </div>
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:14px;display:flex;gap:14px;align-items:flex-start;">
+      <div style="font-size:24px;">🤖</div>
+      <div>
+        <div style="font-weight:700;color:#d97706;">AI Funksiyalar — Backend bor, UI yo'q</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">Xato tahlili (analyze-errors), kunlik takrorlash mashg'ulot oqimi — backend tayyor lekin o'quvchi ularni ishlatadigan sahifa yo'q.</div>
+      </div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:14px;display:flex;gap:14px;align-items:flex-start;">
+      <div style="font-size:24px;">🏟️</div>
+      <div>
+        <div style="font-weight:700;color:#2563eb;">Turnir boshqaruvi — Admin UI yo'q</div>
+        <div style="font-size:13px;color:#6b7280;margin-top:4px;">Turnir yaratish (filadmin/superadmin), ishtirokchilar ro'yxati ko'rish — faqat o'quvchi sahifasi bor.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Qaysi subsystemdan boshlaysiz?</h3>
+  <p class="subtitle">Har biri alohida plan bo'ladi — mantiqiy tartibda qilamiz</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="mentor" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>👨‍🏫 Mentor sahifalari (eng muhim)</h3>
+      <p>Dashboard, guruh boshqaruvi, davomat, vazifalar, o'quvchi xato tahlili ko'rish</p>
+    </div>
+  </div>
+  <div class="option" data-choice="ai-ui" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>🤖 AI mashg'ulot sahifalari</h3>
+      <p>Kunlik takrorlash oqimi (so'z kartochkalar), xato tahlili natijasi — o'quvchi uchun</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tournament-admin" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>🏟️ Turnir admin UI</h3>
+      <p>Filadmin/superadmin uchun turnir yaratish, ishtirokchilar ko'rish</p>
+    </div>
+  </div>
+  <div class="option" data-choice="all-order" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>📋 Hammasi — tartibda</h3>
+      <p>Avval Mentor, keyin AI UI, keyin admin — rejalashtiring</p>
+    </div>
+  </div>
+</div>

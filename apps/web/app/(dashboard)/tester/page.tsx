@@ -1,35 +1,19 @@
-'use client';
+﻿'use client';
 import { useEffect, useState, useCallback } from 'react';
+import { CheckCircle, Clock, UserX, PlayCircle, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
-interface Student {
-  id: string;
-  name: string;
-}
-
-interface AttendanceRecord {
-  studentId: string;
-  status: string;
-  student: { id: string; name: string };
-}
-
+interface Student { id: string; name: string; }
+interface AttendanceRecord { studentId: string; status: string; student: { id: string; name: string }; }
 type QueueStatus = 'waiting' | 'testing' | 'done' | 'absent';
-
-interface StudentRow {
-  id: string;
-  name: string;
-  attendance: 'present' | 'absent' | null;
-  queue: QueueStatus;
-}
+interface StudentRow { id: string; name: string; attendance: 'present' | 'absent' | null; queue: QueueStatus; }
 
 function getBranchIdFromToken(): string | null {
   try {
     const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string; tenantId?: string };
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
     return payload.branchId ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function getTenantIdFromToken(): string | null {
@@ -37,31 +21,14 @@ function getTenantIdFromToken(): string | null {
     const token = localStorage.getItem('accessToken') ?? '';
     const payload = JSON.parse(atob(token.split('.')[1])) as { tenantId?: string };
     return payload.tenantId ?? null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-const QUEUE_LABEL: Record<QueueStatus, string> = {
-  waiting: 'Navbatda',
-  testing: 'Topshirmoqda',
-  done: 'Tugadi',
-  absent: 'Kelmadi',
-};
+function getInitials(name: string) {
+  return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+}
 
-const QUEUE_COLOR: Record<QueueStatus, string> = {
-  waiting: 'bg-yellow-50 border-yellow-200',
-  testing: 'bg-blue-50 border-blue-200',
-  done: 'bg-green-50 border-green-200',
-  absent: 'bg-gray-50 border-gray-200',
-};
-
-const BADGE_COLOR: Record<QueueStatus, string> = {
-  waiting: 'bg-yellow-100 text-yellow-700',
-  testing: 'bg-blue-100 text-blue-700',
-  done: 'bg-green-100 text-green-700',
-  absent: 'bg-gray-100 text-gray-500',
-};
+const QUEUE_LABEL: Record<QueueStatus, string> = { waiting: 'Navbatda', testing: 'Topshirmoqda', done: 'Tugadi', absent: 'Kelmadi' };
 
 export default function TesterPage() {
   const [rows, setRows] = useState<StudentRow[]>([]);
@@ -82,22 +49,17 @@ export default function TesterPage() {
         apiRequest<AttendanceRecord[]>(`/attendance/students/${branchId}/${today}`, {}, token)
           .catch(() => ({ data: [] as AttendanceRecord[] })),
       ]);
-
       const attendanceMap = new Map(attendanceRes.data.map((a) => [a.studentId, a.status]));
-
-      setRows(
-        studentsRes.data.map((s) => {
-          const att = attendanceMap.get(s.id);
-          return {
-            id: s.id,
-            name: s.name,
-            attendance: att === 'present' ? 'present' : att === 'absent' ? 'absent' : null,
-            queue: att === 'present' ? 'waiting' : att === 'absent' ? 'absent' : 'waiting',
-          };
-        }),
-      );
+      setRows(studentsRes.data.map((s) => {
+        const att = attendanceMap.get(s.id);
+        return {
+          id: s.id, name: s.name,
+          attendance: att === 'present' ? 'present' : att === 'absent' ? 'absent' : null,
+          queue: att === 'absent' ? 'absent' : 'waiting',
+        };
+      }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Yuklab bo\'lmadi');
+      setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
     } finally {
       setLoading(false);
     }
@@ -110,112 +72,147 @@ export default function TesterPage() {
     const branchId = getBranchIdFromToken();
     const tenantId = getTenantIdFromToken();
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
-
     try {
       await apiRequest('/attendance/students/bulk', {
         method: 'POST',
-        body: JSON.stringify({
-          date: today,
-          records: [{ studentId, status: 'present', markedBy: user.id ?? '', tenantId, branchId }],
-        }),
+        body: JSON.stringify({ date: today, records: [{ studentId, status: 'present', markedBy: user.id ?? '', tenantId, branchId }] }),
       }, token);
-      setRows((prev) =>
-        prev.map((r) => (r.id === studentId ? { ...r, attendance: 'present', queue: 'waiting' } : r)),
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
-    }
+      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, attendance: 'present', queue: 'waiting' } : r));
+    } catch (err) { setError(err instanceof Error ? err.message : 'Xatolik'); }
   }
 
   function setQueue(studentId: string, queue: QueueStatus) {
-    setRows((prev) => prev.map((r) => (r.id === studentId ? { ...r, queue } : r)));
+    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue } : r));
   }
 
   const arrived = rows.filter((r) => r.attendance === 'present');
   const notArrived = rows.filter((r) => r.attendance !== 'present');
   const testingNow = rows.find((r) => r.queue === 'testing');
+  const doneCount = rows.filter((r) => r.queue === 'done').length;
 
   if (loading) {
     return (
-      <div className="space-y-3 max-w-lg">
-        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-        {[1, 2, 3, 4].map((i) => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-5 max-w-lg">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Bugungi navbat</h1>
-        <span className="text-sm text-gray-400">{today}</span>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+        <div className="relative z-10 mb-5">
+          <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Tester paneli</p>
+          <p className="text-white text-xl font-bold">Bugungi navbat</p>
+          <p className="text-[#475569] text-xs mt-1 font-mono">{today}</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 mb-[-20px] relative z-10">
+          <div className="bg-[#162032] rounded-[14px] p-3">
+            <Users size={14} className="text-[#0d9488] mb-1" />
+            <p className="text-white text-xl font-black font-mono">{arrived.length}</p>
+            <p className="text-[#94a3b8] text-[10px] mt-0.5">Keldi</p>
+          </div>
+          <div className="bg-[#162032] rounded-[14px] p-3">
+            <CheckCircle size={14} className="text-emerald-400 mb-1" />
+            <p className="text-white text-xl font-black font-mono">{doneCount}</p>
+            <p className="text-[#94a3b8] text-[10px] mt-0.5">Topshirdi</p>
+          </div>
+          <div className="bg-[#162032] rounded-[14px] p-3">
+            <Clock size={14} className="text-[#f59e0b] mb-1" />
+            <p className="text-white text-xl font-black font-mono">{arrived.length - doneCount}</p>
+            <p className="text-[#94a3b8] text-[10px] mt-0.5">Kutmoqda</p>
+          </div>
+        </div>
       </div>
 
-      {error && <p className="text-red-500 text-sm">{error}</p>}
+      <div className="px-4 pt-8 pb-6 space-y-5">
+        {error && <p className="text-rose-500 text-sm">{error}</p>}
 
-      {testingNow && (
-        <div className="bg-blue-600 rounded-2xl p-4 text-white">
-          <p className="text-blue-200 text-xs font-medium uppercase tracking-wide mb-1">Hozir topshirmoqda</p>
-          <p className="text-xl font-bold">{testingNow.name}</p>
-          <button
-            onClick={() => setQueue(testingNow.id, 'done')}
-            className="mt-3 bg-white text-blue-600 text-sm font-semibold px-4 py-1.5 rounded-lg"
-          >
-            Tugatdi ✓
-          </button>
-        </div>
-      )}
-
-      <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-          Kelganlar — {arrived.length}/{rows.length}
-        </p>
-        {arrived.length === 0 ? (
-          <p className="text-sm text-gray-400">Hali hech kim kelmadi</p>
-        ) : (
-          <div className="space-y-2">
-            {arrived.map((s) => (
-              <div key={s.id} className={`rounded-xl p-3 border flex items-center gap-3 ${QUEUE_COLOR[s.queue]}`}>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800">{s.name}</p>
-                </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE_COLOR[s.queue]}`}>
-                  {QUEUE_LABEL[s.queue]}
-                </span>
-                {s.queue === 'waiting' && (
-                  <button
-                    onClick={() => setQueue(s.id, 'testing')}
-                    disabled={!!testingNow}
-                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded-lg disabled:opacity-40"
-                  >
-                    Topshirsin
-                  </button>
-                )}
+        {testingNow && (
+          <div className="bg-gradient-to-br from-[#1e3a5f] to-[#1e293b] rounded-[18px] p-4 border border-blue-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <PlayCircle size={14} className="text-blue-400" />
+              <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Hozir topshirmoqda</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-300 font-black text-sm shrink-0">
+                {getInitials(testingNow.name)}
               </div>
-            ))}
+              <p className="text-white text-lg font-bold flex-1">{testingNow.name}</p>
+              <button onClick={() => setQueue(testingNow.id, 'done')}
+                className="bg-emerald-500 text-white text-sm font-bold px-4 py-2 rounded-xl">
+                Tugatdi
+              </button>
+            </div>
           </div>
         )}
-      </div>
 
-      <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-          Kutilmoqda — {notArrived.length} ta
-        </p>
-        {notArrived.length === 0 ? (
-          <p className="text-sm text-gray-400">Barchasi keldi</p>
-        ) : (
-          <div className="space-y-2">
-            {notArrived.map((s) => (
-              <div key={s.id} className="bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
-                <p className="flex-1 text-gray-700">{s.name}</p>
-                <button
-                  onClick={() => markPresent(s.id)}
-                  className="text-xs bg-green-600 text-white px-3 py-1 rounded-lg font-medium"
-                >
-                  Keldi
-                </button>
-              </div>
-            ))}
+        {arrived.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+              Kelganlar — {arrived.length}/{rows.length}
+            </p>
+            <div className="space-y-2">
+              {arrived.map((s) => {
+                const isDone = s.queue === 'done';
+                const isTesting = s.queue === 'testing';
+                const isWaiting = s.queue === 'waiting';
+                return (
+                  <div key={s.id} className={`bg-white rounded-[14px] px-4 py-3 border-[1.5px] flex items-center gap-3 ${
+                    isDone ? 'border-emerald-100' : isTesting ? 'border-blue-200' : 'border-[#ede9e1]'
+                  }`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
+                      isDone ? 'bg-emerald-100 text-emerald-700' : isTesting ? 'bg-blue-100 text-blue-700' : 'bg-[#f7f4ef] text-[#0f172a]'
+                    }`}>
+                      {isDone ? <CheckCircle size={16} /> : getInitials(s.name)}
+                    </div>
+                    <p className={`flex-1 text-sm font-semibold ${isDone ? 'text-[#94a3b8] line-through' : 'text-[#0f172a]'}`}>{s.name}</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isDone ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                      isTesting ? 'bg-blue-50 text-blue-600 border border-blue-200' :
+                      'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]'
+                    }`}>{QUEUE_LABEL[s.queue]}</span>
+                    {isWaiting && (
+                      <button onClick={() => setQueue(s.id, 'testing')} disabled={!!testingNow}
+                        className="bg-[#0f172a] text-white text-xs font-bold px-3 py-1.5 rounded-xl disabled:opacity-30">
+                        Boshlash
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {notArrived.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+              Kutilmoqda — {notArrived.length} ta
+            </p>
+            <div className="space-y-2">
+              {notArrived.map((s) => (
+                <div key={s.id} className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8] shrink-0">
+                    <UserX size={16} />
+                  </div>
+                  <p className="flex-1 text-sm text-[#94a3b8]">{s.name}</p>
+                  <button onClick={() => markPresent(s.id)}
+                    className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl">
+                    Keldi
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {rows.length === 0 && !error && (
+          <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
+            <Users size={40} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-[#0f172a] font-semibold">O'quvchilar topilmadi</p>
           </div>
         )}
       </div>
