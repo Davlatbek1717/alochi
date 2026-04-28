@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, CheckCircle2, XCircle, Clock, Users, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
@@ -31,30 +33,35 @@ const TODAY = new Date().toISOString().split('T')[0];
 const STATUS_CONFIG: {
   status: AttendanceStatus;
   label: string;
-  active: string;
-  inactive: string;
+  icon: React.ReactNode;
+  activeClass: string;
+  inactiveClass: string;
 }[] = [
   {
     status: 'present',
-    label: '✅ Keldi',
-    active: 'bg-green-500 text-white',
-    inactive: 'bg-gray-100 text-gray-500',
+    label: 'Keldi',
+    icon: <CheckCircle2 size={14} />,
+    activeClass: 'bg-emerald-500 text-white border-emerald-500',
+    inactiveClass: 'bg-[#f7f4ef] text-[#94a3b8] border-[#ede9e1]',
   },
   {
     status: 'absent',
-    label: '❌ Kelmadi',
-    active: 'bg-red-500 text-white',
-    inactive: 'bg-gray-100 text-gray-500',
+    label: 'Kelmadi',
+    icon: <XCircle size={14} />,
+    activeClass: 'bg-[#e11d48] text-white border-[#e11d48]',
+    inactiveClass: 'bg-[#f7f4ef] text-[#94a3b8] border-[#ede9e1]',
   },
   {
     status: 'late',
-    label: '⏰ Kechikdi',
-    active: 'bg-yellow-500 text-white',
-    inactive: 'bg-gray-100 text-gray-500',
+    label: 'Kechikdi',
+    icon: <Clock size={14} />,
+    activeClass: 'bg-[#f59e0b] text-white border-[#f59e0b]',
+    inactiveClass: 'bg-[#f7f4ef] text-[#94a3b8] border-[#ede9e1]',
   },
 ];
 
 export default function MentorAttendancePage() {
+  const router = useRouter();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -115,101 +122,124 @@ export default function MentorAttendancePage() {
     }
   }
 
-  if (!branchId) {
-    return (
-      <div className="space-y-4 max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
-        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-          <p className="text-red-500">Filial topilmadi. Administrator bilan bog&#39;laning.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-4 max-w-2xl">
-        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="bg-white rounded-xl p-4 h-16 animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-4 max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
-        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-          <p className="text-red-500 mb-3">{error}</p>
-          <button
-            onClick={loadStudents}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium"
-          >
-            Qayta urinish
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const presentCount = students.filter((s) => s.status === 'present').length;
+  const absentCount = students.filter((s) => s.status === 'absent').length;
+  const lateCount = students.filter((s) => s.status === 'late').length;
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bugungi Davomat</h1>
-          <p className="text-gray-500 mt-1">{TODAY}</p>
-        </div>
-        <button
-          onClick={saveAttendance}
-          disabled={saving}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
-        >
-          {saving ? (
-            <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : saved ? (
-            '✅ Saqlandi'
-          ) : (
-            'Saqlash'
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/mentor')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Mentor
+          </button>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <Users size={18} className="text-[#0d9488]" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg">Bugungi Davomat</p>
+                <p className="text-[#64748b] text-xs font-mono">{TODAY}</p>
+              </div>
+            </div>
+            <button
+              onClick={saveAttendance}
+              disabled={saving || students.length === 0}
+              className="bg-[#0d9488] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            >
+              {saving ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : saved ? (
+                <CheckCircle2 size={16} />
+              ) : (
+                <Save size={16} />
+              )}
+              {saved ? 'Saqlandi' : 'Saqlash'}
+            </button>
+          </div>
+
+          {/* Stats row */}
+          {!loading && students.length > 0 && (
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 mb-[-20px] grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <p className="text-emerald-400 text-xl font-black font-mono">{presentCount}</p>
+                <p className="text-[#94a3b8] text-xs">Keldi</p>
+              </div>
+              <div className="text-center border-x border-white/10">
+                <p className="text-[#e11d48] text-xl font-black font-mono">{absentCount}</p>
+                <p className="text-[#94a3b8] text-xs">Kelmadi</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[#f59e0b] text-xl font-black font-mono">{lateCount}</p>
+                <p className="text-[#94a3b8] text-xs">Kechikdi</p>
+              </div>
+            </div>
           )}
-        </button>
+        </div>
       </div>
 
-      {saveError && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{saveError}</div>
-      )}
+      {/* Body */}
+      <div className="px-4 pt-8 pb-6 space-y-3">
+        {saveError && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{saveError}</div>
+        )}
 
-      {students.length === 0 ? (
-        <div className="bg-white rounded-xl p-10 text-center text-gray-500 shadow-sm">
-          <p className="text-4xl mb-2">👥</p>
-          <p className="font-medium">Bu filialda o&#39;quvchilar topilmadi</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {students.map((student) => (
+        {!branchId ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
+            <p className="text-[#e11d48] text-sm">Filial topilmadi. Administrator bilan bog&apos;laning.</p>
+          </div>
+        ) : loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 h-16 animate-pulse" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
+            <p className="text-[#e11d48] mb-3 text-sm">{error}</p>
+            <button
+              onClick={loadStudents}
+              className="bg-[#0f172a] text-white px-4 py-2 rounded-xl font-bold text-sm"
+            >
+              Qayta urinish
+            </button>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <Users size={32} className="text-[#94a3b8] mx-auto mb-3" />
+            <p className="text-[#64748b] font-medium">Bu filialda o&apos;quvchilar topilmadi</p>
+          </div>
+        ) : (
+          students.map((student) => (
             <div
               key={student.id}
-              className="bg-white rounded-xl shadow-sm px-5 py-4 flex items-center justify-between"
+              className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center justify-between gap-3"
             >
-              <span className="font-medium text-gray-900">{student.name}</span>
-              <div className="flex gap-2">
-                {STATUS_CONFIG.map(({ status, label, active, inactive }) => (
+              <span className="font-semibold text-[#0f172a] text-sm flex-1 truncate">{student.name}</span>
+              <div className="flex gap-1.5">
+                {STATUS_CONFIG.map(({ status, label, icon, activeClass, inactiveClass }) => (
                   <button
                     key={status}
                     onClick={() => setStatus(student.id, status)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
-                      student.status === status ? active : inactive
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border-[1.5px] transition-all ${
+                      student.status === status ? activeClass : inactiveClass
                     }`}
                   >
-                    {label}
+                    {icon}
+                    <span className="hidden sm:inline">{label}</span>
                   </button>
                 ))}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

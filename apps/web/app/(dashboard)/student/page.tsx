@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { RefreshCw, BarChart2, Trophy } from 'lucide-react';
 import { XpBar } from './_components/XpBar';
 import { StreakBadge } from './_components/StreakBadge';
 import { DailyQuests } from './_components/DailyQuests';
@@ -204,7 +205,7 @@ export default function StudentDashboard() {
           href="/student/review"
           className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
         >
-          <span className="text-2xl">🔁</span>
+          <RefreshCw size={22} className="text-[#0d9488]" />
           <p className="font-bold text-sm text-gray-800">Takrorlash</p>
           <p className="text-xs text-gray-500">Spaced repetition</p>
         </Link>
@@ -212,7 +213,7 @@ export default function StudentDashboard() {
           href="/student/errors"
           className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
         >
-          <span className="text-2xl">📊</span>
+          <BarChart2 size={22} className="text-[#7c3aed]" />
           <p className="font-bold text-sm text-gray-800">Xato tahlili</p>
           <p className="text-xs text-gray-500">AI tavsiyalar</p>
         </Link>
@@ -220,7 +221,7 @@ export default function StudentDashboard() {
           href="/student/tournaments"
           className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
         >
-          <span className="text-2xl">🏆</span>
+          <Trophy size={22} className="text-[#f59e0b]" />
           <p className="font-bold text-sm text-gray-800">Turnirlar</p>
           <p className="text-xs text-gray-500">Musobaqalar</p>
         </Link>

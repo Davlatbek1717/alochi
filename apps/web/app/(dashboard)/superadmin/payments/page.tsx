@@ -1,6 +1,7 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CreditCard, Settings, ChevronRight, Users, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
 
@@ -60,11 +61,14 @@ function PaymentSettingsPanel() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4">
+    <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-gray-700">To&apos;lov muddati sozlamalari</h2>
+        <div className="flex items-center gap-2">
+          <Settings size={16} className="text-[#64748b]" />
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">To&apos;lov muddati</p>
+        </div>
         {!editing && (
-          <button onClick={() => setEditing(true)} className="text-sm text-indigo-600 hover:underline">
+          <button onClick={() => setEditing(true)} className="text-xs font-bold text-[#0f172a] hover:underline">
             Tahrirlash
           </button>
         )}
@@ -74,45 +78,45 @@ function PaymentSettingsPanel() {
         <div className="space-y-3">
           <div className="flex gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Boshlanish kuni</label>
+              <label className="block text-xs text-[#94a3b8] mb-1">Boshlanish kuni</label>
               <input
                 type="number" min={1} max={28}
                 value={startDay}
                 onChange={(e) => setStartDay(e.target.value)}
-                className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-20 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a]"
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Tugash kuni</label>
+              <label className="block text-xs text-[#94a3b8] mb-1">Tugash kuni</label>
               <input
                 type="number" min={1} max={31}
                 value={endDay}
                 onChange={(e) => setEndDay(e.target.value)}
-                className="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-20 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a]"
               />
             </div>
           </div>
-          {error && <p className="text-red-500 text-xs">{error}</p>}
+          {error && <p className="text-[#e11d48] text-xs">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={save}
               disabled={saving}
-              className="bg-indigo-600 text-white text-sm px-4 py-1.5 rounded-lg disabled:opacity-50"
+              className="bg-[#0f172a] text-white text-xs px-4 py-2 rounded-xl font-bold disabled:opacity-50"
             >
               {saving ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
             <button
               onClick={() => setEditing(false)}
-              className="text-sm text-gray-500 px-3 py-1.5 rounded-lg border"
+              className="text-xs text-[#64748b] px-3 py-2 rounded-xl border border-[#ede9e1] font-semibold"
             >
               Bekor
             </button>
           </div>
         </div>
       ) : (
-        <p className="text-sm text-gray-600">
-          Har oyning <span className="font-medium text-indigo-700">{settings?.paymentStartDay ?? '—'}</span> dan{' '}
-          <span className="font-medium text-indigo-700">{settings?.paymentEndDay ?? '—'}</span> gacha
+        <p className="text-sm text-[#0f172a]">
+          Har oyning <span className="font-bold text-[#0d9488]">{settings?.paymentStartDay ?? '—'}</span> dan{' '}
+          <span className="font-bold text-[#0d9488]">{settings?.paymentEndDay ?? '—'}</span> gacha
         </p>
       )}
     </div>
@@ -128,22 +132,48 @@ function BranchCard({ summary, month }: { summary: BranchPaymentSummary; month: 
   return (
     <button
       onClick={() => router.push(`/superadmin/payments/${summary.branchId}?month=${month}`)}
-      className="bg-white rounded-xl shadow-sm p-5 text-left hover:shadow-md transition-shadow w-full"
+      className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 text-left hover:border-[#0f172a] transition-all w-full"
     >
-      <h3 className="font-semibold text-gray-900 mb-2">{summary.branchName}</h3>
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-bold text-[#0f172a] text-sm">{summary.branchName}</p>
+        <ChevronRight size={16} className="text-[#94a3b8]" />
+      </div>
       {summary.total === 0 ? (
-        <p className="text-sm text-gray-400">O&apos;quvchilar yo&apos;q</p>
+        <p className="text-sm text-[#94a3b8]">O&apos;quvchilar yo&apos;q</p>
       ) : (
         <>
-          <p className="text-sm text-gray-500 mb-2">{summary.total} o&apos;quvchi</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-3">
-            <span className="text-green-600">✅ {summary.paid} to&apos;lagan</span>
-            <span className="text-gray-600">❌ {summary.unpaid} qarzdor</span>
-            <span className="text-red-600">🔒 {summary.blocked} bloklangan</span>
+          <div className="flex items-center gap-1 mb-3">
+            <Users size={12} className="text-[#94a3b8]" />
+            <span className="text-xs text-[#64748b]">{summary.total} o&apos;quvchi</span>
           </div>
-          <p className="text-sm font-medium text-indigo-600">
-            Yig&apos;ilgan: {summary.totalCollected.toLocaleString()} so&apos;m
-          </p>
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <CheckCircle size={10} className="text-emerald-500" />
+                <span className="text-emerald-600 font-bold text-sm">{summary.paid}</span>
+              </div>
+              <p className="text-[10px] text-[#94a3b8]">To&apos;lagan</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <XCircle size={10} className="text-[#64748b]" />
+                <span className="text-[#64748b] font-bold text-sm">{summary.unpaid}</span>
+              </div>
+              <p className="text-[10px] text-[#94a3b8]">Qarzdor</p>
+            </div>
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-1 mb-0.5">
+                <Lock size={10} className="text-[#e11d48]" />
+                <span className="text-[#e11d48] font-bold text-sm">{summary.blocked}</span>
+              </div>
+              <p className="text-[10px] text-[#94a3b8]">Bloklangan</p>
+            </div>
+          </div>
+          <div className="bg-[#0d9488]/10 border border-[#0d9488]/20 rounded-xl px-3 py-2">
+            <p className="text-xs font-bold text-[#0d9488]">
+              Yig&apos;ilgan: {summary.totalCollected.toLocaleString()} so&apos;m
+            </p>
+          </div>
         </>
       )}
     </button>
@@ -188,45 +218,60 @@ function SuperadminPaymentsContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">To&apos;lov Hisoboti</h1>
-        <MonthPicker value={month} onChange={handleMonthChange} />
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <CreditCard size={18} className="text-[#0d9488]" />
+              </div>
+              <p className="text-white font-bold text-lg">To&apos;lov Hisoboti</p>
+            </div>
+            <MonthPicker value={month} onChange={handleMonthChange} />
+          </div>
+        </div>
       </div>
 
-      <PaymentSettingsPanel />
+      {/* Body */}
+      <div className="px-4 pt-4 pb-6 space-y-4">
+        <PaymentSettingsPanel />
 
-      {error ? (
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-red-500 text-sm">{error}</p>
-          <button
-            onClick={() => fetchSummary(month)}
-            className="mt-2 text-sm text-indigo-600 hover:underline"
-          >
-            Qayta urinish
-          </button>
-        </div>
-      ) : loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-xl shadow-sm p-5 animate-pulse">
-              <div className="h-5 w-32 bg-gray-200 rounded mb-3" />
-              <div className="h-4 w-20 bg-gray-100 rounded mb-2" />
-              <div className="h-4 w-40 bg-gray-100 rounded" />
-            </div>
-          ))}
-        </div>
-      ) : summaries.length === 0 ? (
-        <p className="text-gray-400 text-sm">Filiallar topilmadi</p>
-      ) : (
-        <div
-          className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity ${fetching ? 'opacity-50' : ''}`}
-        >
-          {summaries.map((s) => (
-            <BranchCard key={s.branchId} summary={s} month={month} />
-          ))}
-        </div>
-      )}
+        {error ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+            <p className="text-[#e11d48] text-sm">{error}</p>
+            <button
+              onClick={() => fetchSummary(month)}
+              className="mt-2 text-sm text-[#0f172a] underline font-medium"
+            >
+              Qayta urinish
+            </button>
+          </div>
+        ) : loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 animate-pulse">
+                <div className="h-5 w-32 bg-[#f7f4ef] rounded mb-3" />
+                <div className="h-4 w-20 bg-[#f7f4ef] rounded mb-2" />
+                <div className="h-4 w-40 bg-[#f7f4ef] rounded" />
+              </div>
+            ))}
+          </div>
+        ) : summaries.length === 0 ? (
+          <p className="text-[#94a3b8] text-sm">Filiallar topilmadi</p>
+        ) : (
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity ${fetching ? 'opacity-50' : ''}`}>
+            {summaries.map((s) => (
+              <BranchCard key={s.branchId} summary={s} month={month} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

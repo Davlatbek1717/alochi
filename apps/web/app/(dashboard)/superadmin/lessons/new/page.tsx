@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { ArrowLeft, BookOpen, CheckSquare } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 const LESSON_TYPES = [
@@ -38,7 +38,7 @@ export default function NewLessonPage() {
     setSaving(true);
 
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}');
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { tenantId?: string };
 
     const body: Record<string, unknown> = {
       tenantId: user.tenantId,
@@ -70,153 +70,181 @@ export default function NewLessonPage() {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="flex items-center gap-3">
-        <Link href="/superadmin/lessons" className="text-gray-400 hover:text-gray-600">
-          ← Orqaga
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Yangi Dars</h1>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/superadmin/lessons')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Darslar
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+              <BookOpen size={18} className="text-[#0d9488]" />
+            </div>
+            <p className="text-white font-bold text-lg">Yangi Dars</p>
+          </div>
+        </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
-      )}
+      {/* Body */}
+      <div className="px-4 pt-5 pb-6">
+        {error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm mb-4">{error}</div>
+        )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Dars nomi <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={form.title}
-            onChange={(e) => set('title', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Masalan: Present Simple"
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Turi <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.type}
-              onChange={(e) => set('type', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              {LESSON_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tartib raqami <span className="text-red-500">*</span>
-            </label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Title */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              Dars nomi <span className="text-[#e11d48]">*</span>
+            </p>
             <input
-              type="number"
-              min="1"
-              value={form.orderNumber}
-              onChange={(e) => set('orderNumber', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="1"
+              type="text"
+              value={form.title}
+              onChange={(e) => set('title', e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a]"
+              placeholder="Masalan: Present Simple"
               required
             />
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            YouTube URL <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="url"
-            value={form.youtubeUrl}
-            onChange={(e) => set('youtubeUrl', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="https://youtu.be/..."
-            required
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              N — Takrorlash soni <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="10"
-              value={form.nRepetitions}
-              onChange={(e) => set('nRepetitions', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-            <p className="text-xs text-gray-400 mt-1">1 dan 10 gacha</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Max N (Manager uchun limit)
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={form.maxNOverride}
-              onChange={(e) => set('maxNOverride', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="10"
-            />
-            <p className="text-xs text-gray-400 mt-1">Ixtiyoriy, 1-20</p>
-          </div>
-        </div>
-
-        <div>
-          <p className="block text-sm font-medium text-gray-700 mb-2">Komponentlar</p>
-          <div className="space-y-2">
-            {[
-              { field: 'mcqEnabled', label: 'MCQ — Ko\'p tanlovli test' },
-              { field: 'wordOrderEnabled', label: 'So\'z tartibi testi' },
-              { field: 'vocabularyEnabled', label: 'Lug\'at (so\'zlar)' },
-            ].map(({ field, label }) => (
-              <label key={field} className="flex items-center gap-3 cursor-pointer">
+          {/* Type and order */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                  Turi <span className="text-[#e11d48]">*</span>
+                </p>
+                <select
+                  value={form.type}
+                  onChange={(e) => set('type', e.target.value)}
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                >
+                  {LESSON_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                  Tartib # <span className="text-[#e11d48]">*</span>
+                </p>
                 <input
-                  type="checkbox"
-                  checked={form[field as keyof typeof form] as boolean}
-                  onChange={(e) => set(field, e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 rounded"
+                  type="number"
+                  min="1"
+                  value={form.orderNumber}
+                  onChange={(e) => set('orderNumber', e.target.value)}
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                  placeholder="1"
+                  required
                 />
-                <span className="text-sm text-gray-700">{label}</span>
-              </label>
-            ))}
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            AI Tutor va Kamera — Faza 2 da qo&apos;shiladi
-          </p>
-        </div>
 
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Saqlanmoqda...' : 'Dars yaratish'}
-          </button>
-          <Link
-            href="/superadmin/lessons"
-            className="px-4 py-2.5 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-          >
-            Bekor
-          </Link>
-        </div>
-      </form>
+          {/* YouTube */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              YouTube URL <span className="text-[#e11d48]">*</span>
+            </p>
+            <input
+              type="url"
+              value={form.youtubeUrl}
+              onChange={(e) => set('youtubeUrl', e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+              placeholder="https://youtu.be/..."
+              required
+            />
+          </div>
+
+          {/* N repetitions */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                  N takrorlash <span className="text-[#e11d48]">*</span>
+                </p>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={form.nRepetitions}
+                  onChange={(e) => set('nRepetitions', e.target.value)}
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                  required
+                />
+                <p className="text-xs text-[#94a3b8]">1–10</p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Max N</p>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={form.maxNOverride}
+                  onChange={(e) => set('maxNOverride', e.target.value)}
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                  placeholder="10"
+                />
+                <p className="text-xs text-[#94a3b8]">Ixtiyoriy, 1–20</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Components */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Komponentlar</p>
+            <div className="space-y-2">
+              {[
+                { field: 'mcqEnabled', label: "MCQ — Ko'p tanlovli test" },
+                { field: 'wordOrderEnabled', label: "So'z tartibi testi" },
+                { field: 'vocabularyEnabled', label: "Lug'at (so'zlar)" },
+              ].map(({ field, label }) => (
+                <label key={field} className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-[#f7f4ef] transition-colors">
+                  <div className={`w-5 h-5 rounded-md border-[1.5px] flex items-center justify-center transition-colors ${
+                    form[field as keyof typeof form]
+                      ? 'bg-[#0f172a] border-[#0f172a]'
+                      : 'border-[#ede9e1] bg-white'
+                  }`}>
+                    {form[field as keyof typeof form] && <CheckSquare size={12} className="text-white" />}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={form[field as keyof typeof form] as boolean}
+                    onChange={(e) => set(field, e.target.checked)}
+                    className="sr-only"
+                  />
+                  <span className="text-sm text-[#0f172a] font-medium">{label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-[#94a3b8]">
+              AI Tutor va Kamera — Faza 2 da qo&apos;shiladi
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#1e293b] disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saqlanmoqda...' : 'Dars yaratish'}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push('/superadmin/lessons')}
+              className="px-5 py-4 border-[1.5px] border-[#ede9e1] rounded-xl text-[#64748b] font-bold text-sm hover:bg-[#f7f4ef]"
+            >
+              Bekor
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

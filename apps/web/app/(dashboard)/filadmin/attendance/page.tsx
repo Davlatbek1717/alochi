@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Eye, Key, Shield, Clock, CheckCircle, Download, ClipboardList } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type StaffRecord = {
@@ -40,29 +42,33 @@ function lateMinutes(loginTime: string | null): number {
   return Math.max(0, Math.round((login.getTime() - cutoff.getTime()) / 60000));
 }
 
-function methodBadge(method: string | null) {
+function getInitials(name: string) {
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function MethodBadge({ method }: { method: string | null }) {
   if (method === 'face_auto') {
     return (
-      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
-        👁 Yuz
+      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full font-medium border border-blue-100">
+        <Eye size={10} /> Yuz
       </span>
     );
   }
   if (method === 'manual') {
     return (
-      <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full font-medium">
-        🔑 Qo&apos;lda
+      <span className="inline-flex items-center gap-1 bg-[#f7f4ef] text-[#64748b] text-xs px-2 py-1 rounded-full font-medium border border-[#ede9e1]">
+        <Key size={10} /> Qo&apos;lda
       </span>
     );
   }
   if (method === 'admin') {
     return (
-      <span className="inline-flex items-center gap-1 bg-purple-50 text-purple-700 text-xs px-2 py-1 rounded-full font-medium">
-        👤 Admin
+      <span className="inline-flex items-center gap-1 bg-violet-50 text-violet-700 text-xs px-2 py-1 rounded-full font-medium border border-violet-100">
+        <Shield size={10} /> Admin
       </span>
     );
   }
-  return <span className="text-gray-400">—</span>;
+  return <span className="text-[#94a3b8] text-xs">—</span>;
 }
 
 function exportCsv(records: StaffRecord[], date: string) {
@@ -87,6 +93,7 @@ function exportCsv(records: StaffRecord[], date: string) {
 const TODAY = new Date().toISOString().split('T')[0];
 
 export default function FiladminAttendancePage() {
+  const router = useRouter();
   const [date, setDate] = useState(TODAY);
   const [records, setRecords] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,121 +151,147 @@ export default function FiladminAttendancePage() {
 
   if (!branchId) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900">Xodimlar Davomati</h1>
-        <div className="bg-white rounded-xl p-6 text-center shadow-sm">
-          <p className="text-red-500">Filial topilmadi. Administrator bilan bog&#39;laning.</p>
+      <div className="min-h-screen bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-4">
+            <ArrowLeft size={18} /> Orqaga
+          </button>
+          <p className="text-white font-bold text-xl">Xodimlar Davomati</p>
+        </div>
+        <div className="p-4">
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
+            <p className="text-[#e11d48] text-sm">Filial topilmadi. Administrator bilan bog&apos;laning.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Xodimlar Davomati</h1>
-        <div className="flex items-center gap-3">
-          <input
-            type="date"
-            value={date}
-            max={TODAY}
-            onChange={(e) => setDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          {records.length > 0 && (
-            <button
-              onClick={() => exportCsv(records, date)}
-              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              📥 Eksport
-            </button>
-          )}
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/filadmin')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Filadmin
+          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <ClipboardList size={18} className="text-[#0d9488]" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg">Xodimlar Davomati</p>
+                <p className="text-[#64748b] text-xs">{date}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={date}
+                max={TODAY}
+                onChange={(e) => setDate(e.target.value)}
+                className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#0d9488]"
+              />
+              {records.length > 0 && (
+                <button
+                  onClick={() => exportCsv(records, date)}
+                  className="bg-white/5 border border-white/10 text-[#94a3b8] p-2 rounded-lg hover:bg-white/10"
+                >
+                  <Download size={16} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
-          <span>{error}</span>
-          <button onClick={() => loadRecords(date)} className="ml-4 underline text-sm font-medium">
-            Qayta urinish
-          </button>
-        </div>
-      )}
+      {/* Body */}
+      <div className="px-4 pt-4 pb-6 space-y-3">
+        {error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => loadRecords(date)} className="underline text-sm font-medium ml-4">
+              Qayta
+            </button>
+          </div>
+        )}
 
-      {loading ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Xodim', 'Kirish', 'Usul', 'Kechikish', 'Tasdiqlangan'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[1, 2, 3, 4].map((i) => (
-                <tr key={i} className="border-t border-gray-100">
-                  {[1, 2, 3, 4, 5].map((j) => (
-                    <td key={j} className="px-4 py-3">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : records.length === 0 && !error ? (
-        <div className="bg-white rounded-xl p-10 text-center text-gray-500 shadow-sm">
-          <p className="text-4xl mb-2">📋</p>
-          <p className="font-medium">Bu kun uchun davomat yo&apos;q</p>
-        </div>
-      ) : !error ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Xodim', 'Kirish', 'Usul', 'Kechikish', 'Tasdiqlangan'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {records.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{r.user.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatTime(r.loginTime)}</td>
-                  <td className="px-4 py-3">{methodBadge(r.recognitionMethod)}</td>
-                  <td className="px-4 py-3">
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f7f4ef]" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#f7f4ef] rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-[#f7f4ef] rounded w-1/4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : records.length === 0 && !error ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <ClipboardList size={32} className="text-[#94a3b8] mx-auto mb-3" />
+            <p className="text-[#64748b] font-medium">Bu kun uchun davomat yo&apos;q</p>
+          </div>
+        ) : !error ? (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{records.length} ta xodim</p>
+            {records.map((r) => (
+              <div key={r.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {getInitials(r.user.name)}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[#0f172a] font-semibold text-sm">{r.user.name}</p>
+                      {r.isLate && r.loginTime && (
+                        <span className="inline-flex items-center gap-1 bg-[#e11d48]/10 text-[#e11d48] text-xs px-2 py-0.5 rounded-full font-medium">
+                          <Clock size={10} /> +{lateMinutes(r.loginTime)} daq
+                        </span>
+                      )}
+                      {r.confirmedAt && (
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                          <CheckCircle size={10} /> Tasdiqlangan
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-[#64748b] text-xs font-mono">{formatTime(r.loginTime)}</span>
+                      <MethodBadge method={r.recognitionMethod} />
+                    </div>
+                  </div>
+                  {/* Action */}
+                  <div className="shrink-0">
                     {!r.loginTime ? (
-                      <span className="text-gray-400">—</span>
-                    ) : r.isLate ? (
-                      <span className="text-red-600 font-medium">⏰ +{lateMinutes(r.loginTime)} daq</span>
-                    ) : (
-                      <span className="text-green-600 font-medium">✅ O&apos;z vaqtida</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {!r.loginTime ? (
-                      <span className="text-gray-400">Kelmagan</span>
+                      <span className="text-[#94a3b8] text-xs">Kelmagan</span>
                     ) : r.confirmedAt ? (
-                      <span className="text-green-600 font-medium">✓ {formatTime(r.confirmedAt)}</span>
+                      <span className="text-[#94a3b8] text-xs font-mono">{formatTime(r.confirmedAt)}</span>
                     ) : (
                       <button
                         onClick={() => confirmStaff(r.userId)}
                         disabled={confirming === r.userId}
-                        className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                        className="bg-[#0f172a] text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#1e293b] disabled:opacity-50 transition-colors"
                       >
                         {confirming === r.userId ? '...' : 'Tasdiqlash'}
                       </button>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

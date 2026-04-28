@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, CheckCircle2, RefreshCw, BookOpen } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
@@ -60,6 +61,15 @@ function buildSteps(components: ComponentFlags): Step[] {
   steps.push('done');
   return steps;
 }
+
+const STEP_LABELS: Record<Step, string> = {
+  video: 'Video',
+  mcq: 'Test',
+  word_order: "So'z",
+  ai_tutor: 'AI',
+  academy: 'Akademiya',
+  done: 'Tayyor',
+};
 
 export default function LessonPage() {
   const params = useParams();
@@ -156,16 +166,16 @@ export default function LessonPage() {
 
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto py-6 flex items-center justify-center">
-        <p className="text-gray-500">Yuklanmoqda...</p>
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <p className="text-[#64748b]">Yuklanmoqda...</p>
       </div>
     );
   }
 
   if (error || !lesson) {
     return (
-      <div className="max-w-3xl mx-auto py-6">
-        <p className="text-red-500">{error || 'Dars topilmadi'}</p>
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-4">
+        <p className="text-[#e11d48]">{error || 'Dars topilmadi'}</p>
       </div>
     );
   }
@@ -174,156 +184,183 @@ export default function LessonPage() {
   const currentStepIndex = steps.indexOf(step);
   const mcqQuestions = getMcqQuestions();
   const wordOrderSentences = getWordOrderSentences();
+  const visibleSteps = steps.filter((s) => s !== 'done');
 
   return (
-    <div className="max-w-3xl mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="text-gray-400 hover:text-gray-600 text-sm"
-        >
-          ← Orqaga
-        </button>
-        <h1 className="text-xl font-bold flex-1">{lesson.title}</h1>
-        {progress && (
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            {progress.sessionCount}/{lesson.nRepetitions} sessiya
-          </span>
-        )}
-      </div>
-
-      <div className="flex gap-1">
-        {steps.filter((s) => s !== 'done').map((s, i) => (
-          <div
-            key={s}
-            className={`flex-1 h-2 rounded-full ${
-              i < currentStepIndex ? 'bg-green-400' :
-              i === currentStepIndex ? 'bg-indigo-600' :
-              'bg-gray-200'
-            }`}
-          />
-        ))}
-      </div>
-
-      {step === 'video' && (
-        <div className="space-y-4">
-          <VideoPlayer
-            youtubeUrl={lesson.youtubeUrl}
-            onCompleted={() => setVideoCompleted(true)}
-          />
-          {videoCompleted ? (
-            <button
-              onClick={goToNextStep}
-              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium"
-            >
-              Davom etish →
-            </button>
-          ) : (
-            <p className="text-center text-gray-500 text-sm">
-              Davom etish uchun videoni ko&apos;ring
-            </p>
-          )}
-        </div>
-      )}
-
-      {step === 'mcq' && mcqQuestions.length > 0 && (
-        <McqTest
-          questions={mcqQuestions}
-          onPassed={goToNextStep}
-          onFailed={restartCycle}
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
-      )}
-
-      {step === 'mcq' && mcqQuestions.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-gray-400 text-sm">MCQ savollar topilmadi</p>
-          <button onClick={goToNextStep} className="mt-2 text-indigo-600 text-sm underline">
-            Davom etish
+        <div className="relative z-10">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-3 text-sm">
+            <ArrowLeft size={16} /> Orqaga
           </button>
-        </div>
-      )}
-
-      {step === 'word_order' && wordOrderSentences.length > 0 && (
-        <WordOrderTest
-          sentences={wordOrderSentences}
-          onPassed={goToNextStep}
-          onFailed={restartCycle}
-        />
-      )}
-
-      {step === 'word_order' && wordOrderSentences.length === 0 && (
-        <div className="text-center py-6">
-          <p className="text-gray-400 text-sm">So&apos;z tartibi topshiriqlari topilmadi</p>
-          <button onClick={goToNextStep} className="mt-2 text-indigo-600 text-sm underline">
-            Davom etish
-          </button>
-        </div>
-      )}
-
-      {step === 'ai_tutor' && (
-        <AiTutor
-          lessonContext={lesson.title}
-          onCompleted={goToNextStep}
-        />
-      )}
-
-      {step === 'academy' && (
-        <div className="space-y-4">
-          <CameraMonitor
-            onLookAway={restartCycle}
-            onSilenceTooLong={restartCycle}
-          />
-          {sessionError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-2">
-              <p className="text-red-600 text-sm font-medium">
-                Sessiyani saqlashda xato yuz berdi. Qayta urinib ko&apos;ring.
-              </p>
-              <button
-                onClick={completeSession}
-                disabled={completing}
-                className="w-full bg-red-600 text-white py-2 rounded-xl font-medium text-sm disabled:opacity-50"
-              >
-                {completing ? 'Saqlanmoqda...' : 'Qayta urinish'}
-              </button>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center shrink-0">
+                <BookOpen size={18} className="text-[#0d9488]" />
+              </div>
+              <p className="text-white font-bold text-base leading-tight">{lesson.title}</p>
             </div>
-          )}
-          {!sessionError && (
-            <button
-              onClick={handleCycleComplete}
-              disabled={completing}
-              className="w-full bg-green-600 text-white py-3 rounded-xl font-medium disabled:opacity-50"
-            >
-              {completing ? 'Saqlanmoqda...' : '✅ Topshirish — Sessiyani yakunlash'}
-            </button>
-          )}
-        </div>
-      )}
+            {progress && (
+              <span className="text-xs text-[#64748b] bg-white/5 border border-white/10 px-2 py-1 rounded-lg shrink-0 font-mono">
+                {progress.sessionCount}/{lesson.nRepetitions}
+              </span>
+            )}
+          </div>
 
-      {step === 'done' && (
-        <div className="bg-white rounded-2xl p-8 shadow-sm text-center space-y-4">
-          <p className="text-5xl">🎉</p>
-          <h2 className="text-xl font-bold text-gray-800">Sessiya yakunlandi!</h2>
-          <p className="text-gray-500 text-sm">
-            {progress
-              ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
-              : 'Jarayoningiz saqlandi'}
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={restartCycle}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-medium"
-            >
-              🔄 Yana bir bor
-            </button>
-            <button
-              onClick={() => router.push('/student/lessons')}
-              className="bg-gray-100 text-gray-700 px-6 py-2 rounded-xl font-medium"
-            >
-              ← Darslar
-            </button>
+          {/* Step progress */}
+          <div className="flex gap-1 mt-4">
+            {visibleSteps.map((s, i) => (
+              <div key={s} className="flex-1 relative">
+                <div className={`h-1.5 rounded-full ${
+                  i < currentStepIndex ? 'bg-[#0d9488]' :
+                  i === currentStepIndex ? 'bg-[#f59e0b]' :
+                  'bg-white/10'
+                }`} />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-1">
+            {visibleSteps.map((s, i) => (
+              <p key={s} className={`text-[10px] font-medium ${
+                i === currentStepIndex ? 'text-[#f59e0b]' : i < currentStepIndex ? 'text-[#0d9488]' : 'text-white/20'
+              }`}>
+                {STEP_LABELS[s]}
+              </p>
+            ))}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Body */}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        {step === 'video' && (
+          <div className="space-y-4">
+            <VideoPlayer
+              youtubeUrl={lesson.youtubeUrl}
+              onCompleted={() => setVideoCompleted(true)}
+            />
+            {videoCompleted ? (
+              <button
+                onClick={goToNextStep}
+                className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+              >
+                Davom etish <ArrowLeft size={16} className="rotate-180" />
+              </button>
+            ) : (
+              <p className="text-center text-[#94a3b8] text-sm">
+                Davom etish uchun videoni ko&apos;ring
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === 'mcq' && mcqQuestions.length > 0 && (
+          <McqTest
+            questions={mcqQuestions}
+            onPassed={goToNextStep}
+            onFailed={restartCycle}
+          />
+        )}
+
+        {step === 'mcq' && mcqQuestions.length === 0 && (
+          <div className="text-center py-6">
+            <p className="text-[#94a3b8] text-sm">MCQ savollar topilmadi</p>
+            <button onClick={goToNextStep} className="mt-2 text-[#0d9488] text-sm underline font-semibold">
+              Davom etish
+            </button>
+          </div>
+        )}
+
+        {step === 'word_order' && wordOrderSentences.length > 0 && (
+          <WordOrderTest
+            sentences={wordOrderSentences}
+            onPassed={goToNextStep}
+            onFailed={restartCycle}
+          />
+        )}
+
+        {step === 'word_order' && wordOrderSentences.length === 0 && (
+          <div className="text-center py-6">
+            <p className="text-[#94a3b8] text-sm">So&apos;z tartibi topshiriqlari topilmadi</p>
+            <button onClick={goToNextStep} className="mt-2 text-[#0d9488] text-sm underline font-semibold">
+              Davom etish
+            </button>
+          </div>
+        )}
+
+        {step === 'ai_tutor' && (
+          <AiTutor
+            lessonContext={lesson.title}
+            onCompleted={goToNextStep}
+          />
+        )}
+
+        {step === 'academy' && (
+          <div className="space-y-4">
+            <CameraMonitor
+              onLookAway={restartCycle}
+              onSilenceTooLong={restartCycle}
+            />
+            {sessionError && (
+              <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 rounded-[18px] p-4 space-y-2">
+                <p className="text-[#e11d48] text-sm font-semibold">
+                  Sessiyani saqlashda xato yuz berdi. Qayta urinib ko&apos;ring.
+                </p>
+                <button
+                  onClick={completeSession}
+                  disabled={completing}
+                  className="w-full bg-[#e11d48] text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50"
+                >
+                  {completing ? 'Saqlanmoqda...' : 'Qayta urinish'}
+                </button>
+              </div>
+            )}
+            {!sessionError && (
+              <button
+                onClick={handleCycleComplete}
+                disabled={completing}
+                className="w-full bg-emerald-500 text-white py-4 rounded-xl font-bold text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 size={18} />
+                {completing ? 'Saqlanmoqda...' : 'Topshirish — Sessiyani yakunlash'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {step === 'done' && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
+              <CheckCircle2 size={32} className="text-emerald-500" />
+            </div>
+            <h2 className="text-xl font-bold text-[#0f172a]">Sessiya yakunlandi!</h2>
+            <p className="text-[#64748b] text-sm">
+              {progress
+                ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
+                : 'Jarayoningiz saqlandi'}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={restartCycle}
+                className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors"
+              >
+                <RefreshCw size={16} /> Yana bir bor
+              </button>
+              <button
+                onClick={() => router.push('/student/lessons')}
+                className="bg-[#f7f4ef] border border-[#ede9e1] text-[#0f172a] px-6 py-3 rounded-xl font-bold text-sm"
+              >
+                Darslar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

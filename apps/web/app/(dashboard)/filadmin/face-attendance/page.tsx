@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, ScanFace, CheckCircle, Clock, Key } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type AttendanceRecord = {
@@ -23,7 +25,12 @@ function todayDateString() {
   return new Date().toISOString().split('T')[0];
 }
 
+function getInitials(name: string) {
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
 export default function FaceAttendancePage() {
+  const router = useRouter();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,99 +88,113 @@ export default function FaceAttendancePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4 pb-10">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-bold text-gray-800">Yuz ID davomat</h1>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/filadmin')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Filadmin
+          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <ScanFace size={18} className="text-[#0d9488]" />
+              </div>
+              <p className="text-white font-bold text-lg">Yuz ID davomat</p>
+            </div>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#0d9488]"
+            />
+          </div>
+        </div>
       </div>
 
-      {loading && (
-        <div className="flex justify-center py-16">
-          <p className="text-gray-500">Yuklanmoqda...</p>
-        </div>
-      )}
+      {/* Body */}
+      <div className="px-4 pt-4 pb-6 space-y-3">
+        {loading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#f7f4ef]" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#f7f4ef] rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-[#f7f4ef] rounded w-1/4" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-      {!loading && error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-          <p className="text-red-600">{error}</p>
-        </div>
-      )}
+        {!loading && error && (
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
+        )}
 
-      {!loading && !error && (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-gray-500 text-left">
-                <th className="px-4 py-3 font-medium">Xodim ismi</th>
-                <th className="px-4 py-3 font-medium">Kirish vaqti</th>
-                <th className="px-4 py-3 font-medium">Usul</th>
-                <th className="px-4 py-3 font-medium">Kechikdi?</th>
-                <th className="px-4 py-3 font-medium">Ishonch (%)</th>
-                <th className="px-4 py-3 font-medium">Amal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                    Ushbu kun uchun ma&apos;lumot topilmadi
-                  </td>
-                </tr>
-              ) : (
-                records.map((rec) => (
-                  <tr key={rec.userId} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{rec.staffName}</td>
-                    <td className="px-4 py-3 text-gray-600">{formatTime(rec.checkInTime)}</td>
-                    <td className="px-4 py-3">
+        {!loading && !error && records.length === 0 && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <ScanFace size={32} className="text-[#94a3b8] mx-auto mb-3" />
+            <p className="text-[#64748b] font-medium">Ushbu kun uchun ma&apos;lumot topilmadi</p>
+          </div>
+        )}
+
+        {!loading && !error && records.length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{records.length} ta xodim</p>
+            {records.map((rec) => (
+              <div key={rec.userId} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-sm font-bold shrink-0">
+                    {getInitials(rec.staffName)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[#0f172a] font-semibold text-sm">{rec.staffName}</p>
+                      {rec.isLate && (
+                        <span className="inline-flex items-center gap-1 bg-[#e11d48]/10 text-[#e11d48] text-xs px-2 py-0.5 rounded-full font-medium">
+                          <Clock size={10} /> Kechikdi
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="text-[#64748b] text-xs font-mono">{formatTime(rec.checkInTime)}</span>
                       {rec.faceConfidence !== undefined ? (
-                        <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full font-medium">
-                          Face ID
+                        <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium border border-blue-100">
+                          <ScanFace size={10} /> Face ID · {Math.round(rec.faceConfidence * 100)}%
                         </span>
                       ) : (
-                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-medium">
-                          Qo&apos;lda
+                        <span className="inline-flex items-center gap-1 bg-[#f7f4ef] text-[#64748b] text-xs px-2 py-0.5 rounded-full font-medium border border-[#ede9e1]">
+                          <Key size={10} /> Qo&apos;lda
                         </span>
                       )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {rec.isLate ? (
-                        <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full font-medium">
-                          Kechikdi
-                        </span>
-                      ) : (
-                        <span className="text-green-500 text-xs">✓</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {rec.faceConfidence !== undefined
-                        ? `${Math.round(rec.faceConfidence * 100)}%`
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleConfirm(rec.userId)}
-                        disabled={rec.confirmed || confirming === rec.userId}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          rec.confirmed
-                            ? 'bg-green-100 text-green-600 cursor-not-allowed'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
-                        }`}
-                      >
-                        {rec.confirmed ? 'Tasdiqlangan' : confirming === rec.userId ? '...' : 'Tasdiqlash'}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleConfirm(rec.userId)}
+                    disabled={rec.confirmed || confirming === rec.userId}
+                    className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                      rec.confirmed
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-not-allowed'
+                        : 'bg-[#0f172a] text-white hover:bg-[#1e293b] disabled:opacity-50'
+                    }`}
+                  >
+                    {rec.confirmed ? (
+                      <span className="flex items-center gap-1"><CheckCircle size={12} /> Tasdiqlangan</span>
+                    ) : confirming === rec.userId ? '...' : 'Tasdiqlash'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

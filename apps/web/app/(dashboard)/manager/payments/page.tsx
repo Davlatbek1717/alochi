@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, CreditCard } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
 import DebtorsTable, { BranchStudent } from '../../_components/DebtorsTable';
@@ -22,6 +23,7 @@ function getBranchAndToken(): { branchId: string; token: string } {
 }
 
 export default function ManagerPaymentsPage() {
+  const router = useRouter();
   const [month, setMonth] = useState(currentMonth());
   const [students, setStudents] = useState<BranchStudent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,40 +65,51 @@ export default function ManagerPaymentsPage() {
   }
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
-      <Link
-        href="/manager"
-        className="inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
-      >
-        &larr; Orqaga
-      </Link>
-
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">To&apos;lov Holati</h1>
-        <MonthPicker value={month} onChange={handleMonthChange} />
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/manager')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Manager
+          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <CreditCard size={18} className="text-[#0d9488]" />
+              </div>
+              <p className="text-white font-bold text-lg">To&apos;lov Holati</p>
+            </div>
+            <MonthPicker value={month} onChange={handleMonthChange} />
+          </div>
+        </div>
       </div>
 
-      {error ? (
-        <div className="bg-white rounded-xl shadow-sm p-5">
-          <p className="text-red-500 text-sm">{error}</p>
-          <button
-            onClick={() => fetchStudents(month)}
-            className="mt-2 text-sm text-indigo-600 hover:underline"
-          >
-            Qayta urinish
-          </button>
-        </div>
-      ) : (
-        <div
-          className={`bg-white rounded-xl shadow-sm overflow-hidden transition-opacity ${fetching ? 'opacity-50' : ''}`}
-        >
-          <DebtorsTable
-            students={students}
-            readOnly={true}
-            loading={loading}
-          />
-        </div>
-      )}
+      {/* Body */}
+      <div className="px-4 pt-4 pb-6">
+        {error ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+            <p className="text-[#e11d48] text-sm">{error}</p>
+            <button
+              onClick={() => fetchStudents(month)}
+              className="mt-2 text-sm text-[#0f172a] underline font-medium"
+            >
+              Qayta urinish
+            </button>
+          </div>
+        ) : (
+          <div className={`bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden transition-opacity ${fetching ? 'opacity-50' : ''}`}>
+            <DebtorsTable
+              students={students}
+              readOnly={true}
+              loading={loading}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

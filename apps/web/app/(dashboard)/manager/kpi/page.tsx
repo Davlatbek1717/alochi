@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Star, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type BranchUser = {
@@ -16,6 +17,7 @@ type BranchUser = {
 const PRESETS = [5, 10, 15, 20, 25, 30, 50];
 
 export default function ManagerKpiPage() {
+  const router = useRouter();
   const [staffUsers, setStaffUsers] = useState<BranchUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function ManagerKpiPage() {
       const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
       branchId = user.branchId ?? '';
     } catch {
-      // malformed JSON — branchId stays empty, users list will show error
+      // malformed JSON — branchId stays empty
     }
 
     const token = localStorage.getItem('accessToken') ?? '';
@@ -59,7 +61,6 @@ export default function ManagerKpiPage() {
       if (usersRes.status === 'fulfilled') {
         setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
       } else {
-        console.error('[KPI] Failed to load branch users:', usersRes.reason);
         setUsersError('Xodimlar yuklanmadi');
       }
       setLoadingUsers(false);
@@ -101,41 +102,58 @@ export default function ManagerKpiPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto space-y-5">
-      <div className="flex items-center gap-3">
-        <Link href="/manager" className="text-sm text-indigo-600 hover:underline">
-          &larr; Manager
-        </Link>
-        <h1 className="text-xl font-bold">KPI Mukofot</h1>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/manager')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Manager
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/20 flex items-center justify-center">
+              <Star size={18} className="text-[#f59e0b]" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-lg">KPI Mukofot</p>
+              <p className="text-[#94a3b8] text-xs">
+                {loadingStats ? '...' : statsError ? '—' : `Bugun: ${todayTotal} ball`}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Today's total */}
-      <div className="bg-white rounded-2xl shadow-sm p-5">
-        <p className="text-sm font-medium text-gray-500 mb-1">Bugun berilgan jami</p>
-        {loadingStats ? (
-          <div className="h-8 w-24 bg-gray-100 rounded animate-pulse" />
-        ) : statsError ? (
-          <p className="text-3xl font-bold text-gray-400">—</p>
-        ) : (
-          <p className="text-3xl font-bold text-indigo-600">{todayTotal} ball</p>
-        )}
-      </div>
+      {/* Body */}
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        {/* Today stat */}
+        <div className="bg-[#162032] rounded-[18px] p-5">
+          <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-widest mb-1">Bugun berilgan jami</p>
+          {loadingStats ? (
+            <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
+          ) : statsError ? (
+            <p className="text-4xl font-black text-white/30 font-mono">—</p>
+          ) : (
+            <p className="text-4xl font-black text-[#f59e0b] font-mono">{todayTotal} <span className="text-lg">ball</span></p>
+          )}
+        </div>
 
-      {/* Award form */}
-      <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
         {/* User selector */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Xodimni tanlang</label>
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Xodimni tanlang</p>
           {loadingUsers ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />
+                <div key={i} className="h-12 bg-[#f7f4ef] rounded-xl animate-pulse" />
               ))}
             </div>
           ) : usersError ? (
-            <p className="text-sm text-red-500">{usersError}</p>
+            <p className="text-sm text-[#e11d48]">{usersError}</p>
           ) : (
-            <div className="border border-gray-200 rounded-xl overflow-y-auto divide-y max-h-52">
+            <div className="border border-[#ede9e1] rounded-xl overflow-y-auto divide-y divide-[#ede9e1] max-h-52">
               {staffUsers.map((u) => (
                 <button
                   key={u.id}
@@ -143,16 +161,16 @@ export default function ManagerKpiPage() {
                   onClick={() => setSelectedUserId(u.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                     selectedUserId === u.id
-                      ? 'bg-indigo-50 border-l-4 border-indigo-500'
-                      : 'hover:bg-gray-50 border-l-4 border-transparent'
+                      ? 'bg-[#f59e0b]/10 border-l-4 border-[#f59e0b]'
+                      : 'hover:bg-[#f7f4ef] border-l-4 border-transparent'
                   }`}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{u.name}</p>
-                    <p className="text-xs text-gray-400 capitalize">{u.role}</p>
+                    <p className="font-semibold text-sm text-[#0f172a] truncate">{u.name}</p>
+                    <p className="text-xs text-[#64748b] capitalize">{u.role}</p>
                   </div>
                   {selectedUserId === u.id && (
-                    <span className="text-indigo-500 text-lg">✓</span>
+                    <CheckCircle size={16} className="text-[#f59e0b] shrink-0" />
                   )}
                 </button>
               ))}
@@ -161,25 +179,25 @@ export default function ManagerKpiPage() {
         </div>
 
         {/* Score selector */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Ball</label>
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Ball</p>
           <div className="flex flex-wrap gap-2">
             {PRESETS.map((p) => (
               <button
                 key={p}
                 type="button"
                 onClick={() => setScore(p)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                className={`px-3 py-1.5 rounded-xl text-sm font-bold border-[1.5px] transition-colors ${
                   score === p
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'border-gray-300 text-gray-700 hover:border-indigo-400'
+                    ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                    : 'border-[#ede9e1] text-[#64748b] hover:border-[#0f172a]'
                 }`}
               >
                 {p}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2">
             <input
               type="number"
               min={1}
@@ -191,24 +209,24 @@ export default function ManagerKpiPage() {
                   setScore(Math.min(50, Math.max(1, val)));
                 }
               }}
-              className="w-20 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-center focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              className="w-20 border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm text-center focus:ring-2 focus:ring-[#f59e0b] focus:outline-none bg-[#f7f4ef]"
             />
-            <span className="text-sm text-gray-400">/ 50 maksimal</span>
+            <span className="text-sm text-[#94a3b8]">/ 50 maksimal</span>
           </div>
         </div>
 
         {/* Reason */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Sabab</label>
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Sabab</p>
           <textarea
             rows={3}
             maxLength={200}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Nima uchun mukofot berilmoqda?"
-            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-[#f59e0b] focus:outline-none text-[#0f172a]"
           />
-          <p className="text-xs text-gray-400 text-right mt-1">{reason.length}/200</p>
+          <p className="text-xs text-[#94a3b8] text-right">{reason.length}/200</p>
         </div>
 
         {/* Submit */}
@@ -216,21 +234,21 @@ export default function ManagerKpiPage() {
           type="button"
           onClick={handleAward}
           disabled={!selectedUserId || !reason.trim() || submitting}
-          className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+          className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#1e293b] transition-colors"
         >
           {submitting ? 'Yuborilmoqda...' : `${score} ball berish`}
         </button>
 
-        {/* Feedback banners */}
         {success && (
-          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
-            <span>✓</span>
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm">
+            <CheckCircle size={16} />
             <span>Ball muvaffaqiyatli berildi!</span>
           </div>
         )}
         {awardError && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-sm">
-            {awardError}
+          <div className="flex items-center gap-2 bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-xl text-sm">
+            <AlertCircle size={16} />
+            <span>{awardError}</span>
           </div>
         )}
       </div>

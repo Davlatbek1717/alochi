@@ -1,12 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, AlertTriangle, BookX, FileX, ShieldAlert, HelpCircle, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 const REASON_TYPES = [
-  { value: 'not_prepared', label: 'Darsga tayyorlanmagan' },
-  { value: 'no_homework', label: 'Vazifalarni bajarmagan' },
-  { value: 'discipline', label: 'Intizom buzilishi' },
-  { value: 'other', label: 'Boshqa' },
+  { value: 'not_prepared', label: 'Darsga tayyorlanmagan', icon: <BookX size={18} /> },
+  { value: 'no_homework', label: 'Vazifalarni bajarmagan', icon: <FileX size={18} /> },
+  { value: 'discipline', label: 'Intizom buzilishi', icon: <ShieldAlert size={18} /> },
+  { value: 'other', label: 'Boshqa', icon: <HelpCircle size={18} /> },
 ];
 
 type Student = { id: string; name: string };
@@ -30,6 +32,7 @@ function getTokenPayload(): { userId: string; branchId: string; tenantId: string
 }
 
 export default function WarningsPage() {
+  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -44,8 +47,9 @@ export default function WarningsPage() {
     if (!branchId) return;
 
     apiRequest(`/users/by-branch/${branchId}`, {}, token)
-      .then((res: any) => {
-        const list: Array<{ id: string; name: string; role: string }> = res?.data ?? res ?? [];
+      .then((res: unknown) => {
+        const data = res as { data?: Array<{ id: string; name: string; role: string }> };
+        const list = data?.data ?? [];
         setStudents(list.filter((u) => u.role === 'student'));
       })
       .catch(() => {})
@@ -82,70 +86,107 @@ export default function WarningsPage() {
   }
 
   return (
-    <div className="max-w-xl space-y-6">
-      <h1 className="text-2xl font-bold">Ogohlantirish Berish</h1>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 shadow-sm space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">O&apos;quvchi *</label>
-          <select
-            value={selectedStudent}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-            required
-            disabled={loadingStudents}
-          >
-            <option value="">
-              {loadingStudents ? 'Yuklanmoqda...' : "O'quvchi tanlang..."}
-            </option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Turi *</label>
-          <div className="space-y-2">
-            {REASON_TYPES.map((r) => (
-              <label key={r.value} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="reasonType"
-                  value={r.value}
-                  checked={reasonType === r.value}
-                  onChange={() => setReasonType(r.value)}
-                  className="text-indigo-600"
-                />
-                {r.label}
-              </label>
-            ))}
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #e11d48 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/filadmin')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Filadmin
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#e11d48]/20 flex items-center justify-center">
+              <AlertTriangle size={18} className="text-[#e11d48]" />
+            </div>
+            <p className="text-white font-bold text-lg">Ogohlantirish Berish</p>
           </div>
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Izoh (majburiy) *</label>
-          <textarea
-            value={reasonText}
-            onChange={(e) => setReasonText(e.target.value)}
-            rows={3}
-            required
-            className="w-full border rounded-lg px-3 py-2"
-            placeholder="Ogohlantirish sababi..."
-          />
-        </div>
+      {/* Body */}
+      <div className="px-4 pt-5 pb-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Student select */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">O&apos;quvchi *</p>
+            <select
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a]"
+              required
+              disabled={loadingStudents}
+            >
+              <option value="">
+                {loadingStudents ? 'Yuklanmoqda...' : "O'quvchi tanlang..."}
+              </option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+          {/* Reason type cards */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Turi *</p>
+            <div className="grid grid-cols-2 gap-2">
+              {REASON_TYPES.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setReasonType(r.value)}
+                  className={`p-3 rounded-xl border-[1.5px] flex items-center gap-2 text-left transition-all ${
+                    reasonType === r.value
+                      ? 'border-[#e11d48] bg-[#e11d48]/5 text-[#e11d48]'
+                      : 'border-[#ede9e1] bg-[#f7f4ef] text-[#64748b] hover:border-[#0f172a]'
+                  }`}
+                >
+                  <span className="shrink-0">{r.icon}</span>
+                  <span className="text-xs font-semibold leading-tight">{r.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <button
-          type="submit"
-          className="w-full bg-red-600 text-white py-3 rounded-xl font-medium"
-        >
-          {submitted ? '✅ Berildi' : 'Ogohlantirish Berish'}
-        </button>
-      </form>
+          {/* Reason text */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Izoh (majburiy) *</p>
+            <textarea
+              value={reasonText}
+              onChange={(e) => setReasonText(e.target.value)}
+              rows={3}
+              required
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
+              placeholder="Ogohlantirish sababi..."
+            />
+          </div>
+
+          {error && (
+            <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-[#e11d48] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-rose-700 transition-colors"
+          >
+            {submitted ? (
+              <>
+                <CheckCircle size={18} /> Berildi
+              </>
+            ) : (
+              <>
+                <AlertTriangle size={18} /> Ogohlantirish Berish
+              </>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
