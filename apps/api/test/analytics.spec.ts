@@ -4,7 +4,7 @@ describe('AnalyticsService', () => {
   const mockPrisma = {
     $queryRawUnsafe: jest.fn(),
     analyticsEvent: {
-      groupBy: jest.fn(),
+      create: jest.fn().mockResolvedValue({ id: 'ev-1' }),
     },
   };
 
@@ -46,5 +46,22 @@ describe('AnalyticsService', () => {
 
     const result = await service.getStudentActivity('tenant-1', 'weekly');
     expect(result).toHaveLength(2);
+  });
+
+  it('logEvent creates analytics event record', async () => {
+    await service.logEvent({
+      tenantId: 'tenant-1',
+      eventType: 'lesson_completed',
+      studentId: 'student-1',
+      data: { lessonId: 'l-1' },
+    });
+    expect(mockPrisma.analyticsEvent.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tenantId: 'tenant-1',
+          eventType: 'lesson_completed',
+        }),
+      }),
+    );
   });
 });

@@ -1,10 +1,15 @@
-import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request, ParseEnumPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AnalyticsService } from './analytics.service';
+
+enum ActivityPeriod {
+  weekly = 'weekly',
+  monthly = 'monthly',
+}
 
 @ApiTags('analytics')
 @ApiBearerAuth()
@@ -29,7 +34,8 @@ export class AnalyticsController {
   @Roles(UserRole.superadmin)
   getActivity(
     @Request() req: any,
-    @Query('period') period: 'weekly' | 'monthly' = 'monthly',
+    @Query('period', new ParseEnumPipe(ActivityPeriod, { optional: true }))
+    period: ActivityPeriod = ActivityPeriod.monthly,
   ) {
     return this.analytics.getStudentActivity(req.user.tenantId, period);
   }
