@@ -92,17 +92,16 @@ export class ChurnService {
       const score = this.computeScore(signals);
 
       const existing = await this.prisma.churnScore.findUnique({ where: { studentId: student.id } });
-      const wasHighRisk = (existing?.score ?? 0) > 60;
+      const prevAlertSent = existing?.alertSent ?? false;
       const isHighRisk = score > 60;
-      const alertAlreadySent = existing?.alertSent ?? false;
 
       await this.prisma.churnScore.upsert({
         where: { studentId: student.id },
-        create: { studentId: student.id, tenantId, score, signals: signals as any, alertSent: false },
-        update: { score, signals: signals as any, alertSent: isHighRisk ? alertAlreadySent : false },
+        create: { studentId: student.id, tenantId, score, signals: signals as any, alertSent: isHighRisk },
+        update: { score, signals: signals as any, alertSent: isHighRisk },
       });
 
-      if (isHighRisk && !alertAlreadySent) {
+      if (isHighRisk && !prevAlertSent) {
         const managers = await this.prisma.user.findMany({
           where: { tenantId, role: 'manager', branchId: student.branchId ?? undefined },
           select: { id: true },
@@ -112,11 +111,6 @@ export class ChurnService {
             .send(mgr.id, 'churn', "Yuqori xavfli o'quvchi", `Ball: ${score}`, { studentId: student.id, score, signals })
             .catch(() => {});
         }
-        await this.prisma.churnScore.update({ where: { studentId: student.id }, data: { alertSent: true } });
-      }
-
-      if (!isHighRisk && wasHighRisk) {
-        await this.prisma.churnScore.update({ where: { studentId: student.id }, data: { alertSent: false } });
       }
     }
 
