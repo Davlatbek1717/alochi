@@ -313,9 +313,13 @@ export class CronService {
   @Cron('0 2 * * *', { name: 'refresh_mv' })
   async runRefreshMaterializedViews() {
     this.logger.log('Cron: materialized views yangilanmoqda...');
-    await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_stats_mv');
-    await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY branch_stats_mv');
-    this.logger.log('Materialized views yangilandi');
+    try {
+      await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_stats_mv');
+      await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY branch_stats_mv');
+      this.logger.log('Materialized views yangilandi');
+    } catch (e) {
+      this.logger.error(`Materialized view refresh failed: ${e.message}`);
+    }
   }
 
   @Cron('0 3 * * *', { name: 'adaptive_difficulty' })
