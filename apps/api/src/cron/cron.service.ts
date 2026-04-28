@@ -3,6 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AdaptiveService } from '../adaptive/adaptive.service';
+import { ChurnService } from '../churn/churn.service';
 
 @Injectable()
 export class CronService {
@@ -12,6 +14,8 @@ export class CronService {
     private prisma: PrismaService,
     private telegram: TelegramService,
     private notifications: NotificationsService,
+    private adaptive: AdaptiveService,
+    private churn: ChurnService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -303,6 +307,36 @@ export class CronService {
         `🎓 Jami o'quvchilar: ${studentCount}`;
 
       await this.telegram.sendMessage(fa.telegramId, msg).catch(() => {});
+    }
+  }
+
+  @Cron('0 2 * * *', { name: 'refresh_mv' })
+  async runRefreshMaterializedViews() {
+    this.logger.log('Cron: materialized views yangilanmoqda...');
+    await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_stats_mv');
+    await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY branch_stats_mv');
+    this.logger.log('Materialized views yangilandi');
+  }
+
+  @Cron('0 3 * * *', { name: 'adaptive_difficulty' })
+  async runAdaptiveDifficulty() {
+    this.logger.log('Cron: adaptive difficulty boshlanmoqda...');
+    const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
+    for (const tenant of tenants) {
+      await this.adaptive.runNightlyAdaptation(tenant.id).catch((e) =>
+        this.logger.error(`Adaptive error tenant ${tenant.id}: ${e.message}`),
+      );
+    }
+  }
+
+  @Cron('0 6 * * *', { name: 'churn_scoring' })
+  async runChurnScoring() {
+    this.logger.log('Cron: churn scoring boshlanmoqda...');
+    const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
+    for (const tenant of tenants) {
+      await this.churn.runDailyScoring(tenant.id).catch((e) =>
+        this.logger.error(`Churn error tenant ${tenant.id}: ${e.message}`),
+      );
     }
   }
 
