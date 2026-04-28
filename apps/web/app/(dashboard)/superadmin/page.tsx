@@ -50,6 +50,15 @@ export default function SuperadminDashboard() {
           <h2 className="font-semibold text-gray-900">Taqiqlangan so&apos;zlar</h2>
           <p className="text-sm text-gray-500 mt-1">Chat filtrlash uchun kalit so&apos;zlar</p>
         </Link>
+
+        <Link
+          href="/filadmin/tournaments"
+          className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow border border-transparent hover:border-amber-200"
+        >
+          <div className="text-3xl mb-2">🏆</div>
+          <h2 className="font-semibold text-gray-900">Turnirlar</h2>
+          <p className="text-sm text-gray-500 mt-1">Musobaqalar yaratish va boshqarish</p>
+        </Link>
       </div>
     </div>
   );

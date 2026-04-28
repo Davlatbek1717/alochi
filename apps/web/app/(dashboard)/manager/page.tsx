@@ -1,20 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { XpBar } from '../student/_components/XpBar';
-import { StreakBadge } from '../student/_components/StreakBadge';
-
-type XpData = {
-  totalXp: number;
-  level: string;
-  nextLevelXp: number;
-};
-
-type StreakData = {
-  streak: number;
-  hasShield: boolean;
-};
 
 type StatusStudent = {
   studentId: string;
@@ -31,156 +19,207 @@ type HighPerformer = {
   totalLessons: number;
 };
 
-function StudentRow({ s, color }: { s: StatusStudent; color: 'red' | 'yellow' }) {
-  return (
-    <div className="p-4 flex items-center justify-between">
-      <div>
-        <p className="font-medium">{s.student.name}</p>
-        <p className="text-sm text-gray-500">
-          {[s.englishStatus, s.personalStatus, s.criticalStatus]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      </div>
-      <Link
-        href={`/manager/students/${s.student.id}`}
-        className={`px-3 py-1 rounded-lg text-sm text-white ${
-          color === 'red' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-yellow-600 hover:bg-yellow-700'
-        }`}
-      >
-        Ko&apos;rish
-      </Link>
-    </div>
-  );
-}
-
-function SkeletonRows() {
-  return (
-    <>
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="p-4 flex items-center justify-between animate-pulse">
-          <div className="space-y-2">
-            <div className="h-4 w-32 bg-gray-200 rounded" />
-            <div className="h-3 w-20 bg-gray-100 rounded" />
-          </div>
-          <div className="h-8 w-16 bg-gray-200 rounded-lg" />
-        </div>
-      ))}
-    </>
-  );
+function getInitials(name: string): string {
+  return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
 export default function ManagerDashboard() {
-  const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
-  const [streak, setStreak] = useState(0);
-  const [hasShield, setHasShield] = useState(false);
   const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [managerName, setManagerName] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
+    setManagerName(user.name ?? '');
 
-    async function fetchData() {
-      try {
-        const [xpRes, streakRes, redRes, yellowRes, highRes] = await Promise.all([
-          apiRequest<XpData>('/gamification/xp', {}, token),
-          apiRequest<StreakData>('/gamification/streak', {}, token),
-          apiRequest<StatusStudent[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
-          apiRequest<StatusStudent[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
-          apiRequest<HighPerformer[]>('/status/high-performers', {}, token).catch(() => ({ data: [] as HighPerformer[] })),
-        ]);
-        setXpData(xpRes.data);
-        setStreak(streakRes.data.streak);
-        setHasShield(streakRes.data.hasShield);
-        setRedStudents(redRes.data);
-        setYellowStudents(yellowRes.data);
-        setHighPerformers(highRes.data ?? []);
-      } catch {
-        // keep defaults on error
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
+    Promise.all([
+      apiRequest<StatusStudent[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
+      apiRequest<StatusStudent[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
+      apiRequest<HighPerformer[]>('/status/high-performers', {}, token).catch(() => ({ data: [] as HighPerformer[] })),
+    ]).then(([redRes, yellowRes, highRes]) => {
+      setRedStudents(redRes.data ?? []);
+      setYellowStudents(yellowRes.data ?? []);
+      setHighPerformers(highRes.data ?? []);
+    }).finally(() => setLoading(false));
   }, []);
 
+  const navCards = [
+    { href: '/manager/students',    icon: <Users size={20} />,        title: "O'quvchilar", desc: 'Status boshqaruv',  color: 'hover:border-violet-300 hover:bg-violet-50' },
+    { href: '/manager/payments',    icon: <CreditCard size={20} />,   title: "To'lovlar",   desc: 'Qarzdorlar hisobi', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
+    { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: 'Topshiriqlar',      color: 'hover:border-orange-300 hover:bg-orange-50' },
+    { href: '/manager/delegations', icon: <Send size={20} />,         title: 'Delegatsiya', desc: 'Buyruq jo\'natish', color: 'hover:border-blue-300 hover:bg-blue-50' },
+  ];
+
+  const alertCount = redStudents.length + yellowStudents.length;
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Manager Paneli</h1>
-
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
-        <div className="flex justify-between items-start mb-3">
-          <StreakBadge streak={streak} hasShield={hasShield} />
-        </div>
-        <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-          <h2 className="font-semibold text-red-700">
-            🔴 Qizil O&apos;quvchilar ({loading ? '…' : redStudents.length})
-          </h2>
-        </div>
-        <div className="divide-y">
-          {loading ? (
-            <SkeletonRows />
-          ) : redStudents.length === 0 ? (
-            <p className="p-4 text-sm text-gray-400">Qizil o&apos;quvchilar yo&apos;q</p>
-          ) : (
-            redStudents.map((s) => <StudentRow key={s.studentId} s={s} color="red" />)
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-yellow-50 border-b border-yellow-100">
-          <h2 className="font-semibold text-yellow-700">
-            🟡 Sariq O&apos;quvchilar ({loading ? '…' : yellowStudents.length})
-          </h2>
-        </div>
-        <div className="divide-y">
-          {loading ? (
-            <SkeletonRows />
-          ) : yellowStudents.length === 0 ? (
-            <p className="p-4 text-sm text-gray-400">Sariq o&apos;quvchilar yo&apos;q</p>
-          ) : (
-            yellowStudents.map((s) => <StudentRow key={s.studentId} s={s} color="yellow" />)
-          )}
-        </div>
-      </div>
-
-      {highPerformers.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center gap-2">
-            <span className="text-xl">🏆</span>
-            <h2 className="font-bold text-gray-800">200%+ O&apos;quvchilar</h2>
-            <span className="ml-auto bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-full">
-              {highPerformers.length}
-            </span>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-0 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="flex justify-between items-start mb-5 relative z-10">
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Manager Panel</p>
+            <p className="text-white text-xl font-bold">{managerName || 'Manager'}</p>
+            <p className="text-[#475569] text-xs mt-1 font-mono">
+              {new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', weekday: 'long' })}
+            </p>
           </div>
-          <div className="divide-y divide-gray-50">
-            {highPerformers.map((s) => (
-              <div key={s.id} className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">{s.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {s.lessonsCompleted}/{s.totalLessons} dars · barcha statuslar 🟢
-                  </p>
+        </div>
+
+        {/* Alert badge */}
+        <div className={`rounded-2xl p-4 mb-[-20px] relative z-10 flex items-center gap-4 ${alertCount > 0 ? 'bg-[#e11d48]/10 border border-[#e11d48]/20' : 'bg-[#0d9488]/10 border border-[#0d9488]/20'}`}>
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${alertCount > 0 ? 'bg-[#e11d48]/15 border border-[#e11d48]/30' : 'bg-[#0d9488]/15 border border-[#0d9488]/30'}`}>
+            <AlertCircle size={22} className={alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'} />
+          </div>
+          <div className="flex-1">
+            <p className={`text-sm font-bold ${alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'}`}>
+              {loading ? 'Yuklanmoqda...' : alertCount > 0 ? `${alertCount} ta diqqatga sazovor o'quvchi` : "Barcha o'quvchilar yaxshi"}
+            </p>
+            <p className="text-[#94a3b8] text-xs mt-0.5">
+              {redStudents.length} ta qizil · {yellowStudents.length} ta sariq
+            </p>
+          </div>
+          {highPerformers.length > 0 && (
+            <div className="flex items-center gap-1 bg-[#f59e0b]/10 border border-[#f59e0b]/20 rounded-xl px-3 py-1.5">
+              <Trophy size={14} className="text-[#f59e0b]" />
+              <span className="text-[#f59e0b] text-xs font-bold">{highPerformers.length}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="px-4 pt-8 pb-6 space-y-5">
+        {/* Nav cards */}
+        <div>
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
+          <div className="grid grid-cols-2 gap-3">
+            {navCards.map((card) => (
+              <Link
+                key={card.href}
+                href={card.href}
+                className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all text-left ${card.color}`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
+                  {card.icon}
                 </div>
-                <Link
-                  href={`/manager/students/${s.id}`}
-                  className="px-3 py-1 rounded-lg text-sm text-white bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Ko&apos;rish
-                </Link>
-              </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
+                  <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.desc}</p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
-      )}
+
+        {/* Red students */}
+        {(loading || redStudents.length > 0) && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+              Qizil o&apos;quvchilar
+              {!loading && <span className="ml-2 text-[#e11d48]">({redStudents.length})</span>}
+            </p>
+            <div className="space-y-2">
+              {loading ? (
+                [1, 2].map((i) => (
+                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] animate-pulse flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-100 rounded w-1/2 mb-1.5" />
+                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                redStudents.map((s) => (
+                  <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
+                    className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-rose-100 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center text-rose-700 text-sm font-black shrink-0">
+                      {getInitials(s.student.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
+                      <p className="text-[#94a3b8] text-[11px] truncate">
+                        {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <TrendingUp size={14} className="text-rose-400 shrink-0" />
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Yellow students */}
+        {(loading || yellowStudents.length > 0) && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+              Sariq o&apos;quvchilar
+              {!loading && <span className="ml-2 text-[#f59e0b]">({yellowStudents.length})</span>}
+            </p>
+            <div className="space-y-2">
+              {loading ? (
+                [1, 2].map((i) => (
+                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] animate-pulse flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-4 bg-gray-100 rounded w-1/2 mb-1.5" />
+                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                yellowStudents.map((s) => (
+                  <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
+                    className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-amber-100 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 text-sm font-black shrink-0">
+                      {getInitials(s.student.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
+                      <p className="text-[#94a3b8] text-[11px] truncate">
+                        {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <TrendingUp size={14} className="text-amber-400 shrink-0" />
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* High performers */}
+        {highPerformers.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+              200%+ o&apos;quvchilar <span className="ml-2 text-emerald-600">({highPerformers.length})</span>
+            </p>
+            <div className="space-y-2">
+              {highPerformers.map((s) => (
+                <Link key={s.id} href={`/manager/students/${s.id}`}
+                  className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-emerald-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm font-black shrink-0">
+                    {getInitials(s.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#0f172a] text-sm font-semibold truncate">{s.name}</p>
+                    <p className="text-[#94a3b8] text-[11px]">{s.lessonsCompleted}/{s.totalLessons} dars</p>
+                  </div>
+                  <Trophy size={14} className="text-[#f59e0b] shrink-0" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
