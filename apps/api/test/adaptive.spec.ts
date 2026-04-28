@@ -57,4 +57,9 @@ describe('AdaptiveService', () => {
     const config = { minN: 2, maxN: 10, hardThreshold: 0.40, easyThreshold: 0.15 };
     expect(service.computeNewN(2, 1, 10, config)).toBe(2); // already at min
   });
+
+  it('computeNewN returns currentN when totalQuestions is 0', () => {
+    const config = { minN: 1, maxN: 10, hardThreshold: 0.40, easyThreshold: 0.15 };
+    expect(service.computeNewN(3, 0, 0, config)).toBe(3);
+  });
 });

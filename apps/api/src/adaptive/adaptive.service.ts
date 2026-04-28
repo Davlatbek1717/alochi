@@ -33,6 +33,7 @@ export class AdaptiveService {
   }
 
   async updateAdaptiveConfig(tenantId: string, dto: Partial<AdaptiveConfig>) {
+    await this.getAdaptiveConfig(tenantId); // lazy-create if missing
     return this.prisma.adaptiveDifficultyConfig.update({
       where: { tenantId },
       data: dto,
@@ -70,8 +71,9 @@ export class AdaptiveService {
           select: { config: true },
         });
 
-        const totalQuestions = components.reduce((acc, c: any) => {
-          return acc + (c.config?.questions?.length ?? 0);
+        const totalQuestions = components.reduce((acc, c) => {
+          const q = (c.config as { questions?: unknown[] } | null)?.questions;
+          return acc + (Array.isArray(q) ? q.length : 0);
         }, 0);
 
         if (totalQuestions === 0) continue;
