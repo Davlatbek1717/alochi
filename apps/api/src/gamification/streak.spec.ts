@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { StreakService } from './streak.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 
 const mockPrisma = {
   studentXp: {
@@ -8,7 +9,12 @@ const mockPrisma = {
     upsert: jest.fn(),
     update: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn().mockResolvedValue({ tenantId: 't1' }),
+  },
 };
+
+const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
 
 function daysAgo(n: number): Date {
   const d = new Date();
@@ -24,6 +30,7 @@ describe('StreakService', () => {
       providers: [
         StreakService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: AnalyticsService, useValue: mockAnalytics },
       ],
     }).compile();
     service = module.get(StreakService);

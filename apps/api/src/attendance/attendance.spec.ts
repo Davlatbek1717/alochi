@@ -2,6 +2,9 @@ import { Test } from '@nestjs/testing';
 import { AttendanceStudentsService } from './attendance-students.service';
 import { AttendanceStaffService } from './attendance-staff.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AnalyticsService } from '../analytics/analytics.service';
+
+const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
 
 const mockPrismaStudents = {
   attendanceStudent: {
@@ -26,6 +29,7 @@ describe('AttendanceStudentsService', () => {
       providers: [
         AttendanceStudentsService,
         { provide: PrismaService, useValue: mockPrismaStudents },
+        { provide: AnalyticsService, useValue: mockAnalytics },
       ],
     }).compile();
     service = module.get(AttendanceStudentsService);

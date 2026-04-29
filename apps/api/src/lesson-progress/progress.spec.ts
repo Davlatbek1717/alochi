@@ -3,6 +3,9 @@ import { NotFoundException } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
+import { AnalyticsService } from '../analytics/analytics.service';
+
+const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
 
 const mockPrisma = {
   lesson: {
@@ -33,6 +36,7 @@ describe('ProgressService', () => {
         ProgressService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: FeedEventService, useValue: mockFeedEvent },
+        { provide: AnalyticsService, useValue: mockAnalytics },
       ],
     }).compile();
     service = module.get(ProgressService);
