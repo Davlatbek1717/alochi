@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BarChart2, Play } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
@@ -24,6 +24,7 @@ export default function ContentQualityPage() {
   const [error, setError] = useState('');
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [abResults, setAbResults] = useState<ABResult[] | null>(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
@@ -50,7 +51,7 @@ export default function ContentQualityPage() {
         method: 'POST',
         body: JSON.stringify({ config: { description: 'B varianti' } }),
       }, token());
-      alert('B variant yaratildi');
+      setSuccessMsg('B variant yaratildi');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Xato yuz berdi');
     }
@@ -65,6 +66,7 @@ export default function ContentQualityPage() {
         <h1 className="text-2xl font-bold text-white">Darslar Samaradorligi</h1>
       </div>
       {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">{error}</div>}
+      {successMsg && <div className="mb-4 p-3 bg-green-900/40 border border-green-700 rounded-lg text-green-300 text-sm">{successMsg}</div>}
       <div className="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -78,8 +80,8 @@ export default function ContentQualityPage() {
           </thead>
           <tbody>
             {lessons.map((l) => (
-              <>
-                <tr key={l.lessonId}
+              <React.Fragment key={l.lessonId}>
+                <tr
                   className={`border-b border-slate-700/50 hover:bg-slate-700/30 ${l.passRate < 50 ? 'bg-red-900/10' : ''}`}>
                   <td className="px-4 py-3 text-white">{l.title}</td>
                   <td className="px-4 py-3 text-center">
@@ -123,7 +125,7 @@ export default function ContentQualityPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </tbody>
         </table>

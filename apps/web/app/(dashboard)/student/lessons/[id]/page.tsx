@@ -6,6 +6,7 @@ import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
 import { AiTutor } from './_components/AiTutor';
+import { FeedbackWidget } from './_components/FeedbackWidget';
 import { apiRequest } from '@/lib/api';
 
 type ComponentFlags = {
@@ -299,39 +300,42 @@ export default function LessonPage() {
         )}
 
         {step === 'done' && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
-              <CheckCircle2 size={32} className="text-emerald-500" />
-            </div>
-            <h2 className="text-xl font-bold text-[#0f172a]">Sessiya yakunlandi!</h2>
-            <p className="text-[#64748b] text-sm">
-              {progress
-                ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
-                : 'Jarayoningiz saqlandi'}
-            </p>
-            {lesson.hasExam && (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
-                <Lock size={16} className="text-amber-500 shrink-0" />
-                <p className="text-xs text-amber-700 font-medium">
-                  Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.
-                </p>
+          <>
+            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} className="text-emerald-500" />
               </div>
-            )}
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={restartCycle}
-                className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors"
-              >
-                <RefreshCw size={16} /> Yana bir bor
-              </button>
-              <button
-                onClick={() => router.push('/student/lessons')}
-                className="bg-[#f7f4ef] border border-[#ede9e1] text-[#0f172a] px-6 py-3 rounded-xl font-bold text-sm"
-              >
-                Darslar
-              </button>
+              <h2 className="text-xl font-bold text-[#0f172a]">Sessiya yakunlandi!</h2>
+              <p className="text-[#64748b] text-sm">
+                {progress
+                  ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
+                  : 'Jarayoningiz saqlandi'}
+              </p>
+              {lesson.hasExam && (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+                  <Lock size={16} className="text-amber-500 shrink-0" />
+                  <p className="text-xs text-amber-700 font-medium">
+                    Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={restartCycle}
+                  className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors"
+                >
+                  <RefreshCw size={16} /> Yana bir bor
+                </button>
+                <button
+                  onClick={() => router.push('/student/lessons')}
+                  className="bg-[#f7f4ef] border border-[#ede9e1] text-[#0f172a] px-6 py-3 rounded-xl font-bold text-sm"
+                >
+                  Darslar
+                </button>
+              </div>
             </div>
-          </div>
+            <FeedbackWidget lessonId={id} />
+          </>
         )}
       </div>
     </div>

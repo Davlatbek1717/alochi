@@ -18,6 +18,42 @@ const SIGNAL_LABELS: Record<string, string> = {
   noParentTg: "Ota Telegram yo'q",
 };
 
+function StudentTable({ students, color }: { students: ChurnStudent[]; color: 'red' | 'yellow' }) {
+  if (students.length === 0) return <div className="text-slate-500 text-sm p-4">Yo&apos;q</div>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-700">
+            <th className="text-left px-4 py-3 text-slate-400">Ism</th>
+            <th className="text-center px-4 py-3 text-slate-400">Ball</th>
+            <th className="text-left px-4 py-3 text-slate-400">Sabablar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {students.map((s) => (
+            <tr key={s.id} className="border-b border-slate-700/50 hover:bg-slate-700/20">
+              <td className="px-4 py-3 text-white font-medium">{s.student.name}</td>
+              <td className="px-4 py-3 text-center">
+                <span className={`font-bold text-lg ${color === 'red' ? 'text-red-400' : 'text-yellow-400'}`}>{s.score}</span>
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(s.signals).filter(([, v]) => v).map(([k]) => (
+                    <span key={k} className={`text-xs px-2 py-0.5 rounded-full ${color === 'red' ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}`}>
+                      {SIGNAL_LABELS[k] ?? k}
+                    </span>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function ChurnPage() {
   const [high, setHigh] = useState<ChurnStudent[]>([]);
   const [medium, setMedium] = useState<ChurnStudent[]>([]);
@@ -37,42 +73,6 @@ export default function ChurnPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className="p-8 text-slate-400">Yuklanmoqda...</div>;
-
-  function StudentTable({ students, color }: { students: ChurnStudent[]; color: 'red' | 'yellow' }) {
-    if (students.length === 0) return <div className="text-slate-500 text-sm p-4">Yo&apos;q</div>;
-    return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="text-left px-4 py-3 text-slate-400">Ism</th>
-              <th className="text-center px-4 py-3 text-slate-400">Ball</th>
-              <th className="text-left px-4 py-3 text-slate-400">Sabablar</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => (
-              <tr key={s.id} className="border-b border-slate-700/50 hover:bg-slate-700/20">
-                <td className="px-4 py-3 text-white font-medium">{s.student.name}</td>
-                <td className="px-4 py-3 text-center">
-                  <span className={`font-bold text-lg ${color === 'red' ? 'text-red-400' : 'text-yellow-400'}`}>{s.score}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {Object.entries(s.signals).filter(([, v]) => v).map(([k]) => (
-                      <span key={k} className={`text-xs px-2 py-0.5 rounded-full ${color === 'red' ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}`}>
-                        {SIGNAL_LABELS[k] ?? k}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">

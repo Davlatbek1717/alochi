@@ -28,6 +28,7 @@ export default function ManagerDashboard() {
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
   const [highRisk, setHighRisk] = useState<Array<{
+    id: string;
     score: number;
     signals: Record<string, boolean>;
     student: { name: string };
@@ -237,8 +238,8 @@ export default function ManagerDashboard() {
               <span className="text-red-300 font-medium text-sm">Xavfli O&apos;quvchilar</span>
             </div>
             <div className="divide-y divide-slate-700/50">
-              {highRisk.map((s, i) => (
-                <div key={i} className="px-4 py-3 flex items-center justify-between">
+              {highRisk.map((s) => (
+                <div key={s.id} className="px-4 py-3 flex items-center justify-between">
                   <span className="text-white text-sm">{s.student.name}</span>
                   <span className="text-red-400 font-bold text-sm">{s.score} ball</span>
                 </div>

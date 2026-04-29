@@ -18,9 +18,11 @@ export function FeedbackWidget({ lessonId, onDone }: Props) {
     typeof window !== 'undefined' ? !!localStorage.getItem(`feedback_${lessonId}`) : false,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(false);
 
   async function submit(rating: number) {
     setSubmitting(true);
+    setError(false);
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest('/content-quality/feedback', {
@@ -31,7 +33,9 @@ export function FeedbackWidget({ lessonId, onDone }: Props) {
       setSubmitted(true);
       onDone?.();
     } catch {
-      setSubmitted(true);
+      setError(true);
+      setSubmitting(false);
+      return;
     } finally {
       setSubmitting(false);
     }
@@ -51,6 +55,7 @@ export function FeedbackWidget({ lessonId, onDone }: Props) {
           </button>
         ))}
       </div>
+      {error && <p className="text-xs text-red-400 text-center mt-2">Yuborishda xato. Qaytadan urinib ko&apos;ring.</p>}
     </div>
   );
 }
