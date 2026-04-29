@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import {
   BookMarked, CreditCard, Users, Building2,
   ShieldOff, Trophy, ChevronRight, Shield,
+  Settings, BarChart2, AlertTriangle, TrendingUp,
 } from 'lucide-react';
 
 const NAV_CARDS = [
@@ -12,6 +13,10 @@ const NAV_CARDS = [
   { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "Qo'shish, boshqarish",          color: 'hover:border-blue-300 hover:bg-blue-50' },
   { href: '/superadmin/keywords', icon: <ShieldOff size={22} />,  title: "Taqiqlangan so'zlar",  desc: 'Chat filtrlash',                color: 'hover:border-rose-300 hover:bg-rose-50' },
   { href: '/filadmin/tournaments',icon: <Trophy size={22} />,     title: 'Turnirlar',            desc: 'Musobaqalar boshqaruvi',        color: 'hover:border-amber-300 hover:bg-amber-50' },
+  { href: '/superadmin/adaptive',        icon: <Settings size={22} />,      title: 'Adaptiv Qiyinlik',     desc: 'N-back sozlamalari',            color: 'hover:border-blue-300 hover:bg-blue-50' },
+  { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate',           color: 'hover:border-purple-300 hover:bg-purple-50' },
+  { href: '/superadmin/churn',           icon: <AlertTriangle size={22} />, title: 'Churn Monitor',        desc: 'Xavfli o\'quvchilar',           color: 'hover:border-red-300 hover:bg-red-50' },
+  { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika',     color: 'hover:border-green-300 hover:bg-green-50' },
 ];
 
 export default function SuperadminDashboard() {

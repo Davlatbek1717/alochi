@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy } from 'lucide-react';
+import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 type StatusStudent = {
@@ -27,6 +27,11 @@ export default function ManagerDashboard() {
   const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
+  const [highRisk, setHighRisk] = useState<Array<{
+    score: number;
+    signals: Record<string, boolean>;
+    student: { name: string };
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [managerName, setManagerName] = useState('');
 
@@ -44,6 +49,10 @@ export default function ManagerDashboard() {
       setYellowStudents(yellowRes.data ?? []);
       setHighPerformers(highRes.data ?? []);
     }).finally(() => setLoading(false));
+
+    apiRequest<any[]>('/churn/high-risk', {}, token)
+      .then((r) => setHighRisk(r.data.slice(0, 5)))
+      .catch(() => {});
   }, []);
 
   const navCards = [
@@ -215,6 +224,24 @@ export default function ManagerDashboard() {
                   </div>
                   <Trophy size={14} className="text-[#f59e0b] shrink-0" />
                 </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Churn high-risk block */}
+        {highRisk.length > 0 && (
+          <div className="bg-slate-800/60 border border-red-900/40 rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b border-red-900/40 flex items-center gap-2">
+              <AlertTriangle size={16} className="text-red-400" />
+              <span className="text-red-300 font-medium text-sm">Xavfli O&apos;quvchilar</span>
+            </div>
+            <div className="divide-y divide-slate-700/50">
+              {highRisk.map((s, i) => (
+                <div key={i} className="px-4 py-3 flex items-center justify-between">
+                  <span className="text-white text-sm">{s.student.name}</span>
+                  <span className="text-red-400 font-bold text-sm">{s.score} ball</span>
+                </div>
               ))}
             </div>
           </div>
