@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { WifiOff, RefreshCw } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
+import { RetryButton } from './_components/RetryButton';
 
 export const metadata = {
   title: 'Offline — Alochi',
@@ -16,13 +16,7 @@ export default function OfflinePage() {
         <p className="text-slate-400 mb-8 leading-relaxed">
           Sahifa yuklanishi uchun internetga ulaning. Avval ko&apos;rgan sahifalaringiz hali ham ochiladi.
         </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900"
-        >
-          <RefreshCw size={16} />
-          Qayta urinish
-        </Link>
+        <RetryButton />
       </div>
     </div>
   );

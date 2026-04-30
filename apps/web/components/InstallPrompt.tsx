@@ -74,9 +74,13 @@ export function InstallPrompt() {
         <div className="flex-1 pr-4">
           <h3 className="text-sm font-semibold text-white mb-1">Alochi&apos;ni o&apos;rnatish</h3>
           {showIOSHint ? (
-            <p className="text-xs text-slate-400">
-              Share tugmasi → &quot;Add to Home Screen&quot; orqali o&apos;rnating.
-            </p>
+            <div className="text-xs text-slate-400 space-y-2">
+              <p>iPhone&apos;da o&apos;rnatish:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Pastdagi &quot;Ulashish&quot; tugmasini bosing</li>
+                <li>&quot;Bosh ekranga qo&apos;shish&quot; ni tanlang</li>
+              </ol>
+            </div>
           ) : (
             <>
               <p className="text-xs text-slate-400 mb-3">
