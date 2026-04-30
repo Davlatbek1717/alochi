@@ -5,11 +5,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Bot } from 'grammy';
+import { Bot, InlineKeyboard } from 'grammy';
 import { ParentHandler } from './handlers/parent.handler';
 import { StudentHandler } from './handlers/student.handler';
 import { StaffHandler } from './handlers/staff.handler';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -22,6 +23,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private parentHandler: ParentHandler,
     private studentHandler: StudentHandler,
     private staffHandler: StaffHandler,
+    private templates: NotificationTemplatesService,
   ) {}
 
   async onModuleInit() {
@@ -126,6 +128,21 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.studentHandler.handleStreak(ctx, telegramId);
     });
 
+    this.bot.command('rating', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.studentHandler.handleRating(ctx, telegramId);
+    });
+
+    this.bot.command('davomat', async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.staffHandler.handleDavomat(ctx, telegramId);
+    });
+
+    this.bot.callbackQuery(/^att:.+/, async (ctx) => {
+      const telegramId = BigInt(ctx.from?.id ?? 0);
+      await this.staffHandler.handleAttendanceCallback(ctx, telegramId);
+    });
+
     this.bot.command('attendance', async (ctx) => {
       const telegramId = BigInt(ctx.from?.id ?? 0);
       await this.staffHandler.handleAttendance(ctx, telegramId);
@@ -148,18 +165,102 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendMessage(telegramId: string | bigint, text: string) {
+  async sendMessage(
+    telegramId: string | bigint,
+    text: string,
+    extra?: { reply_markup?: unknown },
+  ) {
     if (!this.bot) return;
 
     try {
       await this.bot.api.sendMessage(telegramId.toString(), text, {
         parse_mode: 'HTML',
-      });
+        ...(extra ?? {}),
+      } as Parameters<Bot['api']['sendMessage']>[2]);
     } catch (err) {
       this.logger.warn(
         `Telegram xabar yuborib bo'lmadi (${telegramId}): ${err}`,
       );
     }
+  }
+
+  /**
+   * Send a templated message to a user by ID. Looks up `telegramId` from
+   * the `users` table; silently skips if the user has not linked Telegram.
+   */
+  async sendToUser(
+    userId: string,
+    key: string,
+    vars: Record<string, string | number | undefined> = {},
+    tenantId?: string,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { telegramId: true, tenantId: true },
+    });
+    if (!user?.telegramId) return false;
+    const text = await this.templates.render(
+      key,
+      vars,
+      tenantId ?? user.tenantId,
+    );
+    await this.sendMessage(user.telegramId, text);
+    return true;
+  }
+
+  /**
+   * Send a templated message to a student's parent (via parentTelegramId).
+   * If the student's parent telegram is not linked, logs and returns false.
+   */
+  async sendToParent(
+    studentId: string,
+    key: string,
+    vars: Record<string, string | number | undefined> = {},
+    tenantId?: string,
+  ): Promise<boolean> {
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { parentTelegramId: true, tenantId: true, name: true },
+    });
+    if (!student?.parentTelegramId) {
+      this.logger.warn(
+        `sendToParent: student ${studentId} parentTelegramId yo'q — skip`,
+      );
+      return false;
+    }
+    const text = await this.templates.render(
+      key,
+      { studentName: student.name, ...vars },
+      tenantId ?? student.tenantId,
+    );
+    await this.sendMessage(student.parentTelegramId, text);
+    return true;
+  }
+
+  /**
+   * Render a templated message and send it directly to a Telegram chat ID.
+   */
+  async sendTemplate(
+    telegramId: string | bigint,
+    key: string,
+    vars: Record<string, string | number | undefined> = {},
+    tenantId?: string,
+  ) {
+    const text = await this.templates.render(key, vars, tenantId);
+    await this.sendMessage(telegramId, text);
+  }
+
+  /** Exposes the underlying bot so other handlers can register commands. */
+  getBot(): Bot | null {
+    return this.bot;
+  }
+
+  /** Helper used by /davomat keyboard rendering. */
+  static buildAttendanceKeyboard(studentId: string): InlineKeyboard {
+    return new InlineKeyboard()
+      .text('✅', `att:${studentId}:present`)
+      .text('⏰', `att:${studentId}:late`)
+      .text('❌', `att:${studentId}:absent`);
   }
 
   formatDailyReport(data: {

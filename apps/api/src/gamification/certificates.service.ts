@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import * as QRCode from 'qrcode';
 
@@ -9,9 +10,19 @@ const CERTIFICATE_LEVELS = [
   { level: 'bronze', minLessons: 50 },
 ] as const;
 
+const CERT_NAMES: Record<string, string> = {
+  bronze: "🥉 Bronze A'lochi",
+  silver: "🥈 Silver A'lochi",
+  gold: "🥇 Gold A'lochi",
+  diamond: "💎 Diamond A'lochi",
+};
+
 @Injectable()
 export class CertificatesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private events?: EventEmitter2,
+  ) {}
 
   async checkAndAward(studentId: string, tenantId: string) {
     const completedCount = await this.prisma.studentProgress.count({
@@ -32,7 +43,7 @@ export class CertificatesService {
       `https://alochi.uz/verify/${tenantId}/${studentId}/${eligible.level}`,
     );
 
-    return this.prisma.certificate.create({
+    const certificate = await this.prisma.certificate.create({
       data: {
         studentId,
         tenantId,
@@ -41,6 +52,16 @@ export class CertificatesService {
         qrCode,
       },
     });
+
+    this.events?.emit('certificate.earned', {
+      certificateId: certificate.id,
+      studentId,
+      tenantId,
+      level: eligible.level,
+      certName: CERT_NAMES[eligible.level] ?? eligible.level,
+    });
+
+    return certificate;
   }
 
   async getStudentCertificates(studentId: string) {

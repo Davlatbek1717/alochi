@@ -2,10 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
 import { AdaptiveService } from '../adaptive/adaptive.service';
 import { ChurnService } from '../churn/churn.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
@@ -23,6 +25,8 @@ export class CronService {
     private clickhouse: ClickHouseService,
     private http: HttpService,
     private config: ConfigService,
+    private events: EventEmitter2,
+    private templates: NotificationTemplatesService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -86,6 +90,18 @@ export class CronService {
   async runDelegationComplete() {
     const now = new Date();
 
+    // Fetch the rows we are about to complete so we can emit per-row events
+    // *before* updating — otherwise the toUserId/fromUserId become stale.
+    const expired = await this.prisma.delegation.findMany({
+      where: { status: 'active', endsAt: { lte: now } },
+      select: {
+        id: true,
+        fromUserId: true,
+        toUserId: true,
+        tenantId: true,
+      },
+    });
+
     const result = await this.prisma.delegation.updateMany({
       where: {
         status: 'active',
@@ -93,6 +109,15 @@ export class CronService {
       },
       data: { status: 'completed' },
     });
+
+    for (const d of expired) {
+      this.events?.emit('delegation.completed', {
+        delegationId: d.id,
+        fromUserId: d.fromUserId,
+        toUserId: d.toUserId,
+        tenantId: d.tenantId,
+      });
+    }
 
     if (result.count > 0) {
       this.logger.log(`${result.count} delegatsiya avtomatik yakunlandi`);
@@ -478,5 +503,54 @@ export class CronService {
 
   async triggerPaymentUnblockManually() {
     return this.runPaymentUnblock();
+  }
+
+  /**
+   * Notify the parent of a student who has been absent for 2 consecutive
+   * days (no `attendance_students` row in the last 2 days). Runs once daily
+   * at 18:00 — late enough that today's attendance has been logged.
+   */
+  @Cron('0 18 * * *', { name: 'absent_2day_parent_reminder' })
+  async runAbsent2DayParentReminder() {
+    try {
+      const twoDaysAgo = new Date();
+      twoDaysAgo.setHours(0, 0, 0, 0);
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      const students = await this.prisma.user.findMany({
+        where: {
+          role: 'student',
+          status: 'active',
+          parentTelegramId: { not: null },
+          studentAttendances: {
+            none: {
+              date: { gte: twoDaysAgo },
+              status: { in: ['present', 'late'] },
+            },
+          },
+        },
+        select: { id: true, name: true, tenantId: true },
+      });
+
+      let sent = 0;
+      for (const s of students) {
+        const ok = await this.telegram.sendToParent(
+          s.id,
+          'attendance.absent_2day',
+          { studentName: s.name },
+          s.tenantId,
+        );
+        if (ok) sent++;
+      }
+      if (sent > 0) {
+        this.logger.log(
+          `absent_2day_parent_reminder: ${sent}/${students.length} ota-ona xabardor qilindi`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `absent_2day_parent_reminder failed: ${(err as Error).message}`,
+      );
+    }
   }
 }

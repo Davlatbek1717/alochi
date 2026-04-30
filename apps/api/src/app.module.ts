@@ -29,6 +29,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { HealthModule } from './health/health.module';
 import { TasksModule } from './tasks/tasks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { NotificationTemplatesModule } from './notification-templates/notification-templates.module';
 import { TournamentsModule } from './tournaments/tournaments.module';
 import { ExamsModule } from './exams/exams.module';
 import { ChurnModule } from './churn/churn.module';
@@ -73,6 +74,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     HealthModule,
     TasksModule,
     NotificationsModule,
+    NotificationTemplatesModule,
     TournamentsModule,
     ExamsModule,
     ChurnModule,

@@ -137,7 +137,12 @@ describe('WarningsService', () => {
     });
 
     it('cancels warning and unblocks student when active count drops below limit', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', tenantId: 't1', isCancelled: true };
+      const cancelledWarning = {
+        id: 'w1',
+        studentId: 's1',
+        tenantId: 't1',
+        isCancelled: true,
+      };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(2);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
@@ -156,7 +161,12 @@ describe('WarningsService', () => {
     });
 
     it('does not change status when cancelled student was not blocked_warning', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', tenantId: 't1', isCancelled: true };
+      const cancelledWarning = {
+        id: 'w1',
+        studentId: 's1',
+        tenantId: 't1',
+        isCancelled: true,
+      };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(1);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({

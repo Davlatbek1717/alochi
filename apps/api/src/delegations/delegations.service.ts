@@ -60,11 +60,15 @@ export class DelegationsService {
       select: { name: true },
     });
     this.events.emit('delegation.created', {
+      delegationId: delegation.id,
       toUserId: dto.toUserId,
+      fromUserId: dto.fromUserId,
       fromUserName: fromUser?.name ?? '',
       role: dto.delegatedRole,
+      permissions: dto.permissions,
       endsAt: dto.endsAt.toISOString().split('T')[0],
       reason: dto.reason,
+      tenantId: dto.tenantId,
     });
 
     return delegation;
@@ -112,15 +116,28 @@ export class DelegationsService {
       }),
     ]);
 
-    if (action === 'rejected') {
-      const toUser = await this.prisma.user.findUnique({
-        where: { id: responderId },
-        select: { name: true },
+    const toUser = await this.prisma.user.findUnique({
+      where: { id: responderId },
+      select: { name: true },
+    });
+
+    if (action === 'accepted') {
+      this.events.emit('delegation.accepted', {
+        delegationId,
+        fromUserId: delegation.fromUserId,
+        toUserId: delegation.toUserId,
+        toUserName: toUser?.name ?? '',
+        acceptanceReason: reason ?? '',
+        tenantId: delegation.tenantId,
       });
+    } else {
       this.events.emit('delegation.rejected', {
+        delegationId,
         fromUserId: delegation.fromUserId,
         toUserName: toUser?.name ?? '',
+        rejectionReason: reason ?? '',
         reason: reason ?? '',
+        tenantId: delegation.tenantId,
       });
     }
 
@@ -165,9 +182,14 @@ export class DelegationsService {
       select: { name: true },
     });
     this.events.emit('delegation.cancelled', {
+      delegationId,
       toUserId: delegation.toUserId,
+      fromUserId: delegation.fromUserId,
+      cancelledBy,
       fromUserName: fromUser?.name ?? '',
+      role: delegation.delegatedRole,
       reason,
+      tenantId: delegation.tenantId,
     });
 
     return updated;

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
@@ -7,7 +8,18 @@ export class StreakService {
   constructor(
     private prisma: PrismaService,
     private analytics: AnalyticsService,
+    @Optional() private events?: EventEmitter2,
   ) {}
+
+  private emitMilestoneIfReached(
+    studentId: string,
+    newStreak: number,
+    tenantId?: string,
+  ): void {
+    if (newStreak === 30) {
+      this.events?.emit('streak.milestone30', { studentId, tenantId });
+    }
+  }
 
   private daysBetween(a: Date, b: Date): number {
     const msPerDay = 1000 * 60 * 60 * 24;
@@ -68,6 +80,7 @@ export class StreakService {
           })
           .catch(() => {});
       }
+      this.emitMilestoneIfReached(studentId, newStreak, user?.tenantId);
       return updated;
     }
 
@@ -92,6 +105,7 @@ export class StreakService {
           })
           .catch(() => {});
       }
+      this.emitMilestoneIfReached(studentId, newStreak, user?.tenantId);
       return updated;
     }
 

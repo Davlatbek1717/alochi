@@ -37,6 +37,13 @@ export class StatusService {
 
     const englishToday = existing?.englishStatus ?? null;
     const previousCritical = existing?.criticalStatus ?? null;
+    const oldColor = existing
+      ? this.worstColor([
+          existing.englishStatus,
+          existing.personalStatus,
+          existing.criticalStatus,
+        ])
+      : null;
 
     const autoGreen =
       dto.color === 'yashil' &&
@@ -73,13 +80,16 @@ export class StatusService {
       }
     }
 
+    const newColor = this.worstColor([
+      result.englishStatus,
+      result.personalStatus,
+      result.criticalStatus,
+    ]);
     this.events.emit('status.updated', {
       studentId: dto.studentId,
-      color: this.worstColor([
-        result.englishStatus,
-        result.personalStatus,
-        result.criticalStatus,
-      ]),
+      oldColor,
+      newColor,
+      color: newColor,
       changedBy: actor.userId,
       tenantId: actor.tenantId,
       timestamp: new Date().toISOString(),
@@ -95,6 +105,17 @@ export class StatusService {
   async setCriticalStatus(actor: ActorContext, dto: SetCriticalStatusDto) {
     const dateObj = dto.date ? new Date(dto.date) : startOfToday();
 
+    const existing = await this.prisma.studentStatus.findUnique({
+      where: { studentId_date: { studentId: dto.studentId, date: dateObj } },
+    });
+    const oldColor = existing
+      ? this.worstColor([
+          existing.englishStatus,
+          existing.personalStatus,
+          existing.criticalStatus,
+        ])
+      : null;
+
     const result = await this.prisma.studentStatus.upsert({
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },
       create: {
@@ -109,13 +130,16 @@ export class StatusService {
       },
     });
 
+    const newColor = this.worstColor([
+      result.englishStatus,
+      result.personalStatus,
+      result.criticalStatus,
+    ]);
     this.events.emit('status.updated', {
       studentId: dto.studentId,
-      color: this.worstColor([
-        result.englishStatus,
-        result.personalStatus,
-        result.criticalStatus,
-      ]),
+      oldColor,
+      newColor,
+      color: newColor,
       changedBy: actor.userId,
       tenantId: actor.tenantId,
       timestamp: new Date().toISOString(),

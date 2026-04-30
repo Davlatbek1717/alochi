@@ -3,6 +3,8 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from '../telegram.service';
 
+const DEFAULT_WARNING_BLOCK_LIMIT = 3;
+
 @Injectable()
 export class NotificationHandler {
   private readonly logger = new Logger(NotificationHandler.name);
@@ -12,6 +14,15 @@ export class NotificationHandler {
     private telegram: TelegramService,
   ) {}
 
+  /**
+   * Spec §6.2 — count-differentiated warning Telegram delivery.
+   *
+   *   count === 1                → student-only Telegram (`warning.1`).
+   *   count === 2                → parent Telegram (`warning.2`); mentor in-app
+   *                                already arrives via NotificationEventHandler.
+   *   count >= warningBlockLimit → parent Telegram (`warning.3`); filadmin +
+   *                                superadmin in-app via student.blocked event.
+   */
   @OnEvent('warning.given')
   async onWarningGiven(payload: {
     studentId: string;
@@ -24,33 +35,66 @@ export class NotificationHandler {
         select: {
           name: true,
           telegramId: true,
-          branchId: true,
+          parentTelegramId: true,
           tenantId: true,
         },
       });
       if (!student) return;
 
-      const msg = this.telegram.formatWarningNotification(
-        student.name,
-        payload.count,
-        payload.warning.reasonText,
-      );
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: student.tenantId },
+        select: { warningBlockLimit: true },
+      });
+      const blockLimit =
+        tenant?.warningBlockLimit ?? DEFAULT_WARNING_BLOCK_LIMIT;
 
-      if (student.telegramId) {
-        await this.telegram.sendMessage(student.telegramId, msg);
-      }
+      const reason = payload.warning.reasonText;
 
-      if (payload.count >= 2 && student.branchId) {
-        const mentor = await this.prisma.user.findFirst({
-          where: {
-            branchId: student.branchId,
-            role: 'mentor',
-            telegramId: { not: null },
-          },
-          select: { telegramId: true },
-        });
-        if (mentor?.telegramId) {
-          await this.telegram.sendMessage(mentor.telegramId, msg);
+      if (payload.count === 1) {
+        if (student.telegramId) {
+          await this.telegram.sendTemplate(
+            student.telegramId,
+            'warning.1',
+            { reason },
+            student.tenantId,
+          );
+        }
+      } else if (payload.count === 2) {
+        if (student.telegramId) {
+          await this.telegram.sendTemplate(
+            student.telegramId,
+            'warning.1',
+            { reason },
+            student.tenantId,
+          );
+        }
+        if (student.parentTelegramId) {
+          await this.telegram.sendTemplate(
+            student.parentTelegramId,
+            'warning.2',
+            { studentName: student.name, reason },
+            student.tenantId,
+          );
+        } else {
+          this.logger.warn(
+            `warning.2: student ${payload.studentId} parentTelegramId yo'q — parent xabari yuborilmadi`,
+          );
+        }
+      } else if (payload.count >= blockLimit) {
+        // Block-threshold copy. The student.blocked event also fires from
+        // WarningsService and triggers the in-app filadmin / superadmin
+        // notifications via NotificationEventHandler.
+        if (student.parentTelegramId) {
+          await this.telegram.sendTemplate(
+            student.parentTelegramId,
+            'warning.3',
+            { studentName: student.name },
+            student.tenantId,
+          );
+        } else {
+          this.logger.warn(
+            `warning.3: student ${payload.studentId} parentTelegramId yo'q — parent xabari yuborilmadi`,
+          );
         }
       }
     } catch (err) {
@@ -67,112 +111,31 @@ export class NotificationHandler {
     try {
       const student = await this.prisma.user.findUnique({
         where: { id: payload.studentId },
-        select: { name: true, telegramId: true, tenantId: true },
+        select: {
+          name: true,
+          telegramId: true,
+          parentTelegramId: true,
+          tenantId: true,
+        },
       });
       if (!student) return;
 
-      const msg = this.telegram.formatWarningNotification(
-        student.name,
-        payload.activeCount,
-        payload.reason,
-      );
-
-      if (student.telegramId) {
-        await this.telegram.sendMessage(student.telegramId, msg);
+      // Notify parent at the block threshold (warning.3 copy already covers
+      // this for warning-driven blocks; payment-driven blocks use the legacy
+      // warning summary template). Telegram-only — in-app handled elsewhere.
+      if (student.parentTelegramId) {
+        await this.telegram.sendTemplate(
+          student.parentTelegramId,
+          'warning.3',
+          { studentName: student.name },
+          student.tenantId,
+        );
       }
-
-      const admins = await this.prisma.user.findMany({
-        where: {
-          tenantId: student.tenantId,
-          role: { in: ['filadmin', 'superadmin'] },
-          telegramId: { not: null },
-        },
-        select: { telegramId: true },
-      });
-      await Promise.all(
-        admins.map((a) => this.telegram.sendMessage(a.telegramId!, msg)),
-      );
     } catch (err) {
       this.logger.error(`student.blocked handler xatosi: ${err}`);
     }
   }
 
-  @OnEvent('delegation.created')
-  async onDelegationCreated(payload: {
-    toUserId: string;
-    fromUserName: string;
-    role: string;
-    endsAt: string;
-    reason: string;
-  }) {
-    try {
-      const recipient = await this.prisma.user.findUnique({
-        where: { id: payload.toUserId },
-        select: { telegramId: true },
-      });
-      if (!recipient?.telegramId) return;
-
-      const msg = [
-        `📋 <b>Yangi delegatsiya</b>`,
-        `Kim berdi: ${payload.fromUserName}`,
-        `Rol: ${payload.role}`,
-        `Sabab: ${payload.reason}`,
-        `Muddat: ${payload.endsAt}`,
-      ].join('\n');
-
-      await this.telegram.sendMessage(recipient.telegramId, msg);
-    } catch (err) {
-      this.logger.error(`delegation.created handler xatosi: ${err}`);
-    }
-  }
-
-  @OnEvent('delegation.rejected')
-  async onDelegationRejected(payload: {
-    fromUserId: string;
-    toUserName: string;
-    reason: string;
-  }) {
-    try {
-      const sender = await this.prisma.user.findUnique({
-        where: { id: payload.fromUserId },
-        select: { telegramId: true },
-      });
-      if (!sender?.telegramId) return;
-
-      const msg = [
-        `❌ <b>Delegatsiya rad etildi</b>`,
-        `Kim tomonidan: ${payload.toUserName}`,
-        `Sabab: ${payload.reason}`,
-      ].join('\n');
-
-      await this.telegram.sendMessage(sender.telegramId, msg);
-    } catch (err) {
-      this.logger.error(`delegation.rejected handler xatosi: ${err}`);
-    }
-  }
-
-  @OnEvent('delegation.cancelled')
-  async onDelegationCancelled(payload: {
-    toUserId: string;
-    fromUserName: string;
-    reason: string;
-  }) {
-    try {
-      const recipient = await this.prisma.user.findUnique({
-        where: { id: payload.toUserId },
-        select: { telegramId: true },
-      });
-      if (!recipient?.telegramId) return;
-
-      const msg = [
-        `🚫 <b>Delegatsiya bekor qilindi</b>`,
-        `Kim tomonidan: ${payload.fromUserName}`,
-        `Sabab: ${payload.reason}`,
-      ].join('\n');
-
-      await this.telegram.sendMessage(recipient.telegramId, msg);
-    } catch (err) {
-      this.logger.error(`delegation.cancelled handler xatosi: ${err}`);
-    }
-  }
+  // Delegation Telegram delivery moved to DelegationHandler (Phase 6 §6.1)
+  // so all delegation copy is template-driven and centrally maintained.
 }

@@ -6,9 +6,10 @@ import { FaceService } from './face.service';
 import { DevicesService } from './devices.service';
 import { DevicesController } from './devices.controller';
 import { AttendanceModule } from '../attendance/attendance.module';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-  imports: [AttendanceModule],
+  imports: [AttendanceModule, TelegramModule],
   controllers: [FaceController, DevicesController],
   providers: [CacheService, CronFaceService, FaceService, DevicesService],
   exports: [CacheService, FaceService, DevicesService],
