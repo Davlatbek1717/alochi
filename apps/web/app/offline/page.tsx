@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { WifiOff } from 'lucide-react';
 
 export const metadata = {
@@ -15,12 +16,12 @@ export default function OfflinePage() {
         <p className="text-slate-400 mb-6">
           Sahifa yuklanishi uchun internetga ulaning. Avval ko&apos;rgan sahifalaringiz hali ham ochiladi.
         </p>
-        <a
+        <Link
           href="/"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
         >
           Qayta urinish
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -51,7 +51,12 @@ export default function ManagerDashboard() {
       setHighPerformers(highRes.data ?? []);
     }).finally(() => setLoading(false));
 
-    apiRequest<any[]>('/churn/high-risk', {}, token)
+    apiRequest<Array<{
+      id: string;
+      score: number;
+      signals: Record<string, boolean>;
+      student: { name: string };
+    }>>('/churn/high-risk', {}, token)
       .then((r) => setHighRisk(r.data.slice(0, 5)))
       .catch(() => {});
   }, []);
