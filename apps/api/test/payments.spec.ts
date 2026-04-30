@@ -6,6 +6,7 @@ const mockPrisma = {
   payment: {
     upsert: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
   },
   user: {
     findMany: jest.fn(),
@@ -43,6 +44,11 @@ describe('PaymentsService', () => {
       amount: 500000,
       paidAt: new Date('2025-04-15T12:00:00.000Z'),
     };
+
+    beforeEach(() => {
+      // Phase 21.4: default to no existing payment so markPaid proceeds.
+      mockPrisma.payment.findUnique.mockResolvedValue(null);
+    });
 
     it('calls upsert with correct composite key and unblockAt set to next day midnight', async () => {
       const expectedRecord = { id: 'pay1', ...baseDto };

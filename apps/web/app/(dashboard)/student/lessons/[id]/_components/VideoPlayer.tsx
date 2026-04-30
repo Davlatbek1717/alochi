@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 interface VideoPlayerProps {
   youtubeUrl: string;
   onCompleted: () => void;
+  lessonId?: string;
 }
 
 function extractVideoId(url: string): string | null {
@@ -17,7 +18,51 @@ interface YTPlayer {
   getPlayerState: () => number;
   getDuration: () => number;
   getCurrentTime: () => number;
+  seekTo?: (seconds: number, allowSeekAhead?: boolean) => void;
   destroy: () => void;
+}
+
+const VIDEO_PROGRESS_PREFIX = 'video_progress_';
+const VIDEO_PROGRESS_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
+const VIDEO_PROGRESS_HARD_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 d
+
+interface VideoProgress {
+  position: number;
+  percent: number;
+  completed: boolean;
+  savedAt: number;
+}
+
+/**
+ * Phase 21.3: drop very old (>30 d) progress entries from localStorage so the
+ * key namespace doesn't grow unbounded across many lessons.
+ */
+function pruneOldVideoProgress() {
+  if (typeof window === 'undefined') return;
+  try {
+    const now = Date.now();
+    const toDelete: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (!key || !key.startsWith(VIDEO_PROGRESS_PREFIX)) continue;
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      try {
+        const data = JSON.parse(raw) as VideoProgress;
+        if (
+          typeof data?.savedAt !== 'number' ||
+          now - data.savedAt > VIDEO_PROGRESS_HARD_TTL_MS
+        ) {
+          toDelete.push(key);
+        }
+      } catch {
+        toDelete.push(key);
+      }
+    }
+    toDelete.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    // localStorage may be unavailable (private mode, quota); ignore.
+  }
 }
 
 declare global {
@@ -30,17 +75,24 @@ declare global {
   }
 }
 
-export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
+export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerProps) {
   const playerRef = useRef<YTPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const watchedRef = useRef(0);
   const completedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Phase 21.3: separate 5s save loop, restore-on-mount, prune old entries.
+  const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const restoredRef = useRef(false);
 
   const videoId = extractVideoId(youtubeUrl);
+  const storageKey = lessonId ? `${VIDEO_PROGRESS_PREFIX}${lessonId}` : null;
 
   useEffect(() => {
     if (!videoId) return;
+
+    // Prune stale (>30 d) entries on mount to bound localStorage usage.
+    pruneOldVideoProgress();
 
     const initPlayer = () => {
       playerRef.current = new window.YT.Player(containerRef.current!, {
@@ -56,6 +108,31 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
             }
           },
           onReady: () => {
+            // Phase 21.3: restore prior position if saved within last 24h.
+            if (storageKey && !restoredRef.current && playerRef.current) {
+              try {
+                const raw = window.localStorage.getItem(storageKey);
+                if (raw) {
+                  const data = JSON.parse(raw) as VideoProgress;
+                  if (
+                    typeof data?.savedAt === 'number' &&
+                    Date.now() - data.savedAt < VIDEO_PROGRESS_TTL_MS &&
+                    typeof data?.position === 'number' &&
+                    data.position > 1 &&
+                    typeof playerRef.current.seekTo === 'function'
+                  ) {
+                    playerRef.current.seekTo(data.position, true);
+                    if (typeof data.percent === 'number') {
+                      watchedRef.current = data.percent;
+                    }
+                  }
+                }
+              } catch {
+                // ignore corrupt entries
+              }
+              restoredRef.current = true;
+            }
+
             intervalRef.current = setInterval(() => {
               if (!playerRef.current) return;
               const state = playerRef.current.getPlayerState();
@@ -77,6 +154,27 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
                 if (rate !== 1) playerRef.current.setPlaybackRate(1);
               }
             }, 500);
+
+            // Phase 21.3: save progress every 5s.
+            if (storageKey) {
+              saveIntervalRef.current = setInterval(() => {
+                if (!playerRef.current) return;
+                try {
+                  const position = playerRef.current.getCurrentTime();
+                  const duration = playerRef.current.getDuration();
+                  const percent = duration > 0 ? (position / duration) * 100 : 0;
+                  const payload: VideoProgress = {
+                    position,
+                    percent,
+                    completed: percent >= 90,
+                    savedAt: Date.now(),
+                  };
+                  window.localStorage.setItem(storageKey, JSON.stringify(payload));
+                } catch {
+                  // quota or permission error — ignore so playback continues.
+                }
+              }, 5000);
+            }
           },
         },
       });
@@ -95,9 +193,10 @@ export function VideoPlayer({ youtubeUrl, onCompleted }: VideoPlayerProps) {
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (saveIntervalRef.current) clearInterval(saveIntervalRef.current);
       if (playerRef.current) playerRef.current.destroy();
     };
-  }, [videoId]);
+  }, [videoId, storageKey]);
 
   if (!videoId) {
     return <div className="bg-red-100 p-4 rounded-lg text-red-700">Video URL noto&apos;g&apos;ri</div>;

@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { of, throwError } from 'rxjs';
 import { ServiceUnavailableException } from '@nestjs/common';
-import { AiService } from './ai.service';
+import { AiService, withRetry } from './ai.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { StatusService } from '../student-status/status.service';
 
@@ -111,5 +111,50 @@ describe('AiService', () => {
       await service.evaluate('ctx', [], 'student-1');
       expect(mockStatusService.setEnglishStatus).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('withRetry', () => {
+  it('returns success on first try without retrying', async () => {
+    const fn = jest.fn().mockResolvedValue('ok');
+    const result = await withRetry(fn, 3, 1);
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries on 5xx and succeeds on third attempt', async () => {
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce({ response: { status: 503 } })
+      .mockRejectedValueOnce({ response: { status: 502 } })
+      .mockResolvedValueOnce('done');
+    const result = await withRetry(fn, 3, 1);
+    expect(result).toBe('done');
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it('throws after max attempts when always failing with 5xx', async () => {
+    const err = { response: { status: 500 }, message: 'boom' };
+    const fn = jest.fn().mockRejectedValue(err);
+    await expect(withRetry(fn, 3, 1)).rejects.toEqual(err);
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it('does NOT retry on 4xx (client error)', async () => {
+    const err = { response: { status: 400 }, message: 'bad' };
+    const fn = jest.fn().mockRejectedValue(err);
+    await expect(withRetry(fn, 3, 1)).rejects.toEqual(err);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries network errors (no response)', async () => {
+    const err = { code: 'ECONNREFUSED', message: 'conn refused' };
+    const fn = jest
+      .fn()
+      .mockRejectedValueOnce(err)
+      .mockResolvedValueOnce('recovered');
+    const result = await withRetry(fn, 3, 1);
+    expect(result).toBe('recovered');
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 });

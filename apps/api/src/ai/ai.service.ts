@@ -11,6 +11,38 @@ import Anthropic from '@anthropic-ai/sdk';
 import { StatusService } from '../student-status/status.service';
 import { StatusColor } from '../student-status/status.types';
 
+/**
+ * Phase 21.1: retry transient failures (5xx, network errors, timeouts) for
+ * external AI calls. Skips 4xx because client errors are not transient.
+ * Backoff: 500ms, 1000ms, 1500ms.
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  max = 3,
+  baseMs = 500,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < max; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      const err = e as {
+        response?: { status?: number };
+        code?: string;
+        message?: string;
+      };
+      const status = err?.response?.status;
+      const isClientError =
+        typeof status === 'number' && status >= 400 && status < 500;
+      const isRetryable = !isClientError;
+      if (!isRetryable || i === max - 1) break;
+      await new Promise((r) => setTimeout(r, baseMs * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 @Injectable()
 export class AiService {
   private readonly aiServiceUrl: string;
@@ -38,12 +70,14 @@ export class AiService {
     history: { role: string; content: string }[],
   ) {
     try {
-      const res = await firstValueFrom(
-        this.http.post(`${this.aiServiceUrl}/ai/tutor/ask`, {
-          lesson_context: lessonContext,
-          question,
-          conversation_history: history,
-        }),
+      const res = await withRetry(() =>
+        firstValueFrom(
+          this.http.post(`${this.aiServiceUrl}/ai/tutor/ask`, {
+            lesson_context: lessonContext,
+            question,
+            conversation_history: history,
+          }),
+        ),
       );
       return res.data;
     } catch {
@@ -68,11 +102,13 @@ export class AiService {
   ) {
     let data: { score?: number } & Record<string, unknown>;
     try {
-      const res = await firstValueFrom(
-        this.http.post(`${this.aiServiceUrl}/ai/evaluate/`, {
-          lesson_context: lessonContext,
-          student_answers: studentAnswers,
-        }),
+      const res = await withRetry(() =>
+        firstValueFrom(
+          this.http.post(`${this.aiServiceUrl}/ai/evaluate/`, {
+            lesson_context: lessonContext,
+            student_answers: studentAnswers,
+          }),
+        ),
       );
       data = res.data;
     } catch {
@@ -111,11 +147,13 @@ export class AiService {
 
   async checkPronunciation(wordEn: string, audioBase64: string) {
     try {
-      const res = await firstValueFrom(
-        this.http.post(`${this.aiServiceUrl}/ai/speech/check`, {
-          word_en: wordEn,
-          audio_base64: audioBase64,
-        }),
+      const res = await withRetry(() =>
+        firstValueFrom(
+          this.http.post(`${this.aiServiceUrl}/ai/speech/check`, {
+            word_en: wordEn,
+            audio_base64: audioBase64,
+          }),
+        ),
       );
       return res.data;
     } catch {
@@ -222,19 +260,21 @@ export class AiService {
       .map((e) => `"${e.question}" (${e.errorCount} marta xato)`)
       .join('\n');
 
-    const message = await this.anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [
-        {
-          role: 'user',
-          content:
-            `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
-            `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
-            `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
-        },
-      ],
-    });
+    const message = await withRetry(() =>
+      this.anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [
+          {
+            role: 'user',
+            content:
+              `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
+              `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
+              `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
+          },
+        ],
+      }),
+    );
 
     try {
       const text =

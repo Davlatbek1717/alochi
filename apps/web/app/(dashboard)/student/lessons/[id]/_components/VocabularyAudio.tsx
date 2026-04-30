@@ -16,6 +16,12 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
   const [score, setScore] = useState<number | null>(null);
   const [permError, setPermError] = useState('');
 
+  // Phase 21.2: after 3 consecutive Azure speech failures we fall back to a
+  // text-input flow so the user can still progress.
+  const [azureFails, setAzureFails] = useState(0);
+  const [audioMode, setAudioMode] = useState(true);
+  const [textAnswer, setTextAnswer] = useState('');
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
@@ -76,11 +82,29 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
       const json = await res.json() as ScoreResult & { error?: string };
       if (!res.ok) throw new Error(json.error ?? 'Xato yuz berdi');
       setScore(json.score ?? 0);
+      setAzureFails(0); // success → reset counter
     } catch (err) {
       setPermError(err instanceof Error ? err.message : 'Yuborishda xato yuz berdi');
+      setAzureFails((c) => {
+        const next = c + 1;
+        // After 3 consecutive Azure failures, switch to text-input fallback.
+        if (next >= 3) setAudioMode(false);
+        return next;
+      });
     } finally {
       setLoading(false);
     }
+  }
+
+  function submitTextAnswer() {
+    const trimmed = textAnswer.trim();
+    if (!trimmed) return;
+    // Simple local match: case-insensitive equality with the target word.
+    // Server-side validation can be added later; this unblocks the user when
+    // the speech pipeline is unreachable.
+    const ok = trimmed.toLowerCase() === word.toLowerCase();
+    setScore(ok ? 100 : 50);
+    setPermError('');
   }
 
   function getScoreDisplay() {
@@ -121,42 +145,78 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
         </div>
       )}
 
+      {!audioMode && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p className="text-amber-700 text-sm">
+            Ovoz aniqlanmadi. Iltimos, javobni yozing.
+          </p>
+        </div>
+      )}
+
       {scoreDisplay && (
         <div className={`rounded-xl p-3 border text-center ${scoreDisplay.bg}`}>
           <p className={`font-semibold ${scoreDisplay.color}`}>{scoreDisplay.label}</p>
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-3">
-        {recording && (
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-sm text-red-500 font-medium">Yozib olinmoqda...</span>
-          </div>
-        )}
+      {audioMode ? (
+        <div className="flex flex-col items-center gap-3">
+          {recording && (
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-sm text-red-500 font-medium">Yozib olinmoqda...</span>
+            </div>
+          )}
 
-        {loading && (
-          <p className="text-sm text-gray-500">Tekshirilmoqda...</p>
-        )}
+          {loading && (
+            <p className="text-sm text-gray-500">Tekshirilmoqda...</p>
+          )}
 
-        {!recording && !loading && (
+          {!recording && !loading && (
+            <button
+              onClick={startRecording}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
+            >
+              🎤 Yozib olish
+            </button>
+          )}
+
+          {recording && (
+            <button
+              onClick={stopRecording}
+              className="bg-red-500 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-red-600 transition-colors"
+            >
+              ⏹️ To&apos;xtatish
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={textAnswer}
+            onChange={(e) => setTextAnswer(e.target.value)}
+            placeholder="So'zni yozing"
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+          />
           <button
-            onClick={startRecording}
-            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
+            onClick={submitTextAnswer}
+            className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
           >
-            🎤 Yozib olish
+            Yuborish
           </button>
-        )}
-
-        {recording && (
           <button
-            onClick={stopRecording}
-            className="bg-red-500 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-red-600 transition-colors"
+            onClick={() => {
+              setAudioMode(true);
+              setAzureFails(0);
+              setPermError('');
+            }}
+            className="text-indigo-600 text-xs underline self-start"
           >
-            ⏹️ To&apos;xtatish
+            Ovoz bilan qayta urinish
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

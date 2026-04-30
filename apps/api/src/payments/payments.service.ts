@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface BranchPaymentSummary {
@@ -34,6 +34,21 @@ export class PaymentsService {
 
   async markPaid(dto: MarkPaidDto) {
     const unblockAt = this.nextDayMidnight(dto.paidAt);
+
+    // Phase 21.4: explicit duplicate-detection so the caller gets a clean
+    // 409 + machine-readable code instead of a silent overwrite.
+    const existing = await this.prisma.payment.findUnique({
+      where: {
+        studentId_month: { studentId: dto.studentId, month: dto.month },
+      },
+    });
+    if (existing && existing.paidAt) {
+      throw new ConflictException({
+        code: 'PAYMENT_ALREADY_MARKED',
+        message: "Bu oy uchun to'lov allaqachon belgilangan",
+        details: { paidAt: existing.paidAt, month: dto.month },
+      });
+    }
 
     const payment = await this.prisma.payment.upsert({
       where: {

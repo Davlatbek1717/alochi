@@ -309,6 +309,7 @@ export default function LessonPage() {
           <div className="space-y-4">
             <VideoPlayer
               youtubeUrl={lesson.youtubeUrl}
+              lessonId={id}
               onCompleted={() => setVideoCompleted(true)}
             />
             {videoCompleted ? (

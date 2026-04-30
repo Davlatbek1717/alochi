@@ -6,6 +6,7 @@ const mockPrisma = {
   payment: {
     upsert: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
   },
   user: {
     findMany: jest.fn(),
@@ -46,6 +47,11 @@ describe('PaymentsService', () => {
       amount: 500000,
       paidAt: new Date('2025-04-15T12:00:00.000Z'),
     };
+
+    beforeEach(() => {
+      // Default: no existing payment, so markPaid proceeds to upsert.
+      mockPrisma.payment.findUnique.mockResolvedValue(null);
+    });
 
     it('calls upsert with correct composite key and unblockAt set to next day midnight', async () => {
       const expectedRecord = { id: 'pay1', ...baseDto };
@@ -107,6 +113,25 @@ describe('PaymentsService', () => {
 
       await service.markPaid(baseDto);
 
+      expect(mockPrisma.delegationAuditLog.create).not.toHaveBeenCalled();
+    });
+
+    it('throws ConflictException with PAYMENT_ALREADY_MARKED when payment already exists for that month', async () => {
+      const paidAt = new Date('2025-04-10T08:00:00.000Z');
+      mockPrisma.payment.findUnique.mockResolvedValue({
+        id: 'existing-pay',
+        studentId: 's1',
+        month: '2025-04',
+        paidAt,
+      });
+
+      await expect(service.markPaid(baseDto)).rejects.toMatchObject({
+        response: {
+          code: 'PAYMENT_ALREADY_MARKED',
+          details: { month: '2025-04', paidAt },
+        },
+      });
+      expect(mockPrisma.payment.upsert).not.toHaveBeenCalled();
       expect(mockPrisma.delegationAuditLog.create).not.toHaveBeenCalled();
     });
   });
