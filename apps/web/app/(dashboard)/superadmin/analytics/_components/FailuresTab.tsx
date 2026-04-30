@@ -6,6 +6,7 @@ import { Table, Column, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 interface Failure {
   lessonId: string;
+  lessonTitle: string;
   failedCount: number;
   completedCount: number;
   failureRate: number;
@@ -13,9 +14,14 @@ interface Failure {
 
 const columns: Column<Failure>[] = [
   {
-    key: 'lessonId',
-    label: 'Dars ID',
-    render: (row) => <span className="font-mono text-xs text-slate-400">{row.lessonId.slice(0, 8)}…</span>,
+    key: 'lessonTitle',
+    label: 'Dars',
+    render: (row) => (
+      <div className="flex flex-col">
+        <span className="text-sm text-slate-200">{row.lessonTitle}</span>
+        <span className="font-mono text-[10px] text-slate-500">{row.lessonId.slice(0, 8)}…</span>
+      </div>
+    ),
   },
   {
     key: 'failedCount',

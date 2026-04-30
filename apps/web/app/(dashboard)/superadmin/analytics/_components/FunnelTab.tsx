@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { TrendingDown } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, useToast } from '@/components/ui';
@@ -70,12 +70,30 @@ export function FunnelTab() {
 
       {funnel.length > 0 ? (
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={funnel} layout="vertical" margin={{ left: 80 }}>
+          <BarChart
+            data={funnel.map((s, i) => {
+              const prev = i > 0 ? funnel[i - 1].count : 0;
+              const dropoff = i > 0 && prev > 0 ? ((prev - s.count) / prev) * 100 : 0;
+              const label = i === 0 ? `${s.count}` : `${s.count} (${dropoff.toFixed(1)}% drop)`;
+              return { ...s, dropoff, label };
+            })}
+            layout="vertical"
+            margin={{ left: 80, right: 80 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} />
             <YAxis dataKey="step" type="category" tick={{ fontSize: 11, fill: '#94a3b8' }} width={140} />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8 }} />
-            <Bar dataKey="count" fill="#10b981" />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8 }}
+              formatter={((value: unknown, _name: unknown, item: unknown) => {
+                const payload = (item as { payload?: { dropoff?: number } } | undefined)?.payload;
+                const dropoff = payload?.dropoff ?? 0;
+                return [`${value} (${dropoff.toFixed(1)}% drop)`, 'count'] as [string, string];
+              }) as never}
+            />
+            <Bar dataKey="count" fill="#10b981">
+              <LabelList dataKey="label" position="right" fill="#cbd5e1" fontSize={11} />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       ) : (

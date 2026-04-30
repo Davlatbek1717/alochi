@@ -66,7 +66,7 @@ export default function AnalyticsPage() {
             onClick={() => changeTab(tab.id)}
             className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
               active === tab.id
-                ? 'text-emerald-400 border-emerald-400'
+                ? 'bg-slate-700 text-emerald-400 border-emerald-400'
                 : 'text-slate-400 border-transparent hover:text-slate-200'
             }`}
           >

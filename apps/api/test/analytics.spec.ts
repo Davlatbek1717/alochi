@@ -8,6 +8,7 @@ describe('AnalyticsService', () => {
       update: jest.fn(),
     },
     tenant: { findMany: jest.fn() },
+    lesson: { findMany: jest.fn().mockResolvedValue([]) },
   };
 
   const mockClickHouseDefault = {
@@ -295,16 +296,22 @@ describe('AnalyticsService', () => {
         { lesson_id: 'l1', failed: '50', completed: '50' },
         { lesson_id: 'l2', failed: '30', completed: '70' },
       ]);
+      mockPrisma.lesson.findMany.mockResolvedValue([
+        { id: 'l1', title: 'Lesson One' },
+        { id: 'l2', title: 'Lesson Two' },
+      ]);
       const result = await service.getTopFailures('t1', 10);
       expect(result).toEqual([
         {
           lessonId: 'l1',
+          lessonTitle: 'Lesson One',
           failedCount: 50,
           completedCount: 50,
           failureRate: 50,
         },
         {
           lessonId: 'l2',
+          lessonTitle: 'Lesson Two',
           failedCount: 30,
           completedCount: 70,
           failureRate: 30,

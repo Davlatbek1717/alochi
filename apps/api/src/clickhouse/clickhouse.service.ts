@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, ClickHouseClient } from '@clickhouse/client';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface ClickHouseEvent {
@@ -65,12 +65,18 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
 
   async query<T>(sql: string, params?: Record<string, unknown>): Promise<T[]> {
     if (!this.client) throw new Error('ClickHouse client not initialized');
-    const rs = await this.client.query({
-      query: sql,
-      query_params: params,
-      format: 'JSONEachRow',
-    });
-    return rs.json<T>();
+    try {
+      const rs = await this.client.query({
+        query: sql,
+        query_params: params,
+        format: 'JSONEachRow',
+      });
+      return rs.json<T>();
+    } catch (e) {
+      const msg = (e as Error).message;
+      this.logger.error(`ClickHouse query failed: ${msg}`);
+      throw new Error(`ClickHouse query failed: ${msg}`);
+    }
   }
 
   async runMigrations(): Promise<void> {
@@ -79,7 +85,9 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
       return;
     }
     const migrationsDir = join(__dirname, '../migrations/clickhouse');
-    const files = ['001_create_events.sql', '002_create_mvs.sql'];
+    const files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
     for (const file of files) {
       const sql = readFileSync(join(migrationsDir, file), 'utf8');
       const statements = sql

@@ -199,6 +199,7 @@ export class AnalyticsService {
   ): Promise<
     Array<{
       lessonId: string;
+      lessonTitle: string;
       failedCount: number;
       completedCount: number;
       failureRate: number;
@@ -221,12 +222,24 @@ export class AnalyticsService {
        LIMIT {limit:UInt16}`,
       { tenantId, limit },
     );
+
+    const lessonIds = rows.map((r) => r.lesson_id).filter((id) => !!id);
+    const lessons = lessonIds.length
+      ? await this.prisma.lesson.findMany({
+          where: { id: { in: lessonIds } },
+          select: { id: true, title: true },
+        })
+      : [];
+    const titleMap = new Map(lessons.map((l) => [l.id, l.title]));
+
     return rows.map((r) => {
       const failed = Number(r.failed);
       const completed = Number(r.completed);
       const total = failed + completed;
       return {
         lessonId: r.lesson_id,
+        lessonTitle:
+          titleMap.get(r.lesson_id) ?? `Dars ${r.lesson_id.slice(0, 8)}`,
         failedCount: failed,
         completedCount: completed,
         failureRate: total === 0 ? 0 : Math.round((failed * 100) / total),
