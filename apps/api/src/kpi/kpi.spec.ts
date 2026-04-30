@@ -7,6 +7,7 @@ const mockPrisma = {
     create: jest.fn(),
     aggregate: jest.fn(),
     findMany: jest.fn(),
+    findFirst: jest.fn(),
   },
 };
 
@@ -106,6 +107,42 @@ describe('KpiService', () => {
       const total = await service.getMonthlyTotal('u1', 2026, 4);
 
       expect(total).toBe(0);
+    });
+  });
+
+  describe('hasAwardInRange', () => {
+    it('returns true when an award exists in the range', async () => {
+      mockPrisma.kpiScore.findFirst.mockResolvedValue({ id: 'k1' });
+      const result = await service.hasAwardInRange(
+        'u1',
+        'auto_mentor_daily',
+        new Date('2026-04-30T00:00:00Z'),
+        new Date('2026-04-30T23:59:59Z'),
+      );
+      expect(result).toBe(true);
+    });
+
+    it('returns false when no award exists in the range', async () => {
+      mockPrisma.kpiScore.findFirst.mockResolvedValue(null);
+      const result = await service.hasAwardInRange(
+        'u1',
+        'auto_mentor_daily',
+        new Date(),
+        new Date(),
+      );
+      expect(result).toBe(false);
+    });
+
+    it('queries by userId, reason and date range', async () => {
+      mockPrisma.kpiScore.findFirst.mockResolvedValue(null);
+      const start = new Date('2026-04-01');
+      const end = new Date('2026-04-30');
+      await service.hasAwardInRange('u1', 'filadmin_monthly_bonus', start, end);
+      const call = mockPrisma.kpiScore.findFirst.mock.calls[0][0];
+      expect(call.where.userId).toBe('u1');
+      expect(call.where.reason).toBe('filadmin_monthly_bonus');
+      expect(call.where.date.gte).toBe(start);
+      expect(call.where.date.lte).toBe(end);
     });
   });
 });

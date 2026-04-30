@@ -20,6 +20,19 @@ export const KPI_POINTS = {
   MANAGER_ONE_ON_ONE: 5,
 } as const;
 
+/**
+ * Stable `reason` codes for auto-calculated KPI awards.
+ * Used both for emission and for idempotency lookups (one award per
+ * user/reason/period).
+ */
+export const KPI_REASONS = {
+  AUTO_MENTOR_DAILY: 'auto_mentor_daily',
+  CRITICAL_RED_TO_YELLOW: 'critical_red_to_yellow',
+  CRITICAL_YELLOW_TO_GREEN: 'critical_yellow_to_green',
+  FILADMIN_MONTHLY_BONUS: 'filadmin_monthly_bonus',
+  FILADMIN_MONTHLY_PENALTY: 'filadmin_monthly_penalty',
+} as const;
+
 @Injectable()
 export class KpiService {
   constructor(private prisma: PrismaService) {}
@@ -74,5 +87,28 @@ export class KpiService {
       orderBy: { date: 'desc' },
       take: limit,
     });
+  }
+
+  /**
+   * Idempotency check for auto-calc cron jobs: returns true if a KPI
+   * award already exists for the (userId, reason) pair within the given
+   * date range. Cron handlers use this to avoid double-awarding when
+   * a job is retried (or when 28-31th cron fires multiple non-last days).
+   */
+  async hasAwardInRange(
+    userId: string,
+    reason: string,
+    rangeStart: Date,
+    rangeEnd: Date,
+  ): Promise<boolean> {
+    const found = await this.prisma.kpiScore.findFirst({
+      where: {
+        userId,
+        reason,
+        date: { gte: rangeStart, lte: rangeEnd },
+      },
+      select: { id: true },
+    });
+    return !!found;
   }
 }

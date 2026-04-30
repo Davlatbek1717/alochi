@@ -11,6 +11,28 @@ import { NotificationTemplatesService } from '../notification-templates/notifica
 import { AdaptiveService } from '../adaptive/adaptive.service';
 import { ChurnService } from '../churn/churn.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
+import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
+
+/**
+ * Tunable thresholds for the filadmin monthly KPI cron (§8.3).
+ * Centralised here so they can be adjusted without hunting through
+ * the cron body.
+ */
+export const FILADMIN_MONTHLY_KPI_THRESHOLDS = {
+  /** Green-critical / total active students ratio cutoffs. */
+  GREEN_RATIO_BONUS_HIGH: 0.8,
+  GREEN_RATIO_BONUS_MID: 0.6,
+  GREEN_RATIO_PENALTY_LOW: 0.4,
+  /** Bonus / penalty point amounts. */
+  BONUS_HIGH: 100,
+  BONUS_MID: 50,
+  PENALTY_LOW: -25,
+  /** Extra penalty applied when blocked-students ratio exceeds threshold. */
+  BLOCKED_RATIO_PENALTY: 0.1,
+  BLOCKED_PENALTY: -25,
+  /** Per-mentor-checkin daily reward (proxy for §8.1 "ran a lesson"). */
+  MENTOR_DAILY_BASE_POINTS: 5,
+} as const;
 
 @Injectable()
 export class CronService {
@@ -27,6 +49,7 @@ export class CronService {
     private config: ConfigService,
     private events: EventEmitter2,
     private templates: NotificationTemplatesService,
+    private kpi: KpiService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -550,6 +573,221 @@ export class CronService {
     } catch (err) {
       this.logger.error(
         `absent_2day_parent_reminder failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * §8.1 — Mentor KPI auto-calc.
+   *
+   * Runs daily at 22:00 (after the school day is done). For every active
+   * mentor with a confirmed check-in today (`AttendanceStaff.loginTime
+   * IS NOT NULL`) we award a flat block of points — the closest proxy
+   * we have for "ran qualifying lesson(s) today". The schema has no
+   * Lesson-session model with mentorId/duration/studentCount, so a
+   * full per-lesson breakdown is not yet possible without a schema
+   * change; this implementation captures the "vaqtida xabar berdi /
+   * darsda qatnashdi" portion of the spec.
+   *
+   * Idempotent per mentor per day via `kpi.hasAwardInRange`.
+   */
+  @Cron('0 22 * * *', { name: 'mentor_kpi_calc' })
+  async runMentorKpiCalc() {
+    this.logger.log('Cron: mentor_kpi_calc.start');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 86400000);
+
+    try {
+      const mentors = await this.prisma.user.findMany({
+        where: { role: 'mentor', status: 'active' },
+        select: { id: true, tenantId: true, branchId: true },
+      });
+
+      let awarded = 0;
+      let skipped = 0;
+
+      for (const mentor of mentors) {
+        // Skip if already awarded for this reason today (idempotency).
+        const already = await this.kpi.hasAwardInRange(
+          mentor.id,
+          KPI_REASONS.AUTO_MENTOR_DAILY,
+          today,
+          tomorrow,
+        );
+        if (already) {
+          skipped++;
+          continue;
+        }
+
+        // Did the mentor actually check in today? loginTime IS NOT NULL
+        // is our proxy for "showed up and ran the day".
+        const checkin = await this.prisma.attendanceStaff.findFirst({
+          where: {
+            userId: mentor.id,
+            date: { gte: today, lt: tomorrow },
+            loginTime: { not: null },
+          },
+          select: { id: true },
+        });
+        if (!checkin) continue;
+
+        await this.kpi.award({
+          tenantId: mentor.tenantId,
+          userId: mentor.id,
+          score: FILADMIN_MONTHLY_KPI_THRESHOLDS.MENTOR_DAILY_BASE_POINTS,
+          reason: KPI_REASONS.AUTO_MENTOR_DAILY,
+        });
+        awarded++;
+      }
+
+      this.logger.log(
+        `mentor_kpi_calc.done awarded=${awarded} skipped=${skipped} total=${mentors.length}`,
+      );
+    } catch (err) {
+      this.logger.error(`mentor_kpi_calc.failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * §8.3 — Filadmin oylik bonus / jarima.
+   *
+   * Cron expression `0 23 28-31 * *` fires at 23:00 on the 28th, 29th,
+   * 30th, and 31st of every month. We early-return on every fire that
+   * is *not* actually the last day of the month (i.e. tomorrow is still
+   * the same month) so the body runs exactly once per calendar month.
+   *
+   * For each tenant→branch→filadmin we compute:
+   *   - total active students in the branch
+   *   - count of students whose latest critical status is `yashil`
+   *   - count of `blocked_payment` students in the branch
+   * and apply the threshold-based bonus / penalty defined in
+   * `FILADMIN_MONTHLY_KPI_THRESHOLDS`.
+   *
+   * Idempotent per filadmin per month via `kpi.hasAwardInRange`
+   * over the current calendar month.
+   */
+  @Cron('0 23 28-31 * *', { name: 'filadmin_monthly_kpi' })
+  async runFiladminMonthlyKpi() {
+    const today = new Date();
+    const tomorrow = new Date(today.getTime() + 86400000);
+    if (today.getMonth() === tomorrow.getMonth()) {
+      // Not actually the last day of the month — skip.
+      return;
+    }
+
+    this.logger.log('Cron: filadmin_monthly_kpi.start');
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    );
+    const T = FILADMIN_MONTHLY_KPI_THRESHOLDS;
+
+    try {
+      const filadmins = await this.prisma.user.findMany({
+        where: {
+          role: 'filadmin',
+          status: 'active',
+          branchId: { not: null },
+        },
+        select: { id: true, tenantId: true, branchId: true },
+      });
+
+      let bonusCount = 0;
+      let penaltyCount = 0;
+      let skippedCount = 0;
+
+      for (const fa of filadmins) {
+        if (!fa.branchId) continue;
+
+        // Idempotency — skip if a bonus or penalty has already been
+        // awarded for this filadmin somewhere in the current month.
+        const [bonusAlready, penaltyAlready] = await Promise.all([
+          this.kpi.hasAwardInRange(
+            fa.id,
+            KPI_REASONS.FILADMIN_MONTHLY_BONUS,
+            startOfMonth,
+            endOfMonth,
+          ),
+          this.kpi.hasAwardInRange(
+            fa.id,
+            KPI_REASONS.FILADMIN_MONTHLY_PENALTY,
+            startOfMonth,
+            endOfMonth,
+          ),
+        ]);
+        if (bonusAlready || penaltyAlready) {
+          skippedCount++;
+          continue;
+        }
+
+        const [totalStudents, greenCritical, blocked] = await Promise.all([
+          this.prisma.user.count({
+            where: {
+              branchId: fa.branchId,
+              role: 'student',
+              status: 'active',
+            },
+          }),
+          this.prisma.studentStatus.count({
+            where: {
+              criticalStatus: 'yashil',
+              date: { gte: startOfMonth, lte: endOfMonth },
+              student: {
+                branchId: fa.branchId,
+                role: 'student',
+              },
+            },
+          }),
+          this.prisma.user.count({
+            where: {
+              branchId: fa.branchId,
+              role: 'student',
+              status: 'blocked_payment',
+            },
+          }),
+        ]);
+
+        if (totalStudents === 0) continue;
+
+        const ratio = greenCritical / totalStudents;
+        let bonus = 0;
+        if (ratio >= T.GREEN_RATIO_BONUS_HIGH) bonus = T.BONUS_HIGH;
+        else if (ratio >= T.GREEN_RATIO_BONUS_MID) bonus = T.BONUS_MID;
+        else if (ratio < T.GREEN_RATIO_PENALTY_LOW) bonus = T.PENALTY_LOW;
+
+        if (blocked / totalStudents > T.BLOCKED_RATIO_PENALTY) {
+          bonus += T.BLOCKED_PENALTY;
+        }
+
+        if (bonus === 0) continue;
+
+        await this.kpi.award({
+          tenantId: fa.tenantId,
+          userId: fa.id,
+          score: bonus,
+          reason:
+            bonus > 0
+              ? KPI_REASONS.FILADMIN_MONTHLY_BONUS
+              : KPI_REASONS.FILADMIN_MONTHLY_PENALTY,
+        });
+
+        if (bonus > 0) bonusCount++;
+        else penaltyCount++;
+      }
+
+      this.logger.log(
+        `filadmin_monthly_kpi.done bonus=${bonusCount} penalty=${penaltyCount} skipped=${skippedCount}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `filadmin_monthly_kpi.failed: ${(err as Error).message}`,
       );
     }
   }

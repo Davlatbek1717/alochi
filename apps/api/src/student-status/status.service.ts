@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { KpiService, KPI_POINTS, KPI_REASONS } from '../kpi/kpi.service';
 import { SetPersonalStatusDto } from './dto/set-personal-status.dto';
 import { SetCriticalStatusDto } from './dto/set-critical-status.dto';
 import { StatusColor, worstStatusColor } from './status.types';
@@ -23,9 +24,12 @@ interface SetEnglishStatusMeta {
 
 @Injectable()
 export class StatusService {
+  private readonly logger = new Logger(StatusService.name);
+
   constructor(
     private prisma: PrismaService,
     private events: EventEmitter2,
+    private kpi: KpiService,
   ) {}
 
   /**
@@ -118,6 +122,7 @@ export class StatusService {
     const existing = await this.prisma.studentStatus.findUnique({
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },
     });
+    const previousCritical = existing?.criticalStatus ?? null;
     const oldColor = existing
       ? worstStatusColor([
           existing.englishStatus,
@@ -173,7 +178,57 @@ export class StatusService {
       }
     }
 
+    // Spec §8.2: branch manager earns KPI for *improving* a student's
+    // critical status colour (qizil→sariq=+10, sariq→yashil=+15). No
+    // penalty for backward transitions; no bonus for first-time critical.
+    await this.awardManagerOnImprovement(
+      actor,
+      dto.studentId,
+      previousCritical,
+      dto.color,
+    );
+
     return result;
+  }
+
+  /**
+   * Award the branch manager KPI when a student's critical status
+   * improves. Errors here are logged but never bubble up — KPI awards
+   * must never block a status transition.
+   */
+  private async awardManagerOnImprovement(
+    actor: ActorContext,
+    studentId: string,
+    prev: string | null,
+    next: string,
+  ): Promise<void> {
+    if (!prev) return;
+
+    let amount = 0;
+    let reason: string | null = null;
+    if (prev === 'qizil' && next === 'sariq') {
+      amount = KPI_POINTS.MANAGER_RED_TO_YELLOW;
+      reason = KPI_REASONS.CRITICAL_RED_TO_YELLOW;
+    } else if (prev === 'sariq' && next === 'yashil') {
+      amount = KPI_POINTS.MANAGER_YELLOW_TO_GREEN;
+      reason = KPI_REASONS.CRITICAL_YELLOW_TO_GREEN;
+    }
+    if (!reason) return;
+
+    try {
+      const manager = await this.findBranchManager(studentId);
+      if (!manager) return;
+      await this.kpi.award({
+        tenantId: actor.tenantId,
+        userId: manager.id,
+        score: amount,
+        reason,
+      });
+    } catch (err) {
+      this.logger.warn(
+        `KPI award (${reason}) failed for student=${studentId}: ${(err as Error).message}`,
+      );
+    }
   }
 
   /**

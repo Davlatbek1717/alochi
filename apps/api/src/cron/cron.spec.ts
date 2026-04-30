@@ -1,6 +1,16 @@
 import { Test } from '@nestjs/testing';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CronService } from './cron.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TelegramService } from '../telegram/telegram.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
+import { AdaptiveService } from '../adaptive/adaptive.service';
+import { ChurnService } from '../churn/churn.service';
+import { ClickHouseService } from '../clickhouse/clickhouse.service';
+import { KpiService } from '../kpi/kpi.service';
 
 const mockPrisma = {
   paymentSetting: {
@@ -10,12 +20,40 @@ const mockPrisma = {
     findMany: jest.fn(),
   },
   user: {
+    findMany: jest.fn(),
     updateMany: jest.fn(),
+    count: jest.fn(),
   },
   delegation: {
     updateMany: jest.fn(),
+    findMany: jest.fn(),
+  },
+  attendanceStaff: {
+    findFirst: jest.fn(),
+    count: jest.fn(),
+  },
+  studentStatus: {
+    count: jest.fn(),
   },
 };
+
+const mockKpi = {
+  award: jest.fn(),
+  hasAwardInRange: jest.fn(),
+};
+
+const mockTelegram = { sendMessage: jest.fn(), sendToParent: jest.fn() };
+const mockNotifications = { send: jest.fn() };
+const mockTemplates = {};
+const mockAdaptive = { runNightlyAdaptation: jest.fn() };
+const mockChurn = { runDailyScoring: jest.fn() };
+const mockClickhouse = {
+  isReady: jest.fn(() => false),
+  insertEvent: jest.fn(),
+};
+const mockHttp = { post: jest.fn() };
+const mockConfig = { get: jest.fn() };
+const mockEvents = { emit: jest.fn() };
 
 describe('CronService', () => {
   let service: CronService;
@@ -25,6 +63,16 @@ describe('CronService', () => {
       providers: [
         CronService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: TelegramService, useValue: mockTelegram },
+        { provide: NotificationsService, useValue: mockNotifications },
+        { provide: NotificationTemplatesService, useValue: mockTemplates },
+        { provide: AdaptiveService, useValue: mockAdaptive },
+        { provide: ChurnService, useValue: mockChurn },
+        { provide: ClickHouseService, useValue: mockClickhouse },
+        { provide: HttpService, useValue: mockHttp },
+        { provide: ConfigService, useValue: mockConfig },
+        { provide: EventEmitter2, useValue: mockEvents },
+        { provide: KpiService, useValue: mockKpi },
       ],
     }).compile();
     service = module.get(CronService);
@@ -103,6 +151,7 @@ describe('CronService', () => {
 
   describe('runDelegationComplete', () => {
     it('completes active delegations whose endsAt has passed', async () => {
+      mockPrisma.delegation.findMany.mockResolvedValue([]);
       mockPrisma.delegation.updateMany.mockResolvedValue({ count: 2 });
 
       await service.runDelegationComplete();
@@ -126,6 +175,185 @@ describe('CronService', () => {
       await service.triggerPaymentUnblockManually();
 
       expect(mockPrisma.payment.findMany).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('runMentorKpiCalc', () => {
+    it('awards 5 points to mentors who checked in today and have not been awarded yet', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'm1', tenantId: 't1', branchId: 'b1' },
+        { id: 'm2', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.attendanceStaff.findFirst.mockResolvedValue({ id: 'a1' });
+
+      await service.runMentorKpiCalc();
+
+      expect(mockKpi.award).toHaveBeenCalledTimes(2);
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'm1',
+          tenantId: 't1',
+          score: 5,
+          reason: 'auto_mentor_daily',
+        }),
+      );
+    });
+
+    it('skips mentors who already received auto_mentor_daily today (idempotent)', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'm1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(true);
+
+      await service.runMentorKpiCalc();
+
+      expect(mockPrisma.attendanceStaff.findFirst).not.toHaveBeenCalled();
+      expect(mockKpi.award).not.toHaveBeenCalled();
+    });
+
+    it('skips mentors who did NOT check in today', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'm1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.attendanceStaff.findFirst.mockResolvedValue(null);
+
+      await service.runMentorKpiCalc();
+
+      expect(mockKpi.award).not.toHaveBeenCalled();
+    });
+
+    it('swallows internal errors so the cron never bubbles up', async () => {
+      mockPrisma.user.findMany.mockRejectedValue(new Error('db down'));
+      await expect(service.runMentorKpiCalc()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('runFiladminMonthlyKpi', () => {
+    it('returns early when today is NOT the last day of the month', async () => {
+      // Set "today" to the 10th — clearly not last day. We don't need to
+      // mock prisma at all because we expect early-return.
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 10, 23, 0, 0)); // April 10 2026
+
+      await service.runFiladminMonthlyKpi();
+
+      expect(mockPrisma.user.findMany).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+
+    it('awards BONUS_HIGH (+100) when ratio of green critical >= 80%', async () => {
+      // April 30 2026 — last day of April.
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 30, 23, 0, 0));
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'fa1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.user.count
+        .mockResolvedValueOnce(10) // totalStudents
+        .mockResolvedValueOnce(0); // blocked
+      mockPrisma.studentStatus.count.mockResolvedValue(8); // greenCritical
+
+      await service.runFiladminMonthlyKpi();
+
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'fa1',
+          tenantId: 't1',
+          score: 100,
+          reason: 'filadmin_monthly_bonus',
+        }),
+      );
+      jest.useRealTimers();
+    });
+
+    it('awards PENALTY_LOW (-25) when ratio < 40%', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 30, 23, 0, 0));
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'fa1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.user.count
+        .mockResolvedValueOnce(10) // totalStudents
+        .mockResolvedValueOnce(0); // blocked
+      mockPrisma.studentStatus.count.mockResolvedValue(2); // 20% green
+
+      await service.runFiladminMonthlyKpi();
+
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          score: -25,
+          reason: 'filadmin_monthly_penalty',
+        }),
+      );
+      jest.useRealTimers();
+    });
+
+    it('applies extra blocked penalty when blocked ratio > 10%', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 30, 23, 0, 0));
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'fa1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.user.count
+        .mockResolvedValueOnce(10) // totalStudents
+        .mockResolvedValueOnce(2); // blocked = 20% > 10%
+      mockPrisma.studentStatus.count.mockResolvedValue(8); // 80% green = +100
+
+      await service.runFiladminMonthlyKpi();
+
+      // 100 + (-25) = 75 → still positive bonus
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          score: 75,
+          reason: 'filadmin_monthly_bonus',
+        }),
+      );
+      jest.useRealTimers();
+    });
+
+    it('skips filadmin who was already awarded this month (idempotent)', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 30, 23, 0, 0));
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'fa1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      await service.runFiladminMonthlyKpi();
+
+      expect(mockPrisma.user.count).not.toHaveBeenCalled();
+      expect(mockKpi.award).not.toHaveBeenCalled();
+      jest.useRealTimers();
+    });
+
+    it('skips branches with zero students', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(2026, 3, 30, 23, 0, 0));
+
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'fa1', tenantId: 't1', branchId: 'b1' },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.user.count
+        .mockResolvedValueOnce(0) // totalStudents = 0
+        .mockResolvedValueOnce(0);
+      mockPrisma.studentStatus.count.mockResolvedValue(0);
+
+      await service.runFiladminMonthlyKpi();
+
+      expect(mockKpi.award).not.toHaveBeenCalled();
+      jest.useRealTimers();
     });
   });
 });

@@ -6,6 +6,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { NotificationTemplatesModule } from '../notification-templates/notification-templates.module';
 import { AdaptiveModule } from '../adaptive/adaptive.module';
 import { ChurnModule } from '../churn/churn.module';
+import { KpiModule } from '../kpi/kpi.module';
 import { CronService } from './cron.service';
 
 @Module({
@@ -16,6 +17,7 @@ import { CronService } from './cron.service';
     NotificationTemplatesModule,
     AdaptiveModule,
     ChurnModule,
+    KpiModule,
     HttpModule,
   ],
   providers: [CronService],

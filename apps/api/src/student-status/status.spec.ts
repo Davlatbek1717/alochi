@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole } from '@prisma/client';
 import { StatusService } from './status.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { KpiService } from '../kpi/kpi.service';
 
 const mockPrisma = {
   studentStatus: {
@@ -22,6 +23,7 @@ const mockPrisma = {
 };
 
 const mockEvents = { emit: jest.fn() };
+const mockKpi = { award: jest.fn(), hasAwardInRange: jest.fn() };
 
 describe('StatusService', () => {
   let service: StatusService;
@@ -32,6 +34,7 @@ describe('StatusService', () => {
         StatusService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: mockEvents },
+        { provide: KpiService, useValue: mockKpi },
       ],
     }).compile();
     service = module.get(StatusService);
@@ -223,6 +226,113 @@ describe('StatusService', () => {
         (c) => c[0] === 'notification.new',
       );
       expect(notifCalls).toHaveLength(0);
+    });
+
+    it('awards manager +10 KPI when critical improves qizil → sariq', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: null,
+        personalStatus: null,
+        criticalStatus: 'qizil',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'sariq',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        branchId: 'b1',
+        tenantId: 't1',
+      });
+      mockPrisma.user.findFirst
+        .mockResolvedValueOnce({ id: 'filadmin1' }) // filadmin notif lookup
+        .mockResolvedValueOnce({ id: 'manager1' }); // branch manager lookup
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'sariq',
+      });
+
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 't1',
+          userId: 'manager1',
+          score: 10,
+          reason: 'critical_red_to_yellow',
+        }),
+      );
+    });
+
+    it('awards manager +15 KPI when critical improves sariq → yashil', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: null,
+        personalStatus: null,
+        criticalStatus: 'sariq',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'yashil',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        branchId: 'b1',
+        tenantId: 't1',
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'manager1' });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'yashil',
+      });
+
+      expect(mockKpi.award).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'manager1',
+          score: 15,
+          reason: 'critical_yellow_to_green',
+        }),
+      );
+    });
+
+    it('does NOT award KPI for backward transitions (yashil → qizil)', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: null,
+        personalStatus: null,
+        criticalStatus: 'yashil',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'qizil',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'filadmin1' });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'qizil',
+      });
+
+      expect(mockKpi.award).not.toHaveBeenCalled();
+    });
+
+    it('does NOT award KPI when previous critical is null (first set)', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue(null);
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'sariq',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'filadmin1' });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'sariq',
+      });
+
+      expect(mockKpi.award).not.toHaveBeenCalled();
     });
   });
 
