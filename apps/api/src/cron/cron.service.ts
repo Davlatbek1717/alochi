@@ -1,5 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -18,6 +21,8 @@ export class CronService {
     private adaptive: AdaptiveService,
     private churn: ChurnService,
     private clickhouse: ClickHouseService,
+    private http: HttpService,
+    private config: ConfigService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -383,6 +388,24 @@ export class CronService {
         .catch((e) =>
           this.logger.error(`Adaptive error tenant ${tenant.id}: ${e.message}`),
         );
+    }
+  }
+
+  @Cron('0 5 * * *', { name: 'ml_churn_train' })
+  async runMlChurnTraining() {
+    this.logger.log('Cron: ML churn training boshlanmoqda...');
+    const mlUrl = this.config.get<string>('ML_SERVICE_URL');
+    if (!mlUrl) {
+      this.logger.warn('ML_SERVICE_URL not set — skip training');
+      return;
+    }
+    try {
+      const response = await firstValueFrom(
+        this.http.post(`${mlUrl}/train`, {}, { timeout: 60_000 }),
+      );
+      this.logger.log(`ML training success: ${JSON.stringify(response.data)}`);
+    } catch (e) {
+      this.logger.warn(`ML training failed: ${(e as Error).message}`);
     }
   }
 

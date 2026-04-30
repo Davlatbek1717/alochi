@@ -26,23 +26,62 @@ describe('ChurnService', () => {
   };
 
   const mockNotifications = { send: jest.fn().mockResolvedValue({}) };
-  const service = new ChurnService(mockPrisma as any, mockNotifications as any);
+  const mockHttp = { post: jest.fn(), get: jest.fn() };
+  const mockConfig = { get: jest.fn() };
+  const service = new ChurnService(
+    mockPrisma as any,
+    mockNotifications as any,
+    mockHttp as any,
+    mockConfig as any,
+  );
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('computeScore returns 30 for absent3Days only', () => {
-    expect(service.computeScore({ absent3Days: true, streakBroken: false, passRateDrop: false, redStatus: false, noParentTg: false })).toBe(30);
+  it('computeScoreRuleBased returns 30 for absent3Days only', () => {
+    expect(
+      service.computeScoreRuleBased({
+        absent3Days: true,
+        streakBroken: false,
+        passRateDrop: false,
+        redStatus: false,
+        noParentTg: false,
+      }),
+    ).toBe(30);
   });
 
-  it('computeScore returns 75 for absent + streakBroken + redStatus', () => {
-    expect(service.computeScore({ absent3Days: true, streakBroken: true, passRateDrop: false, redStatus: true, noParentTg: false })).toBe(75);
+  it('computeScoreRuleBased returns 75 for absent + streakBroken + redStatus', () => {
+    expect(
+      service.computeScoreRuleBased({
+        absent3Days: true,
+        streakBroken: true,
+        passRateDrop: false,
+        redStatus: true,
+        noParentTg: false,
+      }),
+    ).toBe(75);
   });
 
-  it('computeScore caps at 100 when all signals active', () => {
-    expect(service.computeScore({ absent3Days: true, streakBroken: true, passRateDrop: true, redStatus: true, noParentTg: true })).toBe(100); // raw=110
+  it('computeScoreRuleBased caps at 100 when all signals active', () => {
+    expect(
+      service.computeScoreRuleBased({
+        absent3Days: true,
+        streakBroken: true,
+        passRateDrop: true,
+        redStatus: true,
+        noParentTg: true,
+      }),
+    ).toBe(100); // raw=110
   });
 
-  it('computeScore returns 0 when no signals', () => {
-    expect(service.computeScore({ absent3Days: false, streakBroken: false, passRateDrop: false, redStatus: false, noParentTg: false })).toBe(0);
+  it('computeScoreRuleBased returns 0 when no signals', () => {
+    expect(
+      service.computeScoreRuleBased({
+        absent3Days: false,
+        streakBroken: false,
+        passRateDrop: false,
+        redStatus: false,
+        noParentTg: false,
+      }),
+    ).toBe(0);
   });
 });

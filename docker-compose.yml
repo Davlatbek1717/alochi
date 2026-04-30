@@ -82,6 +82,22 @@ services:
       db:
         condition: service_healthy
 
+  ml-service:
+    build:
+      context: apps/ml-service
+      dockerfile: Dockerfile
+    container_name: alochi_ml
+    ports:
+      - '8001:8001'
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/alochi
+      MODEL_PATH: /app/models/churn_model.pkl
+    volumes:
+      - ml_models:/app/models
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     container_name: alochi_nginx
@@ -97,3 +113,4 @@ services:
 volumes:
   db_data:
   clickhouse_data:
+  ml_models:
