@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate:clickhouse-backfill": "ts-node src/migrations/clickhouse/backfill.ts"
+    "migrate:clickhouse-backfill": "ts-node src/migrations/clickhouse/backfill.ts",
+    "seed:churn-training": "python ../ml-service/scripts/seed_training_data.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

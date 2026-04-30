@@ -28,6 +28,23 @@ export class TenantsService {
     return this.prisma.tenant.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
+  /**
+   * Tenant list shape for the /superadmin/tenants page:
+   * { id, name, slug, createdAt, _count: { users, branches } }.
+   */
+  async listAllWithCounts() {
+    return this.prisma.tenant.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        createdAt: true,
+        _count: { select: { users: true, branches: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findById(id: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
     if (!tenant) throw new NotFoundException('Tenant topilmadi');

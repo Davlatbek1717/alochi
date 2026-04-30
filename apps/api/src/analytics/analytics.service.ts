@@ -88,36 +88,28 @@ export class AnalyticsService {
       cohort_size: string;
       active: string;
     };
+    // Reads from the `cohort_weekly` view (see migration 003) which joins
+    // events to the `cohort_first_event_mv` AggregatingMergeTree. Cheaper
+    // than the previous ad-hoc CTE/window approach; same response shape.
+    // cohort_size is taken from the row where return_week == cohort_week
+    // (week 0 — every member of the cohort is active by definition).
     const rows = await this.clickhouse.query<Row>(
-      `WITH cohort AS (
-         SELECT
-           tenant_id,
-           student_id,
-           toStartOfWeek(min(created_at)) AS cohort_week
-         FROM events
-         WHERE tenant_id = {tenantId:UUID} AND student_id IS NOT NULL
-         GROUP BY tenant_id, student_id
-       ),
-       activity AS (
-         SELECT
-           e.tenant_id,
-           c.cohort_week,
-           dateDiff('week', c.cohort_week, toStartOfWeek(e.created_at)) AS week_offset,
-           e.student_id
-         FROM events e
-         INNER JOIN cohort c ON e.student_id = c.student_id AND e.tenant_id = c.tenant_id
-         WHERE e.tenant_id = {tenantId:UUID}
-           AND c.cohort_week >= today() - INTERVAL {weeks:UInt16} WEEK
-       )
-       SELECT
-         toString(cohort_week) AS cohort_week,
-         toString(week_offset) AS week_offset,
-         toString(uniqExact(student_id) OVER (PARTITION BY cohort_week)) AS cohort_size,
-         toString(uniqExact(student_id)) AS active
-       FROM activity
-       WHERE week_offset >= 0 AND week_offset <= {weeks:UInt16}
-       GROUP BY cohort_week, week_offset
-       ORDER BY cohort_week DESC, week_offset ASC`,
+      `SELECT
+         toString(cw.cohort_week) AS cohort_week,
+         toString(dateDiff('week', cw.cohort_week, cw.return_week)) AS week_offset,
+         toString(any(size.active_users) OVER (PARTITION BY cw.cohort_week)) AS cohort_size,
+         toString(cw.active_users) AS active
+       FROM cohort_weekly AS cw
+       LEFT JOIN (
+         SELECT tenant_id, cohort_week, active_users
+         FROM cohort_weekly
+         WHERE tenant_id = {tenantId:UUID} AND cohort_week = return_week
+       ) AS size
+         ON size.tenant_id = cw.tenant_id AND size.cohort_week = cw.cohort_week
+       WHERE cw.tenant_id = {tenantId:UUID}
+         AND cw.cohort_week >= today() - INTERVAL {weeks:UInt16} WEEK
+         AND dateDiff('week', cw.cohort_week, cw.return_week) BETWEEN 0 AND {weeks:UInt16}
+       ORDER BY cw.cohort_week DESC, cw.return_week ASC`,
       { tenantId, weeks },
     );
 

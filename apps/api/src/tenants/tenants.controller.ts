@@ -27,7 +27,7 @@ export class TenantsController {
   @Get()
   @Roles(UserRole.superadmin)
   findAll() {
-    return this.tenants.findAll();
+    return this.tenants.listAllWithCounts();
   }
 
   @Get(':id')

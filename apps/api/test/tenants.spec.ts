@@ -133,6 +133,52 @@ describe('TenantsService — onboardTenant', () => {
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
   });
 
+  it('listAllWithCounts returns tenants with _count.users and _count.branches (newest first)', async () => {
+    const mockPrisma = {
+      tenant: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 't1',
+            name: 'Markaz Bir',
+            slug: 'markaz-bir',
+            createdAt: new Date('2026-04-30T00:00:00Z'),
+            _count: { users: 12, branches: 3 },
+          },
+          {
+            id: 't2',
+            name: 'Markaz Ikki',
+            slug: 'markaz-ikki',
+            createdAt: new Date('2026-04-01T00:00:00Z'),
+            _count: { users: 5, branches: 1 },
+          },
+        ]),
+      },
+    };
+
+    const service = new TenantsService(mockPrisma as never);
+    const result = await service.listAllWithCounts();
+
+    // Verify select shape includes _count for both relations + ordering
+    expect(mockPrisma.tenant.findMany).toHaveBeenCalledWith({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        createdAt: true,
+        _count: { select: { users: true, branches: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({
+      id: 't1',
+      slug: 'markaz-bir',
+      _count: { users: 12, branches: 3 },
+    });
+    expect(result[1]._count).toEqual({ users: 5, branches: 1 });
+  });
+
   it('converts Prisma P2002 (unique violation) into ConflictException — race-condition safety', async () => {
     const mockPrisma = makeMockPrisma();
     mockPrisma.tenant.findUnique.mockResolvedValue(null); // pre-check passes (TOCTOU window)
