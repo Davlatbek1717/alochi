@@ -53,6 +53,8 @@ export const DEFAULT_TEMPLATES: Record<string, string> = {
     '⚠️ Filial {branchName} yuz tanish keshi {staleDays} kun yangilanmagan. Internet aloqasini tekshiring.',
   'face.enrollment_reminder':
     "⚠️ Filial {branchName} hali ba'zi xodimlar yuzini ro'yxatdan o'tkazmagan: {namesList}. Iltimos, ro'yxatdan o'tkazing.",
+  'face.recognition_failed_3x':
+    '⚠️ Filial {branchName} planshetida 3 marta yuz tanish muvaffaqiyatsiz.',
 
   // Spaced repetition (§15.4)
   'spaced_repetition.morning':

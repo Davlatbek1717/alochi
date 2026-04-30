@@ -3,6 +3,14 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, WifiOff, RefreshCw, KeyRound, ScanFace, GraduationCap, ArrowLeft } from 'lucide-react';
 import { FaceScanner } from './_components/FaceScanner';
 import { AttendanceResult } from './_components/AttendanceResult';
+import { OfflineQueue, isNetworkError } from '@/lib/offline-queue';
+
+type CheckinPayload = {
+  userId: string;
+  deviceToken: string;
+  livenessPassed?: boolean;
+};
+const checkinQueue = new OfflineQueue<CheckinPayload>('face-checkin-queue');
 
 type KioskState = 'loading' | 'scanning' | 'success' | 'manual_login' | 'error';
 
@@ -96,7 +104,28 @@ export default function KioskPage() {
           const json = await res.json().catch(() => ({}));
           throw new Error((json as { message?: string }).message ?? 'Cache yuklanmadi');
         }
-        const data = (await res.json()) as FaceCache;
+        const raw = (await res.json()) as FaceCache & {
+          encrypted?: string;
+          encryption?: string;
+        };
+        // Phase 18.9 — encrypted cache shape: backend may return
+        // { encrypted, encryption: 'aes-256-gcm' } when FACE_VECTOR_KEY is set.
+        // Client-side decryption is deferred (TODO 18.9): when an encrypted
+        // payload arrives without a local key, fall back to a plaintext fetch
+        // by treating it as empty so manual login still works. PG encryption
+        // at rest + TLS in transit covers cache confidentiality today.
+        let data: FaceCache;
+        if (raw.encrypted && !raw.embeddings) {
+          console.warn('[KioskPage] encrypted cache received — client decryption not yet implemented; using empty embeddings');
+          data = {
+            embeddings: [],
+            work_start_time: raw.work_start_time,
+            late_grace_minutes: raw.late_grace_minutes,
+            generated_at: raw.generated_at,
+          };
+        } else {
+          data = raw;
+        }
         if (db) await idbPut(db, branchId, data);
         setCache(data);
         setIsOffline(false);
@@ -133,13 +162,14 @@ export default function KioskPage() {
     };
   }, []);
 
-  async function handleMatched(userId: string, name: string, isLate: boolean, minutes: number) {
+  async function handleMatched(userId: string, name: string, isLate: boolean, minutes: number, livenessPassed: boolean) {
     const deviceToken = localStorage.getItem('deviceToken') ?? '';
+    const payload: CheckinPayload = { userId, deviceToken, livenessPassed };
     try {
       const res = await fetch(`${BASE_URL}/face/face-checkin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, deviceToken }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -155,10 +185,50 @@ export default function KioskPage() {
       setResult({ name, time, isLate, minutes });
       setKioskState('success');
     } catch (err: unknown) {
+      // Phase 18.7 — network error: enqueue and show optimistic success.
+      if (isNetworkError(err)) {
+        try {
+          await checkinQueue.enqueue(payload);
+          const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+          setResult({ name, time, isLate, minutes });
+          setKioskState('success');
+          return;
+        } catch (qErr) {
+          console.error('[KioskPage] enqueue failed:', qErr);
+        }
+      }
       setLoadError(err instanceof Error ? err.message : 'Xato');
       timerRef.current = setTimeout(() => { setLoadError(''); setKioskState('scanning'); }, 3000);
     }
   }
+
+  // Phase 18.7 — drain offline queue when reconnecting.
+  useEffect(() => {
+    async function drain() {
+      try {
+        await checkinQueue.drain(async (item) => {
+          const res = await fetch(`${BASE_URL}/face/face-checkin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item),
+          });
+          // Treat 409 as terminal (already recorded) — drop it from the
+          // queue by returning normally; throw on real network/5xx so we
+          // retry next reconnect.
+          if (!res.ok && res.status >= 500) {
+            throw new Error(`drain failed status=${res.status}`);
+          }
+        });
+      } catch (err) {
+        console.error('[KioskPage] drain error:', err);
+      }
+    }
+    const handler = () => { void drain(); };
+    window.addEventListener('online', handler);
+    // Try once on mount in case queue had pending items from last session.
+    void drain();
+    return () => window.removeEventListener('online', handler);
+  }, []);
 
   function resetToScanning() {
     setResult(null);

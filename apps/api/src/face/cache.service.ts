@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { encryptString, loadKey } from '../common/crypto/vector-cipher';
 
 interface EmbeddingRow {
   user_id: string;
@@ -22,8 +23,19 @@ export interface BranchCachePackage {
   }[];
 }
 
+export interface EncryptedBranchCachePackage {
+  branch_id: string;
+  tenant_id: string;
+  generated_at: string;
+  work_start_time: string;
+  late_grace_minutes: number;
+  encrypted: string; // AES-256-GCM ciphertext (base64) of JSON-serialized embeddings
+  encryption: 'aes-256-gcm';
+}
+
 @Injectable()
 export class CacheService {
+  private readonly logger = new Logger(CacheService.name);
   constructor(private prisma: PrismaService) {}
 
   async generateBranchCache(
@@ -73,6 +85,48 @@ export class CacheService {
           .split(',')
           .map((v) => Number(v.trim())),
       })),
+    };
+  }
+
+  /**
+   * Phase 18.9 — encrypted cache variant.
+   *
+   * Returns the cache with the embeddings list AES-256-GCM encrypted as a
+   * single base64 ciphertext blob, suitable for transit to a kiosk that
+   * holds the FACE_VECTOR_KEY. Plaintext metadata (branch id, work start,
+   * grace minutes) is left in the clear so the kiosk can render its UI
+   * before decryption succeeds.
+   *
+   * If FACE_VECTOR_KEY is unset (dev mode), this method falls back to
+   * generateBranchCache() and logs a warning. Production deploys must set
+   * the key — encryption-at-rest in PG plus TLS in transit gives adequate
+   * security for the cache contents already; encryption here is a
+   * defense-in-depth measure for kiosks running on shared networks.
+   */
+  async generateEncryptedBranchCache(
+    branchId: string,
+    tenantId: string,
+  ): Promise<EncryptedBranchCachePackage | BranchCachePackage> {
+    const cache = await this.generateBranchCache(branchId, tenantId);
+    let key: Buffer;
+    try {
+      key = loadKey();
+    } catch (err) {
+      this.logger.warn(
+        `FACE_VECTOR_KEY not configured — returning plaintext cache: ${(err as Error).message}`,
+      );
+      return cache;
+    }
+    const json = JSON.stringify(cache.embeddings);
+    const encrypted = encryptString(json, key);
+    return {
+      branch_id: cache.branch_id,
+      tenant_id: cache.tenant_id,
+      generated_at: cache.generated_at,
+      work_start_time: cache.work_start_time,
+      late_grace_minutes: cache.late_grace_minutes,
+      encrypted,
+      encryption: 'aes-256-gcm',
     };
   }
 }

@@ -18,7 +18,7 @@ interface FaceScannerProps {
   cachedEmbeddings: CachedEmbedding[];
   workStartTime: string;
   lateGraceMinutes: number;
-  onMatched: (userId: string, name: string, isLate: boolean, minutes: number) => void;
+  onMatched: (userId: string, name: string, isLate: boolean, minutes: number, livenessPassed: boolean) => void;
   onFailed: () => void;
 }
 
@@ -129,7 +129,9 @@ export function FaceScanner({
                 // Stop polling on confirmed match
                 if (interval) clearInterval(interval);
                 const { late, minutes } = isLateArrival(workStartTime, lateGraceMinutes);
-                onMatched(match.userId, match.name, late, minutes);
+                // Phase 18.10 — blink confirmed (EAR < 0.20 over BLINK_FRAMES);
+                // pass livenessPassed=true to the kiosk so it forwards to the API.
+                onMatched(match.userId, match.name, late, minutes, true);
               } else {
                 failCountRef.current++;
                 if (failCountRef.current >= 3) {

@@ -43,6 +43,42 @@ export function decryptVector(b64: string, key: Buffer): number[] {
   return JSON.parse(pt.toString()) as number[];
 }
 
+/**
+ * Encrypt an arbitrary UTF-8 string with AES-256-GCM, same envelope layout
+ * as encryptVector ([12-byte IV][16-byte tag][ciphertext], base64 encoded).
+ */
+export function encryptString(plain: string, key: Buffer): string {
+  if (key.length !== 32) {
+    throw new Error('FACE_VECTOR_KEY must decode to exactly 32 bytes');
+  }
+  const iv = randomBytes(IV_LEN);
+  const cipher = createCipheriv(ALGO, key, iv);
+  const ct = Buffer.concat([
+    cipher.update(Buffer.from(plain, 'utf8')),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, ct]).toString('base64');
+}
+
+export function decryptString(b64: string, key: Buffer): string {
+  if (key.length !== 32) {
+    throw new Error('FACE_VECTOR_KEY must decode to exactly 32 bytes');
+  }
+  const buf = Buffer.from(b64, 'base64');
+  if (buf.length < IV_LEN + TAG_LEN) {
+    throw new Error('Ciphertext too short');
+  }
+  const iv = buf.subarray(0, IV_LEN);
+  const tag = buf.subarray(IV_LEN, IV_LEN + TAG_LEN);
+  const ct = buf.subarray(IV_LEN + TAG_LEN);
+  const decipher = createDecipheriv(ALGO, key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ct), decipher.final()]).toString(
+    'utf8',
+  );
+}
+
 let cachedKey: Buffer | null = null;
 
 export function loadKey(): Buffer {

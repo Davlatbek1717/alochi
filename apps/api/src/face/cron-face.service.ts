@@ -116,6 +116,44 @@ export class CronFaceService {
     }
   }
 
+  /**
+   * Phase 18.2 — warn (log only) about kiosk JWTs expiring inside 7 days.
+   * Filadmin rotates manually via the device admin UI; we don't
+   * auto-disable to avoid bricking a kiosk overnight.
+   */
+  @Cron('0 7 * * *', { name: 'face_device_token_expiry_warn' })
+  async warnDeviceTokenExpiry() {
+    try {
+      const cutoff = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const expiring = await this.prisma.branchDevice.findMany({
+        where: {
+          isActive: true,
+          tokenExpiresAt: { not: null, lt: cutoff },
+        },
+        select: {
+          id: true,
+          deviceName: true,
+          branchId: true,
+          tokenExpiresAt: true,
+        },
+      });
+      if (expiring.length > 0) {
+        this.logger.warn(
+          `Face devices with token expiring < 7d: ${expiring
+            .map(
+              (d) =>
+                `${d.deviceName}(${d.id})@${d.tokenExpiresAt?.toISOString()}`,
+            )
+            .join(', ')}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `face_device_token_expiry_warn failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
   @Cron('0 9 * * 1', { name: 'face_enrollment_reminder' })
   async sendEnrollmentReminder() {
     this.logger.log('Face ID: enrollment reminder boshlanmoqda...');

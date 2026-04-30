@@ -268,6 +268,7 @@ model AttendanceStaff {
   confirmedAt         DateTime? @map("confirmed_at")
   confirmedBy         String?   @map("confirmed_by") @db.Uuid
   isLate              Boolean   @default(false) @map("is_late")
+  lateMinutes         Int       @default(0) @map("late_minutes")
   recognitionMethod   String    @default("manual") @map("recognition_method")
   confidence          Float?
   deviceId            String?   @map("device_id")

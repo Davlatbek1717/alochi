@@ -136,6 +136,52 @@ export class NotificationHandler {
     }
   }
 
+  /**
+   * Phase 18.6 — fan out a 3-consecutive-fail face recognition alert to the
+   * branch's filadmin(s) via Telegram. The face controller emits this
+   * event; FaceService keeps the in-memory consecutive counter.
+   */
+  @OnEvent('face.recognition_failed_3x')
+  async onFaceRecognitionFailed3x(payload: {
+    deviceId: string;
+    branchId: string;
+  }) {
+    try {
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: payload.branchId },
+        select: { name: true, tenantId: true },
+      });
+      if (!branch) return;
+
+      const filadmins = await this.prisma.user.findMany({
+        where: {
+          tenantId: branch.tenantId,
+          branchId: payload.branchId,
+          role: 'filadmin',
+          status: 'active',
+        },
+        select: { id: true },
+      });
+
+      for (const fa of filadmins) {
+        await this.telegram
+          .sendToUser(
+            fa.id,
+            'face.recognition_failed_3x',
+            { branchName: branch.name },
+            branch.tenantId,
+          )
+          .catch((err) =>
+            this.logger.warn(
+              `face.recognition_failed_3x Telegram failed (${fa.id}): ${err}`,
+            ),
+          );
+      }
+    } catch (err) {
+      this.logger.error(`face.recognition_failed_3x handler xatosi: ${err}`);
+    }
+  }
+
   // Delegation Telegram delivery moved to DelegationHandler (Phase 6 §6.1)
   // so all delegation copy is template-driven and centrally maintained.
 }
