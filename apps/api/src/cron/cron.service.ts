@@ -5,6 +5,7 @@ import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AdaptiveService } from '../adaptive/adaptive.service';
 import { ChurnService } from '../churn/churn.service';
+import { ClickHouseService } from '../clickhouse/clickhouse.service';
 
 @Injectable()
 export class CronService {
@@ -16,6 +17,7 @@ export class CronService {
     private notifications: NotificationsService,
     private adaptive: AdaptiveService,
     private churn: ChurnService,
+    private clickhouse: ClickHouseService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -45,7 +47,9 @@ export class CronService {
         data: { status: 'blocked_payment' },
       });
 
-      this.logger.log(`Tenant ${setting.tenantId}: ${result.count} o'quvchi bloklandi`);
+      this.logger.log(
+        `Tenant ${setting.tenantId}: ${result.count} o'quvchi bloklandi`,
+      );
     }
   }
 
@@ -127,7 +131,9 @@ export class CronService {
         );
       }
 
-      this.logger.log(`Tenant ${setting.tenantId}: ${unpaidStudents.length} ta eslatma yuborildi`);
+      this.logger.log(
+        `Tenant ${setting.tenantId}: ${unpaidStudents.length} ta eslatma yuborildi`,
+      );
     }
   }
 
@@ -151,19 +157,23 @@ export class CronService {
     });
 
     for (const d of delegations) {
-      await this.notifications.send(
-        d.fromUser.id,
-        'delegation',
-        'Delegatsiya tugayapti',
-        `${d.toUser.name} ga delegatsiyangiz ertaga tugaydi.`,
-      ).catch(() => {});
+      await this.notifications
+        .send(
+          d.fromUser.id,
+          'delegation',
+          'Delegatsiya tugayapti',
+          `${d.toUser.name} ga delegatsiyangiz ertaga tugaydi.`,
+        )
+        .catch(() => {});
 
-      await this.notifications.send(
-        d.toUser.id,
-        'delegation',
-        'Delegatsiya tugayapti',
-        `${d.fromUser.name} dan delegatsiya ertaga tugaydi.`,
-      ).catch(() => {});
+      await this.notifications
+        .send(
+          d.toUser.id,
+          'delegation',
+          'Delegatsiya tugayapti',
+          `${d.fromUser.name} dan delegatsiya ertaga tugaydi.`,
+        )
+        .catch(() => {});
     }
 
     if (delegations.length > 0) {
@@ -195,10 +205,17 @@ export class CronService {
           where: { date: { gte: today, lt: tomorrow } },
           orderBy: { date: 'desc' },
           take: 1,
-          select: { englishStatus: true, personalStatus: true, criticalStatus: true },
+          select: {
+            englishStatus: true,
+            personalStatus: true,
+            criticalStatus: true,
+          },
         },
         studentProgress: {
-          where: { completedAt: { gte: today, lt: tomorrow }, academyCompleted: true },
+          where: {
+            completedAt: { gte: today, lt: tomorrow },
+            academyCompleted: true,
+          },
           select: { id: true },
         },
       },
@@ -219,7 +236,9 @@ export class CronService {
         streak: student.studentXp?.currentStreak ?? 0,
         totalXp: student.studentXp?.totalXp ?? 0,
       });
-      await this.telegram.sendMessage(student.parentTelegramId, message).catch(() => {});
+      await this.telegram
+        .sendMessage(student.parentTelegramId, message)
+        .catch(() => {});
       sent++;
     }
 
@@ -237,7 +256,13 @@ export class CronService {
 
     const managers = await this.prisma.user.findMany({
       where: { role: 'manager', status: 'active', telegramId: { not: null } },
-      select: { id: true, name: true, telegramId: true, branchId: true, tenantId: true },
+      select: {
+        id: true,
+        name: true,
+        telegramId: true,
+        branchId: true,
+        tenantId: true,
+      },
     });
 
     for (const manager of managers) {
@@ -247,15 +272,29 @@ export class CronService {
         this.prisma.studentStatus.count({
           where: {
             date: { gte: today, lt: tomorrow },
-            student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
-            OR: [{ englishStatus: 'qizil' }, { personalStatus: 'qizil' }, { criticalStatus: 'qizil' }],
+            student: {
+              tenantId: manager.tenantId,
+              branchId: manager.branchId ?? undefined,
+            },
+            OR: [
+              { englishStatus: 'qizil' },
+              { personalStatus: 'qizil' },
+              { criticalStatus: 'qizil' },
+            ],
           },
         }),
         this.prisma.studentStatus.count({
           where: {
             date: { gte: today, lt: tomorrow },
-            student: { tenantId: manager.tenantId, branchId: manager.branchId ?? undefined },
-            OR: [{ englishStatus: 'sariq' }, { personalStatus: 'sariq' }, { criticalStatus: 'sariq' }],
+            student: {
+              tenantId: manager.tenantId,
+              branchId: manager.branchId ?? undefined,
+            },
+            OR: [
+              { englishStatus: 'sariq' },
+              { personalStatus: 'sariq' },
+              { criticalStatus: 'sariq' },
+            ],
           },
         }),
       ]);
@@ -291,10 +330,18 @@ export class CronService {
 
       const [staffCount, presentCount, studentCount] = await Promise.all([
         this.prisma.user.count({
-          where: { branchId: fa.branchId, role: { in: ['mentor', 'manager', 'tester'] }, status: 'active' },
+          where: {
+            branchId: fa.branchId,
+            role: { in: ['mentor', 'manager', 'tester'] },
+            status: 'active',
+          },
         }),
         this.prisma.attendanceStaff.count({
-          where: { date: { gte: today, lt: tomorrow }, user: { branchId: fa.branchId }, loginTime: { not: null } },
+          where: {
+            date: { gte: today, lt: tomorrow },
+            user: { branchId: fa.branchId },
+            loginTime: { not: null },
+          },
         }),
         this.prisma.user.count({
           where: { branchId: fa.branchId, role: 'student', status: 'active' },
@@ -314,8 +361,12 @@ export class CronService {
   async runRefreshMaterializedViews() {
     this.logger.log('Cron: materialized views yangilanmoqda...');
     try {
-      await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_stats_mv');
-      await this.prisma.$executeRawUnsafe('REFRESH MATERIALIZED VIEW CONCURRENTLY branch_stats_mv');
+      await this.prisma.$executeRawUnsafe(
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY lesson_stats_mv',
+      );
+      await this.prisma.$executeRawUnsafe(
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY branch_stats_mv',
+      );
       this.logger.log('Materialized views yangilandi');
     } catch (e) {
       this.logger.error(`Materialized view refresh failed: ${e.message}`);
@@ -327,9 +378,11 @@ export class CronService {
     this.logger.log('Cron: adaptive difficulty boshlanmoqda...');
     const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
     for (const tenant of tenants) {
-      await this.adaptive.runNightlyAdaptation(tenant.id).catch((e) =>
-        this.logger.error(`Adaptive error tenant ${tenant.id}: ${e.message}`),
-      );
+      await this.adaptive
+        .runNightlyAdaptation(tenant.id)
+        .catch((e) =>
+          this.logger.error(`Adaptive error tenant ${tenant.id}: ${e.message}`),
+        );
     }
   }
 
@@ -338,10 +391,66 @@ export class CronService {
     this.logger.log('Cron: churn scoring boshlanmoqda...');
     const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
     for (const tenant of tenants) {
-      await this.churn.runDailyScoring(tenant.id).catch((e) =>
-        this.logger.error(`Churn error tenant ${tenant.id}: ${e.message}`),
-      );
+      await this.churn
+        .runDailyScoring(tenant.id)
+        .catch((e) =>
+          this.logger.error(`Churn error tenant ${tenant.id}: ${e.message}`),
+        );
     }
+  }
+
+  @Cron('0 3 * * *', { name: 'clickhouse_retry' })
+  async runClickHouseRetry() {
+    this.logger.log('Cron: ClickHouse retry boshlanmoqda...');
+    if (!this.clickhouse.isReady()) {
+      this.logger.warn('ClickHouse not ready, skip retry');
+      return;
+    }
+    const BATCH = 1000;
+    const unsynced = await this.prisma.analyticsEvent.findMany({
+      where: { syncedAt: null },
+      take: BATCH,
+      orderBy: { createdAt: 'asc' },
+    });
+    let synced = 0;
+    for (const event of unsynced) {
+      const data = (event.data ?? {}) as Record<string, unknown>;
+      const lessonId = (data as { lessonId?: string }).lessonId ?? null;
+      const sessionCount =
+        (data as { sessionCount?: number }).sessionCount ?? 0;
+      const isPresent = (data as { isPresent?: boolean }).isPresent;
+      const isLate = (data as { isLate?: boolean }).isLate;
+      const newStreak = (data as { newStreak?: number }).newStreak;
+
+      try {
+        await this.clickhouse.insertEvent({
+          event_id: event.id,
+          tenant_id: event.tenantId,
+          event_type: event.eventType,
+          student_id: event.studentId,
+          branch_id: event.branchId,
+          lesson_id: lessonId,
+          session_count: sessionCount,
+          is_present: isPresent === undefined ? null : isPresent ? 1 : 0,
+          is_late: isLate === undefined ? null : isLate ? 1 : 0,
+          new_streak: newStreak ?? null,
+          data: JSON.stringify(data),
+          created_at: event.createdAt.toISOString(),
+        });
+        await this.prisma.analyticsEvent.update({
+          where: { id: event.id },
+          data: { syncedAt: new Date() },
+        });
+        synced++;
+      } catch (e) {
+        this.logger.warn(
+          `ClickHouse retry failed for event ${event.id}: ${(e as Error).message}`,
+        );
+      }
+    }
+    this.logger.log(
+      `ClickHouse retry: ${synced}/${unsynced.length} events synced`,
+    );
   }
 
   async triggerPaymentUnblockManually() {
