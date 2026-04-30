@@ -24,7 +24,7 @@ export class WarningsController {
   constructor(private warnings: WarningsService) {}
 
   @Get('my')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   getMyWarnings(@Request() req: any) {
     return this.warnings.findByStudent(req.user.userId);
   }

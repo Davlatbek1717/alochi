@@ -39,7 +39,7 @@ export class LessonsController {
   }
 
   @Get('next')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   getNext(@Request() req: any) {
     return this.lessons.getNextLesson(req.user.userId, req.user.tenantId);
   }

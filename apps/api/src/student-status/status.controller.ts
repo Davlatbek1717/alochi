@@ -69,7 +69,7 @@ export class StatusController {
   }
 
   @Get('my')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   getMyStatus(@Request() req: AuthRequest) {
     return this.statusService.getLatest(req.user.userId);
   }

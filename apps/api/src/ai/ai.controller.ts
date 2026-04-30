@@ -114,7 +114,7 @@ export class AiController {
   }
 
   @Get('spaced-repetition/daily-review')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   getDailyReview(@Request() req: any) {
     return this.ai.getDailyReview(req.user.userId);
   }

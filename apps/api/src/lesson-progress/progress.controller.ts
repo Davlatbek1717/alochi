@@ -22,7 +22,7 @@ export class ProgressController {
   constructor(private progress: ProgressService) {}
 
   @Post(':lessonId/complete-session')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   completeSession(@Param('lessonId') lessonId: string, @Request() req: any) {
     return this.progress.completeSession(
       req.user.userId,
@@ -54,7 +54,7 @@ export class ProgressController {
   }
 
   @Get('my')
-  @Roles(UserRole.student)
+  @Roles(UserRole.student, UserRole.tester)
   myProgress(@Request() req: any) {
     return this.progress.getStudentProgress(req.user.userId);
   }

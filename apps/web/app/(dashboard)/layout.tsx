@@ -9,7 +9,7 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import {
   Home, BookOpen, Users, GraduationCap, BarChart2, ClipboardList,
   CreditCard, AlertTriangle, Building2, BookMarked, Send,
-  ShieldOff, Trophy, User,
+  ShieldOff, Trophy, User, FlaskConical,
 } from 'lucide-react';
 import { ToastProvider, Button } from '@/components/ui';
 
@@ -32,8 +32,9 @@ const SIDEBAR_NAV: Record<string, NavItem[]> = {
     { href: '/mentor/tasks',      icon: <ClipboardList size={17} />, label: 'Vazifalar'   },
   ],
   tester: [
-    { href: '/tester',       icon: <Home size={17} />,          label: 'Bosh sahifa' },
-    { href: '/tester/tasks', icon: <ClipboardList size={17} />, label: 'Vazifalar'   },
+    { href: '/tester',                 icon: <Home size={17} />,           label: 'Bosh sahifa'      },
+    { href: '/tester/lessons/current', icon: <FlaskConical size={17} />,   label: 'Sinov darsi'      },
+    { href: '/tester/exam-queue',      icon: <ClipboardList size={17} />,  label: 'Imtihon navbati'  },
   ],
   manager: [
     { href: '/manager',             icon: <Home size={17} />,          label: 'Bosh sahifa'  },
