@@ -124,7 +124,7 @@ export function OnboardForm() {
             <input
               type="text"
               required
-              pattern="[a-z0-9-]{3,50}"
+              pattern="[a-z0-9\-]{3,50}"
               value={slug}
               onChange={(e) => onSlugChange(e.target.value)}
               className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-emerald-500 outline-none"
