@@ -223,6 +223,7 @@ export default function SuperadminUsersPage() {
             <select
               value={filterRole}
               onChange={(e) => applyFilter(e.target.value, filterBranch)}
+              aria-label="Rol bo'yicha filtrlash"
               className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
             >
               <option value="">Barcha rollar</option>
@@ -234,6 +235,7 @@ export default function SuperadminUsersPage() {
             <select
               value={filterBranch}
               onChange={(e) => applyFilter(filterRole, e.target.value)}
+              aria-label="Filial bo'yicha filtrlash"
               className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
             >
               <option value="">Barcha filiallar</option>

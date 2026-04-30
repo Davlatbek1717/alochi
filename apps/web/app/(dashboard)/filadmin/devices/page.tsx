@@ -149,6 +149,7 @@ export default function FiladminDevicesPage() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addDevice()}
               placeholder="Qurilma nomi (masalan: Asosiy kirish)"
+              aria-label="Yangi qurilma nomi"
               className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
             />
             <button
@@ -214,6 +215,7 @@ export default function FiladminDevicesPage() {
                   <button
                     onClick={() => deactivate(d.id)}
                     disabled={deactivating === d.id}
+                    aria-label={`${d.deviceName} qurilmasini o'chirish`}
                     className="text-[#e11d48] hover:bg-[#e11d48]/10 p-2 rounded-xl disabled:opacity-50 transition-colors"
                   >
                     <Trash2 size={16} />

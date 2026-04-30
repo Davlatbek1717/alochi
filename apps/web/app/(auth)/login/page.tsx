@@ -1,6 +1,10 @@
 import { LoginForm } from './_components/LoginForm';
 import { GraduationCap, Zap, Trophy, BarChart2 } from 'lucide-react';
 
+export const metadata = {
+  title: 'Kirish — Alochi',
+};
+
 const FEATURES = [
   { icon: <Zap size={16} />, text: 'AI bilan shaxsiy o\'quv yo\'li' },
   { icon: <Trophy size={16} />, text: 'Gamifikatsiya va turnirlar' },

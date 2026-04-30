@@ -158,7 +158,7 @@ export default function EditLessonPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] p-6 space-y-4">
+      <div className="min-h-screen bg-[#f7f4ef] p-4 md:p-6 space-y-4">
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-24 w-full rounded-[18px]" />
@@ -220,7 +220,7 @@ export default function EditLessonPage() {
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-4">
         {/* Info panel */}
-        <div className="bg-[#162032] rounded-[18px] p-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="bg-[#162032] rounded-[18px] p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
           <div>
             <p className="text-[#64748b] text-xs">Tartib</p>
             <p className="text-white font-bold">#{lesson.orderNumber}</p>
@@ -304,6 +304,7 @@ export default function EditLessonPage() {
                   <span className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Savol {qIdx + 1}</span>
                   <button
                     onClick={() => removeMcqQuestion(qIdx)}
+                    aria-label="Savolni o'chirish"
                     className="text-[#e11d48] hover:bg-[#e11d48]/10 p-1.5 rounded-lg transition-colors"
                   >
                     <Trash2 size={14} />
@@ -313,6 +314,7 @@ export default function EditLessonPage() {
                   type="text"
                   value={q.text}
                   onChange={(e) => updateMcqQuestion(qIdx, 'text', e.target.value)}
+                  aria-label={`${qIdx + 1}-savol matni`}
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
                   placeholder="Savol matni..."
                 />
@@ -322,6 +324,8 @@ export default function EditLessonPage() {
                       <button
                         type="button"
                         onClick={() => updateMcqQuestion(qIdx, 'correct', optIdx)}
+                        aria-label={`${optIdx + 1}-javobni to'g'ri deb belgilash`}
+                        aria-pressed={q.correct === optIdx}
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                           q.correct === optIdx ? 'border-emerald-500 bg-emerald-500' : 'border-[#ede9e1]'
                         }`}
@@ -332,6 +336,7 @@ export default function EditLessonPage() {
                         type="text"
                         value={opt}
                         onChange={(e) => updateMcqOption(qIdx, optIdx, e.target.value)}
+                        aria-label={`${qIdx + 1}-savol, ${optIdx + 1}-javob`}
                         className={`flex-1 border rounded-xl px-3 py-1.5 text-sm focus:outline-none bg-[#f7f4ef] text-[#0f172a] ${
                           q.correct === optIdx
                             ? 'border-emerald-300 focus:border-emerald-500'

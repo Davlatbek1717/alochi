@@ -94,6 +94,7 @@ export function Table<T extends Record<string, unknown>>({
                 return (
                   <th
                     key={String(col.key)}
+                    scope="col"
                     className={`px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider ${alignCls}`}
                     style={col.width ? { width: col.width } : undefined}
                   >

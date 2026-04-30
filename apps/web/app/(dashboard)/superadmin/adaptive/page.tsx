@@ -58,13 +58,13 @@ export default function AdaptivePage() {
 
   if (loading) {
     return (
-      <div className="p-6 max-w-2xl space-y-6">
+      <div className="p-4 md:p-6 max-w-2xl space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <Skeleton className="w-10 h-10 rounded-xl" />
           <Skeleton className="h-8 w-64" />
         </div>
         <Card>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="space-y-2">
                 <Skeleton className="h-4 w-40" />
@@ -95,10 +95,11 @@ export default function AdaptivePage() {
             </CardDescription>
           </CardHeader>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Minimal N (takrorlash)</label>
+              <label htmlFor="minN" className="block text-sm text-slate-400 mb-2">Minimal N (takrorlash)</label>
               <input
+                id="minN"
                 type="number"
                 min={1}
                 max={20}
@@ -108,8 +109,9 @@ export default function AdaptivePage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Maksimal N (takrorlash)</label>
+              <label htmlFor="maxN" className="block text-sm text-slate-400 mb-2">Maksimal N (takrorlash)</label>
               <input
+                id="maxN"
                 type="number"
                 min={1}
                 max={20}
@@ -119,8 +121,9 @@ export default function AdaptivePage() {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Qiyin chegarasi (%)</label>
+              <label htmlFor="hardThreshold" className="block text-sm text-slate-400 mb-2">Qiyin chegarasi (%)</label>
               <input
+                id="hardThreshold"
                 type="number"
                 min={1}
                 max={100}
@@ -131,8 +134,9 @@ export default function AdaptivePage() {
               <p className="text-xs text-slate-500 mt-1">Xato foizi bundan yuqori bo&apos;lsa N oshiriladi</p>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-2">Oson chegarasi (%)</label>
+              <label htmlFor="easyThreshold" className="block text-sm text-slate-400 mb-2">Oson chegarasi (%)</label>
               <input
+                id="easyThreshold"
                 type="number"
                 min={1}
                 max={100}

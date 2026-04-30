@@ -104,12 +104,14 @@ export default function FiladminTasksPage() {
               {formError && <p className="text-sm text-rose-500">{formError}</p>}
               <input
                 placeholder="Sarlavha *"
+                aria-label="Vazifa sarlavhasi"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               />
               <input
                 placeholder="Bajaruvchi ID *"
+                aria-label="Bajaruvchi ID"
                 value={form.assignedTo}
                 onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -125,12 +127,14 @@ export default function FiladminTasksPage() {
                 <input
                   type="number"
                   placeholder="KPI ball"
+                  aria-label="KPI ball"
                   value={form.kpiBall}
                   onChange={(e) => setForm({ ...form, kpiBall: Number(e.target.value) })}
                   className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
                 />
                 <input
                   type="date"
+                  aria-label="Muddat"
                   value={form.deadline}
                   onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                   className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"

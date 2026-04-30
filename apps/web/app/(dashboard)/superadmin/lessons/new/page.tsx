@@ -105,6 +105,7 @@ export default function NewLessonPage() {
               type="text"
               value={form.title}
               onChange={(e) => set('title', e.target.value)}
+              aria-label="Dars nomi"
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a]"
               placeholder="Masalan: Present Simple"
               required
@@ -113,7 +114,7 @@ export default function NewLessonPage() {
 
           {/* Type and order */}
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
                   Turi <span className="text-[#e11d48]">*</span>
@@ -121,6 +122,7 @@ export default function NewLessonPage() {
                 <select
                   value={form.type}
                   onChange={(e) => set('type', e.target.value)}
+                  aria-label="Dars turi"
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
                 >
                   {LESSON_TYPES.map((t) => (
@@ -135,6 +137,7 @@ export default function NewLessonPage() {
                 <input
                   type="number"
                   min="1"
+                  aria-label="Tartib raqami"
                   value={form.orderNumber}
                   onChange={(e) => set('orderNumber', e.target.value)}
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -152,6 +155,7 @@ export default function NewLessonPage() {
             </p>
             <input
               type="url"
+              aria-label="YouTube URL"
               value={form.youtubeUrl}
               onChange={(e) => set('youtubeUrl', e.target.value)}
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -162,7 +166,7 @@ export default function NewLessonPage() {
 
           {/* N repetitions */}
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
                   N takrorlash <span className="text-[#e11d48]">*</span>
@@ -171,6 +175,7 @@ export default function NewLessonPage() {
                   type="number"
                   min="1"
                   max="10"
+                  aria-label="N takrorlash soni"
                   value={form.nRepetitions}
                   onChange={(e) => set('nRepetitions', e.target.value)}
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -184,6 +189,7 @@ export default function NewLessonPage() {
                   type="number"
                   min="1"
                   max="20"
+                  aria-label="Maksimal N"
                   value={form.maxNOverride}
                   onChange={(e) => set('maxNOverride', e.target.value)}
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"

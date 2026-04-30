@@ -70,7 +70,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-[#0f172a] rounded-[18px] shadow-2xl border border-white/10 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+        <div role="menu" aria-label="Bildirishnomalar menyusi" className="absolute right-0 top-full mt-2 w-72 bg-[#0f172a] rounded-[18px] shadow-2xl border border-white/10 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Bildirishnomalar</p>
             {unread > 0 && (

@@ -202,6 +202,7 @@ export default function ManagerKpiPage() {
               type="number"
               min={1}
               max={50}
+              aria-label="Ball miqdori"
               value={score}
               onChange={(e) => {
                 const val = Number(e.target.value);

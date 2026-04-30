@@ -117,6 +117,7 @@ export default function WarningsPage() {
             <select
               value={selectedStudent}
               onChange={(e) => setSelectedStudent(e.target.value)}
+              aria-label="O'quvchini tanlang"
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a]"
               required
               disabled={loadingStudents}
@@ -162,6 +163,7 @@ export default function WarningsPage() {
               onChange={(e) => setReasonText(e.target.value)}
               rows={3}
               required
+              aria-label="Ogohlantirish sababi"
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
               placeholder="Ogohlantirish sababi..."
             />

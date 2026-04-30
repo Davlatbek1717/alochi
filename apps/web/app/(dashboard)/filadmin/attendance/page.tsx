@@ -196,6 +196,7 @@ export default function FiladminAttendancePage() {
             <div className="flex items-center gap-2">
               <input
                 type="date"
+                aria-label="Sana"
                 value={date}
                 max={TODAY}
                 onChange={(e) => setDate(e.target.value)}

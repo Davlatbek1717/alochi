@@ -310,6 +310,7 @@ export default function GroupChatPage() {
               onChange={(e) => setInput(e.target.value.slice(0, 200))}
               onKeyDown={handleKeyDown}
               placeholder="Xabar yozing..."
+              aria-label="Xabar yozing"
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 pr-14 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#94a3b8] font-mono">
@@ -319,6 +320,7 @@ export default function GroupChatPage() {
           <button
             onClick={sendMessage}
             disabled={!connected || !input.trim()}
+            aria-label="Xabar yuborish"
             className="w-11 h-11 bg-[#0f172a] text-white rounded-xl flex items-center justify-center disabled:opacity-40"
           >
             <Send size={16} />

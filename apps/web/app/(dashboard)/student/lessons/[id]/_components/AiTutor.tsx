@@ -116,11 +116,13 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendQuestion(input)}
             placeholder="Savolingizni yozing..."
+            aria-label="AI tutorga savol yozing"
             className="flex-1 border rounded-lg px-3 py-2 text-sm"
           />
           <button
             onClick={() => sendQuestion(input)}
             disabled={loading || !input.trim()}
+            aria-label="Savol yuborish"
             className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm disabled:opacity-50"
           >
             ↑

@@ -98,7 +98,7 @@ export default function MentorDashboard() {
             <p className="text-white text-xl font-bold">{mentorName || 'Mentor'}</p>
             <p className="text-[#475569] text-xs mt-1 font-mono">{dateStr}</p>
           </div>
-          <button className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#94a3b8]">
+          <button aria-label="Bildirishnomalar" className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#94a3b8]">
             <Bell size={18} />
           </button>
         </div>

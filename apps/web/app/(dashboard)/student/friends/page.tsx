@@ -146,6 +146,7 @@ export default function FriendsPage() {
             <input
               type="text"
               placeholder="Foydalanuvchi ID"
+              aria-label="Do'st foydalanuvchi ID"
               value={friendId}
               onChange={(e) => setFriendId(e.target.value)}
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -153,6 +154,7 @@ export default function FriendsPage() {
             <input
               type="text"
               placeholder="Filial ID"
+              aria-label="Filial ID"
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"

@@ -94,6 +94,7 @@ export default function SuperadminBranchesPage() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && createBranch()}
             placeholder="Yangi filial nomi..."
+            aria-label="Yangi filial nomi"
             className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
           />
           <button
@@ -137,16 +138,19 @@ export default function SuperadminBranchesPage() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && saveName(b.id)}
+                      aria-label="Filial nomini tahrirlash"
                       className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
                     />
                     <button
                       onClick={() => saveName(b.id)}
+                      aria-label="Saqlash"
                       className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center"
                     >
                       <Check size={15} />
                     </button>
                     <button
                       onClick={() => setEditId(null)}
+                      aria-label="Bekor qilish"
                       className="w-8 h-8 bg-[#f7f4ef] text-[#94a3b8] rounded-xl flex items-center justify-center"
                     >
                       <X size={15} />
@@ -157,6 +161,7 @@ export default function SuperadminBranchesPage() {
                     <p className="flex-1 font-semibold text-[#0f172a] text-sm">{b.name}</p>
                     <button
                       onClick={() => { setEditId(b.id); setEditName(b.name); }}
+                      aria-label={`${b.name} nomini tahrirlash`}
                       className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] rounded-xl flex items-center justify-center"
                     >
                       <Pencil size={14} />

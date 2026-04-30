@@ -329,6 +329,7 @@ export default function TesterPage() {
               <select
                 value={selectedLesson}
                 onChange={(e) => setSelectedLesson(e.target.value)}
+                aria-label="Dars tanlang"
                 className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
               >
                 {lessons.map((l) => (

@@ -90,6 +90,7 @@ export default function KeywordsPage() {
             onChange={(e) => setNewWord(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addKeyword()}
             placeholder="Yangi so'z qo'shing..."
+            aria-label="Taqiqlangan so'z kiriting"
             className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
           />
           <button

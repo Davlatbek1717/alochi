@@ -251,6 +251,7 @@ export default function StudentProfilePage() {
                         type="number"
                         min={1}
                         max={lesson.maxNOverride}
+                        aria-label={`${lesson.title} — takrorlash soni`}
                         value={overrides[lesson.id] ?? lesson.nRepetitions}
                         onChange={(e) =>
                           setOverrides((prev) => ({

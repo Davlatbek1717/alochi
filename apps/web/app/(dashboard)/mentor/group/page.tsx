@@ -13,6 +13,12 @@ const STATUS_DOT: Record<Status, string> = {
   red:    'bg-rose-500',
 };
 
+const STATUS_ARIA: Record<Status, string> = {
+  green:  'Yaxshi',
+  yellow: "Ogohlantirishga muhtoj",
+  red:    'Muammo bor',
+};
+
 const STATUS_RING: Record<Status, string> = {
   green:  'ring-emerald-400',
   yellow: 'ring-amber-400',
@@ -211,6 +217,8 @@ export default function MentorGroupPage() {
                       <button
                         key={s}
                         onClick={() => updateStatus(student.id, s)}
+                        aria-label={STATUS_ARIA[s]}
+                        aria-pressed={student.status === s}
                         className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
                           student.status === s ? `bg-[#f7f4ef] ring-2 ring-offset-1 ${STATUS_RING[s]}` : 'bg-[#f7f4ef]'
                         }`}
@@ -225,6 +233,7 @@ export default function MentorGroupPage() {
                   <input
                     type="text"
                     placeholder="Izoh (ixtiyoriy)..."
+                    aria-label={`${student.name} uchun izoh`}
                     value={student.note}
                     onChange={(e) => updateNote(student.id, e.target.value)}
                     className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"

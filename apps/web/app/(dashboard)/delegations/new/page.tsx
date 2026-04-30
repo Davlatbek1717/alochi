@@ -115,6 +115,7 @@ function NewDelegationForm() {
                 value={selectedRecipient}
                 onChange={(e) => setSelectedRecipient(e.target.value)}
                 disabled={loadingUsers}
+                aria-label="Oluvchi xodimni tanlang"
                 className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm font-medium focus:outline-none focus:border-[#0f172a] disabled:opacity-60 pr-10"
                 required
               >
@@ -165,6 +166,7 @@ function NewDelegationForm() {
               value={reason}
               onChange={(e) => { setReason(e.target.value); setError(''); }}
               rows={3}
+              aria-label="Delegatsiya sababi"
               className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
               placeholder="Nima uchun delegatsiya bermoqchisiz?"
             />

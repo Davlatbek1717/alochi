@@ -108,6 +108,7 @@ export default function FaceAttendancePage() {
             </div>
             <input
               type="date"
+              aria-label="Sana"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#0d9488]"

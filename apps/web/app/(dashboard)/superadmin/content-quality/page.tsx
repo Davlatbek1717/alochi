@@ -137,7 +137,7 @@ export default function ContentQualityPage() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <Skeleton className="w-10 h-10 rounded-xl" />
           <Skeleton className="h-8 w-56" />

@@ -94,6 +94,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ToastProvider>
     <DuelNotificationProvider>
       <div className="flex flex-col min-h-screen bg-[#f7f4ef]">
+        {/* Skip to main content — keyboard a11y */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-emerald-600 focus:text-white focus:rounded-lg"
+        >
+          Asosiy kontentga o&apos;tish
+        </a>
         {/* Top header */}
         <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-white/5 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -147,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Main content */}
-          <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
+          <main id="main-content" className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
         </div>
 
         {/* Bottom nav — mobile only */}

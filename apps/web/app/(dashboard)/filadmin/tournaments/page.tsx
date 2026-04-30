@@ -98,11 +98,13 @@ export default function FiladminTournamentsPage() {
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 placeholder="Turnir nomi"
+                aria-label="Turnir nomi"
                 className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
               />
               <select
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                aria-label="Turnir turi"
                 className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b] bg-white"
               >
                 <option value="individual">Individual</option>
