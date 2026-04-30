@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { Swords, Trophy } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Modal, Button } from '@/components/ui';
 
 interface DuelChallenge {
   duelId: string;
@@ -70,33 +72,46 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
     <>
       {children}
 
-      {challenge && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-white rounded-2xl shadow-xl border border-indigo-200 p-4 w-80 animate-in slide-in-from-top-2">
-          <p className="font-bold text-gray-900 text-center mb-1">⚔️ Duel taklifi!</p>
-          <p className="text-sm text-gray-600 text-center mb-4">
-            <span className="font-medium">{challenge.challengerName}</span> sizni duelga chaqirdi
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={acceptDuel}
-              className="flex-1 bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold"
-            >
-              Qabul ✓
-            </button>
-            <button
-              onClick={rejectDuel}
-              className="flex-1 border border-gray-200 text-gray-600 py-2 rounded-xl text-sm"
-            >
-              Rad ✗
-            </button>
+      {/* Duel challenge modal */}
+      <Modal
+        open={!!challenge}
+        onClose={rejectDuel}
+        size="sm"
+        closeOnOverlay={false}
+        title="Duel taklifi!"
+        description={challenge ? `${challenge.challengerName} sizni duelga chaqirdi` : undefined}
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={rejectDuel}>
+              Rad etish
+            </Button>
+            <Button variant="primary" size="sm" icon={<Swords size={14} />} onClick={acceptDuel}>
+              Qabul qilish
+            </Button>
+          </>
+        }
+      >
+        <div className="flex justify-center py-2">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+            <Swords size={28} className="text-indigo-400" />
           </div>
         </div>
-      )}
+      </Modal>
 
+      {/* Duel result toast-like banner */}
       {result && (
-        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl shadow-xl px-6 py-3 text-white text-center animate-in slide-in-from-bottom-2 ${result.won ? 'bg-green-500' : 'bg-gray-600'}`}>
-          <p className="font-bold">{result.won ? '🏆 G\'alaba!' : '😔 Mag\'lubiyat'}</p>
-          <p className="text-sm opacity-90">+{result.xpEarned} XP · {result.score}</p>
+        <div
+          className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-50 rounded-2xl shadow-2xl px-6 py-4 text-white text-center animate-in slide-in-from-bottom-2 duration-200 min-w-[200px] ${
+            result.won
+              ? 'bg-emerald-600 border border-emerald-500/50'
+              : 'bg-slate-700 border border-slate-600/50'
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2 mb-1">
+            <Trophy size={18} className={result.won ? 'text-yellow-300' : 'text-slate-400'} />
+            <p className="font-bold">{result.won ? "G'alaba!" : "Mag'lubiyat"}</p>
+          </div>
+          <p className="text-sm opacity-80">+{result.xpEarned} XP · {result.score}</p>
         </div>
       )}
     </>

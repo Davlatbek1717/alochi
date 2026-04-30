@@ -51,14 +51,27 @@ export default function ProfilePage() {
             style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
           />
           <div className="relative z-10 mt-4">
-            <div className="h-6 w-32 bg-white/10 rounded animate-pulse" />
+            <div className="h-5 w-32 bg-white/10 rounded-lg animate-pulse" />
+            <div className="flex items-center gap-4 mt-4">
+              <div className="w-14 h-14 rounded-full bg-white/10 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-5 w-36 bg-white/10 rounded-lg animate-pulse" />
+                <div className="h-3 w-24 bg-white/10 rounded-lg animate-pulse" />
+              </div>
+            </div>
           </div>
         </div>
         <div className="px-4 pt-5 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 animate-pulse">
-              <div className="h-4 bg-[#f7f4ef] rounded w-1/2 mb-2" />
-              <div className="h-3 bg-[#f7f4ef] rounded w-3/4" />
+          {[1, 2].map((i) => (
+            <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+              <div className="h-3 w-16 bg-[#f0ece4] rounded-full animate-pulse" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#f0ece4] animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-[#f0ece4] rounded-lg animate-pulse w-3/4" />
+                  <div className="h-3 bg-[#f0ece4] rounded-lg animate-pulse w-1/2" />
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -73,7 +86,9 @@ export default function ProfilePage() {
           <p className="text-white font-bold text-lg mt-4">Mening Profilim</p>
         </div>
         <div className="p-4">
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] rounded-[18px] p-5 text-sm">{error || 'Xato'}</div>
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] rounded-[18px] p-5 text-sm">
+            {error || 'Xato yuz berdi'}
+          </div>
         </div>
       </div>
     );
@@ -128,7 +143,7 @@ export default function ProfilePage() {
             </div>
             <Link
               href="/profile/enroll"
-              className="bg-[#0f172a] text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-[#1e293b] transition-colors"
+              className="bg-[#0f172a] hover:bg-[#1e293b] active:bg-[#0a0f1e] text-white px-3 py-2 rounded-xl text-xs font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-[#0f172a] focus:ring-offset-2"
             >
               {profile.faceEnrolled ? 'Yangilash' : "Ro'yxat"}
             </Link>
@@ -167,7 +182,7 @@ export default function ProfilePage() {
                     href={tgLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors"
+                    className="flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
                   >
                     <ExternalLink size={16} /> Telegramga havola yuborish
                   </a>
@@ -178,6 +193,23 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+
+        {/* Account info */}
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-4">Hisob ma&apos;lumotlari</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[#64748b] text-sm">Login</span>
+              <span className="text-[#0f172a] text-sm font-semibold">{profile.login}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[#64748b] text-sm">Rol</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-100 rounded-full px-2.5 py-0.5">
+                {ROLE_LABELS[profile.role] ?? profile.role}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

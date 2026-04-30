@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
+import { Button } from '@/components/ui';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -58,19 +59,19 @@ export function InstallPrompt() {
   if (hidden) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 max-w-xs z-50 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl">
+    <div className="fixed bottom-20 right-4 md:bottom-4 max-w-xs z-50 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-2 duration-200">
       <button
         onClick={dismiss}
         aria-label="Yopish"
-        className="absolute top-2 right-2 text-slate-500 hover:text-slate-300"
+        className="absolute top-3 right-3 text-slate-500 hover:text-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 rounded"
       >
         <X size={16} />
       </button>
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shrink-0">
           <Download size={20} className="text-white" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 pr-4">
           <h3 className="text-sm font-semibold text-white mb-1">Alochi&apos;ni o&apos;rnatish</h3>
           {showIOSHint ? (
             <p className="text-xs text-slate-400">
@@ -81,12 +82,14 @@ export function InstallPrompt() {
               <p className="text-xs text-slate-400 mb-3">
                 Tezroq ochish uchun telefoningizga o&apos;rnating.
               </p>
-              <button
+              <Button
+                variant="primary"
+                size="sm"
+                icon={<Download size={13} />}
                 onClick={install}
-                className="text-xs px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md"
               >
                 O&apos;rnatish
-              </button>
+              </Button>
             </>
           )}
         </div>

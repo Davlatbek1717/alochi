@@ -216,7 +216,7 @@ export default function KioskPage() {
           <p className="text-[#94a3b8] text-sm mb-6">{loadError}</p>
           <button
             onClick={() => window.location.reload()}
-            className="flex items-center gap-2 bg-white text-[#0f172a] px-6 py-3 rounded-xl font-bold mx-auto"
+            className="flex items-center gap-2 bg-white hover:bg-slate-100 active:bg-slate-200 text-[#0f172a] px-6 py-3 rounded-xl font-bold mx-auto transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
           >
             <RefreshCw size={16} /> Qayta urinish
           </button>
@@ -274,7 +274,7 @@ export default function KioskPage() {
           />
           <button
             onClick={() => setKioskState('manual_login')}
-            className="flex items-center gap-2 text-[#94a3b8] hover:text-white text-sm transition-colors"
+            className="flex items-center gap-2 text-[#94a3b8] hover:text-white text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg px-2 py-1"
           >
             <KeyRound size={14} /> Login bilan kirish
           </button>
@@ -307,12 +307,15 @@ export default function KioskPage() {
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-[#64748b] text-sm focus:outline-none focus:border-indigo-500"
           />
           {manualError && (
-            <p className="text-[#e11d48] text-sm text-center">{manualError}</p>
+            <div className="flex items-center gap-2 bg-[#e11d48]/10 border border-[#e11d48]/20 rounded-xl px-3 py-2 text-[#e11d48] text-sm">
+              <AlertTriangle size={13} className="shrink-0" />
+              {manualError}
+            </div>
           )}
           <button
             type="submit"
             disabled={manualLoading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-[#0f172a]"
           >
             {manualLoading
               ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -322,9 +325,10 @@ export default function KioskPage() {
           <button
             type="button"
             onClick={() => setKioskState('scanning')}
-            className="w-full flex items-center justify-center gap-2 text-[#64748b] hover:text-white text-sm transition-colors py-2"
+            className="w-full flex items-center justify-center gap-2 text-[#64748b] hover:text-white text-sm transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
           >
-            <ScanFace size={14} /> <ArrowLeft size={12} /> Yuz aniqlashga qaytish
+            <ArrowLeft size={14} />
+            <ScanFace size={14} /> Yuz aniqlashga qaytish
           </button>
         </form>
       )}

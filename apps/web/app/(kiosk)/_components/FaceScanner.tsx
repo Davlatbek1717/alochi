@@ -165,21 +165,33 @@ export function FaceScanner({
 
   return (
     <div className="relative w-full max-w-sm">
-      <video ref={videoRef} autoPlay muted playsInline className="w-full rounded-2xl" />
-      <div className="absolute bottom-4 left-0 right-0 text-center">
+      {/* Scan-frame overlay */}
+      <div className="absolute inset-0 rounded-2xl pointer-events-none z-10">
+        <div className={`absolute inset-0 rounded-2xl border-2 transition-colors duration-300 ${status === 'liveness' ? 'border-indigo-500/70' : status === 'recognizing' ? 'border-emerald-500/70' : 'border-white/20'}`} />
+      </div>
+      <video ref={videoRef} autoPlay muted playsInline className="w-full rounded-2xl block" />
+      <div className="absolute bottom-4 left-0 right-0 text-center z-20">
         {status === 'loading' && (
-          <p className="text-white bg-black/60 rounded-full px-4 py-2 mx-4 text-sm">Kamera yuklanmoqda...</p>
+          <span className="inline-flex items-center gap-2 text-white bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 text-sm">
+            <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            Kamera yuklanmoqda...
+          </span>
         )}
         {status === 'scanning' && (
-          <p className="text-white bg-black/60 rounded-full px-4 py-2 mx-4 text-sm">Yuzingizni ko&apos;rsating...</p>
+          <span className="inline-flex items-center gap-2 text-white bg-black/70 backdrop-blur-sm rounded-full px-4 py-2 text-sm">
+            Yuzingizni ko&apos;rsating...
+          </span>
         )}
         {status === 'liveness' && (
-          <p className="text-white bg-indigo-600/80 rounded-full px-4 py-2 mx-4 text-sm animate-pulse">
-            👁 {livenessInstruction}
-          </p>
+          <span className="inline-flex items-center gap-2 text-white bg-indigo-600/90 backdrop-blur-sm rounded-full px-4 py-2 text-sm animate-pulse">
+            {livenessInstruction}
+          </span>
         )}
         {status === 'recognizing' && (
-          <p className="text-white bg-black/60 rounded-full px-4 py-2 mx-4 text-sm">⏳ Aniqlanmoqda...</p>
+          <span className="inline-flex items-center gap-2 text-white bg-emerald-600/90 backdrop-blur-sm rounded-full px-4 py-2 text-sm">
+            <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            Aniqlanmoqda...
+          </span>
         )}
       </div>
     </div>

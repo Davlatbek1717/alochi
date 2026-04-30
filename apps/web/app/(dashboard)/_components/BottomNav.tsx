@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home, BookOpen, Users, Swords, User,
+  Home, BookOpen, Users, User,
   GraduationCap, BarChart2, ClipboardList,
   CreditCard, AlertTriangle, Building2,
   BookMarked, Send,
@@ -84,7 +84,7 @@ export default function BottomNav() {
   }
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)] px-2 pt-2 z-50">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100/80 pb-[env(safe-area-inset-bottom)] px-2 pt-2 z-50">
       <div className="flex justify-around items-center max-w-lg mx-auto">
         {tabs.map((tab) => {
           const isActive =
@@ -97,15 +97,21 @@ export default function BottomNav() {
               key={tab.href}
               onClick={() => handleTabClick(tab)}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center px-2 rounded-lg transition-colors ${
-                isActive ? 'text-indigo-600' : 'text-gray-400'
+              className={`relative flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center px-2 rounded-xl transition-all duration-200 ${
+                isActive
+                  ? 'text-indigo-600 scale-105'
+                  : 'text-gray-400 hover:text-gray-600 active:scale-95'
               }`}
             >
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-indigo-600 rounded-full" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-indigo-600 rounded-full" />
               )}
-              {tab.icon}
-              <span className="text-[10px] font-medium leading-none mt-0.5">{tab.label}</span>
+              <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
+                {tab.icon}
+              </span>
+              <span className={`text-[10px] font-medium leading-none mt-0.5 transition-colors ${isActive ? 'text-indigo-600' : ''}`}>
+                {tab.label}
+              </span>
             </button>
           );
         })}

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bell, AlertTriangle, XCircle, ClipboardList, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { EmptyState, Button } from '@/components/ui';
 
 type Notif = {
   id: string;
@@ -56,8 +57,9 @@ export function NotificationBell() {
     <div className="relative" ref={dropRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative w-8 h-8 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors"
+        className="relative w-8 h-8 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
         aria-label="Bildirishnomalar"
+        aria-expanded={open}
       >
         <Bell size={18} />
         {unread > 0 && (
@@ -68,25 +70,31 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-[#0f172a] rounded-[18px] shadow-2xl border border-white/10 z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-[#0f172a] rounded-[18px] shadow-2xl border border-white/10 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
             <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-wider">Bildirishnomalar</p>
             {unread > 0 && (
-              <button onClick={markAll} className="text-xs text-indigo-400 font-medium hover:text-indigo-300">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={markAll}
+                className="text-indigo-400 hover:text-indigo-300 !text-xs !px-2 !py-1"
+              >
                 Hammasini o&apos;qi
-              </button>
+              </Button>
             )}
           </div>
 
           {notifs.length === 0 ? (
-            <div className="text-center py-8">
-              <Bell size={24} className="text-white/20 mx-auto mb-2" />
-              <p className="text-[#64748b] text-xs">Bildirishnomalar yo&apos;q</p>
-            </div>
+            <EmptyState
+              icon={<Bell size={22} />}
+              title="Bildirishnomalar yo'q"
+              className="py-8"
+            />
           ) : (
             <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
               {notifs.map((n) => (
-                <div key={n.id} className={`px-4 py-3 ${!n.isRead ? 'bg-indigo-500/5' : ''}`}>
+                <div key={n.id} className={`px-4 py-3 transition-colors ${!n.isRead ? 'bg-indigo-500/5 hover:bg-indigo-500/10' : 'hover:bg-white/5'}`}>
                   <div className="flex items-start gap-2.5">
                     <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5">
                       {TYPE_ICON[n.type] ?? <Bell size={12} className="text-[#94a3b8]" />}

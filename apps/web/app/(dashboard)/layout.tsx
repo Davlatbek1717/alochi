@@ -11,7 +11,7 @@ import {
   CreditCard, AlertTriangle, Building2, BookMarked, Send,
   ShieldOff, Trophy, User,
 } from 'lucide-react';
-import { ToastProvider } from '@/components/ui';
+import { ToastProvider, Button } from '@/components/ui';
 
 interface UserInfo { id: string; name: string; role: string; tenantId: string; }
 
@@ -106,12 +106,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleLogout}
-              className="text-xs text-[#94a3b8] hover:text-white font-medium transition-colors"
             >
               Chiqish
-            </button>
+            </Button>
           </div>
         </header>
 
