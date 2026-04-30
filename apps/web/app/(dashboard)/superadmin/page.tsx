@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 const NAV_CARDS = [
+  { href: '/superadmin/tenants/new', icon: <Building2 size={22} />, title: "Yangi Markaz", desc: 'Markaz + admin yaratish', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
   { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr',  color: 'hover:border-indigo-300 hover:bg-indigo-50' },
   { href: '/superadmin/payments', icon: <CreditCard size={22} />, title: "To'lovlar",            desc: 'Qarzdorlar, filial statistika', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
   { href: '/superadmin/users',    icon: <Users size={22} />,      title: 'Foydalanuvchilar',     desc: 'Yaratish, tahrirlash',          color: 'hover:border-violet-300 hover:bg-violet-50' },
