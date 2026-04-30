@@ -86,8 +86,15 @@ export class ChurnService {
     has_red_status: number;
     has_parent_tg: number;
     pass_rate_30d: number;
+    pass_rate_change: number;
+    avg_session_count: number;
+    xp_gained_7d: number;
   }> {
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const since30 = new Date(now - 30 * 24 * 60 * 60 * 1000);
+    const since7 = new Date(now - 7 * 24 * 60 * 60 * 1000);
+    const since14 = new Date(now - 14 * 24 * 60 * 60 * 1000);
+
     const [user, xp, events, status] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: studentId },
@@ -95,8 +102,8 @@ export class ChurnService {
       }),
       this.prisma.studentXp.findUnique({ where: { studentId } }),
       this.prisma.analyticsEvent.findMany({
-        where: { studentId, createdAt: { gte: since } },
-        select: { eventType: true },
+        where: { studentId, createdAt: { gte: since30 } },
+        select: { eventType: true, createdAt: true },
       }),
       this.prisma.studentStatus.findFirst({ where: { studentId } }),
     ]);
@@ -109,11 +116,57 @@ export class ChurnService {
     ).length;
     const totalLessons = lessonsCompleted + lessonsFailed;
 
+    // Pass-rate change = (this week's pass rate) - (last week's pass rate).
+    // Each window uses analytics_events.lesson_completed / lesson_failed.
+    const passRateForWindow = (start: Date, end: Date): number => {
+      let c = 0;
+      let f = 0;
+      for (const e of events) {
+        if (e.createdAt < start || e.createdAt >= end) continue;
+        if (e.eventType === 'lesson_completed') c++;
+        else if (e.eventType === 'lesson_failed') f++;
+      }
+      const t = c + f;
+      return t > 0 ? (c * 100) / t : 0;
+    };
+    const nowDate = new Date(now);
+    const passRateThisWeek = passRateForWindow(since7, nowDate);
+    const passRateLastWeek = passRateForWindow(since14, since7);
+    const passRateChange =
+      Math.round((passRateThisWeek - passRateLastWeek) * 100) / 100;
+
     // Absent days from attendance table using status field
     const absentEvents = await this.prisma.attendanceStudent
       .count({
-        where: { studentId, date: { gte: since }, status: 'absent' },
+        where: { studentId, date: { gte: since30 }, status: 'absent' },
       })
+      .catch(() => 0);
+
+    // Mean StudentProgress.sessionCount over last 30 days (last_activity_at or completed_at).
+    const avgSessionCount = await this.prisma.studentProgress
+      .aggregate({
+        where: {
+          studentId,
+          OR: [
+            { lastActivityAt: { gte: since30 } },
+            { completedAt: { gte: since30 } },
+          ],
+        },
+        _avg: { sessionCount: true },
+      })
+      .then(
+        (r: { _avg: { sessionCount: number | null } }) =>
+          r._avg.sessionCount ?? 0,
+      )
+      .catch(() => 0);
+
+    // XP gained in last 7 days (sum of XpEvent.amount).
+    const xpGained7d = await this.prisma.xpEvent
+      .aggregate({
+        where: { studentId, createdAt: { gte: since7 } },
+        _sum: { amount: true },
+      })
+      .then((r: { _sum: { amount: number | null } }) => r._sum.amount ?? 0)
       .catch(() => 0);
 
     return {
@@ -127,6 +180,9 @@ export class ChurnService {
         totalLessons > 0
           ? Math.round((lessonsCompleted * 100) / totalLessons)
           : 0,
+      pass_rate_change: passRateChange,
+      avg_session_count: Math.round(avgSessionCount * 100) / 100,
+      xp_gained_7d: xpGained7d,
     };
   }
 

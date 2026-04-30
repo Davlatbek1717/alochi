@@ -27,6 +27,28 @@ interface Branch {
   name: string;
 }
 
+interface ModelMetrics {
+  samples: number;
+  precision_mean: number;
+  recall_mean: number;
+  f1_mean: number;
+  cv_folds?: number;
+  trained_at?: string;
+}
+
+function formatTrainedAt(iso: string | undefined): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleString('uz-UZ', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 const SIGNAL_LABELS: Record<string, string> = {
   absent3Days: 'Absent 3+ kun',
   streakBroken: 'Streak uzildi',
@@ -85,6 +107,7 @@ export default function ChurnPage() {
   const [branchId, setBranchId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [modelMetrics, setModelMetrics] = useState<ModelMetrics | null>(null);
   const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
@@ -93,6 +116,37 @@ export default function ChurnPage() {
     apiRequest<Branch[]>('/branches', {}, token())
       .then((r) => setBranches(r.data ?? []))
       .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch ML model metrics. On 404 / error / cold-start payload, leave as null
+  // so the UI shows the "Model hali o'qitilmagan" copy.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await apiRequest<ModelMetrics | { error: string }>(
+          '/churn/model-metrics',
+          {},
+          token(),
+        );
+        if (cancelled) return;
+        const payload = r.data as ModelMetrics | { error: string } | null;
+        if (
+          payload &&
+          typeof (payload as ModelMetrics).samples === 'number' &&
+          typeof (payload as ModelMetrics).precision_mean === 'number'
+        ) {
+          setModelMetrics(payload as ModelMetrics);
+        } else {
+          setModelMetrics(null);
+        }
+      } catch {
+        if (!cancelled) setModelMetrics(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = useCallback(async () => {
@@ -144,6 +198,51 @@ export default function ChurnPage() {
         description="Tashlab ketish xavfi yuqori o'quvchilar ro'yxati"
         iconColor="text-red-400"
       />
+
+      {/* ML model metrics block — Phase 14 */}
+      <div className="bg-slate-800/60 border border-slate-700 rounded-2xl shadow p-5">
+        <h3 className="font-semibold mb-3 text-slate-100">
+          ML modeli ko&apos;rsatkichlari
+        </h3>
+        {modelMetrics === null ? (
+          <p className="text-slate-400 text-sm">
+            Model hali o&apos;qitilmagan
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <span className="text-xs text-slate-400">Namunalar</span>
+              <div className="font-bold text-lg text-slate-100">
+                {modelMetrics.samples}
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-400">Precision</span>
+              <div className="font-bold text-lg text-slate-100">
+                {(modelMetrics.precision_mean * 100).toFixed(1)}%
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-400">Recall</span>
+              <div className="font-bold text-lg text-slate-100">
+                {(modelMetrics.recall_mean * 100).toFixed(1)}%
+              </div>
+            </div>
+            <div>
+              <span className="text-xs text-slate-400">F1</span>
+              <div className="font-bold text-lg text-slate-100">
+                {(modelMetrics.f1_mean * 100).toFixed(1)}%
+              </div>
+            </div>
+            <div className="col-span-2 md:col-span-4 text-xs text-slate-400">
+              Oxirgi train: {formatTrainedAt(modelMetrics.trained_at)}
+              {modelMetrics.cv_folds
+                ? ` (CV ${modelMetrics.cv_folds} fold)`
+                : ''}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Branch filter */}
       <div className="flex items-center gap-3">

@@ -19,9 +19,13 @@ describe('ChurnService', () => {
     },
     studentProgress: {
       count: jest.fn(),
+      aggregate: jest.fn(),
     },
     studentStatus: {
       findFirst: jest.fn(),
+    },
+    xpEvent: {
+      aggregate: jest.fn(),
     },
   };
 
@@ -97,6 +101,8 @@ describe('ChurnService', () => {
       lessonsFailed?: number;
       hasRedStatus?: boolean;
       hasParentTg?: boolean;
+      avgSessionCount?: number;
+      xpGained7d?: number;
     }) => {
       const o = {
         absentDays: 5,
@@ -105,6 +111,8 @@ describe('ChurnService', () => {
         lessonsFailed: 6,
         hasRedStatus: true,
         hasParentTg: false,
+        avgSessionCount: 0,
+        xpGained7d: 0,
         ...overrides,
       };
       mockPrisma.user.findMany.mockResolvedValue([
@@ -120,19 +128,30 @@ describe('ChurnService', () => {
       mockPrisma.studentXp.findUnique.mockResolvedValue({
         currentStreak: o.streak,
       });
-      // analyticsEvent.findMany used by buildFeatures
+      // analyticsEvent.findMany used by buildFeatures (now also returns createdAt for week-windowing).
+      const now = Date.now();
       (mockPrisma as any).analyticsEvent = {
         findMany: jest.fn().mockResolvedValue([
           ...Array(o.lessonsCompleted).fill({
             eventType: 'lesson_completed',
+            createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000),
           }),
-          ...Array(o.lessonsFailed).fill({ eventType: 'lesson_failed' }),
+          ...Array(o.lessonsFailed).fill({
+            eventType: 'lesson_failed',
+            createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000),
+          }),
         ]),
       };
       mockPrisma.studentStatus.findFirst.mockResolvedValue({
         englishStatus: o.hasRedStatus ? 'qizil' : 'kok',
       });
       mockPrisma.attendanceStudent.count.mockResolvedValue(o.absentDays);
+      mockPrisma.studentProgress.aggregate.mockResolvedValue({
+        _avg: { sessionCount: o.avgSessionCount },
+      });
+      mockPrisma.xpEvent.aggregate.mockResolvedValue({
+        _sum: { amount: o.xpGained7d },
+      });
     };
 
     it('returns ML score when ML service responds with valid payload', async () => {
@@ -230,6 +249,100 @@ describe('ChurnService', () => {
       // No signals match → 0
       expect(result.score).toBe(0);
       expect((result.signals as any).fallbackReason).toBe('ml_error');
+    });
+
+    it('payload sent to /predict includes all 10 named features (Phase 14: 7 baseline + 3 new)', async () => {
+      setupBuildFeaturesMocks({
+        absentDays: 4,
+        streak: 2,
+        lessonsCompleted: 6,
+        lessonsFailed: 4,
+        hasRedStatus: false,
+        hasParentTg: true,
+        avgSessionCount: 1.5,
+        xpGained7d: 120,
+      });
+      mockConfig.get.mockImplementation((k: string) => {
+        if (k === 'ML_SERVICE_URL') return 'http://ml:8000';
+        if (k === 'ML_SERVICE_TIMEOUT_MS') return '2000';
+        return undefined;
+      });
+      const { of } = await import('rxjs');
+      mockHttp.post.mockReturnValue(
+        of({ data: { probability: 0.42, score: 42, modelVersion: 'v9' } }),
+      );
+
+      await service.computeScoreML('student-1');
+
+      expect(mockHttp.post).toHaveBeenCalledTimes(1);
+      const [, body] = mockHttp.post.mock.calls[0];
+      expect(body).toHaveProperty('features');
+      const f = body.features as Record<string, unknown>;
+      // 9-feature contract with ml-service/features.py FEATURE_COLUMNS
+      const expectedKeys = [
+        'absent_days_30d',
+        'streak_value',
+        'lessons_completed_30d',
+        'lessons_failed_30d',
+        'has_red_status',
+        'has_parent_tg',
+        'pass_rate_30d',
+        'pass_rate_change',
+        'avg_session_count',
+        'xp_gained_7d',
+      ];
+      for (const k of expectedKeys) {
+        expect(f).toHaveProperty(k);
+        expect(typeof f[k]).toBe('number');
+      }
+      expect(Object.keys(f).sort()).toEqual([...expectedKeys].sort());
+      // Specific Phase 14 features wired correctly
+      expect(f.avg_session_count).toBe(1.5);
+      expect(f.xp_gained_7d).toBe(120);
+    });
+
+    it('score stays bounded 0-100 even when ML probability is high', async () => {
+      setupBuildFeaturesMocks();
+      mockConfig.get.mockImplementation((k: string) => {
+        if (k === 'ML_SERVICE_URL') return 'http://ml:8000';
+        if (k === 'ML_SERVICE_TIMEOUT_MS') return '2000';
+        return undefined;
+      });
+      const { of } = await import('rxjs');
+      // Python service returns score=85 (probability=0.85 scaled to 0-100).
+      // This test pins the contract: the API trusts the bounded score from ML.
+      mockHttp.post.mockReturnValue(
+        of({ data: { probability: 0.85, score: 85, modelVersion: 'v1' } }),
+      );
+
+      const result = await service.computeScoreML('student-1');
+
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+      expect(result.score).toBe(85);
+    });
+
+    it('method label is propagated correctly between ml and rule_fallback', async () => {
+      // Path 1: ML up → method='ml'
+      setupBuildFeaturesMocks();
+      mockConfig.get.mockImplementation((k: string) => {
+        if (k === 'ML_SERVICE_URL') return 'http://ml:8000';
+        if (k === 'ML_SERVICE_TIMEOUT_MS') return '2000';
+        return undefined;
+      });
+      const { of, throwError } = await import('rxjs');
+      mockHttp.post.mockReturnValueOnce(
+        of({ data: { probability: 0.3, score: 30, modelVersion: 'v1' } }),
+      );
+      const okResult = await service.computeScoreML('student-1');
+      expect(okResult.method).toBe('ml');
+
+      // Path 2: ML down → method='rule_fallback'
+      mockHttp.post.mockReturnValueOnce(
+        throwError(() => new Error('ECONNREFUSED')),
+      );
+      const fbResult = await service.computeScoreML('student-1');
+      expect(fbResult.method).toBe('rule_fallback');
     });
 
     it('falls back when ML returns malformed payload (score becomes NaN→fallback path stays through ml)', async () => {
