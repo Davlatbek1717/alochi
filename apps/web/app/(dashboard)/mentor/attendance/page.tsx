@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, XCircle, Clock, Users, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
@@ -62,12 +63,12 @@ const STATUS_CONFIG: {
 
 export default function MentorAttendancePage() {
   const router = useRouter();
+  const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState('');
 
   const branchId = getBranchIdFromToken();
 
@@ -99,7 +100,6 @@ export default function MentorAttendancePage() {
 
   async function saveAttendance() {
     setSaving(true);
-    setSaveError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest(
@@ -114,9 +114,10 @@ export default function MentorAttendancePage() {
         token,
       );
       setSaved(true);
+      success('Davomat saqlandi');
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      toastError(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setSaving(false);
     }
@@ -148,20 +149,16 @@ export default function MentorAttendancePage() {
                 <p className="text-[#64748b] text-xs font-mono">{TODAY}</p>
               </div>
             </div>
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              loading={saving}
+              disabled={students.length === 0}
+              icon={saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
               onClick={saveAttendance}
-              disabled={saving || students.length === 0}
-              className="bg-[#0d9488] text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors flex items-center gap-2"
             >
-              {saving ? (
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : saved ? (
-                <CheckCircle2 size={16} />
-              ) : (
-                <Save size={16} />
-              )}
               {saved ? 'Saqlandi' : 'Saqlash'}
-            </button>
+            </Button>
           </div>
 
           {/* Stats row */}
@@ -186,10 +183,6 @@ export default function MentorAttendancePage() {
 
       {/* Body */}
       <div className="px-4 pt-8 pb-6 space-y-3">
-        {saveError && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{saveError}</div>
-        )}
-
         {!branchId ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
             <p className="text-[#e11d48] text-sm">Filial topilmadi. Administrator bilan bog&apos;laning.</p>
@@ -197,23 +190,27 @@ export default function MentorAttendancePage() {
         ) : loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 h-16 animate-pulse" />
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center justify-between gap-3">
+                <Skeleton className="h-5 flex-1 max-w-[180px]" />
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-8 w-16 rounded-xl" />
+                  <Skeleton className="h-8 w-16 rounded-xl" />
+                  <Skeleton className="h-8 w-20 rounded-xl" />
+                </div>
+              </div>
             ))}
           </div>
         ) : error ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
             <p className="text-[#e11d48] mb-3 text-sm">{error}</p>
-            <button
-              onClick={loadStudents}
-              className="bg-[#0f172a] text-white px-4 py-2 rounded-xl font-bold text-sm"
-            >
-              Qayta urinish
-            </button>
+            <Button variant="primary" size="sm" onClick={loadStudents}>Qayta urinish</Button>
           </div>
         ) : students.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <Users size={32} className="text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-[#64748b] font-medium">Bu filialda o&apos;quvchilar topilmadi</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<Users size={28} />}
+              title="Bu filialda o'quvchilar topilmadi"
+            />
           </div>
         ) : (
           students.map((student) => (

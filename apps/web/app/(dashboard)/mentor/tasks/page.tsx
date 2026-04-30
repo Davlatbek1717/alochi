@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { ClipboardList, PlayCircle, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type Task = {
   id: string; title: string; description?: string; status: string;
@@ -24,6 +25,7 @@ const NEXT_STATUS: Record<string, string | null> = {
 };
 
 export default function MentorTasksPage() {
+  const { success, error: toastError } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,8 @@ export default function MentorTasksPage() {
         body: JSON.stringify({ status }),
       }, token());
       setTasks((prev) => prev.map((t) => t.id === id ? res.data : t));
-    } catch (err) { alert(err instanceof Error ? err.message : 'Xato'); }
+      success('Status yangilandi');
+    } catch (err) { toastError(err instanceof Error ? err.message : 'Xato'); }
   }
 
   return (
@@ -62,13 +65,21 @@ export default function MentorTasksPage() {
 
       <div className="px-4 pt-5 pb-6">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            ))}
           </div>
         ) : tasks.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <ClipboardList size={36} className="text-[#94a3b8] mx-auto mb-2" />
-            <p className="text-[#64748b] text-sm">Vazifalar yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<ClipboardList size={28} />}
+              title="Vazifalar yo'q"
+              description="Sizga hali vazifalar yuklanmagan"
+            />
           </div>
         ) : (
           <div className="space-y-2">
@@ -88,15 +99,15 @@ export default function MentorTasksPage() {
                     {t.kpiBall > 0 && <span className="bg-[#f7f4ef] px-2 py-0.5 rounded-full">{t.kpiBall} KPI</span>}
                   </div>
                   {next && (
-                    <button
+                    <Button
+                      variant={next === 'done' ? 'success' : 'secondary'}
+                      fullWidth
+                      size="sm"
+                      icon={next === 'done' ? <CheckCircle size={14} /> : <PlayCircle size={14} />}
                       onClick={() => updateStatus(t.id, next)}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold ${
-                        next === 'done' ? 'bg-emerald-600 text-white' : 'bg-[#0f172a] text-white'
-                      }`}
                     >
-                      {next === 'done' ? <CheckCircle size={14} /> : <PlayCircle size={14} />}
                       {next === 'done' ? 'Bajarildi' : 'Boshlash'}
-                    </button>
+                    </Button>
                   )}
                 </div>
               );

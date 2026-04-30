@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Trophy, Users, Calendar, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Plus, Trophy, Users, Calendar, ChevronRight, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Card, CardHeader, CardTitle, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type Tournament = {
   id: string;
@@ -15,6 +16,7 @@ type Tournament = {
 
 export default function FiladminTournamentsPage() {
   const router = useRouter();
+  const { error: toastError } = useToast();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -41,8 +43,8 @@ export default function FiladminTournamentsPage() {
       setTournaments((prev) => [res.data, ...prev]);
       setShowForm(false);
       setForm({ title: '', type: 'individual', startsAt: '', endsAt: '' });
-    } catch {
-      // keep form open on error
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Turnir yaratishda xatolik');
     }
     setSubmitting(false);
   }
@@ -72,92 +74,102 @@ export default function FiladminTournamentsPage() {
             </div>
             <p className="text-white text-xl font-bold">Turnir boshqaruvi</p>
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
+            icon={showForm ? <X size={16} /> : <Plus size={16} />}
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 bg-[#f59e0b] text-[#0f172a] text-sm font-bold px-4 py-2 rounded-xl"
           >
-            <Plus size={16} /> Yangi
-          </button>
+            {showForm ? 'Yopish' : 'Yangi'}
+          </Button>
         </div>
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
         {/* Create form */}
         {showForm && (
-          <form onSubmit={handleCreate} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] space-y-3">
-            <p className="font-bold text-[#0f172a] text-sm mb-1">Yangi turnir yaratish</p>
-            <input
-              required
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="Turnir nomi"
-              className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
-            />
-            <select
-              value={form.type}
-              onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-              className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b] bg-white"
-            >
-              <option value="individual">Individual</option>
-              <option value="team">Jamoaviy</option>
-              <option value="group">Guruh</option>
-            </select>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-[#64748b] mb-1 block">Boshlanish</label>
-                <input
-                  required
-                  type="datetime-local"
-                  value={form.startsAt}
-                  onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
-                  className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-[#64748b] mb-1 block">Tugash</label>
-                <input
-                  required
-                  type="datetime-local"
-                  value={form.endsAt}
-                  onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
-                  className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="flex-1 border border-[#ede9e1] text-[#64748b] py-2.5 rounded-xl text-sm font-semibold"
+          <Card>
+            <CardHeader>
+              <CardTitle>Yangi turnir yaratish</CardTitle>
+            </CardHeader>
+            <form onSubmit={handleCreate} className="p-4 space-y-3">
+              <input
+                required
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Turnir nomi"
+                className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
+              />
+              <select
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
+                className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b] bg-white"
               >
-                Bekor qilish
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex-1 bg-[#f59e0b] text-[#0f172a] py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
-              >
-                {submitting ? 'Saqlanmoqda...' : 'Saqlash'}
-              </button>
-            </div>
-          </form>
+                <option value="individual">Individual</option>
+                <option value="team">Jamoaviy</option>
+                <option value="group">Guruh</option>
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-[#64748b] mb-1 block">Boshlanish</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={form.startsAt}
+                    onChange={(e) => setForm((f) => ({ ...f, startsAt: e.target.value }))}
+                    className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-[#64748b] mb-1 block">Tugash</label>
+                  <input
+                    required
+                    type="datetime-local"
+                    value={form.endsAt}
+                    onChange={(e) => setForm((f) => ({ ...f, endsAt: e.target.value }))}
+                    className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  fullWidth
+                  onClick={() => setShowForm(false)}
+                >
+                  Bekor qilish
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={submitting}
+                >
+                  {submitting ? 'Saqlanmoqda...' : 'Saqlash'}
+                </Button>
+              </div>
+            </form>
+          </Card>
         )}
 
         {/* List */}
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] animate-pulse">
-                <div className="h-4 bg-gray-100 rounded w-2/3 mb-2" />
-                <div className="h-3 bg-gray-100 rounded w-1/3" />
+              <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
               </div>
             ))}
           </div>
         ) : tournaments.length === 0 ? (
-          <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
-            <Trophy size={40} className="text-[#f59e0b] mx-auto mb-3" />
-            <p className="text-[#0f172a] font-semibold">Hali turnirlar yo&apos;q</p>
-            <p className="text-[#64748b] text-sm mt-1">Birinchi turnirni yarating</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<Trophy size={28} />}
+              title="Hali turnirlar yo'q"
+              description="Birinchi turnirni yarating"
+            />
           </div>
         ) : (
           <div className="space-y-3">

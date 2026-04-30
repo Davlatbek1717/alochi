@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   BarChart2,
   CreditCard,
@@ -9,6 +9,7 @@ import {
   Trophy,
   ChevronRight,
   Building2,
+  ClipboardList,
 } from 'lucide-react';
 
 const NAV_CARDS = [
@@ -54,11 +55,16 @@ const NAV_CARDS = [
     description: 'Musobaqalarni boshqarish',
     color: 'hover:border-amber-300 hover:bg-amber-50',
   },
+  {
+    href: '/filadmin/tasks',
+    icon: <ClipboardList size={22} />,
+    title: 'Vazifalar',
+    description: 'Topshiriqlarni boshqarish',
+    color: 'hover:border-orange-300 hover:bg-orange-50',
+  },
 ];
 
 export default function FiladminDashboard() {
-  const router = useRouter();
-
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
@@ -90,9 +96,9 @@ export default function FiladminDashboard() {
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
           <div className="grid grid-cols-2 gap-3">
             {NAV_CARDS.map((card) => (
-              <button
+              <Link
                 key={card.href}
-                onClick={() => router.push(card.href)}
+                href={card.href}
                 className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all text-left ${card.color}`}
               >
                 <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
@@ -103,7 +109,7 @@ export default function FiladminDashboard() {
                   <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.description}</p>
                 </div>
                 <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
-              </button>
+              </Link>
             ))}
           </div>
         </div>

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Eye, Key, Shield, Clock, CheckCircle, Download, ClipboardList } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type StaffRecord = {
   id: string;
@@ -94,6 +95,7 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 export default function FiladminAttendancePage() {
   const router = useRouter();
+  const { error: toastError } = useToast();
   const [date, setDate] = useState(TODAY);
   const [records, setRecords] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,12 +118,14 @@ export default function FiladminAttendancePage() {
         );
         setRecords(res.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
+        const msg = err instanceof Error ? err.message : "Yuklab bo'lmadi";
+        setError(msg);
+        toastError(msg);
       } finally {
         setLoading(false);
       }
     },
-    [branchId],
+    [branchId, toastError],
   );
 
   useEffect(() => {
@@ -198,12 +202,12 @@ export default function FiladminAttendancePage() {
                 className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#0d9488]"
               />
               {records.length > 0 && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Download size={16} />}
                   onClick={() => exportCsv(records, date)}
-                  className="bg-white/5 border border-white/10 text-[#94a3b8] p-2 rounded-lg hover:bg-white/10"
-                >
-                  <Download size={16} />
-                </button>
+                />
               )}
             </div>
           </div>
@@ -212,33 +216,27 @@ export default function FiladminAttendancePage() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-3">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => loadRecords(date)} className="underline text-sm font-medium ml-4">
-              Qayta
-            </button>
-          </div>
-        )}
-
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 animate-pulse">
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#f7f4ef]" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-[#f7f4ef] rounded w-1/3 mb-2" />
-                    <div className="h-3 bg-[#f7f4ef] rounded w-1/4" />
+                  <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/4" />
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : records.length === 0 && !error ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <ClipboardList size={32} className="text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-[#64748b] font-medium">Bu kun uchun davomat yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<ClipboardList size={28} />}
+              title="Bu kun uchun davomat yo'q"
+              description="Tanlangan sana uchun davomat ma'lumotlari topilmadi"
+            />
           </div>
         ) : !error ? (
           <div className="space-y-3">
@@ -277,13 +275,14 @@ export default function FiladminAttendancePage() {
                     ) : r.confirmedAt ? (
                       <span className="text-[#94a3b8] text-xs font-mono">{formatTime(r.confirmedAt)}</span>
                     ) : (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        loading={confirming === r.userId}
                         onClick={() => confirmStaff(r.userId)}
-                        disabled={confirming === r.userId}
-                        className="bg-[#0f172a] text-white px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-[#1e293b] disabled:opacity-50 transition-colors"
                       >
                         {confirming === r.userId ? '...' : 'Tasdiqlash'}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

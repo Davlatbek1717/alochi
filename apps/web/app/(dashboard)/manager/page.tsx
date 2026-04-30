@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Skeleton, Stat } from '@/components/ui';
 
 type StatusStudent = {
   studentId: string;
@@ -94,9 +95,13 @@ export default function ManagerDashboard() {
             <AlertCircle size={22} className={alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'} />
           </div>
           <div className="flex-1">
-            <p className={`text-sm font-bold ${alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'}`}>
-              {loading ? 'Yuklanmoqda...' : alertCount > 0 ? `${alertCount} ta diqqatga sazovor o'quvchi` : "Barcha o'quvchilar yaxshi"}
-            </p>
+            {loading ? (
+              <Skeleton className="h-4 w-40 mb-1" />
+            ) : (
+              <p className={`text-sm font-bold ${alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'}`}>
+                {alertCount > 0 ? `${alertCount} ta diqqatga sazovor o'quvchi` : "Barcha o'quvchilar yaxshi"}
+              </p>
+            )}
             <p className="text-[#94a3b8] text-xs mt-0.5">
               {redStudents.length} ta qizil · {yellowStudents.length} ta sariq
             </p>
@@ -111,6 +116,24 @@ export default function ManagerDashboard() {
       </div>
 
       <div className="px-4 pt-8 pb-6 space-y-5">
+        {/* Stats */}
+        {!loading && (
+          <div className="grid grid-cols-2 gap-3">
+            <Stat
+              icon={<AlertCircle size={18} />}
+              label="Qizil o'quvchilar"
+              value={redStudents.length}
+              color="text-rose-400"
+            />
+            <Stat
+              icon={<Trophy size={18} />}
+              label="Yuqori natija"
+              value={highPerformers.length}
+              color="text-amber-400"
+            />
+          </div>
+        )}
+
         {/* Nav cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
@@ -143,11 +166,11 @@ export default function ManagerDashboard() {
             <div className="space-y-2">
               {loading ? (
                 [1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] animate-pulse flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-100 rounded w-1/2 mb-1.5" />
-                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                    <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
                     </div>
                   </div>
                 ))
@@ -182,11 +205,11 @@ export default function ManagerDashboard() {
             <div className="space-y-2">
               {loading ? (
                 [1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] animate-pulse flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
-                    <div className="flex-1">
-                      <div className="h-4 bg-gray-100 rounded w-1/2 mb-1.5" />
-                      <div className="h-3 bg-gray-100 rounded w-1/3" />
+                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                    <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
                     </div>
                   </div>
                 ))

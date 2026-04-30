@@ -13,6 +13,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Stat, Skeleton } from '@/components/ui';
 
 type Task = { id: string; status: string };
 type Student = { id: string; name: string; role: string };
@@ -107,7 +108,7 @@ export default function MentorDashboard() {
           <div>
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Bugungi KPI</p>
             {loading ? (
-              <div className="h-9 w-16 bg-white/10 rounded animate-pulse" />
+              <Skeleton className="h-9 w-16 mb-1" />
             ) : (
               <p className="text-[#f59e0b] text-4xl font-black font-mono leading-none">{kpiToday}</p>
             )}
@@ -131,61 +132,65 @@ export default function MentorDashboard() {
         {/* Stat cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Statistika</p>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-[#162032] rounded-[18px] p-3 relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0d9488]/50 rounded-b-[18px]" />
-              <Users size={16} className="text-[#0d9488] mb-2" />
-              {loading ? <div className="h-7 w-10 bg-white/10 rounded animate-pulse" /> : (
-                <p className="text-white text-2xl font-black font-mono leading-none">{studentCount}</p>
-              )}
-              <p className="text-[#94a3b8] text-[10px] mt-1 leading-tight">Guruh<br />a&apos;zolari</p>
+          {loading ? (
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-[#162032] rounded-[18px] p-3">
+                  <Skeleton className="h-4 w-4 mb-2" />
+                  <Skeleton className="h-7 w-10 mb-1" />
+                  <Skeleton className="h-3 w-14" />
+                </div>
+              ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              <Stat
+                icon={<Users size={16} />}
+                label="Guruh a'zolari"
+                value={studentCount}
+                color="text-[#0d9488]"
+              />
+              <Stat
+                icon={<ClipboardList size={16} />}
+                label="Kutilayotgan vazifa"
+                value={pendingTasks}
+                color="text-[#e11d48]"
+              />
+              <Stat
+                icon={<Star size={16} />}
+                label="Oylik ball"
+                value={kpiMonthly}
+                color="text-[#f59e0b]"
+              />
+            </div>
+          )}
 
-            <div className="bg-[#162032] rounded-[18px] p-3 relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#e11d48]/50 rounded-b-[18px]" />
-              <ClipboardList size={16} className="text-[#e11d48] mb-2" />
-              {loading ? <div className="h-7 w-10 bg-white/10 rounded animate-pulse" /> : (
-                <p className="text-white text-2xl font-black font-mono leading-none">{pendingTasks}</p>
-              )}
-              <p className="text-[#94a3b8] text-[10px] mt-1 leading-tight">Kutilayotgan<br />vazifa</p>
+          {/* Attendance wide card */}
+          <div className="bg-[#162032] rounded-[18px] p-3 mt-2 flex items-center gap-3 relative overflow-hidden">
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0d9488]/50 rounded-b-[18px]" />
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+              attendanceMarked ? 'bg-[#0d9488]/15 border border-[#0d9488]/40' : 'bg-[#f59e0b]/10 border border-[#f59e0b]/30'
+            }`}>
+              {attendanceMarked
+                ? <CheckCircle size={18} className="text-[#0d9488]" />
+                : <AlertCircle size={18} className="text-[#f59e0b]" />}
             </div>
-
-            <div className="bg-[#162032] rounded-[18px] p-3 relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#f59e0b]/50 rounded-b-[18px]" />
-              <Star size={16} className="text-[#f59e0b] mb-2" />
-              {loading ? <div className="h-7 w-10 bg-white/10 rounded animate-pulse" /> : (
-                <p className="text-white text-2xl font-black font-mono leading-none">{kpiMonthly}</p>
-              )}
-              <p className="text-[#94a3b8] text-[10px] mt-1 leading-tight">Oylik<br />ball</p>
+            <div className="flex-1">
+              <p className="text-white text-sm font-semibold">
+                {attendanceMarked ? 'Bugungi davomat belgilandi' : 'Davomat belgilanmagan'}
+              </p>
+              <p className="text-[#94a3b8] text-xs mt-0.5">
+                {attendanceMarked ? "Guruh sahifasidan ko'rish" : "Guruh sahifasiga o'ting"}
+              </p>
             </div>
-
-            {/* Attendance wide */}
-            <div className="bg-[#162032] rounded-[18px] p-3 col-span-3 flex items-center gap-3 relative overflow-hidden">
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0d9488]/50 rounded-b-[18px]" />
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-                attendanceMarked ? 'bg-[#0d9488]/15 border border-[#0d9488]/40' : 'bg-[#f59e0b]/10 border border-[#f59e0b]/30'
-              }`}>
-                {attendanceMarked
-                  ? <CheckCircle size={18} className="text-[#0d9488]" />
-                  : <AlertCircle size={18} className="text-[#f59e0b]" />}
-              </div>
-              <div className="flex-1">
-                <p className="text-white text-sm font-semibold">
-                  {attendanceMarked ? 'Bugungi davomat belgilandi' : 'Davomat belgilanmagan'}
-                </p>
-                <p className="text-[#94a3b8] text-xs mt-0.5">
-                  {attendanceMarked ? "Guruh sahifasidan ko'rish" : "Guruh sahifasiga o'ting"}
-                </p>
-              </div>
-              <button
-                onClick={() => router.push('/mentor/group')}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
-                  attendanceMarked ? 'bg-white/5 border border-white/10 text-[#94a3b8]' : 'bg-[#0d9488] text-white'
-                }`}
-              >
-                {attendanceMarked ? "Ko'rish" : 'Belgilash'}
-              </button>
-            </div>
+            <button
+              onClick={() => router.push('/mentor/group')}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                attendanceMarked ? 'bg-white/5 border border-white/10 text-[#94a3b8]' : 'bg-[#0d9488] text-white'
+              }`}
+            >
+              {attendanceMarked ? "Ko'rish" : 'Belgilash'}
+            </button>
           </div>
         </div>
 

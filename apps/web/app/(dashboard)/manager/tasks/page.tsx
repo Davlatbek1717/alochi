@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react';
 import { Plus, ClipboardList, CheckCircle, X, PlayCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  Button, Card, CardHeader, CardTitle,
+  EmptyState, Skeleton, useToast,
+} from '@/components/ui';
 
 type Task = {
   id: string; title: string; description?: string; status: string;
@@ -21,13 +25,14 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export default function ManagerTasksPage() {
+  const { success, error: toastError } = useToast();
   const [tab, setTab] = useState<'sent' | 'my'>('sent');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ assignedTo: '', title: '', description: '', kpiBall: 0, deadline: '' });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
 
   function token() { return localStorage.getItem('accessToken') ?? ''; }
 
@@ -43,8 +48,8 @@ export default function ManagerTasksPage() {
   useEffect(() => { fetchTasks(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function createTask() {
-    if (!form.title.trim() || !form.assignedTo.trim()) { setError('Sarlavha va bajaruvchi kerak'); return; }
-    setSaving(true); setError('');
+    if (!form.title.trim() || !form.assignedTo.trim()) { setFormError('Sarlavha va bajaruvchi kerak'); return; }
+    setSaving(true); setFormError('');
     try {
       const res = await apiRequest<Task>('/tasks', {
         method: 'POST',
@@ -53,8 +58,9 @@ export default function ManagerTasksPage() {
       setTasks((prev) => [res.data, ...prev]);
       setShowForm(false);
       setForm({ assignedTo: '', title: '', description: '', kpiBall: 0, deadline: '' });
+      success('Vazifa yaratildi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xato');
+      setFormError(err instanceof Error ? err.message : 'Xato');
     } finally { setSaving(false); }
   }
 
@@ -62,7 +68,8 @@ export default function ManagerTasksPage() {
     try {
       const res = await apiRequest<Task>(`/tasks/${id}/confirm`, { method: 'PATCH' }, token());
       setTasks((prev) => prev.map((t) => t.id === id ? res.data : t));
-    } catch (err) { alert(err instanceof Error ? err.message : 'Xato'); }
+      success('Vazifa tasdiqlandi');
+    } catch (err) { toastError(err instanceof Error ? err.message : 'Xato'); }
   }
 
   async function updateMyStatus(id: string, status: string) {
@@ -72,7 +79,8 @@ export default function ManagerTasksPage() {
         body: JSON.stringify({ status }),
       }, token());
       setTasks((prev) => prev.map((t) => t.id === id ? res.data : t));
-    } catch (err) { alert(err instanceof Error ? err.message : 'Xato'); }
+      success('Status yangilandi');
+    } catch (err) { toastError(err instanceof Error ? err.message : 'Xato'); }
   }
 
   return (
@@ -88,64 +96,70 @@ export default function ManagerTasksPage() {
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Manager</p>
             <p className="text-white text-xl font-bold">Vazifalar</p>
           </div>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
+            icon={showForm ? <X size={16} /> : <Plus size={16} />}
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-1.5 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold"
           >
-            {showForm ? <X size={16} /> : <Plus size={16} />}
             {showForm ? 'Yopish' : 'Yaratish'}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
         {/* Create form */}
         {showForm && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi vazifa</p>
-            {error && <p className="text-sm text-rose-500">{error}</p>}
-            <input
-              placeholder="Sarlavha *"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-            />
-            <input
-              placeholder="Bajaruvchi ID *"
-              value={form.assignedTo}
-              onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-            />
-            <textarea
-              placeholder="Tavsif (ixtiyoriy)"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={2}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
-            />
-            <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardHeader>
+              <CardTitle>Yangi vazifa</CardTitle>
+            </CardHeader>
+            <div className="space-y-3 p-4">
+              {formError && <p className="text-sm text-rose-500">{formError}</p>}
               <input
-                type="number"
-                placeholder="KPI ball"
-                value={form.kpiBall}
-                onChange={(e) => setForm({ ...form, kpiBall: Number(e.target.value) })}
-                className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                placeholder="Sarlavha *"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               />
               <input
-                type="date"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                placeholder="Bajaruvchi ID *"
+                value={form.assignedTo}
+                onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               />
+              <textarea
+                placeholder="Tavsif (ixtiyoriy)"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  placeholder="KPI ball"
+                  value={form.kpiBall}
+                  onChange={(e) => setForm({ ...form, kpiBall: Number(e.target.value) })}
+                  className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                />
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                  className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+                />
+              </div>
+              <Button
+                variant="primary"
+                fullWidth
+                loading={saving}
+                onClick={createTask}
+              >
+                {saving ? 'Saqlanmoqda...' : 'Yuborish'}
+              </Button>
             </div>
-            <button
-              onClick={createTask}
-              disabled={saving}
-              className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl text-sm font-bold disabled:opacity-50"
-            >
-              {saving ? 'Saqlanmoqda...' : 'Yuborish'}
-            </button>
-          </div>
+          </Card>
         )}
 
         {/* Tabs */}
@@ -164,13 +178,21 @@ export default function ManagerTasksPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            ))}
           </div>
         ) : tasks.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <ClipboardList size={36} className="text-[#94a3b8] mx-auto mb-2" />
-            <p className="text-[#64748b] text-sm">Vazifalar yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<ClipboardList size={28} />}
+              title="Vazifalar yo'q"
+              description="Bu bo'limda hali vazifalar mavjud emas"
+            />
           </div>
         ) : (
           <div className="space-y-2">
@@ -188,28 +210,37 @@ export default function ManagerTasksPage() {
                   {t.kpiBall > 0 && <span className="bg-[#f7f4ef] px-2 py-0.5 rounded-full">{t.kpiBall} KPI</span>}
                 </div>
                 {tab === 'sent' && t.status === 'done' && (
-                  <button
+                  <Button
+                    variant="success"
+                    fullWidth
+                    size="sm"
+                    icon={<CheckCircle size={14} />}
                     onClick={() => confirmTask(t.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold"
                   >
-                    <CheckCircle size={14} /> Tasdiqlash
-                  </button>
+                    Tasdiqlash
+                  </Button>
                 )}
                 {tab === 'my' && t.status === 'sent' && (
-                  <button
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    size="sm"
+                    icon={<PlayCircle size={14} />}
                     onClick={() => updateMyStatus(t.id, 'in_progress')}
-                    className="w-full flex items-center justify-center gap-2 bg-[#0f172a] text-white py-2.5 rounded-xl text-xs font-bold"
                   >
-                    <PlayCircle size={14} /> Boshlash
-                  </button>
+                    Boshlash
+                  </Button>
                 )}
                 {tab === 'my' && t.status === 'in_progress' && (
-                  <button
+                  <Button
+                    variant="success"
+                    fullWidth
+                    size="sm"
+                    icon={<CheckCircle size={14} />}
                     onClick={() => updateMyStatus(t.id, 'done')}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white py-2.5 rounded-xl text-xs font-bold"
                   >
-                    <CheckCircle size={14} /> Bajarildi
-                  </button>
+                    Bajarildi
+                  </Button>
                 )}
               </div>
             ))}

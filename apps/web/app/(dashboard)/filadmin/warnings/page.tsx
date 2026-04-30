@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, AlertTriangle, BookX, FileX, ShieldAlert, HelpCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, BookX, FileX, ShieldAlert, HelpCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, useToast } from '@/components/ui';
 
 const REASON_TYPES = [
   { value: 'not_prepared', label: 'Darsga tayyorlanmagan', icon: <BookX size={18} /> },
@@ -33,13 +34,13 @@ function getTokenPayload(): { userId: string; branchId: string; tenantId: string
 
 export default function WarningsPage() {
   const router = useRouter();
+  const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [reasonType, setReasonType] = useState('');
   const [reasonText, setReasonText] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -59,7 +60,7 @@ export default function WarningsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reasonText.trim()) return;
-    setError('');
+    setSubmitting(true);
 
     const token = localStorage.getItem('accessToken') ?? '';
     const { userId, tenantId } = getTokenPayload();
@@ -75,13 +76,14 @@ export default function WarningsPage() {
           reasonText,
         }),
       }, token);
-      setSubmitted(true);
+      success('Ogohlantirish berildi');
       setSelectedStudent('');
       setReasonType('');
       setReasonText('');
-      setTimeout(() => setSubmitted(false), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+      toastError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -165,26 +167,16 @@ export default function WarningsPage() {
             />
           </div>
 
-          {error && (
-            <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">
-              {error}
-            </div>
-          )}
-
-          <button
+          <Button
             type="submit"
-            className="w-full bg-[#e11d48] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-rose-700 transition-colors"
+            variant="danger"
+            fullWidth
+            size="lg"
+            loading={submitting}
+            icon={<AlertTriangle size={18} />}
           >
-            {submitted ? (
-              <>
-                <CheckCircle size={18} /> Berildi
-              </>
-            ) : (
-              <>
-                <AlertTriangle size={18} /> Ogohlantirish Berish
-              </>
-            )}
-          </button>
+            Ogohlantirish Berish
+          </Button>
         </form>
       </div>
     </div>

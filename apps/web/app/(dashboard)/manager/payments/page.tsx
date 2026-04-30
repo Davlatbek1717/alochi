@@ -5,6 +5,7 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
 import DebtorsTable, { BranchStudent } from '../../_components/DebtorsTable';
+import { Button, useToast } from '@/components/ui';
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
@@ -24,6 +25,7 @@ function getBranchAndToken(): { branchId: string; token: string } {
 
 export default function ManagerPaymentsPage() {
   const router = useRouter();
+  const { error: toastError } = useToast();
   const [month, setMonth] = useState(currentMonth());
   const [students, setStudents] = useState<BranchStudent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +49,9 @@ export default function ManagerPaymentsPage() {
       setStudents(res.data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+      const msg = err instanceof Error ? err.message : 'Xatolik yuz berdi';
+      setError(msg);
+      toastError(msg);
     } finally {
       setLoading(false);
       setFetching(false);
@@ -93,12 +97,14 @@ export default function ManagerPaymentsPage() {
         {error ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
             <p className="text-[#e11d48] text-sm">{error}</p>
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 text-[#0f172a]"
               onClick={() => fetchStudents(month)}
-              className="mt-2 text-sm text-[#0f172a] underline font-medium"
             >
               Qayta urinish
-            </button>
+            </Button>
           </div>
         ) : (
           <div className={`bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden transition-opacity ${fetching ? 'opacity-50' : ''}`}>

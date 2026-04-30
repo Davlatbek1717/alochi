@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Users, CheckCircle, XCircle, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type Status = 'green' | 'yellow' | 'red';
 
@@ -33,16 +34,12 @@ function getBranchIdFromToken(): string | null {
   } catch { return null; }
 }
 
-function getInitials(name: string) {
-  return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
 
 export default function MentorGroupPage() {
+  const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<LocalStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loadStudents = useCallback(async () => {
@@ -74,7 +71,7 @@ export default function MentorGroupPage() {
   }
 
   async function saveAll() {
-    setSaveError(''); setSaving(true);
+    setSaving(true);
     const token = localStorage.getItem('accessToken') ?? '';
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string; tenantId?: string; branchId?: string };
     const branchId = getBranchIdFromToken() ?? user.branchId ?? '';
@@ -97,17 +94,39 @@ export default function MentorGroupPage() {
         }, token),
       ));
       localStorage.setItem(`attendance_marked_${today}`, '1');
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      success('Davomat saqlandi');
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      toastError(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally { setSaving(false); }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-        <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f4ef]">
+        {/* Header skeleton */}
+        <div className="bg-[#0f172a] px-5 pt-5 pb-5">
+          <div className="mb-5">
+            <Skeleton className="h-3 w-16 mb-1" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-16 rounded-[14px]" />
+            <Skeleton className="h-16 rounded-[14px]" />
+          </div>
+        </div>
+        <div className="px-4 pt-8 pb-6 space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -117,9 +136,7 @@ export default function MentorGroupPage() {
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-3">
           <p className="text-rose-500 text-sm">{error}</p>
-          <button onClick={loadStudents} className="bg-[#0f172a] text-white px-5 py-2.5 rounded-xl text-sm font-bold">
-            Qayta urinish
-          </button>
+          <Button variant="primary" onClick={loadStudents}>Qayta urinish</Button>
         </div>
       </div>
     );
@@ -156,72 +173,78 @@ export default function MentorGroupPage() {
       </div>
 
       <div className="px-4 pt-8 pb-6 space-y-4">
-        {saveError && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{saveError}</div>
+        {students.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<Users size={28} />}
+              title="Guruhda o'quvchilar yo'q"
+              description="Bu filialda o'quvchilar topilmadi"
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {students.map((student) => (
+              <div key={student.id} className={`bg-white rounded-[14px] border-[1.5px] p-4 space-y-3 ${
+                student.attendance ? 'border-[#ede9e1]' : 'border-[#ede9e1] opacity-60'
+              }`}>
+                <div className="flex items-center gap-3">
+                  {/* Attendance toggle */}
+                  <button
+                    onClick={() => toggleAttendance(student.id)}
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      student.attendance ? 'bg-emerald-100 text-emerald-600' : 'bg-[#f7f4ef] text-[#94a3b8]'
+                    }`}
+                  >
+                    {student.attendance ? <CheckCircle size={18} /> : <XCircle size={18} />}
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#0f172a]">{student.name}</p>
+                    <Link href={`/mentor/students/${student.id}`} className="text-xs text-[#0d9488] font-medium">
+                      Xato tahlili
+                    </Link>
+                  </div>
+
+                  {/* Status dots */}
+                  <div className="flex gap-1.5">
+                    {(['green', 'yellow', 'red'] as Status[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(student.id, s)}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                          student.status === s ? `bg-[#f7f4ef] ring-2 ring-offset-1 ${STATUS_RING[s]}` : 'bg-[#f7f4ef]'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full ${STATUS_DOT[s]}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {student.status !== 'green' && (
+                  <input
+                    type="text"
+                    placeholder="Izoh (ixtiyoriy)..."
+                    value={student.note}
+                    onChange={(e) => updateNote(student.id, e.target.value)}
+                    className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         )}
 
-        <div className="space-y-2">
-          {students.map((student) => (
-            <div key={student.id} className={`bg-white rounded-[14px] border-[1.5px] p-4 space-y-3 ${
-              student.attendance ? 'border-[#ede9e1]' : 'border-[#ede9e1] opacity-60'
-            }`}>
-              <div className="flex items-center gap-3">
-                {/* Attendance toggle */}
-                <button
-                  onClick={() => toggleAttendance(student.id)}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                    student.attendance ? 'bg-emerald-100 text-emerald-600' : 'bg-[#f7f4ef] text-[#94a3b8]'
-                  }`}
-                >
-                  {student.attendance ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-[#0f172a]">{student.name}</p>
-                  <Link href={`/mentor/students/${student.id}`} className="text-xs text-[#0d9488] font-medium">
-                    Xato tahlili
-                  </Link>
-                </div>
-
-                {/* Status dots */}
-                <div className="flex gap-1.5">
-                  {(['green', 'yellow', 'red'] as Status[]).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => updateStatus(student.id, s)}
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                        student.status === s ? `bg-[#f7f4ef] ring-2 ring-offset-1 ${STATUS_RING[s]}` : 'bg-[#f7f4ef]'
-                      }`}
-                    >
-                      <div className={`w-3 h-3 rounded-full ${STATUS_DOT[s]}`} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {student.status !== 'green' && (
-                <input
-                  type="text"
-                  placeholder="Izoh (ixtiyoriy)..."
-                  value={student.note}
-                  onChange={(e) => updateNote(student.id, e.target.value)}
-                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button
+        <Button
+          variant="primary"
+          fullWidth
+          size="lg"
+          loading={saving}
+          icon={<Save size={16} />}
           onClick={saveAll}
-          disabled={saving}
-          className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
-          {saving
-            ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            : <Save size={16} />}
-          {saved ? 'Saqlandi' : saving ? 'Saqlanmoqda...' : 'Saqlash'}
-        </button>
+          Saqlash
+        </Button>
       </div>
     </div>
   );
