@@ -92,4 +92,109 @@ describe('AdaptiveService', () => {
     };
     expect(service.computeNewN(3, 0, 0, config)).toBe(3);
   });
+
+  // ============================================================
+  // Phase 13.1: threshold-boundary + prisma-integration coverage
+  // ============================================================
+
+  describe('threshold boundary behavior', () => {
+    const config = {
+      minN: 1,
+      maxN: 10,
+      hardThreshold: 0.4,
+      easyThreshold: 0.15,
+    };
+
+    // The implementation uses strict `>` for hard and strict `<` for easy.
+    // So an errorRate equal to `hardThreshold` is NOT "hard" → no increment.
+    // Likewise an errorRate equal to `easyThreshold` is NOT "easy" → no decrement.
+    // This boundary contract is explicitly verified here.
+    it('keeps N when errorRate equals hardThreshold exactly (strict >)', () => {
+      // 4/10 = 0.4 == hardThreshold (0.4) → unchanged
+      expect(service.computeNewN(3, 4, 10, config)).toBe(3);
+    });
+
+    it('keeps N when errorRate equals easyThreshold exactly (strict <)', () => {
+      // 1.5/10 = 0.15 == easyThreshold (0.15) → unchanged
+      // Use 3/20 = 0.15 to avoid float rounding
+      expect(service.computeNewN(3, 3, 20, config)).toBe(3);
+    });
+  });
+
+  describe('runNightlyAdaptation prisma integration', () => {
+    it('upserts studentLessonConfig and creates audit log when N changes', async () => {
+      jest.clearAllMocks();
+      mockPrisma.adaptiveDifficultyConfig.findUnique.mockResolvedValue({
+        tenantId: 't1',
+        minN: 1,
+        maxN: 10,
+        hardThreshold: 0.4,
+        easyThreshold: 0.15,
+      });
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 's1' }]);
+      mockPrisma.lesson.findMany.mockResolvedValue([
+        { id: 'l1', nRepetitions: 3 },
+      ]);
+      mockPrisma.lessonComponent.findMany.mockResolvedValue([
+        { config: { questions: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}] } },
+      ]);
+      mockPrisma.errorLog.aggregate.mockResolvedValue({
+        _sum: { errorCount: 6 }, // 6/10 = 0.6 > 0.4
+      });
+      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue(null);
+      mockPrisma.studentLessonConfig.upsert.mockResolvedValue({});
+
+      const adjusted = await service.runNightlyAdaptation('t1');
+
+      expect(adjusted).toBe(1);
+      expect(mockPrisma.studentLessonConfig.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            studentId: 's1',
+            lessonId: 'l1',
+            nRepetitionsOverride: 4,
+          }),
+          update: { nRepetitionsOverride: 4 },
+        }),
+      );
+      expect(mockPrisma.adaptiveDifficultyLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          studentId: 's1',
+          lessonId: 'l1',
+          oldN: 3,
+          newN: 4,
+          errorRate: 0.6,
+        }),
+      });
+    });
+
+    it('skips student-lesson when N would not change (no upsert/log)', async () => {
+      jest.clearAllMocks();
+      mockPrisma.adaptiveDifficultyConfig.findUnique.mockResolvedValue({
+        tenantId: 't1',
+        minN: 1,
+        maxN: 10,
+        hardThreshold: 0.4,
+        easyThreshold: 0.15,
+      });
+      mockPrisma.user.findMany.mockResolvedValue([{ id: 's1' }]);
+      mockPrisma.lesson.findMany.mockResolvedValue([
+        { id: 'l1', nRepetitions: 3 },
+      ]);
+      mockPrisma.lessonComponent.findMany.mockResolvedValue([
+        { config: { questions: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}] } },
+      ]);
+      // 3/10 = 0.3 → middle range → no change
+      mockPrisma.errorLog.aggregate.mockResolvedValue({
+        _sum: { errorCount: 3 },
+      });
+      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue(null);
+
+      const adjusted = await service.runNightlyAdaptation('t1');
+
+      expect(adjusted).toBe(0);
+      expect(mockPrisma.studentLessonConfig.upsert).not.toHaveBeenCalled();
+      expect(mockPrisma.adaptiveDifficultyLog.create).not.toHaveBeenCalled();
+    });
+  });
 });
