@@ -145,7 +145,7 @@ export default function MentorDashboard() {
               <Stat
                 theme="light"
                 icon={<Users size={16} />}
-                label="Guruh a'zolari"
+                label="Guruh o'quvchilari"
                 value={studentCount}
                 color="text-[#0d9488]"
               />

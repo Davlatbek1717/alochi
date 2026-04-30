@@ -10,6 +10,7 @@ describe('ContentQualityService', () => {
     },
     studentProgress: {
       count: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn().mockResolvedValue({ _avg: { sessionCount: 0 } }),
     },
     lessonFeedback: {
       upsert: jest.fn().mockResolvedValue({ id: 'fb-1', rating: 3 }),
@@ -88,6 +89,9 @@ describe('ContentQualityService', () => {
       _avg: { rating: 2.4 },
       _count: 5,
     });
+    mockPrisma.studentProgress.aggregate.mockResolvedValueOnce({
+      _avg: { sessionCount: 2.5 },
+    });
 
     const result = await service.getLessonStats('tenant-1');
 
@@ -99,6 +103,7 @@ describe('ContentQualityService', () => {
         totalStudents: 10,
         feedbackAvg: 2.4,
         feedbackCount: 5,
+        avgSessions: 2.5,
       },
     ]);
   });
@@ -114,10 +119,14 @@ describe('ContentQualityService', () => {
       _avg: { rating: null },
       _count: 0,
     });
+    mockPrisma.studentProgress.aggregate.mockResolvedValueOnce({
+      _avg: { sessionCount: null },
+    });
 
     const result = await service.getLessonStats('tenant-1');
     expect(result[0].passRate).toBe(0);
     expect(result[0].feedbackAvg).toBe(null);
+    expect(result[0].avgSessions).toBe(0);
   });
 
   it('submitFeedback rejects ratings outside 1..3 (BadRequestException)', async () => {

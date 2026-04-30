@@ -5,7 +5,7 @@ import {
   Home, BookOpen, Users, User,
   GraduationCap, BarChart2, ClipboardList,
   CreditCard, AlertTriangle, Building2,
-  BookMarked, Send, FlaskConical,
+  BookMarked, Send, FlaskConical, Swords,
 } from 'lucide-react';
 
 
@@ -15,8 +15,7 @@ const NAV_TABS: Record<string, Tab[]> = {
   student: [
     { href: '/student',         icon: <Home size={20} />,           label: 'Bosh'       },
     { href: '/student/lessons', icon: <BookOpen size={20} />,       label: 'Darslar'    },
-    { href: '/student/exams',   icon: <GraduationCap size={20} />,  label: 'Imtihon'    },
-    { href: '/student/friends', icon: <Users size={20} />,          label: "Do'stlar"   },
+    { href: '/student/friends', icon: <Swords size={20} />,         label: 'Duel'       },
     { href: '/student/profile', icon: <User size={20} />,           label: 'Profil', action: 'logout' },
   ],
   mentor: [

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video } from 'lucide-react';
+import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
 interface Lesson {
@@ -64,6 +64,7 @@ export default function StudentProfilePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studentError, setStudentError] = useState<string | null>(null);
   const [history, setHistory] = useState<StatusRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -73,15 +74,17 @@ export default function StudentProfilePage() {
 
     async function load() {
       try {
-        const [lessonsRes, statusRes, userRes] = await Promise.all([
+        // Fetch user first — if user fetch fails, render full-page error.
+        const userRes = await apiRequest<UserInfo>(`/users/${studentId}`, {}, token);
+        setStudentName(userRes.data.name);
+
+        const [lessonsRes, statusRes] = await Promise.all([
           apiRequest<Lesson[]>('/lessons', {}, token),
           apiRequest<StudentStatus>(`/status/${studentId}`, {}, token).catch(() => ({ data: null })),
-          apiRequest<UserInfo>(`/users/${studentId}`, {}, token),
         ]);
 
         setLessons(lessonsRes.data);
         setStatus(statusRes.data);
-        setStudentName(userRes.data.name);
 
         const initial: Record<string, number> = {};
         for (const l of lessonsRes.data) {
@@ -89,14 +92,20 @@ export default function StudentProfilePage() {
         }
         setOverrides(initial);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+        const msg = err instanceof Error ? err.message : 'Xatolik yuz berdi';
+        // If we never got the studentName, this is a fatal student-fetch error.
+        if (!studentName) {
+          setStudentError(msg);
+        } else {
+          setError(msg);
+        }
       } finally {
         setLoading(false);
       }
     }
 
     load();
-  }, [studentId]);
+  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadHistory() {
     if (historyLoading || history.length > 0) { setShowHistory(true); return; }
@@ -137,6 +146,26 @@ export default function StudentProfilePage() {
   function handleStart11() {
     const encoded = encodeURIComponent(`1:1 sessiya: ${studentName}`);
     router.push(`/delegations/new?reason=${encoded}`);
+  }
+
+  if (studentError) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-4">
+          <div className="w-12 h-12 mx-auto rounded-full bg-rose-100 flex items-center justify-center">
+            <AlertCircle size={24} className="text-rose-600" />
+          </div>
+          <h1 className="text-rose-600 font-bold text-lg">Xato yuz berdi</h1>
+          <p className="text-sm text-[#64748b]">{studentError}</p>
+          <button
+            onClick={() => location.reload()}
+            className="bg-[#0f172a] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-[#1e293b] transition-colors"
+          >
+            Qayta urinish
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

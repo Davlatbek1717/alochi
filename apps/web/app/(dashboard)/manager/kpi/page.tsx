@@ -157,7 +157,7 @@ export default function ManagerKpiPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-5 pb-6 space-y-4">
+      <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
         {/* Today stat */}
         <div className="bg-[#162032] rounded-[18px] p-5">
           <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-widest mb-1">Bugun berilgan jami</p>

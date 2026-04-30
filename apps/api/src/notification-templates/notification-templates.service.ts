@@ -23,9 +23,13 @@ export const DEFAULT_TEMPLATES: Record<string, string> = {
   'warning.1':
     '⚠️ Sizga ogohlantirish berildi. Sabab: {reason}. Hisob hali bloklanmagan.',
   'warning.2':
-    '⚠️ Farzandingiz {studentName} 2-ogohlantirish oldi. Yana 1 ta ogohlantirishda hisob bloklanadi. Sabab: {reason}',
+    '⚠️ Farzandingiz {studentName} 2-ogohlantirish oldi. Yana 1 ta ogohlantirish profilingizni bloklaydi. Sabab: {reason}',
   'warning.3':
     "🚫 Farzandingiz {studentName} 3-ogohlantirish oldi. Hisob bloklanadi. Bog'laning: filadmin",
+
+  // Auth / payment block (Phase 23.13 — spec text)
+  'auth.payment_block':
+    "💳 To'lov muddati o'tdi. To'lovni amalga oshirgach, ertasi kuni kirish tiklanaadi.",
 
   // Status worse / improved (spec §6)
   'status.worse_manager':

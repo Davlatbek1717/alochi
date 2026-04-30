@@ -13,6 +13,7 @@ describe('ChurnService', () => {
     },
     attendanceStudent: {
       count: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     studentXp: {
       findUnique: jest.fn(),
@@ -96,6 +97,8 @@ describe('ChurnService', () => {
     // Helpers to set up the prisma mocks that buildFeatures() needs
     const setupBuildFeaturesMocks = (overrides?: {
       absentDays?: number;
+      consecutiveAbsent3d?: boolean;
+      passRateDrop20?: boolean;
       streak?: number;
       lessonsCompleted?: number;
       lessonsFailed?: number;
@@ -106,6 +109,8 @@ describe('ChurnService', () => {
     }) => {
       const o = {
         absentDays: 5,
+        consecutiveAbsent3d: true,
+        passRateDrop20: true,
         streak: 0,
         lessonsCompleted: 4,
         lessonsFailed: 6,
@@ -128,24 +133,60 @@ describe('ChurnService', () => {
       mockPrisma.studentXp.findUnique.mockResolvedValue({
         currentStreak: o.streak,
       });
-      // analyticsEvent.findMany used by buildFeatures (now also returns createdAt for week-windowing).
+      // analyticsEvent.findMany — to engineer pass_rate_change, distribute
+      // events between this week (since7..now) and last week (since14..since7).
+      // When passRateDrop20=true: place all completes in last week, all
+      // failures this week — pass rate drops from 100 → 0.
+      // When false: place everything 5 days ago (this-week only), so change ≈
+      // currWeekRate - 0 = positive.
       const now = Date.now();
+      const thisWeek = new Date(now - 5 * 24 * 60 * 60 * 1000);
+      const lastWeek = new Date(now - 10 * 24 * 60 * 60 * 1000);
+      const events = o.passRateDrop20
+        ? [
+            // all completed events in *last* week
+            ...Array(o.lessonsCompleted).fill({
+              eventType: 'lesson_completed',
+              createdAt: lastWeek,
+            }),
+            // all failed events in *this* week
+            ...Array(o.lessonsFailed).fill({
+              eventType: 'lesson_failed',
+              createdAt: thisWeek,
+            }),
+          ]
+        : [
+            ...Array(o.lessonsCompleted).fill({
+              eventType: 'lesson_completed',
+              createdAt: thisWeek,
+            }),
+            ...Array(o.lessonsFailed).fill({
+              eventType: 'lesson_failed',
+              createdAt: thisWeek,
+            }),
+          ];
       (mockPrisma as any).analyticsEvent = {
-        findMany: jest.fn().mockResolvedValue([
-          ...Array(o.lessonsCompleted).fill({
-            eventType: 'lesson_completed',
-            createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000),
-          }),
-          ...Array(o.lessonsFailed).fill({
-            eventType: 'lesson_failed',
-            createdAt: new Date(now - 5 * 24 * 60 * 60 * 1000),
-          }),
-        ]),
+        findMany: jest.fn().mockResolvedValue(events),
       };
       mockPrisma.studentStatus.findFirst.mockResolvedValue({
         englishStatus: o.hasRedStatus ? 'qizil' : 'kok',
+        personalStatus: 'kok',
       });
       mockPrisma.attendanceStudent.count.mockResolvedValue(o.absentDays);
+      // Phase 23.12 — consecutive 3-day absence query.
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const day = (offset: number) =>
+        new Date(startOfToday.getTime() - offset * 24 * 60 * 60 * 1000);
+      mockPrisma.attendanceStudent.findMany = jest.fn().mockResolvedValue(
+        o.consecutiveAbsent3d
+          ? [
+              { date: day(0), status: 'absent' },
+              { date: day(1), status: 'absent' },
+              { date: day(2), status: 'absent' },
+            ]
+          : [{ date: day(0), status: 'present' }],
+      );
       mockPrisma.studentProgress.aggregate.mockResolvedValue({
         _avg: { sessionCount: o.avgSessionCount },
       });
@@ -223,6 +264,8 @@ describe('ChurnService', () => {
     it('falls back to rule-based when ML service times out', async () => {
       setupBuildFeaturesMocks({
         absentDays: 0,
+        consecutiveAbsent3d: false,
+        passRateDrop20: false,
         streak: 5,
         lessonsCompleted: 8,
         lessonsFailed: 2,
@@ -251,7 +294,7 @@ describe('ChurnService', () => {
       expect((result.signals as any).fallbackReason).toBe('ml_error');
     });
 
-    it('payload sent to /predict includes all 10 named features (Phase 14: 7 baseline + 3 new)', async () => {
+    it('payload sent to /predict includes all named features (Phase 23.12: +consecutive_absent_3d)', async () => {
       setupBuildFeaturesMocks({
         absentDays: 4,
         streak: 2,
@@ -278,9 +321,10 @@ describe('ChurnService', () => {
       const [, body] = mockHttp.post.mock.calls[0];
       expect(body).toHaveProperty('features');
       const f = body.features as Record<string, unknown>;
-      // 9-feature contract with ml-service/features.py FEATURE_COLUMNS
+      // 11-feature contract: 10-feature baseline + Phase 23.12 consecutive_absent_3d.
       const expectedKeys = [
         'absent_days_30d',
+        'consecutive_absent_3d',
         'streak_value',
         'lessons_completed_30d',
         'lessons_failed_30d',
@@ -343,6 +387,112 @@ describe('ChurnService', () => {
       );
       const fbResult = await service.computeScoreML('student-1');
       expect(fbResult.method).toBe('rule_fallback');
+    });
+
+    // ============================================================
+    // Phase 23.12: corrected churn signal semantics
+    // ============================================================
+    it('passRateDrop fires only when prev_week - curr_week >= 20 (not flat <50%)', async () => {
+      // Mid-rate (40%) but no week-over-week drop: passRateDrop should be FALSE
+      setupBuildFeaturesMocks({
+        absentDays: 0,
+        consecutiveAbsent3d: false,
+        passRateDrop20: false,
+        streak: 5,
+        lessonsCompleted: 4,
+        lessonsFailed: 6, // 40% pass rate, but all in current week
+        hasRedStatus: false,
+        hasParentTg: true,
+      });
+      mockConfig.get.mockImplementation((k: string) =>
+        k === 'ML_SERVICE_TIMEOUT_MS' ? '2000' : undefined,
+      );
+      const result = await service.computeScoreML('student-1');
+      expect((result.signals as any).passRateDrop).toBe(false);
+      // No signal fires → score 0
+      expect(result.score).toBe(0);
+    });
+
+    it('passRateDrop fires when previous week was 100% and this week is 0%', async () => {
+      // Default helper with passRateDrop20=true engineers exactly this case.
+      setupBuildFeaturesMocks({
+        absentDays: 0,
+        consecutiveAbsent3d: false,
+        passRateDrop20: true,
+        streak: 5,
+        lessonsCompleted: 4, // all in last week
+        lessonsFailed: 6, // all in this week
+        hasRedStatus: false,
+        hasParentTg: true,
+      });
+      mockConfig.get.mockImplementation((k: string) =>
+        k === 'ML_SERVICE_TIMEOUT_MS' ? '2000' : undefined,
+      );
+      const result = await service.computeScoreML('student-1');
+      expect((result.signals as any).passRateDrop).toBe(true);
+    });
+
+    it('absent3Days fires only on 3 *consecutive* calendar days, not 30-day count', async () => {
+      // 5 absent days in 30-day window but no consecutive streak → signal off
+      setupBuildFeaturesMocks({
+        absentDays: 5,
+        consecutiveAbsent3d: false,
+        passRateDrop20: false,
+        streak: 5,
+        lessonsCompleted: 8,
+        lessonsFailed: 2,
+        hasRedStatus: false,
+        hasParentTg: true,
+      });
+      mockConfig.get.mockImplementation((k: string) =>
+        k === 'ML_SERVICE_TIMEOUT_MS' ? '2000' : undefined,
+      );
+      const result = await service.computeScoreML('student-1');
+      expect((result.signals as any).absent3Days).toBe(false);
+      expect(result.score).toBe(0);
+    });
+
+    it('absent3Days fires when last 3 calendar days all status=absent', async () => {
+      setupBuildFeaturesMocks({
+        absentDays: 3,
+        consecutiveAbsent3d: true,
+        passRateDrop20: false,
+        streak: 5,
+        lessonsCompleted: 8,
+        lessonsFailed: 2,
+        hasRedStatus: false,
+        hasParentTg: true,
+      });
+      mockConfig.get.mockImplementation((k: string) =>
+        k === 'ML_SERVICE_TIMEOUT_MS' ? '2000' : undefined,
+      );
+      const result = await service.computeScoreML('student-1');
+      expect((result.signals as any).absent3Days).toBe(true);
+      expect(result.score).toBe(30); // only absent3Days fires
+    });
+
+    it('redStatus fires when personalStatus is qizil (not just englishStatus)', async () => {
+      setupBuildFeaturesMocks({
+        absentDays: 0,
+        consecutiveAbsent3d: false,
+        passRateDrop20: false,
+        streak: 5,
+        lessonsCompleted: 8,
+        lessonsFailed: 2,
+        hasRedStatus: false, // english NOT qizil
+        hasParentTg: true,
+      });
+      // Override status mock so personal IS qizil
+      mockPrisma.studentStatus.findFirst.mockResolvedValue({
+        englishStatus: 'kok',
+        personalStatus: 'qizil',
+      });
+      mockConfig.get.mockImplementation((k: string) =>
+        k === 'ML_SERVICE_TIMEOUT_MS' ? '2000' : undefined,
+      );
+      const result = await service.computeScoreML('student-1');
+      expect((result.signals as any).redStatus).toBe(true);
+      expect(result.score).toBe(25);
     });
 
     it('falls back when ML returns malformed payload (score becomes NaN→fallback path stays through ml)', async () => {

@@ -178,82 +178,86 @@ export default function ManagerDashboard() {
         </div>
 
         {/* Red students */}
-        {(loading || redStudents.length > 0) && (
-          <div>
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
-              Qizil o&apos;quvchilar
-              {!loading && <span className="ml-2 text-[#e11d48]">({redStudents.length})</span>}
-            </p>
-            <div className="space-y-2">
-              {loading ? (
-                [1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
-                    <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton theme="light" className="h-4 w-1/2" />
-                      <Skeleton theme="light" className="h-3 w-1/3" />
-                    </div>
+        <div>
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+            Qizil o&apos;quvchilar
+            {!loading && <span className="ml-2 text-[#e11d48]">({redStudents.length})</span>}
+          </p>
+          <div className="space-y-2">
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                  <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton theme="light" className="h-4 w-1/2" />
+                    <Skeleton theme="light" className="h-3 w-1/3" />
                   </div>
-                ))
-              ) : (
-                redStudents.map((s) => (
-                  <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
-                    className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-rose-100 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center text-rose-700 text-sm font-black shrink-0">
-                      {getInitials(s.student.name)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
-                      <p className="text-[#94a3b8] text-[11px] truncate">
-                        {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                    <TrendingUp size={14} className="text-rose-400 shrink-0" />
-                  </Link>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            ) : redStudents.length === 0 ? (
+              <div className="bg-white rounded-[14px] px-4 py-6 border-[1.5px] border-[#ede9e1] text-center">
+                <p className="text-[#94a3b8] text-sm">Hech kim yo&apos;q</p>
+              </div>
+            ) : (
+              redStudents.map((s) => (
+                <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
+                  className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-rose-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center text-rose-700 text-sm font-black shrink-0">
+                    {getInitials(s.student.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
+                    <p className="text-[#94a3b8] text-[11px] truncate">
+                      {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <TrendingUp size={14} className="text-rose-400 shrink-0" />
+                </Link>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
         {/* Yellow students */}
-        {(loading || yellowStudents.length > 0) && (
-          <div>
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
-              Sariq o&apos;quvchilar
-              {!loading && <span className="ml-2 text-[#f59e0b]">({yellowStudents.length})</span>}
-            </p>
-            <div className="space-y-2">
-              {loading ? (
-                [1, 2].map((i) => (
-                  <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
-                    <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton theme="light" className="h-4 w-1/2" />
-                      <Skeleton theme="light" className="h-3 w-1/3" />
-                    </div>
+        <div>
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+            Sariq o&apos;quvchilar
+            {!loading && <span className="ml-2 text-[#f59e0b]">({yellowStudents.length})</span>}
+          </p>
+          <div className="space-y-2">
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                  <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton theme="light" className="h-4 w-1/2" />
+                    <Skeleton theme="light" className="h-3 w-1/3" />
                   </div>
-                ))
-              ) : (
-                yellowStudents.map((s) => (
-                  <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
-                    className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-amber-100 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 text-sm font-black shrink-0">
-                      {getInitials(s.student.name)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
-                      <p className="text-[#94a3b8] text-[11px] truncate">
-                        {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                    <TrendingUp size={14} className="text-amber-400 shrink-0" />
-                  </Link>
-                ))
-              )}
-            </div>
+                </div>
+              ))
+            ) : yellowStudents.length === 0 ? (
+              <div className="bg-white rounded-[14px] px-4 py-6 border-[1.5px] border-[#ede9e1] text-center">
+                <p className="text-[#94a3b8] text-sm">Hech kim yo&apos;q</p>
+              </div>
+            ) : (
+              yellowStudents.map((s) => (
+                <Link key={s.studentId} href={`/manager/students/${s.student.id}`}
+                  className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-amber-100 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 text-sm font-black shrink-0">
+                    {getInitials(s.student.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#0f172a] text-sm font-semibold truncate">{s.student.name}</p>
+                    <p className="text-[#94a3b8] text-[11px] truncate">
+                      {[s.englishStatus, s.personalStatus, s.criticalStatus].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <TrendingUp size={14} className="text-amber-400 shrink-0" />
+                </Link>
+              ))
+            )}
           </div>
-        )}
+        </div>
 
         {/* High performers */}
         {highPerformers.length > 0 && (

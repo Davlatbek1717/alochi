@@ -19,6 +19,7 @@ interface Props<T> {
   emptyMessage?: string;
   loading?: boolean;
   rowAction?: (row: T) => void;
+  rowClassName?: (row: T) => string;
   className?: string;
 }
 
@@ -29,6 +30,7 @@ export function Table<T extends Record<string, unknown>>({
   emptyMessage = "Ma'lumot yo'q",
   loading,
   rowAction,
+  rowClassName,
   className = '',
 }: Props<T>) {
   const [sortBy, setSortBy] = useState<string | null>(null);
@@ -129,7 +131,9 @@ export function Table<T extends Record<string, unknown>>({
                 onClick={rowAction ? () => rowAction(row) : undefined}
                 className={`border-b border-slate-700/50 last:border-0 transition-colors ${
                   idx % 2 === 1 ? 'bg-slate-900/20' : ''
-                } ${rowAction ? 'cursor-pointer hover:bg-slate-700/40' : 'hover:bg-slate-700/20'}`}
+                } ${rowAction ? 'cursor-pointer hover:bg-slate-700/40' : 'hover:bg-slate-700/20'} ${
+                  rowClassName ? rowClassName(row) : ''
+                }`}
               >
                 {columns.map((col) => {
                   const align = col.align ?? 'left';

@@ -80,6 +80,7 @@ export class ChurnService {
 
   private async buildFeatures(studentId: string): Promise<{
     absent_days_30d: number;
+    consecutive_absent_3d: number;
     streak_value: number;
     lessons_completed_30d: number;
     lessons_failed_30d: number;
@@ -135,12 +136,39 @@ export class ChurnService {
     const passRateChange =
       Math.round((passRateThisWeek - passRateLastWeek) * 100) / 100;
 
-    // Absent days from attendance table using status field
+    // Absent days from attendance table using status field (30-day count).
     const absentEvents = await this.prisma.attendanceStudent
       .count({
         where: { studentId, date: { gte: since30 }, status: 'absent' },
       })
       .catch(() => 0);
+
+    // Phase 23.12: consecutive 3-day absence signal. Look at the last 3
+    // calendar days (today, yesterday, day-before): if every record for those
+    // days has status='absent' AND there are 3 records (one per day), the
+    // signal fires. If any day has 'present' or 'late', signal=0.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const since3Days = new Date(
+      startOfToday.getTime() - 2 * 24 * 60 * 60 * 1000,
+    );
+    const recent3 = await this.prisma.attendanceStudent
+      .findMany({
+        where: { studentId, date: { gte: since3Days } },
+        select: { date: true, status: true },
+      })
+      .catch(() => [] as Array<{ date: Date; status: string }>);
+    const dayKeys = new Set<string>();
+    for (const r of recent3) {
+      if (r.status === 'absent') {
+        dayKeys.add(new Date(r.date).toISOString().slice(0, 10));
+      } else {
+        // Any non-absent record breaks the streak.
+        dayKeys.clear();
+        break;
+      }
+    }
+    const consecutiveAbsent3d = dayKeys.size >= 3 ? 1 : 0;
 
     // Mean StudentProgress.sessionCount over last 30 days (last_activity_at or completed_at).
     const avgSessionCount = await this.prisma.studentProgress
@@ -171,10 +199,16 @@ export class ChurnService {
 
     return {
       absent_days_30d: absentEvents,
+      consecutive_absent_3d: consecutiveAbsent3d,
       streak_value: xp?.currentStreak ?? 0,
       lessons_completed_30d: lessonsCompleted,
       lessons_failed_30d: lessonsFailed,
-      has_red_status: status?.englishStatus === 'qizil' ? 1 : 0,
+      // Phase 23.12: redStatus fires when EITHER english OR personal status
+      // is 'qizil' (was previously english-only).
+      has_red_status:
+        status?.englishStatus === 'qizil' || status?.personalStatus === 'qizil'
+          ? 1
+          : 0,
       has_parent_tg: user?.parentTelegramId ? 1 : 0,
       pass_rate_30d:
         totalLessons > 0
@@ -195,11 +229,16 @@ export class ChurnService {
     signals: Record<string, unknown>;
     method: 'rule_fallback';
   }> {
-    // Convert features to legacy signal format and use rule-based scoring
+    // Phase 23.12: corrected semantics.
+    //   absent3Days  = 3 *consecutive* calendar days absent (was 30-day count).
+    //   passRateDrop = (prev week - curr week) >= 20 percentage points
+    //                  (was a flat <50% test).
+    //   redStatus    = englishStatus OR personalStatus === 'qizil'
+    //                  (already wired in buildFeatures via has_red_status).
     const signals = {
-      absent3Days: (features.absent_days_30d as number) >= 3,
+      absent3Days: (features.consecutive_absent_3d as number) === 1,
       streakBroken: (features.streak_value as number) === 0,
-      passRateDrop: (features.pass_rate_30d as number) < 50,
+      passRateDrop: (features.pass_rate_change as number) <= -20,
       redStatus: features.has_red_status === 1,
       noParentTg: features.has_parent_tg === 0,
     };

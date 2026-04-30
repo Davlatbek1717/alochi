@@ -23,7 +23,7 @@ export class ContentQualityService {
 
     return Promise.all(
       lessons.map(async (lesson) => {
-        const [total, passed, feedbackAgg] = await Promise.all([
+        const [total, passed, feedbackAgg, sessionsAgg] = await Promise.all([
           this.prisma.studentProgress.count({ where: { lessonId: lesson.id } }),
           this.prisma.studentProgress.count({
             where: { lessonId: lesson.id, academyCompleted: true },
@@ -33,9 +33,16 @@ export class ContentQualityService {
             _avg: { rating: true },
             _count: true,
           }),
+          this.prisma.studentProgress.aggregate({
+            where: { lessonId: lesson.id },
+            _avg: { sessionCount: true },
+          }),
         ]);
 
         const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+        const avgSessionsRaw = sessionsAgg._avg?.sessionCount ?? 0;
+        const avgSessions =
+          Math.round((Number(avgSessionsRaw) || 0) * 100) / 100;
         return {
           lessonId: lesson.id,
           title: lesson.title,
@@ -46,6 +53,7 @@ export class ContentQualityService {
               ? Number(feedbackAgg._avg.rating)
               : null,
           feedbackCount: feedbackAgg._count,
+          avgSessions,
         };
       }),
     );
