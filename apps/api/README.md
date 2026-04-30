@@ -54,9 +54,31 @@ $ pnpm run test
 # e2e tests
 $ pnpm run test:e2e
 
-# test coverage
+# test coverage (enforces thresholds in jest.config.js)
 $ pnpm run test:cov
+
+# load test (requires k6 — `winget install Grafana.k6` / `brew install k6`)
+$ pnpm run test:load
 ```
+
+Coverage thresholds are configured in `jest.config.js`. Current floor reflects
+actual coverage as of Phase 22 (~33% lines). Aspirational target is **80%
+lines / 70% branches**; ratchet the threshold UP whenever new tests push the
+floor higher — never relax it.
+
+## Load testing
+
+`test/load/lesson-flow.js` is a [k6](https://k6.io) smoke-load script for the
+student lesson flow (login → me → next lesson → progress). Default target is
+`http://localhost:3001`; point it at staging via `-e API_URL=...`. SLOs
+enforced: p95 < 500ms, error rate < 5%. **Do not run against production.**
+
+## Security scanning
+
+`.github/workflows/zap.yml` runs an OWASP ZAP baseline scan against
+`https://staging.alochi.uz` every Monday at 04:00 UTC and on manual dispatch.
+Findings are filed as GitHub issues — review weekly. Suppress known/expected
+findings by adding `IGNORE` rows to `.zap/rules.tsv`.
 
 ## Deployment
 

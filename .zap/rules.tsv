@@ -1,0 +1,7 @@
+# ZAP Baseline scan rule overrides for A'lochi staging.
+# Format: <rule_id>	<IGNORE|WARN|FAIL>	<comment>
+# Default action when omitted: WARN.
+# To suppress a noisy/expected finding, add a row with IGNORE here.
+#
+# Example:
+# 10038	IGNORE	CSP not yet finalised — tracked in TICKET-1234
