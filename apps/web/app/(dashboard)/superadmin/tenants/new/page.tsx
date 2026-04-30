@@ -1,5 +1,6 @@
 import { Building2 } from 'lucide-react';
 import { OnboardForm } from './_components/OnboardForm';
+import { PageHeader } from '@/components/ui';
 
 export const metadata = {
   title: 'Yangi Markaz — Alochi',
@@ -7,11 +8,13 @@ export const metadata = {
 
 export default function NewTenantPage() {
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Building2 className="text-emerald-400" size={24} />
-        <h1 className="text-2xl font-bold text-white">Yangi Markaz Qo&apos;shish</h1>
-      </div>
+    <div className="p-6 space-y-6">
+      <PageHeader
+        icon={<Building2 size={20} />}
+        title="Yangi Markaz Qo'shish"
+        description="Yangi tenant, admin va birinchi filialni bir vaqtda yarating"
+        iconColor="text-emerald-400"
+      />
       <OnboardForm />
     </div>
   );

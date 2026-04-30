@@ -2,6 +2,11 @@
 import { useEffect, useState } from 'react';
 import { Users, Plus, X, ChevronDown, UserCheck, UserX, Filter } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  EmptyState,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 
 interface Branch { id: string; name: string; }
 interface User {
@@ -44,7 +49,7 @@ export default function SuperadminUsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
   const user = () => JSON.parse(localStorage.getItem('user') ?? '{}') as { tenantId?: string };
@@ -63,7 +68,7 @@ export default function SuperadminUsersPage() {
       const res = await apiRequest<User[]>(`/users?${params}`, {}, token());
       setUsers(res.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setLoading(false);
     }
@@ -89,14 +94,13 @@ export default function SuperadminUsersPage() {
       }, token());
       setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, status: next } : x)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     }
   }
 
   async function createUser() {
     if (!form.name.trim() || !form.login.trim() || !form.password) return;
     setSaving(true);
-    setError('');
     try {
       const { tenantId } = user();
       await apiRequest('/users', {
@@ -111,8 +115,9 @@ export default function SuperadminUsersPage() {
       setShowCreate(false);
       setForm(emptyForm());
       await loadUsers();
+      toast.success('Foydalanuvchi yaratildi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setSaving(false);
     }
@@ -196,7 +201,6 @@ export default function SuperadminUsersPage() {
                 </div>
               </div>
             </div>
-            {error && showCreate && <p className="text-[#e11d48] text-xs">{error}</p>}
             <div className="flex gap-2">
               <button
                 onClick={createUser}
@@ -239,16 +243,17 @@ export default function SuperadminUsersPage() {
           </div>
         </div>
 
-        {error && !showCreate && <p className="text-[#e11d48] text-sm">{error}</p>}
-
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3, 4].map((i) => <div key={i} className="h-16 bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] animate-pulse" />)}
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-[18px]" />)}
           </div>
         ) : users.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <Users size={32} className="text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-[#64748b]">Foydalanuvchilar topilmadi</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<Users size={28} />}
+              title="Foydalanuvchilar topilmadi"
+              description="Filtr shartlariga mos foydalanuvchi yo'q"
+            />
           </div>
         ) : (
           <div className="space-y-2">

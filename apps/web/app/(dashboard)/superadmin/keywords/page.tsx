@@ -2,6 +2,13 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, ShieldAlert } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  Button,
+  EmptyState,
+  Skeleton,
+  Modal,
+  useToast,
+} from '@/components/ui';
 
 type Keyword = { id: string; word: string };
 
@@ -10,20 +17,21 @@ export default function KeywordsPage() {
   const [loading, setLoading] = useState(true);
   const [newWord, setNewWord] = useState('');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Keyword | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<Keyword[]>('/social/keywords', {}, token)
       .then((res) => setKeywords(res.data))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Xato'))
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Xato'))
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function addKeyword() {
     const word = newWord.trim().toLowerCase();
     if (!word) return;
-    setSaving(true); setError('');
+    setSaving(true);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<Keyword>('/social/keywords', {
@@ -32,19 +40,23 @@ export default function KeywordsPage() {
       }, token);
       setKeywords((prev) => [...prev, res.data]);
       setNewWord('');
+      toast.success(`"${word}" so'zi qo'shildi`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xato');
+      toast.error(err instanceof Error ? err.message : 'Xato');
     } finally { setSaving(false); }
   }
 
-  async function deleteKeyword(id: string, word: string) {
-    if (!confirm(`"${word}" so'zini o'chirish?`)) return;
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    const { id, word } = deleteTarget;
+    setDeleteTarget(null);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       await apiRequest(`/social/keywords/${id}`, { method: 'DELETE' }, token);
       setKeywords((prev) => prev.filter((k) => k.id !== id));
+      toast.success(`"${word}" o'chirildi`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xato');
+      toast.error(err instanceof Error ? err.message : 'Xato');
     }
   }
 
@@ -70,10 +82,6 @@ export default function KeywordsPage() {
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
-        )}
-
         {/* Add form */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex gap-3">
           <input
@@ -99,13 +107,16 @@ export default function KeywordsPage() {
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-[50px] bg-white rounded-[14px] border border-[#ede9e1] animate-pulse" />
+              <Skeleton key={i} className="h-[50px] rounded-[14px]" />
             ))}
           </div>
         ) : keywords.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <ShieldAlert size={36} className="text-[#94a3b8] mx-auto mb-2" />
-            <p className="text-[#64748b] text-sm">Taqiqlangan so&apos;zlar yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<ShieldAlert size={28} />}
+              title="Taqiqlangan so'zlar yo'q"
+              description="Hali birorta so'z qo'shilmagan"
+            />
           </div>
         ) : (
           <div className="space-y-2">
@@ -116,7 +127,7 @@ export default function KeywordsPage() {
               >
                 <span className="flex-1 text-sm text-[#0f172a] font-mono font-medium">{kw.word}</span>
                 <button
-                  onClick={() => deleteKeyword(kw.id, kw.word)}
+                  onClick={() => setDeleteTarget(kw)}
                   className="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-100"
                 >
                   <Trash2 size={14} />
@@ -126,6 +137,22 @@ export default function KeywordsPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirm modal */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="So'zni o'chirish"
+        description={deleteTarget ? `"${deleteTarget.word}" so'zini taqiqlangan ro'yxatdan o'chirish?` : ''}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>Bekor</Button>
+            <Button variant="danger" onClick={confirmDelete}>O&apos;chirish</Button>
+          </>
+        }
+      >
+        <p className="text-slate-400 text-sm">Bu amalni bekor qilib bo&apos;lmaydi.</p>
+      </Modal>
     </div>
   );
 }

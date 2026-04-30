@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { TrendingDown } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { EmptyState, Skeleton, useToast } from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -18,7 +20,7 @@ export function FunnelTab() {
   const [selectedLessonId, setSelectedLessonId] = useState<string>('');
   const [funnel, setFunnel] = useState<FunnelStep[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -27,25 +29,33 @@ export function FunnelTab() {
         setLessons(r.data);
         if (r.data.length > 0) setSelectedLessonId(r.data[0].id);
       })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Xatolik'))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'))
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selectedLessonId) return;
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<FunnelStep[]>(`/analytics/funnel/${selectedLessonId}`, {}, token)
       .then((r) => setFunnel(r.data))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Xatolik'));
-  }, [selectedLessonId]);
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'));
+  }, [selectedLessonId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <p className="text-slate-400 text-sm">Yuklanmoqda...</p>;
-  if (error) return <p className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">{error}</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-44" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-white mb-4">Funnel Analysis</h2>
-      <div className="mb-4">
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-white">Funnel Analysis</h2>
+
+      <div>
         <label className="block text-xs text-slate-400 mb-1.5">Dars tanlang</label>
         <select
           value={selectedLessonId}
@@ -57,7 +67,8 @@ export function FunnelTab() {
           ))}
         </select>
       </div>
-      {funnel.length > 0 && (
+
+      {funnel.length > 0 ? (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={funnel} layout="vertical" margin={{ left: 80 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -67,6 +78,12 @@ export function FunnelTab() {
             <Bar dataKey="count" fill="#10b981" />
           </BarChart>
         </ResponsiveContainer>
+      ) : (
+        <EmptyState
+          icon={<TrendingDown size={24} />}
+          title="Funnel ma'lumotlari yo'q"
+          description="Tanlangan dars uchun funnel tahlili mavjud emas"
+        />
       )}
     </div>
   );

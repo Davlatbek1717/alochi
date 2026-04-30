@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Plus, CheckCircle, Globe, Pencil } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  EmptyState,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -35,15 +40,15 @@ export default function SuperadminLessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<Lesson[]>('/lessons', {}, token)
       .then((res) => setLessons(res.data))
-      .catch((e) => setError(e.message))
+      .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function publishLesson(id: string) {
     setPublishing(id);
@@ -51,8 +56,9 @@ export default function SuperadminLessonsPage() {
     try {
       await apiRequest(`/lessons/${id}/publish`, { method: 'PATCH' }, token);
       setLessons((prev) => prev.map((l) => l.id === id ? { ...l, isPublished: true } : l));
+      toast.success('Dars nashr qilindi');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik');
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
       setPublishing(null);
     }
@@ -86,24 +92,30 @@ export default function SuperadminLessonsPage() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-3">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
-        )}
-
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 animate-pulse">
-                <div className="h-4 bg-[#f7f4ef] rounded w-1/2 mb-2" />
-                <div className="h-3 bg-[#f7f4ef] rounded w-1/4" />
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
+                <Skeleton className="h-4 w-1/2 mb-2" />
+                <Skeleton className="h-3 w-1/4" />
               </div>
             ))}
           </div>
         ) : lessons.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <BookOpen size={32} className="text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-[#64748b] font-semibold">Hali dars yo&apos;q</p>
-            <p className="text-[#94a3b8] text-sm mt-1">Birinchi darsni yarating</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<BookOpen size={28} />}
+              title="Hali dars yo'q"
+              description="Birinchi darsni yarating"
+              action={
+                <button
+                  onClick={() => router.push('/superadmin/lessons/new')}
+                  className="bg-[#0f172a] text-white px-5 py-2.5 rounded-xl text-sm font-bold"
+                >
+                  Yangi Dars
+                </button>
+              }
+            />
           </div>
         ) : (
           <div className="space-y-3">

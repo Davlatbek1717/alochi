@@ -1,7 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Pencil, Check, X } from 'lucide-react';
+import { Building2, Plus, Check, X, Pencil } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  EmptyState,
+  Skeleton,
+  useToast,
+} from '@/components/ui';
 
 interface Branch { id: string; name: string; }
 
@@ -12,7 +17,7 @@ export default function SuperadminBranchesPage() {
   const [creating, setCreating] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
@@ -22,7 +27,7 @@ export default function SuperadminBranchesPage() {
       const res = await apiRequest<Branch[]>('/branches', {}, token());
       setBranches(res.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally { setLoading(false); }
   }
 
@@ -30,7 +35,7 @@ export default function SuperadminBranchesPage() {
 
   async function createBranch() {
     if (!newName.trim()) return;
-    setCreating(true); setError('');
+    setCreating(true);
     try {
       await apiRequest('/branches', {
         method: 'POST',
@@ -38,14 +43,14 @@ export default function SuperadminBranchesPage() {
       }, token());
       setNewName('');
       await load();
+      toast.success('Filial yaratildi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally { setCreating(false); }
   }
 
   async function saveName(id: string) {
     if (!editName.trim()) return;
-    setError('');
     try {
       await apiRequest(`/branches/${id}`, {
         method: 'PATCH',
@@ -53,8 +58,9 @@ export default function SuperadminBranchesPage() {
       }, token());
       setEditId(null);
       setBranches((prev) => prev.map((b) => b.id === id ? { ...b, name: editName.trim() } : b));
+      toast.success('Filial nomi yangilandi');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     }
   }
 
@@ -80,10 +86,6 @@ export default function SuperadminBranchesPage() {
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
-        )}
-
         {/* Add form */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex gap-3">
           <input
@@ -109,13 +111,16 @@ export default function SuperadminBranchesPage() {
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-[58px] bg-white rounded-[14px] border border-[#ede9e1] animate-pulse" />
+              <Skeleton key={i} className="h-[58px] rounded-[14px]" />
             ))}
           </div>
         ) : branches.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <Building2 size={36} className="text-[#94a3b8] mx-auto mb-2" />
-            <p className="text-[#64748b] text-sm">Filiallar yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<Building2 size={28} />}
+              title="Filiallar yo'q"
+              description="Birinchi filialni yarating"
+            />
           </div>
         ) : (
           <div className="space-y-2">

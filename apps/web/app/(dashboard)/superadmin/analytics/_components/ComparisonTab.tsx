@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Building2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Table, Column, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 interface TenantRow {
   tenantId: string;
@@ -9,53 +11,69 @@ interface TenantRow {
   eventsLast30d: number;
 }
 
+const columns: Column<TenantRow>[] = [
+  {
+    key: 'tenantName',
+    label: 'Markaz',
+    render: (row) => <span className="text-white font-medium">{row.tenantName}</span>,
+  },
+  {
+    key: 'dau',
+    label: 'DAU',
+    align: 'center',
+    sortable: true,
+    render: (row) => <span className="text-emerald-400 font-semibold">{row.dau}</span>,
+  },
+  {
+    key: 'eventsLast30d',
+    label: "Event'lar (30 kun)",
+    align: 'center',
+    sortable: true,
+    render: (row) => <span className="text-slate-300">{row.eventsLast30d}</span>,
+  },
+];
+
 export function ComparisonTab() {
   const [data, setData] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<TenantRow[]>('/analytics/comparison', {}, token)
       .then((r) => setData(r.data))
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Xatolik'))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'))
       .finally(() => setLoading(false));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <p className="text-slate-400 text-sm">Yuklanmoqda...</p>;
-  if (error) return <p className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">{error}</p>;
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-6 w-64" />
+        <Table columns={columns as unknown as Column<Record<string, unknown>>[]} data={[]} keyField="tenantId" loading />
+      </div>
+    );
+  }
+
+  // Sort by eventsLast30d descending
+  const sorted = [...data].sort((a, b) => b.eventsLast30d - a.eventsLast30d);
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-white mb-4">Markazlar Taqqoslash (faqat superadmin)</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="text-left px-3 py-2 text-slate-400">Markaz</th>
-              <th className="text-center px-3 py-2 text-slate-400">DAU</th>
-              <th className="text-center px-3 py-2 text-slate-400">Event&apos;lar (30 kun)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data
-              .slice()
-              .sort((a, b) => b.eventsLast30d - a.eventsLast30d)
-              .map((t) => (
-                <tr key={t.tenantId} className="border-b border-slate-700/50">
-                  <td className="px-3 py-2 text-white font-medium">{t.tenantName}</td>
-                  <td className="px-3 py-2 text-center text-emerald-400 font-semibold">{t.dau}</td>
-                  <td className="px-3 py-2 text-center text-slate-300">{t.eventsLast30d}</td>
-                </tr>
-              ))}
-            {data.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-8 text-center text-slate-500">Markazlar yo&apos;q</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-white">Markazlar Taqqoslash (faqat superadmin)</h2>
+      {sorted.length === 0 ? (
+        <EmptyState
+          icon={<Building2 size={24} />}
+          title="Markazlar yo'q"
+          description="Hali birorta markaz ro'yxatda yo'q"
+        />
+      ) : (
+        <Table
+          columns={columns as unknown as Column<Record<string, unknown>>[]}
+          data={sorted as unknown as Record<string, unknown>[]}
+          keyField="tenantId"
+        />
+      )}
     </div>
   );
 }

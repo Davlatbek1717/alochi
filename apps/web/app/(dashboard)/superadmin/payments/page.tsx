@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Settings, ChevronRight, Users, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
+import { Skeleton, EmptyState, useToast } from '@/components/ui';
 
 interface BranchPaymentSummary {
   branchId: string;
@@ -26,7 +27,7 @@ function PaymentSettingsPanel() {
   const [startDay, setStartDay] = useState('');
   const [endDay, setEndDay] = useState('');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -44,7 +45,6 @@ function PaymentSettingsPanel() {
 
   async function save() {
     setSaving(true);
-    setError('');
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<PaymentSettings>('/payments/settings', {
@@ -53,8 +53,9 @@ function PaymentSettingsPanel() {
       }, token);
       setSettings(res.data);
       setEditing(false);
+      toast.success("To'lov muddati saqlandi");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik');
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setSaving(false);
     }
@@ -96,7 +97,6 @@ function PaymentSettingsPanel() {
               />
             </div>
           </div>
-          {error && <p className="text-[#e11d48] text-xs">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={save}
@@ -182,10 +182,10 @@ function BranchCard({ summary, month }: { summary: BranchPaymentSummary; month: 
 
 function SuperadminPaymentsContent() {
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [month, setMonth] = useState(searchParams.get('month') ?? currentMonth());
   const [summaries, setSummaries] = useState<BranchPaymentSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
 
   async function fetchSummary(selectedMonth: string) {
@@ -198,9 +198,8 @@ function SuperadminPaymentsContent() {
         token,
       );
       setSummaries(res.data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
       setFetching(false);
@@ -242,28 +241,24 @@ function SuperadminPaymentsContent() {
       <div className="px-4 pt-4 pb-6 space-y-4">
         <PaymentSettingsPanel />
 
-        {error ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
-            <p className="text-[#e11d48] text-sm">{error}</p>
-            <button
-              onClick={() => fetchSummary(month)}
-              className="mt-2 text-sm text-[#0f172a] underline font-medium"
-            >
-              Qayta urinish
-            </button>
-          </div>
-        ) : loading ? (
+        {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 animate-pulse">
-                <div className="h-5 w-32 bg-[#f7f4ef] rounded mb-3" />
-                <div className="h-4 w-20 bg-[#f7f4ef] rounded mb-2" />
-                <div className="h-4 w-40 bg-[#f7f4ef] rounded" />
+              <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+                <Skeleton className="h-5 w-32 mb-3" />
+                <Skeleton className="h-4 w-20 mb-2" />
+                <Skeleton className="h-4 w-40" />
               </div>
             ))}
           </div>
         ) : summaries.length === 0 ? (
-          <p className="text-[#94a3b8] text-sm">Filiallar topilmadi</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<CreditCard size={28} />}
+              title="Filiallar topilmadi"
+              description="Bu oy uchun to'lov ma'lumotlari yo'q"
+            />
+          </div>
         ) : (
           <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity ${fetching ? 'opacity-50' : ''}`}>
             {summaries.map((s) => (

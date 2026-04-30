@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Globe, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, EmptyState, useToast } from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -37,9 +38,9 @@ interface LessonComponent {
 export default function EditLessonPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'mcq' | 'word_order'>('info');
 
@@ -62,9 +63,9 @@ export default function EditLessonPage() {
         if (mcqComp?.config.questions) setMcqQuestions(mcqComp.config.questions);
         if (wordComp?.config.sentences) setWordSentences(wordComp.config.sentences);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function publishLesson() {
     setPublishing(true);
@@ -72,8 +73,9 @@ export default function EditLessonPage() {
     try {
       await apiRequest(`/lessons/${id}/publish`, { method: 'PATCH' }, token);
       setLesson((prev) => prev ? { ...prev, isPublished: true } : prev);
+      toast.success('Dars nashr qilindi');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik');
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
       setPublishing(false);
     }
@@ -87,8 +89,9 @@ export default function EditLessonPage() {
         method: 'POST',
         body: JSON.stringify({ questions: mcqQuestions }),
       }, token);
+      toast.success('MCQ savollar saqlandi');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik');
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
       setSavingMcq(false);
     }
@@ -102,8 +105,9 @@ export default function EditLessonPage() {
         method: 'POST',
         body: JSON.stringify({ sentences: wordSentences }),
       }, token);
+      toast.success("So'z tartibi saqlandi");
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik');
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
       setSavingWord(false);
     }
@@ -152,16 +156,28 @@ export default function EditLessonPage() {
     setWordSentences((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-      <p className="text-[#64748b]">Yuklanmoqda...</p>
-    </div>
-  );
-  if (!lesson) return (
-    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-      <p className="text-[#e11d48]">Dars topilmadi</p>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ef] p-6 space-y-4">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-24 w-full rounded-[18px]" />
+        <Skeleton className="h-12 w-full rounded-[18px]" />
+      </div>
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+        <EmptyState
+          icon={<BookOpen size={28} />}
+          title="Dars topilmadi"
+          description="Bunday ID li dars mavjud emas"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
@@ -183,13 +199,15 @@ export default function EditLessonPage() {
               <p className="text-white font-bold text-base leading-tight">{lesson.title}</p>
             </div>
             {!lesson.isPublished ? (
-              <button
+              <Button
+                variant="success"
+                size="sm"
+                loading={publishing}
+                icon={<Globe size={14} />}
                 onClick={publishLesson}
-                disabled={publishing}
-                className="flex items-center gap-2 bg-emerald-500 text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-emerald-600 disabled:opacity-50 shrink-0"
               >
-                <Globe size={14} /> {publishing ? '...' : 'Nashr'}
-              </button>
+                {publishing ? '...' : 'Nashr'}
+              </Button>
             ) : (
               <span className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">
                 <CheckCircle size={12} /> Nashr
@@ -201,10 +219,6 @@ export default function EditLessonPage() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-4">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
-        )}
-
         {/* Info panel */}
         <div className="bg-[#162032] rounded-[18px] p-4 grid grid-cols-2 gap-3 text-sm">
           <div>
@@ -342,13 +356,15 @@ export default function EditLessonPage() {
             </button>
 
             {mcqQuestions.length > 0 && (
-              <button
+              <Button
+                variant="primary"
+                loading={savingMcq}
+                fullWidth
+                size="lg"
                 onClick={saveMcq}
-                disabled={savingMcq}
-                className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#1e293b] disabled:opacity-50"
               >
                 {savingMcq ? 'Saqlanmoqda...' : `MCQ savollarni saqlash (${mcqQuestions.length} ta)`}
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -399,13 +415,15 @@ export default function EditLessonPage() {
             </button>
 
             {wordSentences.length > 0 && (
-              <button
+              <Button
+                variant="primary"
+                loading={savingWord}
+                fullWidth
+                size="lg"
                 onClick={saveWordOrder}
-                disabled={savingWord}
-                className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#1e293b] disabled:opacity-50"
               >
                 {savingWord ? 'Saqlanmoqda...' : `So'z tartibi saqlash (${wordSentences.length} ta)`}
-              </button>
+              </Button>
             )}
           </div>
         )}

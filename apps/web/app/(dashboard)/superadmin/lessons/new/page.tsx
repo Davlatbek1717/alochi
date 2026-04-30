@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, CheckSquare } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, useToast } from '@/components/ui';
 
 const LESSON_TYPES = [
   { value: 'english', label: 'Ingliz tili' },
@@ -14,7 +15,7 @@ const LESSON_TYPES = [
 export default function NewLessonPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   const [form, setForm] = useState({
     title: '',
@@ -35,7 +36,6 @@ export default function NewLessonPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
     setSaving(true);
 
     const token = localStorage.getItem('accessToken') ?? '';
@@ -63,9 +63,10 @@ export default function NewLessonPage() {
         method: 'POST',
         body: JSON.stringify(body),
       }, token);
+      toast.success('Dars yaratildi');
       router.push('/superadmin/lessons');
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Xatolik yuz berdi');
+      toast.error(e instanceof Error ? e.message : 'Xatolik yuz berdi');
     } finally {
       setSaving(false);
     }
@@ -94,10 +95,6 @@ export default function NewLessonPage() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm mb-4">{error}</div>
-        )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
@@ -231,13 +228,15 @@ export default function NewLessonPage() {
           </div>
 
           <div className="flex gap-3">
-            <button
+            <Button
               type="submit"
-              disabled={saving}
-              className="flex-1 bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#1e293b] disabled:opacity-50 transition-colors"
+              variant="primary"
+              loading={saving}
+              fullWidth
+              size="lg"
             >
               {saving ? 'Saqlanmoqda...' : 'Dars yaratish'}
-            </button>
+            </Button>
             <button
               type="button"
               onClick={() => router.push('/superadmin/lessons')}

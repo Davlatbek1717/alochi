@@ -2,6 +2,18 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  Table,
+  Column,
+  PageHeader,
+  EmptyState,
+  SkeletonCard,
+  useToast,
+} from '@/components/ui';
 
 interface ChurnStudent {
   id: string;
@@ -18,47 +30,54 @@ const SIGNAL_LABELS: Record<string, string> = {
   noParentTg: "Ota Telegram yo'q",
 };
 
-function StudentTable({ students, color }: { students: ChurnStudent[]; color: 'red' | 'yellow' }) {
-  if (students.length === 0) return <div className="text-slate-500 text-sm p-4">Yo&apos;q</div>;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-700">
-            <th className="text-left px-4 py-3 text-slate-400">Ism</th>
-            <th className="text-center px-4 py-3 text-slate-400">Ball</th>
-            <th className="text-left px-4 py-3 text-slate-400">Sabablar</th>
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((s) => (
-            <tr key={s.id} className="border-b border-slate-700/50 hover:bg-slate-700/20">
-              <td className="px-4 py-3 text-white font-medium">{s.student.name}</td>
-              <td className="px-4 py-3 text-center">
-                <span className={`font-bold text-lg ${color === 'red' ? 'text-red-400' : 'text-yellow-400'}`}>{s.score}</span>
-              </td>
-              <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(s.signals).filter(([, v]) => v).map(([k]) => (
-                    <span key={k} className={`text-xs px-2 py-0.5 rounded-full ${color === 'red' ? 'bg-red-900/40 text-red-300' : 'bg-yellow-900/40 text-yellow-300'}`}>
-                      {SIGNAL_LABELS[k] ?? k}
-                    </span>
-                  ))}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+function buildColumns(color: 'red' | 'yellow'): Column<ChurnStudent>[] {
+  return [
+    {
+      key: 'student',
+      label: 'Ism',
+      render: (row) => <span className="text-white font-medium">{row.student.name}</span>,
+    },
+    {
+      key: 'score',
+      label: 'Ball',
+      align: 'center',
+      sortable: true,
+      render: (row) => (
+        <span className={`font-bold text-lg ${color === 'red' ? 'text-red-400' : 'text-yellow-400'}`}>
+          {row.score}
+        </span>
+      ),
+    },
+    {
+      key: 'signals',
+      label: 'Sabablar',
+      render: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(row.signals)
+            .filter(([, v]) => v)
+            .map(([k]) => (
+              <span
+                key={k}
+                className={`text-xs px-2 py-0.5 rounded-full ${
+                  color === 'red'
+                    ? 'bg-red-900/40 text-red-300'
+                    : 'bg-yellow-900/40 text-yellow-300'
+                }`}
+              >
+                {SIGNAL_LABELS[k] ?? k}
+              </span>
+            ))}
+        </div>
+      ),
+    },
+  ];
 }
 
 export default function ChurnPage() {
   const [high, setHigh] = useState<ChurnStudent[]>([]);
   const [medium, setMedium] = useState<ChurnStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
@@ -68,35 +87,84 @@ export default function ChurnPage() {
       apiRequest<ChurnStudent[]>('/churn/medium-risk', {}, token()),
     ])
       .then(([h, m]) => { setHigh(h.data); setMedium(m.data); })
-      .catch((e) => setError(e.message))
+      .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) return <div className="p-8 text-slate-400">Yuklanmoqda...</div>;
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-slate-700/50 animate-pulse" />
+          <div className="h-8 w-56 bg-slate-700/50 rounded animate-pulse" />
+        </div>
+        <SkeletonCard />
+        <SkeletonCard />
+      </div>
+    );
+  }
+
+  const highColumns = buildColumns('red');
+  const mediumColumns = buildColumns('yellow');
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-8">
-        <AlertTriangle className="text-red-400" size={24} />
-        <h1 className="text-2xl font-bold text-white">Churn Risk Monitoring</h1>
-      </div>
-      {error && <div className="mb-4 p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">{error}</div>}
-      <div className="space-y-6">
-        <div className="bg-slate-800/60 border border-red-900/50 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-red-900/50 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-red-300 font-medium">Yuqori xavf (&gt;60 ball) — {high.length} ta o&apos;quvchi</span>
+    <div className="p-6 space-y-6">
+      <PageHeader
+        icon={<AlertTriangle size={20} />}
+        title="Churn Risk Monitoring"
+        description="Tashlab ketish xavfi yuqori o'quvchilar ro'yxati"
+        iconColor="text-red-400"
+      />
+
+      {/* High risk */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0" />
+            <CardTitle>Yuqori xavf (&gt;60 ball)</CardTitle>
+            <span className="ml-auto text-sm text-slate-400">{high.length} ta o&apos;quvchi</span>
           </div>
-          <StudentTable students={high} color="red" />
-        </div>
-        <div className="bg-slate-800/60 border border-yellow-900/50 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-yellow-900/50 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-yellow-300 font-medium">O&apos;rta xavf (31–60 ball) — {medium.length} ta o&apos;quvchi</span>
+          <CardDescription>Zudlik bilan murojaat talab qilinadi</CardDescription>
+        </CardHeader>
+        {high.length === 0 ? (
+          <EmptyState
+            icon={<AlertTriangle size={24} />}
+            title="Yuqori xavfli o'quvchilar yo'q"
+            description="Barcha o'quvchilar yaxshi holatda"
+          />
+        ) : (
+          <Table
+            columns={highColumns as unknown as Column<Record<string, unknown>>[]}
+            data={high as unknown as Record<string, unknown>[]}
+            keyField="id"
+          />
+        )}
+      </Card>
+
+      {/* Medium risk */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shrink-0" />
+            <CardTitle>O&apos;rta xavf (31–60 ball)</CardTitle>
+            <span className="ml-auto text-sm text-slate-400">{medium.length} ta o&apos;quvchi</span>
           </div>
-          <StudentTable students={medium} color="yellow" />
-        </div>
-      </div>
+          <CardDescription>Kuzatuv tavsiya etiladi</CardDescription>
+        </CardHeader>
+        {medium.length === 0 ? (
+          <EmptyState
+            icon={<AlertTriangle size={24} />}
+            title="O'rta xavfli o'quvchilar yo'q"
+            description="Hozircha kuzatuv talab qilinadigan o'quvchilar yo'q"
+          />
+        ) : (
+          <Table
+            columns={mediumColumns as unknown as Column<Record<string, unknown>>[]}
+            data={medium as unknown as Record<string, unknown>[]}
+            keyField="id"
+          />
+        )}
+      </Card>
     </div>
   );
 }

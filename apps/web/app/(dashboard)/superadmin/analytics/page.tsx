@@ -9,6 +9,7 @@ import { FunnelTab } from './_components/FunnelTab';
 import { LifecycleTab } from './_components/LifecycleTab';
 import { FailuresTab } from './_components/FailuresTab';
 import { ComparisonTab } from './_components/ComparisonTab';
+import { PageHeader, Card } from '@/components/ui';
 
 type TabId =
   | 'activity'
@@ -50,10 +51,12 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <TrendingUp className="text-green-400" size={24} />
-        <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
-      </div>
+      <PageHeader
+        icon={<TrendingUp size={20} />}
+        title="Analytics Dashboard"
+        description="Filial va dars statistikasi, foydalanuvchi faolligi"
+        iconColor="text-emerald-400"
+      />
 
       <div className="border-b border-slate-700 flex gap-1 overflow-x-auto">
         {TABS.map((tab) => (
@@ -71,7 +74,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <div className="bg-slate-800/40 rounded-xl p-6">
+      <Card>
         {active === 'activity' && <ActivityTab />}
         {active === 'lessons' && <LessonsTab />}
         {active === 'branches' && <BranchesTab />}
@@ -80,7 +83,7 @@ export default function AnalyticsPage() {
         {active === 'lifecycle' && <LifecycleTab />}
         {active === 'failures' && <FailuresTab />}
         {active === 'comparison' && <ComparisonTab />}
-      </div>
+      </Card>
     </div>
   );
 }

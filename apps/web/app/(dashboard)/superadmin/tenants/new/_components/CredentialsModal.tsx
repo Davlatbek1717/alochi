@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2, Copy, Printer, AlertTriangle } from 'lucide-react';
+import { Modal, Button } from '@/components/ui';
 
 interface Props {
   data: {
@@ -14,14 +15,6 @@ interface Props {
 export function CredentialsModal({ data, onClose }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   async function copy(value: string, field: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -33,51 +26,43 @@ export function CredentialsModal({ data, onClose }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 print:bg-white print:relative print:p-0"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="credentials-modal-title"
+    <Modal
+      open
+      onClose={onClose}
+      closeOnOverlay={false}
+      title="Markaz muvaffaqiyatli yaratildi"
+      size="md"
+      footer={
+        <>
+          <Button
+            variant="secondary"
+            icon={<Printer size={14} />}
+            onClick={() => window.print()}
+            className="print:hidden"
+          >
+            Chop etish
+          </Button>
+          <Button variant="primary" onClick={onClose}>
+            Yopib ro&apos;yxatga
+          </Button>
+        </>
+      }
     >
-      <div className="bg-slate-800 border border-slate-700 rounded-xl max-w-md w-full p-6 print:bg-white print:border-0 print:shadow-none print:max-w-full" id="credentials-print">
-        <div className="flex items-center gap-3 mb-4 print:text-black">
-          <CheckCircle2 className="text-emerald-400 print:text-emerald-700" size={24} />
-          <h2 id="credentials-modal-title" className="text-lg font-bold text-white print:text-black">
-            Markaz muvaffaqiyatli yaratildi
-          </h2>
-        </div>
-
-        <div className="bg-amber-900/30 border border-amber-800 rounded-lg p-3 mb-4 flex items-start gap-2 print:hidden">
+      <div id="credentials-print">
+        <div className="flex items-start gap-2 bg-amber-900/30 border border-amber-800 rounded-lg p-3 mb-5 print:hidden">
           <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={14} />
           <p className="text-xs text-amber-200">
             Bu ma&apos;lumotlarni admin&apos;ga yetkazib bering. Modal yopilgandan keyin parol qaytadan ko&apos;rsatilmaydi.
           </p>
         </div>
 
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3">
           <CredentialRow label="Markaz URL" value={`/${data.tenantSlug}/login`} field="url" copiedField={copiedField} onCopy={copy} />
           <CredentialRow label="Login" value={data.login} field="login" copiedField={copiedField} onCopy={copy} />
           <CredentialRow label="Parol" value={data.password} field="password" copiedField={copiedField} onCopy={copy} />
         </div>
-
-        <div className="flex justify-end gap-3 print:hidden">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm flex items-center gap-2"
-          >
-            <Printer size={14} /> Chop etish
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-sm"
-          >
-            Yopib ro&apos;yxatga
-          </button>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

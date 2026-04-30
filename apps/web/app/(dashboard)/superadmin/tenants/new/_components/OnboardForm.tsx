@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Building2, RefreshCw, User, Lock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Card, CardHeader, CardTitle, CardDescription, useToast } from '@/components/ui';
 import { CredentialsModal } from './CredentialsModal';
 
 const PASSWORD_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -11,7 +12,7 @@ function deriveSlug(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036F]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 50);
@@ -37,6 +38,7 @@ interface ModalData {
 
 export function OnboardForm() {
   const router = useRouter();
+  const toast = useToast();
   const [tenantName, setTenantName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -47,7 +49,6 @@ export function OnboardForm() {
   const [includeBranch, setIncludeBranch] = useState(false);
   const [branchName, setBranchName] = useState('Markaziy filial');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
   const [modal, setModal] = useState<ModalData | null>(null);
 
   function onTenantNameChange(value: string) {
@@ -62,7 +63,6 @@ export function OnboardForm() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
     setSubmitting(true);
     try {
       const token = localStorage.getItem('accessToken') ?? '';
@@ -86,7 +86,7 @@ export function OnboardForm() {
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Server xatosi';
-      setError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
@@ -95,116 +95,128 @@ export function OnboardForm() {
   return (
     <>
       <form onSubmit={onSubmit} className="max-w-2xl space-y-6">
-        {error && (
-          <div className="p-3 bg-red-900/40 border border-red-700 rounded-lg text-red-300 text-sm">
-            {error}
-          </div>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <span className="flex items-center gap-2">
+                <Building2 size={16} className="text-emerald-400" />
+                Markaz ma&apos;lumotlari
+              </span>
+            </CardTitle>
+            <CardDescription>Tenant nomi va URL slug</CardDescription>
+          </CardHeader>
 
-        <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-            <Building2 size={16} className="text-emerald-400" />
-            Markaz ma&apos;lumotlari
-          </h2>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1.5">Markaz nomi *</label>
-            <input
-              type="text"
-              required
-              minLength={2}
-              maxLength={100}
-              value={tenantName}
-              onChange={(e) => onTenantNameChange(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-emerald-500 outline-none"
-              placeholder="Toshkent IELTS Markazi"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1.5">Slug *</label>
-            <input
-              type="text"
-              required
-              pattern="[a-z0-9\-]{3,50}"
-              value={slug}
-              onChange={(e) => onSlugChange(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-emerald-500 outline-none"
-              placeholder="toshkent-ielts"
-            />
-            <p className="text-xs text-slate-500 mt-1">URL: /{slug || 'slug'}/login</p>
-          </div>
-        </section>
-
-        <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-            <User size={16} className="text-blue-400" />
-            Birinchi admin (filadmin)
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Ism *</label>
+              <label className="block text-xs text-slate-400 mb-1.5">Markaz nomi *</label>
               <input
                 type="text"
                 required
                 minLength={2}
                 maxLength={100}
-                value={adminName}
-                onChange={(e) => setAdminName(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 outline-none"
+                value={tenantName}
+                onChange={(e) => onTenantNameChange(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-emerald-500 outline-none"
+                placeholder="Toshkent IELTS Markazi"
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Login *</label>
+              <label className="block text-xs text-slate-400 mb-1.5">Slug *</label>
               <input
                 type="text"
                 required
-                minLength={3}
-                maxLength={50}
-                pattern="[a-zA-Z0-9_.\-]+"
-                value={adminLogin}
-                onChange={(e) => setAdminLogin(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-blue-500 outline-none"
+                pattern="[a-z0-9\-]{3,50}"
+                value={slug}
+                onChange={(e) => onSlugChange(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-emerald-500 outline-none"
+                placeholder="toshkent-ielts"
               />
+              <p className="text-xs text-slate-500 mt-1">URL: /{slug || 'slug'}/login</p>
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
-              <Lock size={12} /> Parol *
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                required
-                minLength={6}
-                maxLength={100}
-                autoComplete="new-password"
-                spellCheck={false}
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-blue-500 outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => setAdminPassword(generatePassword())}
-                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-300 flex items-center gap-1.5"
-              >
-                <RefreshCw size={12} /> Generate
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1.5">Telefon (ixtiyoriy)</label>
-            <input
-              type="text"
-              maxLength={20}
-              value={adminPhone}
-              onChange={(e) => setAdminPhone(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 outline-none"
-              placeholder="+998 90 123 45 67"
-            />
-          </div>
-        </section>
+        </Card>
 
-        <section className="bg-slate-800/60 border border-slate-700 rounded-xl p-6 space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <span className="flex items-center gap-2">
+                <User size={16} className="text-blue-400" />
+                Birinchi admin (filadmin)
+              </span>
+            </CardTitle>
+            <CardDescription>Markaz administratorining kirish ma&apos;lumotlari</CardDescription>
+          </CardHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Ism *</label>
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1.5">Login *</label>
+                <input
+                  type="text"
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  pattern="[a-zA-Z0-9_.\-]+"
+                  value={adminLogin}
+                  onChange={(e) => setAdminLogin(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <Lock size={12} /> Parol *
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  required
+                  minLength={6}
+                  maxLength={100}
+                  autoComplete="new-password"
+                  spellCheck={false}
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-blue-500 outline-none"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  icon={<RefreshCw size={12} />}
+                  onClick={() => setAdminPassword(generatePassword())}
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1.5">Telefon (ixtiyoriy)</label>
+              <input
+                type="text"
+                maxLength={20}
+                value={adminPhone}
+                onChange={(e) => setAdminPhone(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm focus:border-blue-500 outline-none"
+                placeholder="+998 90 123 45 67"
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-300 cursor-pointer">
             <input
               type="checkbox"
@@ -215,7 +227,7 @@ export function OnboardForm() {
             Birinchi filial ham yaratish (ixtiyoriy)
           </label>
           {includeBranch && (
-            <div>
+            <div className="mt-4">
               <label className="block text-xs text-slate-400 mb-1.5">Filial nomi *</label>
               <input
                 type="text"
@@ -228,23 +240,23 @@ export function OnboardForm() {
               />
             </div>
           )}
-        </section>
+        </Card>
 
         <div className="flex justify-end gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => router.push('/superadmin')}
-            className="px-5 py-2 text-sm text-slate-400 hover:text-white"
           >
             Bekor
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={submitting}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium rounded-lg text-sm"
+            variant="primary"
+            loading={submitting}
           >
             {submitting ? 'Yaratilmoqda...' : 'Markaz Yaratish'}
-          </button>
+          </Button>
         </div>
       </form>
 

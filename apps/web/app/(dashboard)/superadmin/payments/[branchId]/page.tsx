@@ -6,6 +6,7 @@ import { ArrowLeft, CreditCard } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../../_components/MonthPicker';
 import DebtorsTable, { BranchStudent } from '../../../_components/DebtorsTable';
+import { Skeleton, useToast } from '@/components/ui';
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
@@ -15,10 +16,10 @@ function BranchDetailContent() {
   const { branchId } = useParams<{ branchId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const toast = useToast();
   const [month, setMonth] = useState(searchParams.get('month') ?? currentMonth());
   const [students, setStudents] = useState<BranchStudent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(false);
 
   async function fetchStudents(selectedMonth: string) {
@@ -31,9 +32,8 @@ function BranchDetailContent() {
         token,
       );
       setStudents(res.data);
-      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
       setFetching(false);
@@ -79,19 +79,15 @@ function BranchDetailContent() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-6">
-        {error ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
-            <p className="text-[#e11d48] text-sm">{error}</p>
-            <button
-              onClick={() => fetchStudents(month)}
-              className="mt-2 text-sm text-[#0f172a] underline font-medium"
-            >
-              Qayta urinish
-            </button>
+        {loading ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-12 rounded-xl" />
+            ))}
           </div>
         ) : (
           <div className={`bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden transition-opacity ${fetching ? 'opacity-50' : ''}`}>
-            <DebtorsTable students={students} readOnly={true} loading={loading} />
+            <DebtorsTable students={students} readOnly={true} loading={false} />
           </div>
         )}
       </div>

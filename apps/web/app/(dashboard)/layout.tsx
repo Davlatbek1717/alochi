@@ -11,6 +11,7 @@ import {
   CreditCard, AlertTriangle, Building2, BookMarked, Send,
   ShieldOff, Trophy, User,
 } from 'lucide-react';
+import { ToastProvider } from '@/components/ui';
 
 interface UserInfo { id: string; name: string; role: string; tenantId: string; }
 
@@ -90,6 +91,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const sidebarItems = user ? (SIDEBAR_NAV[user.role] ?? []) : [];
 
   return (
+    <ToastProvider>
     <DuelNotificationProvider>
       <div className="flex flex-col min-h-screen bg-[#f7f4ef]">
         {/* Top header */}
@@ -152,5 +154,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
       <InstallPrompt />
     </DuelNotificationProvider>
+    </ToastProvider>
   );
 }
