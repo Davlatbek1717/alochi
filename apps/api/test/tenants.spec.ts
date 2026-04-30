@@ -224,6 +224,90 @@ describe('TenantsService — onboardTenant', () => {
     });
   });
 
+  describe('disable (Phase 17)', () => {
+    it('atomically marks tenant inactive and cascades users to status=inactive', async () => {
+      const tenantUpdate = jest
+        .fn()
+        .mockResolvedValue({ id: 't1', isActive: false });
+      const usersUpdateMany = jest.fn().mockResolvedValue({ count: 3 });
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue({ id: 't1' }),
+          update: tenantUpdate,
+        },
+        user: {
+          updateMany: usersUpdateMany,
+        },
+        $transaction: jest.fn(async (ops: unknown[]) =>
+          Promise.all(ops as Promise<unknown>[]),
+        ),
+      };
+
+      const service = new TenantsService(mockPrisma as never);
+      await service.disable('t1');
+
+      // Both writes were enqueued via $transaction (atomic)
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(tenantUpdate).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { isActive: false },
+      });
+      expect(usersUpdateMany).toHaveBeenCalledWith({
+        where: { tenantId: 't1' },
+        data: { status: 'inactive' },
+      });
+    });
+
+    it('throws NotFoundException when tenant does not exist', async () => {
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          update: jest.fn(),
+        },
+        user: { updateMany: jest.fn() },
+        $transaction: jest.fn(),
+      };
+      const service = new TenantsService(mockPrisma as never);
+      await expect(service.disable('missing')).rejects.toThrow(
+        'Tenant topilmadi',
+      );
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+      expect(mockPrisma.user.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateName (Phase 17)', () => {
+    it('renames an existing tenant', async () => {
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue({ id: 't1' }),
+          update: jest.fn().mockResolvedValue({ id: 't1', name: 'New Name' }),
+        },
+      };
+      const service = new TenantsService(mockPrisma as never);
+      const result = await service.updateName('t1', 'New Name');
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { name: 'New Name' },
+      });
+      expect(result.name).toBe('New Name');
+    });
+
+    it('throws NotFoundException when tenant missing', async () => {
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          update: jest.fn(),
+        },
+      };
+      const service = new TenantsService(mockPrisma as never);
+      await expect(service.updateName('missing', 'X')).rejects.toThrow(
+        'Tenant topilmadi',
+      );
+      expect(mockPrisma.tenant.update).not.toHaveBeenCalled();
+    });
+  });
+
   it('converts Prisma P2002 (unique violation) into ConflictException — race-condition safety', async () => {
     const mockPrisma = makeMockPrisma();
     mockPrisma.tenant.findUnique.mockResolvedValue(null); // pre-check passes (TOCTOU window)

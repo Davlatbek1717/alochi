@@ -15,6 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { OnboardTenantDto } from './dto/onboard-tenant.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 @Controller('tenants')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,5 +57,23 @@ export class TenantsController {
     @Body() dto: UpdateTenantSettingsDto,
   ) {
     return this.tenants.updateSettings(id, dto);
+  }
+
+  /**
+   * Phase 17 — rename a tenant.
+   */
+  @Patch(':id')
+  @Roles(UserRole.superadmin)
+  updateTenant(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
+    return this.tenants.updateName(id, dto.name);
+  }
+
+  /**
+   * Phase 17 — disable a tenant (cascade-deactivates its users).
+   */
+  @Post(':id/disable')
+  @Roles(UserRole.superadmin)
+  disableTenant(@Param('id') id: string) {
+    return this.tenants.disable(id);
   }
 }

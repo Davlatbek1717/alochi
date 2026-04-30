@@ -30,6 +30,7 @@ model Tenant {
   name              String
   slug              String   @unique
   status            String   @default("active")
+  isActive          Boolean  @default(true) @map("is_active")
   warningBlockLimit Int      @default(3) @map("warning_block_limit")
   createdAt         DateTime @default(now()) @map("created_at")
 

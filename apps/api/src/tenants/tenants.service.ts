@@ -79,6 +79,41 @@ export class TenantsService {
     });
   }
 
+  /**
+   * Phase 17 — superadmin renames a tenant. Returns the updated tenant.
+   */
+  async updateName(id: string, name: string) {
+    const exists = await this.prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    return this.prisma.tenant.update({ where: { id }, data: { name } });
+  }
+
+  /**
+   * Phase 17 — superadmin disables a tenant. Sets tenant.isActive = false and
+   * cascade-deactivates all of its users (status = 'inactive').
+   */
+  async disable(id: string) {
+    const exists = await this.prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Tenant topilmadi');
+
+    return this.prisma.$transaction([
+      this.prisma.tenant.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+      this.prisma.user.updateMany({
+        where: { tenantId: id },
+        data: { status: 'inactive' },
+      }),
+    ]);
+  }
+
   async onboardTenant(dto: OnboardTenantDto) {
     const existing = await this.prisma.tenant.findUnique({
       where: { slug: dto.tenant.slug },

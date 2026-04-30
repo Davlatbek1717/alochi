@@ -135,20 +135,18 @@ export default function SuperadminTenantsPage() {
                   <div className="mt-3 flex items-center gap-2">
                     <button
                       type="button"
-                      disabled
-                      title="Phase 17 da yoqiladi"
+                      onClick={() => router.push(`/superadmin/tenants/${t.id}/edit`)}
                       aria-label={`${t.name} ni tahrirlash`}
-                      className="flex-1 bg-[#f7f4ef] text-[#64748b] rounded-xl px-3 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-not-allowed"
+                      className="flex-1 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl px-3 py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
                     >
                       <Pencil size={13} />
                       Tahrirlash
                     </button>
                     <button
                       type="button"
-                      disabled
-                      title="Phase 17 da yoqiladi"
-                      aria-label={`${t.name} ni o'chirish`}
-                      className="flex-1 bg-[#f7f4ef] text-rose-600 rounded-xl px-3 py-2 text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-not-allowed"
+                      onClick={() => router.push(`/superadmin/tenants/${t.id}/edit`)}
+                      aria-label={`${t.name} ni bloklash`}
+                      className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl px-3 py-2 text-xs font-semibold flex items-center justify-center gap-1.5"
                     >
                       <ShieldOff size={13} />
                       Bloklash
@@ -225,20 +223,18 @@ export default function SuperadminTenantsPage() {
                           <div className="flex justify-end gap-1.5">
                             <button
                               type="button"
-                              disabled
-                              title="Phase 17 da yoqiladi"
+                              onClick={() => router.push(`/superadmin/tenants/${t.id}/edit`)}
                               aria-label={`${t.name} ni tahrirlash`}
-                              className="bg-[#f7f4ef] text-[#64748b] rounded-lg px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1 disabled:opacity-50 cursor-not-allowed"
+                              className="bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1"
                             >
                               <Pencil size={12} />
                               Tahrir
                             </button>
                             <button
                               type="button"
-                              disabled
-                              title="Phase 17 da yoqiladi"
+                              onClick={() => router.push(`/superadmin/tenants/${t.id}/edit`)}
                               aria-label={`${t.name} ni bloklash`}
-                              className="bg-[#f7f4ef] text-rose-600 rounded-lg px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1 disabled:opacity-50 cursor-not-allowed"
+                              className="bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold flex items-center gap-1"
                             >
                               <ShieldOff size={12} />
                               Blok
