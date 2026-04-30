@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trophy } from 'lucide-react';
+import { Trophy, BookOpen } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton } from '@/components/ui';
 
 type NextLesson = { id: string; title: string } | null;
 
@@ -36,20 +37,30 @@ export default function CurrentLessonPage() {
               Ajoyib — siz barcha mavjud darslarni o&apos;tdingiz.
             </p>
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            icon={<BookOpen size={16} />}
+            className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
             onClick={() => router.push('/student/lessons')}
-            className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm"
           >
             Darslar ro&apos;yxati
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-      <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="flex flex-col items-center gap-4">
+        <Skeleton className="w-16 h-16 rounded-2xl" />
+        <div className="space-y-2 w-48">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-3 w-3/4 mx-auto" />
+        </div>
+      </div>
     </div>
   );
 }

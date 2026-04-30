@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, Camera, CheckCircle2, XCircle, AlertTriangle, BookOpen } from 'lucide-react';
 import { CameraMonitor } from '../lessons/[id]/_components/CameraMonitor';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, EmptyState } from '@/components/ui';
 
 type McqQuestion = {
   question: string;
@@ -86,8 +87,16 @@ export default function StudentExamsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <Skeleton className="h-3 w-20 mb-2 rounded" />
+          <Skeleton className="h-6 w-32 rounded" />
+        </div>
+        <div className="px-4 pt-5 space-y-4">
+          <Skeleton className="h-32 w-full rounded-[18px]" />
+          <Skeleton className="h-40 w-full rounded-[18px]" />
+          <Skeleton className="h-40 w-full rounded-[18px]" />
+        </div>
       </div>
     );
   }
@@ -122,12 +131,15 @@ export default function StudentExamsPage() {
               Imtihondan o&apos;tish uchun 70% kerak. Qayta urinish uchun testerga murojaat qiling.
             </p>
           )}
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
             onClick={() => router.push('/student')}
-            className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm"
           >
             Bosh sahifaga
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -146,12 +158,15 @@ export default function StudentExamsPage() {
             3 marta kameradan uzoqlashganligi sababli imtihon to&apos;xtatildi.
             Qayta urinish uchun testerga murojaat qiling.
           </p>
-          <button
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
             onClick={() => router.push('/student')}
-            className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm"
           >
             Bosh sahifaga
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -172,14 +187,12 @@ export default function StudentExamsPage() {
           </div>
         </div>
         <div className="flex items-center justify-center px-6 pt-20">
-          <div className="text-center max-w-xs">
-            <div className="w-20 h-20 rounded-2xl bg-[#0f172a]/5 border-2 border-[#ede9e1] flex items-center justify-center mx-auto mb-5">
-              <Lock size={36} className="text-[#94a3b8]" />
-            </div>
-            <p className="text-[#0f172a] font-bold text-lg mb-2">Imtihon qulflangan</p>
-            <p className="text-[#64748b] text-sm leading-relaxed">
-              Imtihon topshirish uchun akademiyaga keling va testerdan ruxsat oling.
-            </p>
+          <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-xs">
+            <EmptyState
+              icon={<Lock size={28} />}
+              title="Imtihon qulflangan"
+              description="Imtihon topshirish uchun akademiyaga keling va testerdan ruxsat oling."
+            />
           </div>
         </div>
       </div>
@@ -246,14 +259,14 @@ export default function StudentExamsPage() {
                       <button
                         key={oi}
                         onClick={() => setAnswers((prev) => { const n = [...prev]; n[qi] = oi; return n; })}
-                        className={`w-full text-left px-4 py-3 rounded-xl border-[1.5px] text-sm font-medium transition-colors ${
+                        className={`w-full text-left px-4 py-3 rounded-xl border-[1.5px] text-sm font-medium transition-all duration-150 flex items-center gap-3 ${
                           selected
                             ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                            : 'border-[#ede9e1] bg-[#f7f4ef] text-[#0f172a] hover:border-[#0f172a]'
+                            : 'border-[#ede9e1] bg-[#f7f4ef] text-[#0f172a] hover:border-[#0f172a]/40 hover:bg-white'
                         }`}
                       >
-                        <span className="font-mono text-xs mr-2 opacity-50">{String.fromCharCode(65 + oi)}.</span>
-                        {opt}
+                        <span className="font-mono text-xs opacity-50 shrink-0">{String.fromCharCode(65 + oi)}.</span>
+                        <span className="flex-1">{opt}</span>
                       </button>
                     );
                   })}
@@ -272,18 +285,22 @@ export default function StudentExamsPage() {
         )}
 
         {/* Submit */}
-        <button
-          onClick={handleSubmit}
+        <Button
+          variant="secondary"
+          size="lg"
+          fullWidth
+          loading={submitting}
           disabled={submitting || !allAnswered}
-          className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2 transition-opacity"
+          icon={<CheckCircle2 size={18} />}
+          className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl !py-4"
+          onClick={handleSubmit}
         >
-          {submitting ? (
-            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <CheckCircle2 size={18} />
-          )}
-          {submitting ? 'Topshirilmoqda...' : allAnswered ? 'Imtihonni topshirish' : `${answers.filter(a => a !== null).length}/${questions.length} savol javoblandi`}
-        </button>
+          {submitting
+            ? 'Topshirilmoqda...'
+            : allAnswered
+              ? 'Imtihonni topshirish'
+              : `${answers.filter((a) => a !== null).length}/${questions.length} savol javoblandi`}
+        </Button>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Lock, CheckCircle, BookMarked } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { EmptyState, Skeleton } from '@/components/ui';
 
 type Lesson = {
   id: string;
@@ -60,14 +61,6 @@ export default function LessonsListPage() {
     done:        { label: 'Tugallangan',          badge: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-        <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
@@ -81,10 +74,12 @@ export default function LessonsListPage() {
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
             <p className="text-white text-xl font-bold">Darslar</p>
           </div>
-          <div className="bg-[#162032] rounded-[14px] px-3 py-2">
-            <p className="text-white text-lg font-black font-mono">{lessons.length}</p>
-            <p className="text-[#94a3b8] text-[10px]">Jami</p>
-          </div>
+          {!loading && (
+            <div className="bg-[#162032] rounded-[14px] px-3 py-2">
+              <p className="text-white text-lg font-black font-mono">{lessons.length}</p>
+              <p className="text-[#94a3b8] text-[10px]">Jami</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -93,10 +88,28 @@ export default function LessonsListPage() {
           <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm mb-4">{error}</div>
         )}
 
-        {lessons.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <BookOpen size={40} className="text-[#94a3b8] mx-auto mb-3" />
-            <p className="text-[#0f172a] font-semibold">Hali darslar qo&apos;shilmagan</p>
+        {loading ? (
+          <ul className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li key={i}>
+                <div className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center gap-3">
+                  <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-3 w-1/4" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                  <Skeleton className="h-5 w-16 rounded-full shrink-0" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : lessons.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<BookOpen size={28} />}
+              title="Hali darslar qo'shilmagan"
+              description="Darslar tez orada qo'shiladi"
+            />
           </div>
         ) : (
           <ul className="space-y-2">
@@ -131,7 +144,7 @@ export default function LessonsListPage() {
                 <li key={lesson.id}>
                   <Link
                     href={`/student/lessons/${lesson.id}`}
-                    className={`bg-white rounded-[14px] border-[1.5px] px-4 py-3 flex items-center gap-3 ${
+                    className={`bg-white rounded-[14px] border-[1.5px] px-4 py-3 flex items-center gap-3 transition-colors hover:border-[#0f172a]/30 ${
                       isDone ? 'border-emerald-100' : 'border-[#ede9e1]'
                     }`}
                   >

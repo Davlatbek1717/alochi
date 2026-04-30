@@ -8,6 +8,7 @@ import { DailyQuests } from './_components/DailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
 import VirtualCity from './_components/VirtualCity';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, SkeletonCard } from '@/components/ui';
 
 type Quest = {
   questType: string;
@@ -107,8 +108,15 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto flex items-center justify-center py-20">
-        <p className="text-gray-500">Yuklanmoqda...</p>
+      <div className="max-w-lg mx-auto space-y-4 pb-20 pt-4 px-4">
+        <Skeleton className="h-28 w-full rounded-2xl" />
+        <div className="grid grid-cols-3 gap-3">
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+        </div>
+        <SkeletonCard />
+        <SkeletonCard />
       </div>
     );
   }
@@ -241,12 +249,15 @@ export default function StudentDashboard() {
       <SocialFeed />
 
       <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto">
-        <Link
-          href="/student/lessons/current"
-          className="block w-full bg-indigo-600 text-white py-4 rounded-2xl text-center font-bold shadow-lg"
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          className="!rounded-2xl !py-4 !bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 shadow-lg"
+          onClick={() => { window.location.href = '/student/lessons/current'; }}
         >
           ▶️ Bugungi Darsni Boshlash
-        </Link>
+        </Button>
       </div>
     </div>
   );

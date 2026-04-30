@@ -1,13 +1,14 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle2, RefreshCw, BookOpen, Lock } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, RefreshCw, BookOpen, Lock, AlertTriangle } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
 import { AiTutor } from './_components/AiTutor';
 import { FeedbackWidget } from './_components/FeedbackWidget';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, Modal } from '@/components/ui';
 
 type ComponentFlags = {
   mcq?: boolean;
@@ -83,6 +84,7 @@ export default function LessonPage() {
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [sessionError, setSessionError] = useState(false);
+  const [exitModalOpen, setExitModalOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -150,7 +152,12 @@ export default function LessonPage() {
     const steps = buildSteps(lesson.components);
     const idx = steps.indexOf(step);
     if (idx + 1 < steps.length) {
-      setStep(steps[idx + 1]);
+      const nextStep = steps[idx + 1];
+      if (nextStep === 'done') {
+        completeSession();
+      } else {
+        setStep(nextStep);
+      }
     }
   }
 
@@ -159,14 +166,36 @@ export default function LessonPage() {
     setVideoCompleted(false);
   }
 
-  async function handleCycleComplete() {
-    await completeSession();
+  function handleBackClick() {
+    const inProgress = step !== 'video' || videoCompleted;
+    if (inProgress) {
+      setExitModalOpen(true);
+    } else {
+      router.back();
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-        <p className="text-[#64748b]">Yuklanmoqda...</p>
+      <div className="min-h-screen bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Skeleton className="w-16 h-4 rounded" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+            <Skeleton className="h-5 w-48 rounded" />
+          </div>
+          <div className="flex gap-1 mt-4">
+            <Skeleton className="flex-1 h-1.5 rounded-full" />
+            <Skeleton className="flex-1 h-1.5 rounded-full" />
+            <Skeleton className="flex-1 h-1.5 rounded-full" />
+          </div>
+        </div>
+        <div className="px-4 pt-5 space-y-4">
+          <Skeleton className="w-full aspect-video rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -174,7 +203,19 @@ export default function LessonPage() {
   if (error || !lesson) {
     return (
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-4">
-        <p className="text-[#e11d48]">{error || 'Dars topilmadi'}</p>
+        <div className="bg-white rounded-[18px] border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
+          <AlertTriangle size={36} className="text-rose-500 mx-auto" />
+          <p className="text-[#0f172a] font-semibold">{error || 'Dars topilmadi'}</p>
+          <Button
+            variant="secondary"
+            size="md"
+            fullWidth
+            className="!bg-[#0f172a] !border-[#0f172a] !rounded-xl"
+            onClick={() => router.back()}
+          >
+            Orqaga
+          </Button>
+        </div>
       </div>
     );
   }
@@ -187,6 +228,33 @@ export default function LessonPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Exit confirmation modal */}
+      <Modal
+        open={exitModalOpen}
+        onClose={() => setExitModalOpen(false)}
+        title="Darsdan chiqish"
+        description="Joriy jarayoningiz saqlanmaydi. Haqiqatan ham chiqmoqchimisiz?"
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" size="md" onClick={() => setExitModalOpen(false)}>
+              Davom etish
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => { setExitModalOpen(false); router.back(); }}
+            >
+              Chiqish
+            </Button>
+          </>
+        }
+      >
+        <p className="text-slate-400 text-sm">
+          Video ko&apos;rish yoki test jarayonidan chiqib ketmoqchimisiz?
+        </p>
+      </Modal>
+
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
@@ -194,7 +262,7 @@ export default function LessonPage() {
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="relative z-10">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-3 text-sm">
+          <button onClick={handleBackClick} className="flex items-center gap-2 text-[#94a3b8] mb-3 text-sm hover:text-white transition-colors">
             <ArrowLeft size={16} /> Orqaga
           </button>
           <div className="flex items-start justify-between gap-3">
@@ -215,7 +283,7 @@ export default function LessonPage() {
           <div className="flex gap-1 mt-4">
             {visibleSteps.map((s, i) => (
               <div key={s} className="flex-1 relative">
-                <div className={`h-1.5 rounded-full ${
+                <div className={`h-1.5 rounded-full transition-colors duration-300 ${
                   i < currentStepIndex ? 'bg-[#0d9488]' :
                   i === currentStepIndex ? 'bg-[#f59e0b]' :
                   'bg-white/10'
@@ -225,7 +293,7 @@ export default function LessonPage() {
           </div>
           <div className="flex justify-between mt-1">
             {visibleSteps.map((s, i) => (
-              <p key={s} className={`text-[10px] font-medium ${
+              <p key={s} className={`text-[10px] font-medium transition-colors duration-300 ${
                 i === currentStepIndex ? 'text-[#f59e0b]' : i < currentStepIndex ? 'text-[#0d9488]' : 'text-white/20'
               }`}>
                 {STEP_LABELS[s]}
@@ -244,12 +312,16 @@ export default function LessonPage() {
               onCompleted={() => setVideoCompleted(true)}
             />
             {videoCompleted ? (
-              <button
+              <Button
+                variant="secondary"
+                size="lg"
+                fullWidth
+                iconRight={<ArrowRight size={16} />}
+                className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
                 onClick={goToNextStep}
-                className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
               >
-                Davom etish <ArrowLeft size={16} className="rotate-180" />
-              </button>
+                Davom etish
+              </Button>
             ) : (
               <p className="text-center text-[#94a3b8] text-sm">
                 Davom etish uchun videoni ko&apos;ring
@@ -311,6 +383,11 @@ export default function LessonPage() {
                   ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
                   : 'Jarayoningiz saqlandi'}
               </p>
+              {sessionError && (
+                <p className="text-rose-600 text-sm bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                  Sessiyani saqlashda xato yuz berdi. Qayta urining.
+                </p>
+              )}
               {lesson.hasExam && (
                 <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
                   <Lock size={16} className="text-amber-500 shrink-0" />
@@ -320,24 +397,40 @@ export default function LessonPage() {
                 </div>
               )}
               <div className="flex gap-3 justify-center">
-                <button
+                <Button
+                  variant="secondary"
+                  size="md"
+                  icon={<RefreshCw size={15} />}
+                  className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
                   onClick={restartCycle}
-                  className="flex items-center gap-2 bg-[#0f172a] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors"
                 >
-                  <RefreshCw size={16} /> Yana bir bor
-                </button>
-                <button
+                  Yana bir bor
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  className="!text-[#0f172a] !border-[#ede9e1] hover:!bg-[#f7f4ef] !rounded-xl"
                   onClick={() => router.push('/student/lessons')}
-                  className="bg-[#f7f4ef] border border-[#ede9e1] text-[#0f172a] px-6 py-3 rounded-xl font-bold text-sm"
                 >
                   Darslar
-                </button>
+                </Button>
               </div>
             </div>
             <FeedbackWidget lessonId={id} />
           </>
         )}
       </div>
+
+      {/* Void completeSession call fix */}
+      {completing && (
+        <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl px-6 py-4 flex items-center gap-3 shadow-xl">
+            <span className="w-5 h-5 border-2 border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+            <p className="text-[#0f172a] font-semibold text-sm">Saqlanmoqda...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -1,8 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle, XCircle, Trophy } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Trophy, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, EmptyState } from '@/components/ui';
 
 type ReviewItem = { word: string; easeFactor: number; interval: number };
 
@@ -48,21 +49,38 @@ export default function ReviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <Skeleton className="h-4 w-20 mb-4 rounded" />
+          <Skeleton className="h-1.5 w-full rounded-full" />
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-4">
+          <Skeleton className="w-full max-w-sm h-48 rounded-[24px]" />
+        </div>
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-5xl mb-4">🎉</p>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Bugun takrorlanadigan so&apos;z yo&apos;q!</h2>
-        <p className="text-gray-500 text-sm mb-6">Darslarni bajarib so&apos;z boyligingizni oshiring.</p>
-        <button onClick={() => router.push('/student')} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-semibold">
-          Bosh sahifaga
-        </button>
+      <div className="min-h-screen bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
+        <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-sm">
+          <EmptyState
+            icon={<RefreshCw size={28} />}
+            title="Bugun takrorlanadigan so'z yo'q!"
+            description="Darslarni bajarib so'z boyligingizni oshiring."
+            action={
+              <Button
+                variant="secondary"
+                size="lg"
+                className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !rounded-2xl"
+                onClick={() => router.push('/student')}
+              >
+                Bosh sahifaga
+              </Button>
+            }
+          />
+        </div>
       </div>
     );
   }
@@ -77,16 +95,21 @@ export default function ReviewPage() {
         <div className="w-full max-w-xs bg-white rounded-2xl p-5 shadow-sm mb-6">
           <div className="flex justify-between text-sm font-semibold mb-2">
             <span className="text-emerald-600">To&apos;g&apos;ri</span>
-            <span>{correct}/{items.length}</span>
+            <span className="text-[#0f172a]">{correct}/{items.length}</span>
           </div>
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           <p className="text-3xl font-black text-gray-900 mt-3">{pct}%</p>
         </div>
-        <button onClick={() => router.push('/student')} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-semibold">
+        <Button
+          variant="primary"
+          size="lg"
+          className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !rounded-2xl !px-8"
+          onClick={() => router.push('/student')}
+        >
           Bosh sahifaga
-        </button>
+        </Button>
       </div>
     );
   }
@@ -99,13 +122,19 @@ export default function ReviewPage() {
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => router.push('/student')} className="text-[#94a3b8] flex items-center gap-1 text-sm">
+          <button
+            onClick={() => router.push('/student')}
+            className="text-[#94a3b8] flex items-center gap-1 text-sm hover:text-white transition-colors"
+          >
             <ArrowLeft size={16} /> Chiqish
           </button>
           <span className="text-[#94a3b8] text-sm font-mono">{current + 1} / {items.length}</span>
         </div>
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div className="h-full bg-[#f59e0b] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+          <div
+            className="h-full bg-[#f59e0b] rounded-full transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
@@ -113,15 +142,17 @@ export default function ReviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <button
           onClick={() => setFlipped((f) => !f)}
-          className="w-full max-w-sm"
+          className="w-full max-w-sm focus:outline-none"
         >
-          <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] border-[#ede9e1] p-10 text-center transition-all duration-200 ${flipped ? 'bg-indigo-50 border-indigo-200' : ''}`}>
+          <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 text-center transition-all duration-200 ${
+            flipped ? 'bg-indigo-50 border-indigo-200' : 'border-[#ede9e1]'
+          }`}>
             {!flipped ? (
               <>
                 <p className="text-4xl font-black text-[#0f172a] mb-3">{item.word}</p>
                 <p className="text-[#94a3b8] text-sm">Tarjimasini bilsangiz kartani aylantiring</p>
                 <div className="mt-4 text-xs text-[#94a3b8] bg-[#f7f4ef] rounded-xl px-3 py-1.5 inline-block">
-                  👆 Bosing
+                  Bosing
                 </div>
               </>
             ) : (
@@ -136,20 +167,28 @@ export default function ReviewPage() {
 
         {flipped && (
           <div className="flex gap-4 mt-6 w-full max-w-sm">
-            <button
+            <Button
+              variant="danger"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              icon={<XCircle size={18} />}
+              className="!bg-rose-50 !border-rose-200 !text-rose-600 hover:!bg-rose-100 !rounded-[18px] !py-4"
               onClick={() => answer(false)}
-              disabled={submitting}
-              className="flex-1 bg-rose-50 border-2 border-rose-200 text-rose-600 py-4 rounded-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <XCircle size={20} /> Bilmadim
-            </button>
-            <button
+              Bilmadim
+            </Button>
+            <Button
+              variant="success"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              icon={<CheckCircle size={18} />}
+              className="!bg-emerald-50 !border-emerald-200 !text-emerald-600 hover:!bg-emerald-100 !rounded-[18px] !py-4"
               onClick={() => answer(true)}
-              disabled={submitting}
-              className="flex-1 bg-emerald-50 border-2 border-emerald-200 text-emerald-600 py-4 rounded-[18px] font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <CheckCircle size={20} /> Bildim
-            </button>
+              Bildim
+            </Button>
           </div>
         )}
 

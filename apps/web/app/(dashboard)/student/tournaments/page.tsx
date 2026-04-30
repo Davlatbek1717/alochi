@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Trophy, Calendar, Users, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Button, Skeleton, EmptyState } from '@/components/ui';
 
 type Tournament = {
   id: string;
@@ -60,7 +61,7 @@ export default function StudentTournamentsPage() {
         />
         <button
           onClick={() => router.push('/student')}
-          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10"
+          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 hover:text-white transition-colors"
         >
           <ArrowLeft size={16} /> Bosh sahifaga
         </button>
@@ -78,18 +79,25 @@ export default function StudentTournamentsPage() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] animate-pulse">
-                <div className="h-4 bg-gray-100 rounded w-2/3 mb-3" />
-                <div className="h-3 bg-gray-100 rounded w-1/2 mb-4" />
-                <div className="h-10 bg-gray-100 rounded-xl" />
+              <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1]">
+                <div className="flex items-start gap-3 mb-3">
+                  <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/3 rounded" />
+                    <Skeleton className="h-3 w-1/2 rounded" />
+                  </div>
+                </div>
+                <Skeleton className="h-10 w-full rounded-xl" />
               </div>
             ))}
           </div>
         ) : tournaments.length === 0 ? (
-          <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
-            <Trophy size={40} className="text-[#f59e0b] mx-auto mb-3" />
-            <p className="text-[#0f172a] font-semibold">Hali turnirlar yo&apos;q</p>
-            <p className="text-[#64748b] text-sm mt-1">Tez orada yangi musobaqalar e&apos;lon qilinadi</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<Trophy size={28} className="text-[#f59e0b]" />}
+              title="Hali turnirlar yo'q"
+              description="Tez orada yangi musobaqalar e'lon qilinadi"
+            />
           </div>
         ) : (
           tournaments.map((t) => {
@@ -136,13 +144,16 @@ export default function StudentTournamentsPage() {
                     <span className="text-emerald-700 text-sm font-semibold">Ro&apos;yxatdan o&apos;tdingiz</span>
                   </div>
                 ) : (
-                  <button
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    loading={registering === t.id}
+                    className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
                     onClick={() => handleRegister(t.id)}
-                    disabled={registering === t.id}
-                    className="w-full bg-[#0f172a] text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-50"
                   >
-                    {registering === t.id ? 'Saqlanmoqda...' : "Ishtirok etish →"}
-                  </button>
+                    {registering === t.id ? 'Saqlanmoqda...' : 'Ishtirok etish →'}
+                  </Button>
                 )}
               </div>
             );
