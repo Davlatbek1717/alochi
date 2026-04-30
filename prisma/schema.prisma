@@ -888,6 +888,7 @@ model AnalyticsEvent {
   branchId  String?  @map("branch_id") @db.Uuid
   data      Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
+  syncedAt  DateTime? @map("synced_at")
 
   @@index([tenantId, eventType, createdAt])
   @@index([tenantId, branchId, createdAt])

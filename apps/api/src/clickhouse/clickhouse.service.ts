@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, ClickHouseClient } from '@clickhouse/client';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 export interface ClickHouseEvent {
   event_id: string;
@@ -47,8 +49,9 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
       await this.client.ping();
       this.ready = true;
       this.logger.log('ClickHouse connected');
+      await this.runMigrations();
     } catch (e) {
-      this.logger.warn(`ClickHouse ping failed: ${(e as Error).message}`);
+      this.logger.warn(`ClickHouse init failed: ${(e as Error).message}`);
     }
   }
 
@@ -68,5 +71,41 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
       format: 'JSONEachRow',
     });
     return rs.json<T>();
+  }
+
+  async runMigrations(): Promise<void> {
+    if (!this.client) {
+      this.logger.warn('Skipping migrations — client not initialized');
+      return;
+    }
+    const migrationsDir = join(__dirname, '../migrations/clickhouse');
+    const files = ['001_create_events.sql', '002_create_mvs.sql'];
+    for (const file of files) {
+      const sql = readFileSync(join(migrationsDir, file), 'utf8');
+      const statements = sql
+        .split(';')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      for (const stmt of statements) {
+        try {
+          await this.client.command({ query: stmt });
+        } catch (e) {
+          this.logger.error(
+            `Migration ${file} stmt failed: ${(e as Error).message}`,
+          );
+          throw e;
+        }
+      }
+      this.logger.log(`Applied migration ${file}`);
+    }
+  }
+
+  async insertEvent(event: ClickHouseEvent): Promise<void> {
+    if (!this.client) throw new Error('ClickHouse client not initialized');
+    await this.client.insert({
+      table: 'events',
+      values: [event],
+      format: 'JSONEachRow',
+    });
   }
 }
