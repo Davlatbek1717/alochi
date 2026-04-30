@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
@@ -20,6 +20,11 @@ interface ChurnStudent {
   score: number;
   signals: Record<string, boolean>;
   student: { id: string; name: string; branchId: string | null };
+}
+
+interface Branch {
+  id: string;
+  name: string;
 }
 
 const SIGNAL_LABELS: Record<string, string> = {
@@ -76,22 +81,43 @@ function buildColumns(color: 'red' | 'yellow'): Column<ChurnStudent>[] {
 export default function ChurnPage() {
   const [high, setHigh] = useState<ChurnStudent[]>([]);
   const [medium, setMedium] = useState<ChurnStudent[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchId, setBranchId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
   useEffect(() => {
-    Promise.all([
-      apiRequest<ChurnStudent[]>('/churn/high-risk', {}, token()),
-      apiRequest<ChurnStudent[]>('/churn/medium-risk', {}, token()),
-    ])
-      .then(([h, m]) => { setHigh(h.data); setMedium(m.data); })
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false));
+    apiRequest<Branch[]>('/branches', {}, token())
+      .then((r) => setBranches(r.data ?? []))
+      .catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading) {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const qs = branchId ? `?branchId=${branchId}` : '';
+    try {
+      const [h, m] = await Promise.all([
+        apiRequest<ChurnStudent[]>(`/churn/high-risk${qs}`, {}, token()),
+        apiRequest<ChurnStudent[]>(`/churn/medium-risk${qs}`, {}, token()),
+      ]);
+      setHigh(h.data);
+      setMedium(m.data);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+      setInitialLoading(false);
+    }
+  }, [branchId, toast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (initialLoading) {
     return (
       <div className="min-h-full bg-slate-900">
       <div className="p-4 md:p-6 space-y-6">
@@ -118,6 +144,26 @@ export default function ChurnPage() {
         description="Tashlab ketish xavfi yuqori o'quvchilar ro'yxati"
         iconColor="text-red-400"
       />
+
+      {/* Branch filter */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm text-slate-400" htmlFor="churn-branch-filter">
+          Filial:
+        </label>
+        <select
+          id="churn-branch-filter"
+          value={branchId}
+          onChange={(e) => setBranchId(e.target.value)}
+          className="px-3 py-2 bg-slate-800 border border-slate-700 text-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+        >
+          <option value="">Barcha filiallar</option>
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* High risk */}
       <Card>

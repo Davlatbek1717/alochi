@@ -14,7 +14,29 @@ type BranchUser = {
   login: string;
 };
 
+type RecentAward = {
+  id: string;
+  score: number;
+  reason: string;
+  date: string;
+  recipientName?: string;
+};
+
 const PRESETS = [5, 10, 15, 20, 25, 30, 50];
+
+function formatRelativeTime(iso: string): string {
+  const ts = new Date(iso).getTime();
+  if (Number.isNaN(ts)) return '';
+  const diffMs = Date.now() - ts;
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return 'hozir';
+  if (minutes < 60) return `${minutes} daq oldin`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} soat oldin`;
+  const days = Math.round(hours / 24);
+  if (days < 7) return `${days} kun oldin`;
+  return new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+}
 
 export default function FiladminKpiPage() {
   const router = useRouter();
@@ -32,6 +54,8 @@ export default function FiladminKpiPage() {
   const [todayTotal, setTodayTotal] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
   const [statsError, setStatsError] = useState(false);
+
+  const [recentAwards, setRecentAwards] = useState<RecentAward[]>([]);
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,9 +76,10 @@ export default function FiladminKpiPage() {
     }
 
     async function load() {
-      const [usersRes, todayRes] = await Promise.allSettled([
+      const [usersRes, todayRes, recentRes] = await Promise.allSettled([
         apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
         apiRequest<number>('/kpi/today', {}, token),
+        apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
       ]);
 
       if (usersRes.status === 'fulfilled') {
@@ -70,6 +95,10 @@ export default function FiladminKpiPage() {
         setStatsError(true);
       }
       setLoadingStats(false);
+
+      if (recentRes.status === 'fulfilled') {
+        setRecentAwards(recentRes.value.data ?? []);
+      }
     }
 
     load();
@@ -139,6 +168,26 @@ export default function FiladminKpiPage() {
             <p className="text-4xl font-black text-[#f59e0b] font-mono">{todayTotal} <span className="text-lg">ball</span></p>
           )}
         </div>
+
+        {/* Recent awards strip */}
+        {recentAwards.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-[#0f172a] mb-2">Oxirgi mukofotlar</h3>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {recentAwards.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex-shrink-0 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 min-w-[160px]"
+                >
+                  <div className="text-amber-700 font-semibold">+{a.score}</div>
+                  <div className="text-xs text-slate-600 truncate">{a.recipientName ?? 'Xodim'}</div>
+                  <div className="text-xs text-slate-500 truncate">{a.reason}</div>
+                  <div className="text-xs text-slate-400">{formatRelativeTime(a.date)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* User selector */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">

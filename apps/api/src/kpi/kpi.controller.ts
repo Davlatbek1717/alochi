@@ -44,8 +44,11 @@ export class KpiController {
   }
 
   @Get('my')
-  async getMyHistory(@Request() req: any) {
-    return this.kpi.getHistory(req.user.userId);
+  async getMyHistory(@Request() req: any, @Query('limit') limit?: string) {
+    const parsed = limit ? parseInt(limit, 10) : NaN;
+    const safeLimit =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 100) : 30;
+    return this.kpi.getHistory(req.user.userId, safeLimit);
   }
 
   @Get('today')
