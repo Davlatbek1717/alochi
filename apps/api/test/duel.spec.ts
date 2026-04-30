@@ -79,4 +79,77 @@ describe('DuelService', () => {
       service.create('challenger', 'challenged', 'tenant-id'),
     ).rejects.toThrow('Umumiy');
   });
+
+  it('persists answerMs on duelAnswer.create', async () => {
+    const localPrisma = {
+      ...mockPrisma,
+      duel: {
+        ...mockPrisma.duel,
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'duel-x',
+          status: 'active',
+          expiresAt: new Date(Date.now() + 3_600_000),
+          challengerId: 'challenger',
+          challengedId: 'challenged',
+          questions: [{ correct: 0 }],
+          challengerScore: 0,
+          challengedScore: 0,
+        }),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      duelAnswer: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({}),
+        count: jest.fn().mockResolvedValue(1),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const svc = new DuelService(
+      localPrisma as never,
+      mockXp as never,
+      mockFeedEvent as never,
+      mockGateway as never,
+    );
+    await svc.submitAnswer('duel-x', 'challenger', 0, 0, 1234);
+    expect(localPrisma.duelAnswer.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ answerMs: 1234 }),
+      }),
+    );
+  });
+
+  it('expireOverdue awards challenger DUEL_NO_SHOW for 24h+ pending duels', async () => {
+    const xpAward = jest.fn().mockResolvedValue({});
+    const localPrisma = {
+      duel: {
+        findMany: jest
+          .fn()
+          .mockResolvedValueOnce([]) // active expired
+          .mockResolvedValueOnce([
+            { id: 'd-1', challengerId: 'c-1' },
+            { id: 'd-2', challengerId: 'c-2' },
+          ]), // pending no-show
+        updateMany: jest.fn().mockResolvedValue({ count: 2 }),
+      },
+      duelAnswer: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const svc = new DuelService(
+      localPrisma as never,
+      { award: xpAward } as never,
+      mockFeedEvent as never,
+      mockGateway as never,
+    );
+    await svc.expireOverdue();
+    expect(xpAward).toHaveBeenCalledWith(
+      'c-1',
+      'DUEL_NO_SHOW',
+      expect.any(Object),
+    );
+    expect(xpAward).toHaveBeenCalledWith(
+      'c-2',
+      'DUEL_NO_SHOW',
+      expect.any(Object),
+    );
+  });
 });

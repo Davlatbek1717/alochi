@@ -39,6 +39,14 @@ export class UsersService {
       data: { ...data, passwordHash },
     });
 
+    // Auto-friendship: when a student joins a group, accept-link them with
+    // every existing same-group student in O(N) bulk inserts.
+    if (dto.role === UserRole.student && dto.groupId) {
+      await this.autoFriendGroupmates(user.id, dto.groupId).catch(
+        () => undefined,
+      );
+    }
+
     // Audit-log staff creation when actor was acting under a delegation.
     const isStaffRole = dto.role !== UserRole.student;
     if (actor?.delegationId && isStaffRole) {
@@ -145,10 +153,61 @@ export class UsersService {
   async update(
     id: string,
     tenantId: string,
-    data: { name?: string; phone?: string; branchId?: string; role?: UserRole },
+    data: {
+      name?: string;
+      phone?: string;
+      branchId?: string;
+      role?: UserRole;
+      groupId?: string | null;
+    },
   ) {
-    await this.findById(id, tenantId);
-    return this.prisma.user.update({ where: { id }, data });
+    const before = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      select: { id: true, role: true, groupId: true },
+    });
+    if (!before) throw new NotFoundException('Foydalanuvchi topilmadi');
+
+    const updated = await this.prisma.user.update({ where: { id }, data });
+
+    // Auto-friendship on group join (null → set, or change to a new group)
+    const newGroupId = data.groupId ?? null;
+    if (
+      updated.role === UserRole.student &&
+      newGroupId &&
+      newGroupId !== before.groupId
+    ) {
+      await this.autoFriendGroupmates(id, newGroupId).catch(() => undefined);
+    }
+
+    return updated;
+  }
+
+  /**
+   * Bulk-create accepted Friendship rows (scope=group) between `userId` and
+   * every existing same-group student. Uses `skipDuplicates` to safely
+   * tolerate re-runs.
+   */
+  private async autoFriendGroupmates(userId: string, groupId: string) {
+    const groupmates = await this.prisma.user.findMany({
+      where: {
+        groupId,
+        role: UserRole.student,
+        id: { not: userId },
+        status: 'active',
+      },
+      select: { id: true },
+    });
+    if (groupmates.length === 0) return;
+
+    await this.prisma.friendship.createMany({
+      data: groupmates.map((g) => ({
+        userId,
+        friendId: g.id,
+        scope: 'group' as const,
+        status: 'accepted',
+      })),
+      skipDuplicates: true,
+    });
   }
 
   async updateStatus(

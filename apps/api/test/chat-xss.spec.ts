@@ -41,6 +41,11 @@ describe('Chat XSS sanitization (Phase 1.6)', () => {
         chatBan: { findFirst: jest.fn().mockResolvedValue(null) },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         chatKeyword: { findMany: jest.fn().mockResolvedValue([] as any[]) },
+        user: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ branchId: null, branch: null }),
+        },
       };
       const mockEvents = { emit: jest.fn() } as never;
       const svc = new ChatService(mockPrisma as never, mockEvents);

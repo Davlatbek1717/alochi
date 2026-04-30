@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { CityService } from '../gamification/city.service';
 
 @Injectable()
 export class ProgressService {
@@ -9,6 +10,7 @@ export class ProgressService {
     private prisma: PrismaService,
     private feedEvent: FeedEventService,
     private analytics: AnalyticsService,
+    @Optional() private city?: CityService,
   ) {}
 
   private async getEffectiveN(
@@ -93,6 +95,11 @@ export class ProgressService {
   }
 
   async markAcademyCompleted(studentId: string, lessonId: string) {
+    // Capture pre-update count to detect a city-level boundary crossing.
+    const oldCount = await this.prisma.studentProgress.count({
+      where: { studentId, academyCompleted: true },
+    });
+
     const result = await this.prisma.studentProgress.update({
       where: { studentId_lessonId: { studentId, lessonId } },
       data: { academyCompleted: true, completedAt: new Date() },
@@ -110,6 +117,13 @@ export class ProgressService {
           lessonTitle: lesson.title,
         })
         .catch(() => {});
+
+      // City level-up feed event (if a threshold was crossed).
+      if (this.city) {
+        await this.city
+          .checkCityLevelUp(studentId, lesson.tenantId, oldCount, oldCount + 1)
+          .catch(() => undefined);
+      }
     }
 
     return result;

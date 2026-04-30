@@ -7,12 +7,22 @@ describe('ChatService', () => {
       count: jest.fn().mockResolvedValue(0),
       update: jest.fn().mockResolvedValue({}),
       findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue({ groupId: 'g' }),
     },
     chatBan: {
       findFirst: jest.fn().mockResolvedValue(null),
     },
     messageReaction: {
       upsert: jest.fn().mockResolvedValue({}),
+    },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ branchId: null, branch: null }),
+    },
+    branch: {
+      update: jest.fn().mockResolvedValue({}),
+    },
+    chatKeyword: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 
@@ -56,5 +66,76 @@ describe('ChatService', () => {
         content: 'Salom',
       }),
     ).rejects.toThrow('ban');
+  });
+
+  it('rejects message with CHAT_LOCKED when branch is locked', async () => {
+    mockPrisma.user.findUnique.mockResolvedValueOnce({
+      branchId: 'br-1',
+      branch: { chatLocked: true },
+    });
+    await expect(
+      service.sendMessage({
+        tenantId: 't',
+        groupId: 'g',
+        senderId: 's',
+        content: 'Salom',
+      }),
+    ).rejects.toThrow(/CHAT_LOCKED|yopilgan/);
+  });
+
+  it('marks message moderationStatus=pending when keyword detected', async () => {
+    // Inject a keyword into the cache
+    service.addKeywordToCache('t', 'badword');
+    mockPrisma.groupMessage.create.mockResolvedValueOnce({
+      id: 'msg-9',
+      tenantId: 't',
+      groupId: 'g',
+      senderId: 's',
+      content: 'this has badword in it',
+      moderationStatus: 'pending',
+    });
+    await service.sendMessage({
+      tenantId: 't',
+      groupId: 'g',
+      senderId: 's',
+      content: 'this has badword in it',
+    });
+    const lastCall =
+      mockPrisma.groupMessage.create.mock.calls[
+        mockPrisma.groupMessage.create.mock.calls.length - 1
+      ][0];
+    expect(lastCall.data.moderationStatus).toBe('pending');
+    expect(mockEvents.emit).toHaveBeenCalledWith(
+      'chat.moderation_pending',
+      expect.objectContaining({ messageId: 'msg-9' }),
+    );
+  });
+
+  it('approveMessage flips status to approved + emits chat.message_approved', async () => {
+    mockPrisma.groupMessage.update.mockResolvedValueOnce({
+      id: 'msg-1',
+      groupId: 'g',
+      senderId: 's',
+      moderationStatus: 'approved',
+    });
+    await service.approveMessage('msg-1', 'mod-1');
+    expect(mockEvents.emit).toHaveBeenCalledWith(
+      'chat.message_approved',
+      expect.objectContaining({ messageId: 'msg-1' }),
+    );
+  });
+
+  it('pinMessage flips isPinned + emits chat.pinned', async () => {
+    mockPrisma.groupMessage.update.mockResolvedValueOnce({
+      id: 'msg-1',
+      groupId: 'g',
+      senderId: 's',
+      isPinned: true,
+    });
+    await service.pinMessage('msg-1', 'mod-1');
+    expect(mockEvents.emit).toHaveBeenCalledWith(
+      'chat.pinned',
+      expect.objectContaining({ messageId: 'msg-1', pinnedBy: 'mod-1' }),
+    );
   });
 });

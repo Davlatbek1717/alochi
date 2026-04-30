@@ -7,8 +7,9 @@ export const XP_AMOUNTS = {
   PERFECT_TEST: 50,
   FAST_SUBMIT: 30,
   DAILY_QUEST: 75,
-  DUEL_WIN: 50,
-  DUEL_PARTICIPATE: 10,
+  DUEL_WIN: 150,
+  DUEL_PARTICIPATE: 30,
+  DUEL_NO_SHOW: 50,
   // Spec §7.1 — group challenge outcomes (awarded by cron on expiry).
   CHALLENGE_WINNER: 500,
   CHALLENGE_CONSOLATION: 100,

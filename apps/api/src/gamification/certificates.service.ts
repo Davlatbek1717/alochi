@@ -1,6 +1,7 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { FeedEventService } from '../social/feed-event.service';
 import * as QRCode from 'qrcode';
 
 const CERTIFICATE_LEVELS = [
@@ -22,6 +23,9 @@ export class CertificatesService {
   constructor(
     private prisma: PrismaService,
     @Optional() private events?: EventEmitter2,
+    @Optional()
+    @Inject(forwardRef(() => FeedEventService))
+    private feedEvent?: FeedEventService,
   ) {}
 
   async checkAndAward(studentId: string, tenantId: string) {
@@ -60,6 +64,13 @@ export class CertificatesService {
       level: eligible.level,
       certName: CERT_NAMES[eligible.level] ?? eligible.level,
     });
+
+    this.feedEvent
+      ?.emit(tenantId, studentId, 'cert_earned', {
+        certificateId: certificate.id,
+        level: eligible.level,
+      })
+      .catch(() => undefined);
 
     return certificate;
   }

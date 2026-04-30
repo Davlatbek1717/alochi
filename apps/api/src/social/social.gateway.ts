@@ -282,4 +282,48 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.emitToUser(payload.userId, 'chat:reaction', payload);
     }
   }
+
+  @OnEvent('chat.moderation_pending')
+  forwardChatModerationPending(payload: {
+    messageId: string;
+    groupId: string;
+    senderId: string;
+    tenantId: string;
+  }) {
+    // Notify mentors / filadmins on the tenant channel (a richer per-mentor
+    // routing can come once mentor↔group mapping is available).
+    this.emitToTenant(payload.tenantId, 'chat:moderation_pending', payload);
+  }
+
+  @OnEvent('chat.message_approved')
+  forwardChatMessageApproved(payload: {
+    messageId: string;
+    groupId: string;
+    moderatorId: string;
+  }) {
+    this.server?.to(`group:${payload.groupId}`).emit('chat:message_approved', {
+      messageId: payload.messageId,
+    });
+  }
+
+  @OnEvent('chat.message_rejected')
+  forwardChatMessageRejected(payload: {
+    messageId: string;
+    groupId: string;
+    senderId: string;
+    moderatorId: string;
+  }) {
+    this.emitToUser(payload.senderId, 'chat:message_rejected', {
+      messageId: payload.messageId,
+    });
+  }
+
+  @OnEvent('chat.pinned')
+  forwardChatPinned(payload: {
+    messageId: string;
+    groupId: string;
+    pinnedBy: string;
+  }) {
+    this.server?.to(`group:${payload.groupId}`).emit('chat:pinned', payload);
+  }
 }

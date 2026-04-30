@@ -10,7 +10,11 @@ type FeedItem = {
   eventType: string;
   meta: Record<string, unknown>;
   createdAt: string;
+  reactionCount?: number;
+  myReaction?: string;
 };
+
+const FEED_EMOJIS = ['👍', '🎉', '💪', '🔥', '❤️'];
 
 function relativeTime(isoDate: string): string {
   const d = new Date(isoDate);
@@ -35,9 +39,26 @@ function eventLabel(item: FeedItem): string {
     case 'duel_won':
       return `${item.actorName} duelda g'olib bo'ldi! ⚔️`;
     case 'streak_milestone': {
-      const streak = typeof item.meta.streak === 'number' ? item.meta.streak : '?';
-      return `${item.actorName} ${streak} kunlik streak! 🔥`;
+      const days =
+        typeof item.meta.days === 'number'
+          ? item.meta.days
+          : typeof item.meta.streak === 'number'
+            ? item.meta.streak
+            : '?';
+      return `${item.actorName} ${days} kunlik streak! 🔥`;
     }
+    case 'streak_broken':
+      return `${item.actorName} streakni yo'qotdi 💔`;
+    case 'cert_earned': {
+      const lvl = typeof item.meta.level === 'string' ? item.meta.level : '';
+      return `${item.actorName} sertifikatga erishdi (${lvl}) 🏅`;
+    }
+    case 'city_upgraded': {
+      const name = typeof item.meta.name === 'string' ? item.meta.name : '';
+      return `${item.actorName} shahrini yangiladi: ${name} 🏙️`;
+    }
+    case 'challenge_won':
+      return `${item.actorName}'s guruh challenge'da g'olib bo'ldi! 🏆`;
     default:
       return `${item.actorName} faol bo'ldi`;
   }
@@ -117,11 +138,62 @@ export function SocialFeed() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800 leading-snug">{eventLabel(item)}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{relativeTime(item.createdAt)}</p>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-xs text-gray-400">{relativeTime(item.createdAt)}</p>
+                  <FeedReactionBar item={item} />
+                </div>
               </div>
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function FeedReactionBar({ item }: { item: FeedItem }) {
+  const [count, setCount] = useState<number>(item.reactionCount ?? 0);
+  const [chosen, setChosen] = useState<string | null>(item.myReaction ?? null);
+  const [open, setOpen] = useState(false);
+
+  async function react(emoji: string) {
+    setOpen(false);
+    if (item.id.startsWith('live-')) return;
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(`/social/feed/${item.id}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ emoji }),
+      }, token);
+      if (!chosen) setCount((c) => c + 1);
+      setChosen(emoji);
+    } catch {
+      // swallow — reaction is best-effort
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="text-xs px-2 py-0.5 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {chosen ?? '🙂'} {count > 0 ? count : ''}
+      </button>
+      {open && (
+        <div className="absolute right-0 top-7 z-10 flex gap-1 bg-white rounded-full px-2 py-1 shadow border border-gray-100">
+          {FEED_EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              className="text-base leading-none hover:scale-125 transition-transform"
+              onClick={() => react(e)}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

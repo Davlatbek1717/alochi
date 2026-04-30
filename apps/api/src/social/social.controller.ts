@@ -18,6 +18,7 @@ import { DuelService } from './duel.service';
 import { ChatService } from './chat.service';
 import { FriendsService } from './friends.service';
 import { ChallengeService } from './challenge.service';
+import { FeedEventService } from './feed-event.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('social')
@@ -30,6 +31,7 @@ export class SocialController {
     private chat: ChatService,
     private friends: FriendsService,
     private challenge: ChallengeService,
+    private feedEvent: FeedEventService,
   ) {}
 
   @Post('duels')
@@ -44,7 +46,7 @@ export class SocialController {
   @Post('duels/:id/answer')
   submitDuelAnswer(
     @Param('id') id: string,
-    @Body() body: { questionIdx: number; answer: number },
+    @Body() body: { questionIdx: number; answer: number; answerMs?: number },
     @Request() req: any,
   ) {
     return this.duel.submitAnswer(
@@ -52,6 +54,7 @@ export class SocialController {
       req.user.userId,
       body.questionIdx,
       body.answer,
+      body.answerMs,
     );
   }
 
@@ -77,6 +80,53 @@ export class SocialController {
   @Get('groups/:groupId/messages')
   getGroupMessages(@Param('groupId') groupId: string) {
     return this.chat.getGroupMessages(groupId);
+  }
+
+  /**
+   * REST parity with WebSocket `chat:send`. Both paths funnel into
+   * `chatService.sendMessage`. Useful for clients that don't keep a WS
+   * connection open (e.g. SSR bots, scripted tests).
+   */
+  @Post('groups/:groupId/messages')
+  @Roles(UserRole.student, UserRole.mentor, UserRole.filadmin)
+  sendGroupMessage(
+    @Param('groupId') groupId: string,
+    @Body() body: { content: string },
+    @Request() req: any,
+  ) {
+    return this.chat.sendMessage({
+      tenantId: req.user.tenantId,
+      groupId,
+      senderId: req.user.userId,
+      content: body.content,
+    });
+  }
+
+  @Post('groups/:groupId/messages/:messageId/pin')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
+  pinMessage(@Param('messageId') messageId: string, @Request() req: any) {
+    return this.chat.pinMessage(messageId, req.user.userId);
+  }
+
+  @Post('messages/:id/approve')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
+  approveMessage(@Param('id') messageId: string, @Request() req: any) {
+    return this.chat.approveMessage(messageId, req.user.userId);
+  }
+
+  @Post('messages/:id/reject')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
+  rejectMessage(@Param('id') messageId: string, @Request() req: any) {
+    return this.chat.rejectMessage(messageId, req.user.userId);
+  }
+
+  @Post('branches/:id/lock')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  toggleBranchChatLock(
+    @Param('id') id: string,
+    @Body() body: { locked: boolean },
+  ) {
+    return this.chat.setBranchChatLocked(id, body.locked);
   }
 
   @Delete('groups/:groupId/messages/:msgId')
@@ -139,6 +189,7 @@ export class SocialController {
   }
 
   @Post('challenges')
+  @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
   createChallenge(
     @Body() body: { groupAId: string; groupBId: string; endDate: Date },
     @Request() req: any,
@@ -160,6 +211,15 @@ export class SocialController {
   @Roles(UserRole.student)
   getFeed(@Request() req: any) {
     return this.friends.getFeed(req.user.userId, req.user.tenantId);
+  }
+
+  @Post('feed/:id/react')
+  feedReact(
+    @Param('id') eventId: string,
+    @Body() body: { emoji: string },
+    @Request() req: any,
+  ) {
+    return this.feedEvent.addReaction(eventId, req.user.userId, body.emoji);
   }
 
   @Post('keywords')

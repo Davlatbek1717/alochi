@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { DuelService } from './duel.service';
@@ -10,6 +10,7 @@ import { FeedEventService } from './feed-event.service';
 import { SocialGateway } from './social.gateway';
 import { SocialController } from './social.controller';
 import { GamificationModule } from '../gamification/gamification.module';
+import { WarningsModule } from '../warnings/warnings.module';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { GamificationModule } from '../gamification/gamification.module';
         secret: config.get('JWT_SECRET'),
       }),
     }),
-    GamificationModule,
+    forwardRef(() => GamificationModule),
+    WarningsModule,
   ],
   providers: [
     DuelService,

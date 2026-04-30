@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { FeedEventService } from '../social/feed-event.service';
 
 const CITY_LEVELS = [
   {
@@ -77,7 +78,44 @@ const CITY_LEVELS = [
 
 @Injectable()
 export class CityService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional()
+    @Inject(forwardRef(() => FeedEventService))
+    private feedEvent?: FeedEventService,
+  ) {}
+
+  private getLevelForCount(count: number) {
+    return (
+      CITY_LEVELS.find((l) => count >= l.min && count <= l.max) ??
+      CITY_LEVELS[CITY_LEVELS.length - 1]
+    );
+  }
+
+  /**
+   * Called from progress.service after a lesson is marked completed.
+   * Emits a `city_upgraded` feed event when the new lesson count crosses
+   * a city-level boundary.
+   */
+  async checkCityLevelUp(
+    studentId: string,
+    tenantId: string,
+    oldCount: number,
+    newCount: number,
+  ): Promise<void> {
+    if (newCount <= oldCount) return;
+    const oldLevel = this.getLevelForCount(oldCount);
+    const newLevel = this.getLevelForCount(newCount);
+    if (newLevel.level > oldLevel.level && this.feedEvent) {
+      this.feedEvent
+        .emit(tenantId, studentId, 'city_upgraded', {
+          fromLevel: oldLevel.level,
+          toLevel: newLevel.level,
+          name: newLevel.name,
+        })
+        .catch(() => undefined);
+    }
+  }
 
   async getCityLevel(studentId: string): Promise<{
     level: number;

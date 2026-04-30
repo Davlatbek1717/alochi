@@ -34,13 +34,13 @@ model Tenant {
   warningBlockLimit Int      @default(3) @map("warning_block_limit")
   createdAt         DateTime @default(now()) @map("created_at")
 
-  branches     Branch[]
-  users        User[]
-  lessons      Lesson[]
-  certificates Certificate[]
-  tournaments  Tournament[] @relation("TenantTournaments")
+  branches                 Branch[]
+  users                    User[]
+  lessons                  Lesson[]
+  certificates             Certificate[]
+  tournaments              Tournament[]              @relation("TenantTournaments")
   adaptiveDifficultyConfig AdaptiveDifficultyConfig?
-  churnScores ChurnScore[] @relation("ChurnTenant")
+  churnScores              ChurnScore[]              @relation("ChurnTenant")
 
   @@map("tenants")
 }
@@ -51,8 +51,9 @@ model Branch {
   name       String
   filadminId String? @map("filadmin_id") @db.Uuid
 
-  workStartTime    String @default("09:00") @map("work_start_time")
-  lateGraceMinutes Int    @default(5) @map("late_grace_minutes")
+  workStartTime    String  @default("09:00") @map("work_start_time")
+  lateGraceMinutes Int     @default(5) @map("late_grace_minutes")
+  chatLocked       Boolean @default(false) @map("chat_locked")
 
   tenant  Tenant         @relation(fields: [tenantId], references: [id])
   users   User[]
@@ -63,59 +64,59 @@ model Branch {
 }
 
 model User {
-  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId     String     @map("tenant_id") @db.Uuid
-  branchId     String?    @map("branch_id") @db.Uuid
-  groupId      String?    @map("group_id") @db.Uuid
-  role         UserRole
-  name         String
-  phone        String?
-  login        String
-  passwordHash String     @map("password_hash")
-  status       UserStatus @default(active)
+  id               String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId         String     @map("tenant_id") @db.Uuid
+  branchId         String?    @map("branch_id") @db.Uuid
+  groupId          String?    @map("group_id") @db.Uuid
+  role             UserRole
+  name             String
+  phone            String?
+  login            String
+  passwordHash     String     @map("password_hash")
+  status           UserStatus @default(active)
   telegramId       BigInt?    @map("telegram_id")
   birthDate        DateTime?  @map("birth_date")
   parentTelegramId String?    @map("parent_telegram_id")
   createdAt        DateTime   @default(now()) @map("created_at")
 
-  tenant          Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch          Branch?               @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens      RefreshToken[]
-  studentProgress    StudentProgress[]     @relation("StudentProgress")
-  studentConfigs     StudentLessonConfig[] @relation("StudentConfig")
-  managedConfigs     StudentLessonConfig[] @relation("ManagerConfig")
-  studentStatuses    StudentStatus[]       @relation("StudentStatuses")
-  studentAttendances AttendanceStudent[]   @relation("StudentAttendances")
-  staffAttendances   AttendanceStaff[]     @relation("StaffAttendances")
-  kpiScores          KpiScore[]            @relation("KpiScores")
-  studentWarnings    Warning[]             @relation("StudentWarnings")
-  studentPayments    Payment[]             @relation("StudentPayments")
-  delegationsFrom    Delegation[]          @relation("DelegationFrom")
-  delegationsTo      Delegation[]          @relation("DelegationTo")
-  faceEmbeddings     FaceEmbedding[]       @relation("FaceEmbeddings")
-  faceRecognitionLogs FaceRecognitionLog[] @relation("FaceRecognitionLogs")
-  studentXp          StudentXp?          @relation("StudentXp")
-  xpEvents           XpEvent[]           @relation("XpEvents")
-  examPermissions    ExamPermission[]    @relation("ExamStudent")
-  examsGranted       ExamPermission[]    @relation("ExamGranter")
-  dailyQuests        DailyQuest[]        @relation("DailyQuests")
-  certificates       Certificate[]       @relation("Certificates")
-  friendsAsUser      Friendship[]        @relation("UserFriends")
-  friendsAsFriend    Friendship[]        @relation("FriendOf")
-  challengerDuels    Duel[]              @relation("DuelChallenger")
-  challengedDuels    Duel[]              @relation("DuelChallenged")
-  groupMessages      GroupMessage[]      @relation("GroupMessages")
-  feedEvents         SocialFeedEvent[]   @relation("FeedEventActor")
-  tasksCreated       Task[]              @relation("TaskCreator")
-  tasksAssigned      Task[]              @relation("TaskAssignee")
-  notifications      Notification[]
-  spacedRepetitionItems   SpacedRepetitionItem[]   @relation("SpacedRepetitionItems")
-  errorLogs               ErrorLog[]               @relation("ErrorLogs")
-  tournamentRegistrations TournamentRegistration[] @relation("TournamentRegistrations")
-  adaptiveLogs        AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
-  lessonFeedbacks     LessonFeedback[]           @relation("LessonFeedbacks")
-  variantAssignments  StudentVariantAssignment[] @relation("VariantAssignments")
-  churnScore          ChurnScore?                @relation("ChurnScores")
+  tenant                  Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                  Branch?                    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens           RefreshToken[]
+  studentProgress         StudentProgress[]          @relation("StudentProgress")
+  studentConfigs          StudentLessonConfig[]      @relation("StudentConfig")
+  managedConfigs          StudentLessonConfig[]      @relation("ManagerConfig")
+  studentStatuses         StudentStatus[]            @relation("StudentStatuses")
+  studentAttendances      AttendanceStudent[]        @relation("StudentAttendances")
+  staffAttendances        AttendanceStaff[]          @relation("StaffAttendances")
+  kpiScores               KpiScore[]                 @relation("KpiScores")
+  studentWarnings         Warning[]                  @relation("StudentWarnings")
+  studentPayments         Payment[]                  @relation("StudentPayments")
+  delegationsFrom         Delegation[]               @relation("DelegationFrom")
+  delegationsTo           Delegation[]               @relation("DelegationTo")
+  faceEmbeddings          FaceEmbedding[]            @relation("FaceEmbeddings")
+  faceRecognitionLogs     FaceRecognitionLog[]       @relation("FaceRecognitionLogs")
+  studentXp               StudentXp?                 @relation("StudentXp")
+  xpEvents                XpEvent[]                  @relation("XpEvents")
+  examPermissions         ExamPermission[]           @relation("ExamStudent")
+  examsGranted            ExamPermission[]           @relation("ExamGranter")
+  dailyQuests             DailyQuest[]               @relation("DailyQuests")
+  certificates            Certificate[]              @relation("Certificates")
+  friendsAsUser           Friendship[]               @relation("UserFriends")
+  friendsAsFriend         Friendship[]               @relation("FriendOf")
+  challengerDuels         Duel[]                     @relation("DuelChallenger")
+  challengedDuels         Duel[]                     @relation("DuelChallenged")
+  groupMessages           GroupMessage[]             @relation("GroupMessages")
+  feedEvents              SocialFeedEvent[]          @relation("FeedEventActor")
+  tasksCreated            Task[]                     @relation("TaskCreator")
+  tasksAssigned           Task[]                     @relation("TaskAssignee")
+  notifications           Notification[]
+  spacedRepetitionItems   SpacedRepetitionItem[]     @relation("SpacedRepetitionItems")
+  errorLogs               ErrorLog[]                 @relation("ErrorLogs")
+  tournamentRegistrations TournamentRegistration[]   @relation("TournamentRegistrations")
+  adaptiveLogs            AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
+  lessonFeedbacks         LessonFeedback[]           @relation("LessonFeedbacks")
+  variantAssignments      StudentVariantAssignment[] @relation("VariantAssignments")
+  churnScore              ChurnScore?                @relation("ChurnScores")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -159,12 +160,12 @@ model Lesson {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  tenant          Tenant                @relation(fields: [tenantId], references: [id])
-  components_data LessonComponent[]
-  progress        StudentProgress[]
-  studentConfigs  StudentLessonConfig[]
-  errorLogs       ErrorLog[]            @relation("ErrorLogs")
-  examPermissions ExamPermission[]
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id])
+  components_data    LessonComponent[]
+  progress           StudentProgress[]
+  studentConfigs     StudentLessonConfig[]
+  errorLogs          ErrorLog[]                 @relation("ErrorLogs")
+  examPermissions    ExamPermission[]
   adaptiveLogs       AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
   feedbacks          LessonFeedback[]           @relation("LessonFeedbacks")
   variants           LessonVariant[]            @relation("LessonVariants")
@@ -223,18 +224,18 @@ model StudentLessonConfig {
 
 // ---- STUDENT STATUS ----
 model StudentStatus {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  studentId       String   @map("student_id") @db.Uuid
-  date            DateTime @db.Date
-  englishStatus   String?  @map("english_status")
-  englishNote     String?  @map("english_note")
-  personalStatus  String?  @map("personal_status")
-  personalNote    String?  @map("personal_note")
-  criticalStatus  String?  @map("critical_status")
-  criticalNote    String?  @map("critical_note")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  date           DateTime @db.Date
+  englishStatus  String?  @map("english_status")
+  englishNote    String?  @map("english_note")
+  personalStatus String?  @map("personal_status")
+  personalNote   String?  @map("personal_note")
+  criticalStatus String?  @map("critical_status")
+  criticalNote   String?  @map("critical_note")
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  student         User     @relation("StudentStatuses", fields: [studentId], references: [id])
+  student User @relation("StudentStatuses", fields: [studentId], references: [id])
 
   @@unique([studentId, date])
   @@index([studentId])
@@ -243,15 +244,15 @@ model StudentStatus {
 
 // ---- ATTENDANCE ----
 model AttendanceStudent {
-  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId   String   @map("tenant_id") @db.Uuid
-  branchId   String   @map("branch_id") @db.Uuid
-  studentId  String   @map("student_id") @db.Uuid
-  date       DateTime @db.Date
-  status     String   @default("absent")
-  markedBy   String?  @map("marked_by") @db.Uuid
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  date      DateTime @db.Date
+  status    String   @default("absent")
+  markedBy  String?  @map("marked_by") @db.Uuid
 
-  student    User     @relation("StudentAttendances", fields: [studentId], references: [id])
+  student User @relation("StudentAttendances", fields: [studentId], references: [id])
 
   @@unique([studentId, date])
   @@index([branchId, date])
@@ -259,21 +260,21 @@ model AttendanceStudent {
 }
 
 model AttendanceStaff {
-  id                  String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId            String    @map("tenant_id") @db.Uuid
-  branchId            String    @map("branch_id") @db.Uuid
-  userId              String    @map("user_id") @db.Uuid
-  date                DateTime  @db.Date
-  loginTime           DateTime? @map("login_time")
-  confirmedAt         DateTime? @map("confirmed_at")
-  confirmedBy         String?   @map("confirmed_by") @db.Uuid
-  isLate              Boolean   @default(false) @map("is_late")
-  lateMinutes         Int       @default(0) @map("late_minutes")
-  recognitionMethod   String    @default("manual") @map("recognition_method")
-  confidence          Float?
-  deviceId            String?   @map("device_id")
+  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  branchId          String    @map("branch_id") @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  date              DateTime  @db.Date
+  loginTime         DateTime? @map("login_time")
+  confirmedAt       DateTime? @map("confirmed_at")
+  confirmedBy       String?   @map("confirmed_by") @db.Uuid
+  isLate            Boolean   @default(false) @map("is_late")
+  lateMinutes       Int       @default(0) @map("late_minutes")
+  recognitionMethod String    @default("manual") @map("recognition_method")
+  confidence        Float?
+  deviceId          String?   @map("device_id")
 
-  user                User      @relation("StaffAttendances", fields: [userId], references: [id])
+  user User @relation("StaffAttendances", fields: [userId], references: [id])
 
   @@unique([userId, date])
   @@map("attendance_staff")
@@ -290,7 +291,7 @@ model KpiScore {
   taskId       String?  @map("task_id") @db.Uuid
   delegationId String?  @map("delegation_id") @db.Uuid
 
-  user         User     @relation("KpiScores", fields: [userId], references: [id])
+  user User @relation("KpiScores", fields: [userId], references: [id])
 
   @@index([userId, date])
   @@map("kpi_scores")
@@ -319,7 +320,7 @@ model Warning {
   delegationId String?     @map("delegation_id") @db.Uuid
   createdAt    DateTime    @default(now()) @map("created_at")
 
-  student      User      @relation("StudentWarnings", fields: [studentId], references: [id])
+  student User @relation("StudentWarnings", fields: [studentId], references: [id])
 
   @@index([studentId, isCancelled])
   @@map("warnings")
@@ -348,7 +349,7 @@ model Payment {
   unblockAt    DateTime @map("unblock_at")
   delegationId String?  @map("delegation_id") @db.Uuid
 
-  student      User     @relation("StudentPayments", fields: [studentId], references: [id])
+  student User @relation("StudentPayments", fields: [studentId], references: [id])
 
   @@unique([studentId, month])
   @@index([tenantId, unblockAt])
@@ -386,10 +387,10 @@ model Delegation {
   cancelReason  String?          @map("cancel_reason")
   createdAt     DateTime         @default(now()) @map("created_at")
 
-  fromUser      User             @relation("DelegationFrom", fields: [fromUserId], references: [id])
-  toUser        User             @relation("DelegationTo", fields: [toUserId], references: [id])
-  responses     DelegationResponse[]
-  auditLogs     DelegationAuditLog[]
+  fromUser  User                 @relation("DelegationFrom", fields: [fromUserId], references: [id])
+  toUser    User                 @relation("DelegationTo", fields: [toUserId], references: [id])
+  responses DelegationResponse[]
+  auditLogs DelegationAuditLog[]
 
   @@index([toUserId, status])
   @@map("delegations")
@@ -402,21 +403,21 @@ model DelegationResponse {
   reason       String?
   respondedAt  DateTime         @default(now()) @map("responded_at")
 
-  delegation   Delegation @relation(fields: [delegationId], references: [id])
+  delegation Delegation @relation(fields: [delegationId], references: [id])
 
   @@map("delegation_responses")
 }
 
 model DelegationAuditLog {
-  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  delegationId String    @map("delegation_id") @db.Uuid
-  actorId      String    @map("actor_id") @db.Uuid
-  actionType   String    @map("action_type")
-  targetId     String?   @map("target_id") @db.Uuid
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  delegationId String   @map("delegation_id") @db.Uuid
+  actorId      String   @map("actor_id") @db.Uuid
+  actionType   String   @map("action_type")
+  targetId     String?  @map("target_id") @db.Uuid
   meta         Json?
-  performedAt  DateTime  @default(now()) @map("performed_at")
+  performedAt  DateTime @default(now()) @map("performed_at")
 
-  delegation   Delegation @relation(fields: [delegationId], references: [id])
+  delegation Delegation @relation(fields: [delegationId], references: [id])
 
   @@index([delegationId])
   @@map("delegation_audit_log")
@@ -437,25 +438,25 @@ model FaceEmbedding {
   // Decrypt with FACE_VECTOR_KEY env var (base64-encoded 32 bytes).
   embeddingEncrypted String?  @map("embedding_encrypted")
 
-  user        User     @relation("FaceEmbeddings", fields: [userId], references: [id])
+  user User @relation("FaceEmbeddings", fields: [userId], references: [id])
 
   @@index([userId])
   @@map("face_embeddings")
 }
 
 model FaceRecognitionLog {
-  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId       String    @map("tenant_id") @db.Uuid
-  branchId       String    @map("branch_id") @db.Uuid
-  deviceId       String    @map("device_id")
-  matchedUserId  String?   @map("matched_user_id") @db.Uuid
-  confidence     Float?
-  method         String
-  result         String
-  livenessPassd  Boolean?  @map("liveness_passed")
-  attemptedAt    DateTime  @default(now()) @map("attempted_at")
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  branchId      String   @map("branch_id") @db.Uuid
+  deviceId      String   @map("device_id")
+  matchedUserId String?  @map("matched_user_id") @db.Uuid
+  confidence    Float?
+  method        String
+  result        String
+  livenessPassd Boolean? @map("liveness_passed")
+  attemptedAt   DateTime @default(now()) @map("attempted_at")
 
-  matchedUser    User?     @relation("FaceRecognitionLogs", fields: [matchedUserId], references: [id])
+  matchedUser User? @relation("FaceRecognitionLogs", fields: [matchedUserId], references: [id])
 
   @@index([branchId, attemptedAt])
   @@map("face_recognition_log")
@@ -471,7 +472,7 @@ model BranchDevice {
   isActive       Boolean   @default(true) @map("is_active")
   createdAt      DateTime  @default(now()) @map("created_at")
 
-  branch        Branch    @relation(fields: [branchId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
 
   @@map("branch_devices")
 }
@@ -595,6 +596,7 @@ model DuelAnswer {
   questionIdx Int      @map("question_idx")
   answer      Int
   isCorrect   Boolean  @map("is_correct")
+  answerMs    Int?     @map("answer_ms")
   answeredAt  DateTime @default(now()) @map("answered_at")
 
   duel Duel @relation(fields: [duelId], references: [id])
@@ -687,10 +689,25 @@ model SocialFeedEvent {
   meta      Json          @default("{}")
   createdAt DateTime      @default(now()) @map("created_at")
 
-  actor User @relation("FeedEventActor", fields: [actorId], references: [id], onDelete: Cascade)
+  actor     User                @relation("FeedEventActor", fields: [actorId], references: [id], onDelete: Cascade)
+  reactions FeedEventReaction[]
 
   @@index([actorId, createdAt(sort: Desc)])
   @@map("social_feed_events")
+}
+
+model FeedEventReaction {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  eventId   String   @map("event_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  event SocialFeedEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@map("feed_event_reactions")
 }
 
 model ChatKeyword {
@@ -805,16 +822,16 @@ model ErrorLog {
 // ---- TOURNAMENT ----
 
 model Tournament {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  title       String
-  type        String   @default("1v1")
-  status      String   @default("upcoming")
-  startsAt    DateTime @map("starts_at")
-  endsAt      DateTime @map("ends_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  title     String
+  type      String   @default("1v1")
+  status    String   @default("upcoming")
+  startsAt  DateTime @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  tenant        Tenant   @relation("TenantTournaments", fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant                   @relation("TenantTournaments", fields: [tenantId], references: [id], onDelete: Cascade)
   registrations TournamentRegistration[]
 
   @@index([tenantId, status])
@@ -917,7 +934,7 @@ model LessonVariant {
   config    Json
   createdAt DateTime @default(now()) @map("created_at")
 
-  lesson      Lesson                   @relation("LessonVariants", fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson      Lesson                     @relation("LessonVariants", fields: [lessonId], references: [id], onDelete: Cascade)
   assignments StudentVariantAssignment[]
 
   @@unique([lessonId, variant])
@@ -958,13 +975,13 @@ model ChurnScore {
 
 // ---- ANALYTICS ----
 model AnalyticsEvent {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  eventType String   @map("event_type")
-  studentId String?  @map("student_id") @db.Uuid
-  branchId  String?  @map("branch_id") @db.Uuid
-  data      Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  eventType String    @map("event_type")
+  studentId String?   @map("student_id") @db.Uuid
+  branchId  String?   @map("branch_id") @db.Uuid
+  data      Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at")
   syncedAt  DateTime? @map("synced_at")
 
   @@index([tenantId, eventType, createdAt])

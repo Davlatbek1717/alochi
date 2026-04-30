@@ -16,6 +16,10 @@ export class CreateUserDto {
   @IsOptional()
   branchId?: string;
 
+  @IsUUID()
+  @IsOptional()
+  groupId?: string;
+
   @IsEnum(UserRole)
   role: UserRole;
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GroupChallenge } from '@prisma/client';
 
@@ -12,6 +12,67 @@ export class ChallengeService {
     groupBId: string,
     endDate: Date,
   ): Promise<GroupChallenge> {
+    if (groupAId === groupBId) {
+      throw new BadRequestException({
+        code: 'CHALLENGE_SAME_GROUP',
+        message: "Bir guruh o'ziga raqib bo'lolmaydi",
+      });
+    }
+
+    // Same-branch validation: every student in either group must share a
+    // single branchId. We use the group representative branch (mode of
+    // student.branchId) as the canonical branch for the group.
+    const [aBranch, bBranch] = await Promise.all([
+      this.resolveGroupBranch(groupAId, tenantId),
+      this.resolveGroupBranch(groupBId, tenantId),
+    ]);
+    if (!aBranch || !bBranch || aBranch !== bBranch) {
+      throw new BadRequestException({
+        code: 'CHALLENGE_CROSS_BRANCH',
+        message: 'Challenge faqat bitta filial ichida ruxsat',
+      });
+    }
+
+    // §7.1 — month-2-cap per group. Count active+completed challenges for
+    // this group started in the current calendar month.
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const monthCount = await this.prisma.groupChallenge.count({
+      where: {
+        tenantId,
+        startDate: { gte: monthStart },
+        OR: [
+          { groupAId: { in: [groupAId, groupBId] } },
+          { groupBId: { in: [groupAId, groupBId] } },
+        ],
+      },
+    });
+    if (monthCount >= 2) {
+      throw new BadRequestException({
+        code: 'CHALLENGE_LIMIT_EXCEEDED',
+        message: "Bu oyga tegishli challenge limiti to'ldi (max 2)",
+      });
+    }
+
+    // Single-active-cap — neither group can have an active challenge.
+    const activeCount = await this.prisma.groupChallenge.count({
+      where: {
+        status: 'active',
+        OR: [
+          { groupAId: { in: [groupAId, groupBId] } },
+          { groupBId: { in: [groupAId, groupBId] } },
+        ],
+      },
+    });
+    if (activeCount >= 1) {
+      throw new BadRequestException({
+        code: 'CHALLENGE_LIMIT_EXCEEDED',
+        message: 'Faol challenge mavjud — yangi yaratib bolmaydi',
+      });
+    }
+
     return this.prisma.groupChallenge.create({
       data: {
         tenantId,
@@ -22,6 +83,26 @@ export class ChallengeService {
         status: 'active',
       },
     });
+  }
+
+  /**
+   * Pick the branch all students of `groupId` live in. Returns null if
+   * the group is empty or spans multiple branches (which is invalid).
+   */
+  private async resolveGroupBranch(
+    groupId: string,
+    tenantId: string,
+  ): Promise<string | null> {
+    const students = await this.prisma.user.findMany({
+      where: { groupId, role: 'student', tenantId },
+      select: { branchId: true },
+    });
+    if (students.length === 0) return null;
+    const branches = new Set(
+      students.map((s) => s.branchId).filter((b): b is string => Boolean(b)),
+    );
+    if (branches.size !== 1) return null;
+    return [...branches][0]!;
   }
 
   async getActiveForGroup(groupId: string): Promise<GroupChallenge | null> {

@@ -1,7 +1,10 @@
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { FeedEventService } from '../social/feed-event.service';
+
+const STREAK_MILESTONES = new Set([7, 30, 100]);
 
 @Injectable()
 export class StreakService {
@@ -9,6 +12,9 @@ export class StreakService {
     private prisma: PrismaService,
     private analytics: AnalyticsService,
     @Optional() private events?: EventEmitter2,
+    @Optional()
+    @Inject(forwardRef(() => FeedEventService))
+    private feedEvent?: FeedEventService,
   ) {}
 
   private emitMilestoneIfReached(
@@ -18,6 +24,20 @@ export class StreakService {
   ): void {
     if (newStreak === 30) {
       this.events?.emit('streak.milestone30', { studentId, tenantId });
+    }
+    if (STREAK_MILESTONES.has(newStreak) && tenantId) {
+      this.feedEvent
+        ?.emit(tenantId, studentId, 'streak_milestone', { days: newStreak })
+        .catch(() => undefined);
+    }
+  }
+
+  private emitBreak(studentId: string, oldStreak: number, tenantId?: string) {
+    // Only emit a break event if the student had a meaningful streak (≥3)
+    if (oldStreak >= 3 && tenantId) {
+      this.feedEvent
+        ?.emit(tenantId, studentId, 'streak_broken', { lostDays: oldStreak })
+        .catch(() => undefined);
     }
   }
 
@@ -109,6 +129,8 @@ export class StreakService {
       return updated;
     }
 
+    // Streak broken — gap > 1 day (or > 2 with no shield).
+    this.emitBreak(studentId, xp.currentStreak, user?.tenantId);
     return this.prisma.studentXp.update({
       where: { studentId },
       data: { currentStreak: 1, lastActivity: today },

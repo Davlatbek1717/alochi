@@ -122,6 +122,7 @@ export class DuelService {
     userId: string,
     questionIdx: number,
     answer: number,
+    answerMs?: number,
   ) {
     const duel = await this.prisma.duel.findUnique({ where: { id: duelId } });
     if (!duel) throw new BadRequestException('Duel topilmadi');
@@ -149,7 +150,14 @@ export class DuelService {
     const isChallenger = userId === duel.challengerId;
 
     await this.prisma.duelAnswer.create({
-      data: { duelId, userId, questionIdx, answer, isCorrect },
+      data: {
+        duelId,
+        userId,
+        questionIdx,
+        answer,
+        isCorrect,
+        answerMs: answerMs != null && answerMs >= 0 ? answerMs : null,
+      },
     });
 
     if (isCorrect) {
@@ -183,9 +191,32 @@ export class DuelService {
           where: { id: duelId },
         });
         if (freshDuel) {
-          // On tie, challenger wins (first-mover advantage)
+          // Compute speed bonus per side: avg of max(0, 5000 - answerMs) / 100
+          const allAnswers = await this.prisma.duelAnswer.findMany({
+            where: { duelId },
+            select: { userId: true, answerMs: true, isCorrect: true },
+          });
+          const speedBonus = (uid: string): number => {
+            const rows = allAnswers.filter(
+              (a) => a.userId === uid && a.answerMs != null,
+            );
+            if (rows.length === 0) return 0;
+            const sum = rows.reduce(
+              (s, r) => s + Math.max(0, 5000 - (r.answerMs ?? 5000)) / 100,
+              0,
+            );
+            return Math.round(sum / rows.length);
+          };
+          const challengerSpeed = speedBonus(freshDuel.challengerId);
+          const challengedSpeed = speedBonus(freshDuel.challengedId);
+          const challengerFinal =
+            freshDuel.challengerScore * 10 + challengerSpeed;
+          const challengedFinal =
+            freshDuel.challengedScore * 10 + challengedSpeed;
+
+          // Final winner: highest combined score, ties → challenger.
           const winnerId =
-            freshDuel.challengerScore >= freshDuel.challengedScore
+            challengerFinal >= challengedFinal
               ? freshDuel.challengerId
               : freshDuel.challengedId;
           const loserId =
@@ -203,16 +234,16 @@ export class DuelService {
             this.xp.award(loserId, 'DUEL_PARTICIPATE'),
           ]);
 
-          const score = `${freshDuel.challengerScore}-${freshDuel.challengedScore}`;
+          const score = `${challengerFinal}-${challengedFinal}`;
 
           this.gateway.emitDuelResult(winnerId, {
             won: true,
-            xpEarned: 50,
+            xpEarned: 150,
             score,
           });
           this.gateway.emitDuelResult(loserId, {
             won: false,
-            xpEarned: 10,
+            xpEarned: 30,
             score,
           });
 
@@ -268,7 +299,7 @@ export class DuelService {
       const isParticipant =
         requesterId === duel.challengerId || requesterId === duel.challengedId;
       if (isParticipant) {
-        xpEarned = isWinner ? 50 : 10; // DUEL_WIN : DUEL_PARTICIPATE (from XP_AMOUNTS)
+        xpEarned = isWinner ? 150 : 30; // DUEL_WIN : DUEL_PARTICIPATE (from XP_AMOUNTS)
       }
     }
 
@@ -334,7 +365,35 @@ export class DuelService {
       );
     }
 
-    // Expire pending duels — no XP since challenge was never accepted
+    // Pending duels — defender never played within 24h (expiresAt elapsed
+    // and challenger had been waiting at least 24h since createdAt).
+    // Award the challenger DUEL_NO_SHOW (+50 XP) and flip status='expired'.
+    const cutoff24h = new Date(now.getTime() - 24 * 3_600_000);
+    const noShowDuels = await this.prisma.duel.findMany({
+      where: {
+        status: 'pending',
+        expiresAt: { lt: now },
+        createdAt: { lt: cutoff24h },
+      },
+      select: { id: true, challengerId: true },
+    });
+
+    if (noShowDuels.length > 0) {
+      await this.prisma.duel.updateMany({
+        where: { id: { in: noShowDuels.map((d) => d.id) } },
+        data: { status: 'expired' },
+      });
+      await Promise.all(
+        noShowDuels.map((d) =>
+          this.xp
+            .award(d.challengerId, 'DUEL_NO_SHOW', { duelId: d.id })
+            .catch(() => undefined),
+        ),
+      );
+    }
+
+    // Any other lingering pending duels past their expiresAt — just expire,
+    // no XP (e.g. challenger never followed through somehow).
     await this.prisma.duel.updateMany({
       where: { status: 'pending', expiresAt: { lt: now } },
       data: { status: 'expired' },

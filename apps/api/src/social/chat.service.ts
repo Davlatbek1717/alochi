@@ -3,8 +3,10 @@ import {
   BadRequestException,
   ForbiddenException,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { WarningsService } from '../warnings/warnings.service';
 // CJS interop: isomorphic-dompurify v2 exports the DOMPurify factory result
 // directly via module.exports — no `.default`. Use `import =` to dodge
 // `esModuleInterop` injecting an undefined `.default`.
@@ -39,6 +41,7 @@ export class ChatService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private events: EventEmitter2,
+    @Optional() private warnings?: WarningsService,
   ) {}
 
   async onModuleInit() {
@@ -107,14 +110,29 @@ export class ChatService implements OnModuleInit {
       );
     }
 
+    // Branch-wide chat lock — filadmin can disable chat for the whole branch.
+    const sender = await this.prisma.user.findUnique({
+      where: { id: dto.senderId },
+      select: {
+        branchId: true,
+        branch: { select: { chatLocked: true } },
+      },
+    });
+    if (sender?.branch?.chatLocked) {
+      throw new BadRequestException({
+        code: 'CHAT_LOCKED',
+        message: 'Chat filial admin tomonidan vaqtincha yopilgan',
+      });
+    }
+
     const lowerContent = cleanContent.toLowerCase();
+    let needsModeration = false;
     const tenantKeywords = this.keywordCache.get(dto.tenantId);
     if (tenantKeywords) {
       for (const kw of tenantKeywords) {
         if (lowerContent.includes(kw)) {
-          throw new BadRequestException(
-            "Xabar taqiqlangan so'z o'z ichiga oldi",
-          );
+          needsModeration = true;
+          break;
         }
       }
     }
@@ -148,9 +166,90 @@ export class ChatService implements OnModuleInit {
       );
     }
 
-    return this.prisma.groupMessage.create({
-      data: { ...dto, content: cleanContent },
+    const message = await this.prisma.groupMessage.create({
+      data: {
+        ...dto,
+        content: cleanContent,
+        moderationStatus: needsModeration ? 'pending' : 'approved',
+      },
       include: { sender: { select: { name: true, role: true } } },
+    });
+
+    if (needsModeration) {
+      this.events.emit('chat.moderation_pending', {
+        messageId: message.id,
+        groupId: dto.groupId,
+        senderId: dto.senderId,
+        tenantId: dto.tenantId,
+      });
+    }
+
+    return message;
+  }
+
+  async approveMessage(messageId: string, moderatorId: string) {
+    const msg = await this.prisma.groupMessage.update({
+      where: { id: messageId },
+      data: { moderationStatus: 'approved' },
+    });
+    this.events.emit('chat.message_approved', {
+      messageId,
+      groupId: msg.groupId,
+      moderatorId,
+    });
+    return msg;
+  }
+
+  async rejectMessage(messageId: string, moderatorId: string) {
+    const msg = await this.prisma.groupMessage.update({
+      where: { id: messageId },
+      data: { moderationStatus: 'rejected' },
+    });
+    this.events.emit('chat.message_rejected', {
+      messageId,
+      groupId: msg.groupId,
+      senderId: msg.senderId,
+      moderatorId,
+    });
+
+    // 3-rejected auto-warning trigger. Create a real Warning row via
+    // WarningsService so it counts toward the block-limit logic instead of
+    // floating as an unbacked event.
+    const rejectedCount = await this.prisma.groupMessage.count({
+      where: { senderId: msg.senderId, moderationStatus: 'rejected' },
+    });
+    if (rejectedCount > 0 && rejectedCount % 3 === 0 && this.warnings) {
+      await this.warnings
+        .give({
+          tenantId: msg.tenantId,
+          studentId: msg.senderId,
+          givenBy: moderatorId,
+          reasonType: 'chat_moderation',
+          reasonText: `${rejectedCount} ta moderatsiya rad etilgan xabar`,
+        })
+        .catch(() => undefined);
+    }
+
+    return msg;
+  }
+
+  async pinMessage(messageId: string, userId: string) {
+    const msg = await this.prisma.groupMessage.update({
+      where: { id: messageId },
+      data: { isPinned: true },
+    });
+    this.events.emit('chat.pinned', {
+      messageId,
+      groupId: msg.groupId,
+      pinnedBy: userId,
+    });
+    return msg;
+  }
+
+  async setBranchChatLocked(branchId: string, locked: boolean) {
+    return this.prisma.branch.update({
+      where: { id: branchId },
+      data: { chatLocked: locked },
     });
   }
 

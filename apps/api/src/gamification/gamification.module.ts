@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { XpService } from './xp.service';
 import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
@@ -7,9 +7,10 @@ import { CityService } from './city.service';
 import { LeaderboardService } from './leaderboard.service';
 import { GamificationController } from './gamification.controller';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { SocialModule } from '../social/social.module';
 
 @Module({
-  imports: [AnalyticsModule],
+  imports: [AnalyticsModule, forwardRef(() => SocialModule)],
   providers: [
     XpService,
     StreakService,

@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { FeedEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SocialGateway } from './social.gateway';
+
+const ALLOWED_FEED_EMOJIS = ['👍', '🎉', '💪', '🔥', '❤️'];
 
 @Injectable()
 export class FeedEventService {
@@ -9,6 +15,37 @@ export class FeedEventService {
     private prisma: PrismaService,
     private gateway: SocialGateway,
   ) {}
+
+  async addReaction(eventId: string, userId: string, emoji: string) {
+    if (!ALLOWED_FEED_EMOJIS.includes(emoji)) {
+      throw new BadRequestException(
+        `Faqat quyidagi emoji ruxsat: ${ALLOWED_FEED_EMOJIS.join(' ')}`,
+      );
+    }
+    const event = await this.prisma.socialFeedEvent.findUnique({
+      where: { id: eventId },
+      select: { id: true, actorId: true },
+    });
+    if (!event) throw new NotFoundException('Event topilmadi');
+
+    const reaction = await this.prisma.feedEventReaction.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, emoji },
+      update: { emoji },
+    });
+
+    this.gateway.emitToUser(event.actorId, 'feed:reaction', {
+      eventId,
+      userId,
+      emoji,
+    });
+
+    return reaction;
+  }
+
+  async getReactions(eventId: string) {
+    return this.prisma.feedEventReaction.findMany({ where: { eventId } });
+  }
 
   async emit(
     tenantId: string,

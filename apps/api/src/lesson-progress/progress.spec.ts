@@ -20,6 +20,7 @@ const mockPrisma = {
     upsert: jest.fn(),
     update: jest.fn(),
     findMany: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
   },
 };
 
