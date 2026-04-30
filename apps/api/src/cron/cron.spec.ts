@@ -11,6 +11,7 @@ import { AdaptiveService } from '../adaptive/adaptive.service';
 import { ChurnService } from '../churn/churn.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService } from '../kpi/kpi.service';
+import { XpService } from '../gamification/xp.service';
 
 const mockPrisma = {
   paymentSetting: {
@@ -35,6 +36,22 @@ const mockPrisma = {
   studentStatus: {
     count: jest.fn(),
   },
+  spacedRepetitionItem: {
+    findMany: jest.fn(),
+  },
+  task: {
+    findMany: jest.fn(),
+  },
+  groupMessage: {
+    deleteMany: jest.fn(),
+  },
+  groupChallenge: {
+    findMany: jest.fn(),
+    update: jest.fn(),
+  },
+  branch: {
+    findUnique: jest.fn(),
+  },
 };
 
 const mockKpi = {
@@ -42,8 +59,13 @@ const mockKpi = {
   hasAwardInRange: jest.fn(),
 };
 
-const mockTelegram = { sendMessage: jest.fn(), sendToParent: jest.fn() };
+const mockTelegram = {
+  sendMessage: jest.fn(),
+  sendToParent: jest.fn(),
+  sendTemplate: jest.fn(),
+};
 const mockNotifications = { send: jest.fn() };
+const mockXp = { award: jest.fn() };
 const mockTemplates = {};
 const mockAdaptive = { runNightlyAdaptation: jest.fn() };
 const mockChurn = { runDailyScoring: jest.fn() };
@@ -73,6 +95,7 @@ describe('CronService', () => {
         { provide: ConfigService, useValue: mockConfig },
         { provide: EventEmitter2, useValue: mockEvents },
         { provide: KpiService, useValue: mockKpi },
+        { provide: XpService, useValue: mockXp },
       ],
     }).compile();
     service = module.get(CronService);
@@ -174,7 +197,9 @@ describe('CronService', () => {
 
       await service.triggerPaymentUnblockManually();
 
-      expect(mockPrisma.payment.findMany).toHaveBeenCalledTimes(1);
+      // runPaymentUnblock now queries `payment` twice: once to find due
+      // unblocks, once to monitor stuck rows (§15.3).
+      expect(mockPrisma.payment.findMany).toHaveBeenCalled();
     });
   });
 

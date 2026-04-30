@@ -12,6 +12,7 @@ import { AdaptiveService } from '../adaptive/adaptive.service';
 import { ChurnService } from '../churn/churn.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
+import { XpService, XP_AMOUNTS } from '../gamification/xp.service';
 
 /**
  * Tunable thresholds for the filadmin monthly KPI cron (§8.3).
@@ -50,6 +51,7 @@ export class CronService {
     private events: EventEmitter2,
     private templates: NotificationTemplatesService,
     private kpi: KpiService,
+    private xp: XpService,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -99,14 +101,64 @@ export class CronService {
     });
 
     const ids = duePayments.map((p) => p.studentId);
-    if (ids.length === 0) return;
+    if (ids.length > 0) {
+      const result = await this.prisma.user.updateMany({
+        where: { id: { in: ids }, status: 'blocked_payment' },
+        data: { status: 'active' },
+      });
+      this.logger.log(`${result.count} o'quvchi to'lov blokidan chiqarildi`);
+    }
 
-    const result = await this.prisma.user.updateMany({
-      where: { id: { in: ids }, status: 'blocked_payment' },
-      data: { status: 'active' },
-    });
+    // §15.3 — unblock_at monitoring. Any student whose payment.unblockAt
+    // has passed but who is still status='blocked_payment' is a stuck row
+    // (race / partial failure). Alert superadmins via Telegram.
+    try {
+      const stuck = await this.prisma.payment.findMany({
+        where: {
+          unblockAt: { lt: now },
+          student: { status: 'blocked_payment' },
+        },
+        select: {
+          studentId: true,
+          student: { select: { name: true, tenantId: true } },
+        },
+      });
 
-    this.logger.log(`${result.count} o'quvchi to'lov blokidan chiqarildi`);
+      if (stuck.length > 0) {
+        const ids = stuck.map((p) => p.studentId);
+        const names = stuck.map((p) => p.student?.name).filter(Boolean);
+        this.logger.warn(
+          `unblock_failed count=${stuck.length} userIds=${ids.join(',')}`,
+        );
+
+        const superadmins = await this.prisma.user.findMany({
+          where: {
+            role: 'superadmin',
+            status: 'active',
+            telegramId: { not: null },
+          },
+          select: { telegramId: true, tenantId: true },
+        });
+        for (const sa of superadmins) {
+          if (!sa.telegramId) continue;
+          await this.telegram
+            .sendTemplate(
+              sa.telegramId,
+              'unblock.failed_monitoring',
+              {
+                count: String(stuck.length),
+                userIds: names.slice(0, 10).join(', '),
+              },
+              sa.tenantId,
+            )
+            .catch(() => undefined);
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `unblock_failed monitoring error: ${(err as Error).message}`,
+      );
+    }
   }
 
   @Cron('1 0 * * *', { name: 'delegation_complete' })
@@ -788,6 +840,304 @@ export class CronService {
     } catch (err) {
       this.logger.error(
         `filadmin_monthly_kpi.failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * §15.4 — Spaced repetition morning notification.
+   *
+   * Every day at 07:00 we look at all `SpacedRepetitionItem` rows whose
+   * `nextReview` falls before tomorrow (i.e. due today or earlier),
+   * group them by student, and ping each student with a single in-app
+   * notification (and Telegram message if linked).
+   */
+  @Cron('0 7 * * *', { name: 'spaced_repetition_morning' })
+  async runSpacedRepetitionMorning() {
+    this.logger.log({ event: 'spaced_repetition_morning.start' });
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today.getTime() + 86_400_000);
+
+      const dueItems = await this.prisma.spacedRepetitionItem.findMany({
+        where: { nextReview: { lt: tomorrow } },
+        select: {
+          studentId: true,
+          word: true,
+          student: {
+            select: {
+              id: true,
+              name: true,
+              tenantId: true,
+              telegramId: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      // Group by studentId
+      const byUser = new Map<
+        string,
+        {
+          student: {
+            id: string;
+            name: string;
+            tenantId: string;
+            telegramId: bigint | null;
+            status: string;
+          };
+          words: string[];
+        }
+      >();
+      for (const item of dueItems) {
+        if (!item.student || item.student.status !== 'active') continue;
+        const entry = byUser.get(item.studentId);
+        if (entry) {
+          entry.words.push(item.word);
+        } else {
+          byUser.set(item.studentId, {
+            student: item.student,
+            words: [item.word],
+          });
+        }
+      }
+
+      for (const [userId, { student, words }] of byUser) {
+        await this.notifications
+          .send(
+            userId,
+            'spaced_repetition',
+            `${words.length} ta dars takrorlash uchun`,
+            `Bugun ${words.length} ta darsni takrorlashingiz tavsiya etiladi.`,
+          )
+          .catch(() => undefined);
+
+        if (student.telegramId) {
+          await this.telegram
+            .sendTemplate(
+              student.telegramId,
+              'spaced_repetition.morning',
+              {
+                count: String(words.length),
+                firstLessonTitle: words[0] ?? 'dars',
+              },
+              student.tenantId,
+            )
+            .catch(() => undefined);
+        }
+      }
+
+      this.logger.log({
+        event: 'spaced_repetition_morning.done',
+        users: byUser.size,
+      });
+    } catch (err) {
+      this.logger.error(
+        `spaced_repetition_morning.failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Daily 09:00 — remind assignees about tasks whose deadline is tomorrow.
+   * In-app notification + Telegram (if linked).
+   */
+  @Cron('0 9 * * *', { name: 'task_due_reminder' })
+  async runTaskDueReminder() {
+    this.logger.log({ event: 'task_due_reminder.start' });
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const dayAfter = new Date(tomorrow.getTime() + 86_400_000);
+
+      const tasks = await this.prisma.task.findMany({
+        where: {
+          deadline: { gte: tomorrow, lt: dayAfter },
+          status: { in: ['sent', 'seen', 'in_progress'] },
+        },
+        include: {
+          assignee: {
+            select: { id: true, telegramId: true, tenantId: true },
+          },
+        },
+      });
+
+      for (const task of tasks) {
+        await this.notifications
+          .send(
+            task.assignedTo,
+            'task_due_tomorrow',
+            'Vazifa muddati ertaga',
+            `"${task.title}" muddati ertaga tugaydi.`,
+          )
+          .catch(() => undefined);
+
+        if (task.assignee.telegramId) {
+          await this.telegram
+            .sendTemplate(
+              task.assignee.telegramId,
+              'task.due_tomorrow',
+              { title: task.title },
+              task.assignee.tenantId,
+            )
+            .catch(() => undefined);
+        }
+      }
+
+      this.logger.log({
+        event: 'task_due_reminder.done',
+        tasks: tasks.length,
+      });
+    } catch (err) {
+      this.logger.error(`task_due_reminder.failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Sundays at 04:00 — purge group chat messages older than 90 days,
+   * preserving pinned messages (admins / staff often pin announcements).
+   */
+  @Cron('0 4 * * 0', { name: 'chat_90day_cleanup' })
+  async runChat90DayCleanup() {
+    this.logger.log({ event: 'chat_90day_cleanup.start' });
+    try {
+      const cutoff = new Date(Date.now() - 90 * 86_400_000);
+      const result = await this.prisma.groupMessage.deleteMany({
+        where: { createdAt: { lt: cutoff }, isPinned: false },
+      });
+      this.logger.log({
+        event: 'chat_90day_cleanup.done',
+        deleted: result.count,
+      });
+    } catch (err) {
+      this.logger.error(`chat_90day_cleanup.failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * §7.1 — Award XP for expired group challenges.
+   *
+   * Daily at 01:05 (just after `payment_unblock` / `delegation_complete`
+   * which both run at 01:00) we look at every active GroupChallenge whose
+   * `endDate` has passed and that has not yet had a winner stamped:
+   *
+   *   - winner is whichever side has higher cumulative `groupAXp` /
+   *     `groupBXp` (ties → groupA wins, matching `addXp` semantics)
+   *   - every active student with `branchId === winnerGroupId` gets
+   *     `XP_AMOUNTS.CHALLENGE_WINNER` (+500)
+   *   - every active student with `branchId === loserGroupId` gets
+   *     `XP_AMOUNTS.CHALLENGE_CONSOLATION` (+100)
+   *   - the challenge row is updated with `winnerGroupId` + `status='completed'`
+   *   - a `feed.challenge_won` event is emitted for the social feed
+   *
+   * NOTE on group identity: the schema does NOT have a Group model; the
+   * `groupAId / groupBId` columns store the `branchId` used by the rest
+   * of the platform (group challenges are branch-vs-branch). That is the
+   * mapping used here.
+   */
+  @Cron('5 1 * * *', { name: 'group_challenge_complete' })
+  async runGroupChallengeComplete() {
+    this.logger.log({ event: 'group_challenge_complete.start' });
+    try {
+      const expired = await this.prisma.groupChallenge.findMany({
+        where: {
+          status: 'active',
+          endDate: { lt: new Date() },
+          winnerGroupId: null,
+        },
+      });
+
+      let processed = 0;
+      for (const c of expired) {
+        const winnerGroupId =
+          c.groupAXp >= c.groupBXp ? c.groupAId : c.groupBId;
+        const loserGroupId = c.groupAXp >= c.groupBXp ? c.groupBId : c.groupAId;
+
+        const [winners, losers] = await Promise.all([
+          this.prisma.user.findMany({
+            where: {
+              tenantId: c.tenantId,
+              branchId: winnerGroupId,
+              role: 'student',
+              status: 'active',
+            },
+            select: { id: true },
+          }),
+          this.prisma.user.findMany({
+            where: {
+              tenantId: c.tenantId,
+              branchId: loserGroupId,
+              role: 'student',
+              status: 'active',
+            },
+            select: { id: true },
+          }),
+        ]);
+
+        for (const w of winners) {
+          await this.xp
+            .award(w.id, 'challenge_winner', { challengeId: c.id })
+            .catch((err) =>
+              this.logger.warn(
+                `challenge_winner XP failed user=${w.id}: ${(err as Error).message}`,
+              ),
+            );
+        }
+        for (const l of losers) {
+          await this.xp
+            .award(l.id, 'challenge_consolation', { challengeId: c.id })
+            .catch((err) =>
+              this.logger.warn(
+                `challenge_consolation XP failed user=${l.id}: ${(err as Error).message}`,
+              ),
+            );
+        }
+
+        await this.prisma.groupChallenge.update({
+          where: { id: c.id },
+          data: { winnerGroupId, status: 'completed' },
+        });
+
+        // Look up branch names so the feed event can render nicely.
+        const [winnerBranch, loserBranch] = await Promise.all([
+          this.prisma.branch
+            .findUnique({
+              where: { id: winnerGroupId },
+              select: { name: true },
+            })
+            .catch(() => null),
+          this.prisma.branch
+            .findUnique({
+              where: { id: loserGroupId },
+              select: { name: true },
+            })
+            .catch(() => null),
+        ]);
+
+        this.events?.emit('feed.challenge_won', {
+          challengeId: c.id,
+          tenantId: c.tenantId,
+          winnerGroupId,
+          loserGroupId,
+          winnerGroupName: winnerBranch?.name ?? winnerGroupId,
+          loserGroupName: loserBranch?.name ?? loserGroupId,
+          winnerXp: XP_AMOUNTS.CHALLENGE_WINNER,
+          loserXp: XP_AMOUNTS.CHALLENGE_CONSOLATION,
+        });
+
+        processed++;
+      }
+
+      this.logger.log({
+        event: 'group_challenge_complete.done',
+        processed,
+      });
+    } catch (err) {
+      this.logger.error(
+        `group_challenge_complete.failed: ${(err as Error).message}`,
       );
     }
   }

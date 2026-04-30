@@ -53,6 +53,18 @@ export const DEFAULT_TEMPLATES: Record<string, string> = {
     '⚠️ Filial {branchName} yuz tanish keshi {staleDays} kun yangilanmagan. Internet aloqasini tekshiring.',
   'face.enrollment_reminder':
     "⚠️ Filial {branchName} hali ba'zi xodimlar yuzini ro'yxatdan o'tkazmagan: {namesList}. Iltimos, ro'yxatdan o'tkazing.",
+
+  // Spaced repetition (§15.4)
+  'spaced_repetition.morning':
+    '📚 Bugun {count} ta dars takrorlash uchun. Birinchisi: "{firstLessonTitle}". Davom etish uchun ilovaga kiring.',
+
+  // Tasks (§9 task_due_reminder)
+  'task.due_tomorrow':
+    '⏰ Vazifa muddati ertaga: "{title}". Iltimos, bugun yakunlang.',
+
+  // Payment unblock monitoring (§15.3)
+  'unblock.failed_monitoring':
+    "🚨 {count} ta o'quvchining unblock_at vaqti o'tdi, ammo ular hali bloklanganlikda qolmoqda: {userIds}. Tekshirib ko'ring.",
 };
 
 @Injectable()

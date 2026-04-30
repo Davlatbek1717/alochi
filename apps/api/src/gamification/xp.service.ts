@@ -9,6 +9,9 @@ export const XP_AMOUNTS = {
   DAILY_QUEST: 75,
   DUEL_WIN: 50,
   DUEL_PARTICIPATE: 10,
+  // Spec §7.1 — group challenge outcomes (awarded by cron on expiry).
+  CHALLENGE_WINNER: 500,
+  CHALLENGE_CONSOLATION: 100,
 } as const;
 
 type XpReasonKey = keyof typeof XP_AMOUNTS;

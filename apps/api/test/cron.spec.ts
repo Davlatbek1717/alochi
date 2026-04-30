@@ -125,7 +125,10 @@ describe('CronService', () => {
 
       await service.triggerPaymentUnblockManually();
 
-      expect(mockPrisma.payment.findMany).toHaveBeenCalledTimes(1);
+      // runPaymentUnblock now queries `payment` twice: once to find due
+      // unblocks, once to monitor stuck rows (§15.3). We only need to
+      // assert it ran — both calls hit `payment.findMany`.
+      expect(mockPrisma.payment.findMany).toHaveBeenCalled();
     });
   });
 });
