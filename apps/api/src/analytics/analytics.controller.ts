@@ -1,4 +1,13 @@
-import { Controller, Get, Query, UseGuards, Request, ParseEnumPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Request,
+  ParseEnumPipe,
+  Req,
+  Param,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -38,5 +47,39 @@ export class AnalyticsController {
     period: ActivityPeriod = ActivityPeriod.monthly,
   ) {
     return this.analytics.getStudentActivity(req.user.tenantId, period);
+  }
+
+  @Get('cohort')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getCohort(@Req() req: any, @Query('weeks') weeks?: string) {
+    const w = weeks ? Math.min(Math.max(parseInt(weeks, 10) || 8, 1), 26) : 8;
+    return this.analytics.getCohortRetention(req.user.tenantId, w);
+  }
+
+  @Get('funnel/:lessonId')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getFunnel(@Req() req: any, @Param('lessonId') lessonId: string) {
+    return this.analytics.getFunnel(req.user.tenantId, lessonId);
+  }
+
+  @Get('lifecycle')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getLifecycle(@Req() req: any) {
+    return this.analytics.getLifecycle(req.user.tenantId);
+  }
+
+  @Get('failures')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getFailures(@Req() req: any, @Query('limit') limit?: string) {
+    const lim = limit
+      ? Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100)
+      : 10;
+    return this.analytics.getTopFailures(req.user.tenantId, lim);
+  }
+
+  @Get('comparison')
+  @Roles(UserRole.superadmin)
+  getComparison() {
+    return this.analytics.getTenantComparison();
   }
 }

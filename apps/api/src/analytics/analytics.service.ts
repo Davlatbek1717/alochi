@@ -72,6 +72,223 @@ export class AnalyticsService {
     return rows.map((r) => ({ day: r.day, count: Number(r.count) }));
   }
 
+  async getCohortRetention(
+    tenantId: string,
+    weeks = 8,
+  ): Promise<
+    Array<{
+      cohortWeek: string;
+      size: number;
+      retention: Record<string, number>;
+    }>
+  > {
+    type Row = {
+      cohort_week: string;
+      week_offset: string;
+      cohort_size: string;
+      active: string;
+    };
+    const rows = await this.clickhouse.query<Row>(
+      `WITH cohort AS (
+         SELECT
+           tenant_id,
+           student_id,
+           toStartOfWeek(min(created_at)) AS cohort_week
+         FROM events
+         WHERE tenant_id = {tenantId:UUID} AND student_id IS NOT NULL
+         GROUP BY tenant_id, student_id
+       ),
+       activity AS (
+         SELECT
+           e.tenant_id,
+           c.cohort_week,
+           dateDiff('week', c.cohort_week, toStartOfWeek(e.created_at)) AS week_offset,
+           e.student_id
+         FROM events e
+         INNER JOIN cohort c ON e.student_id = c.student_id AND e.tenant_id = c.tenant_id
+         WHERE e.tenant_id = {tenantId:UUID}
+           AND c.cohort_week >= today() - INTERVAL {weeks:UInt16} WEEK
+       )
+       SELECT
+         toString(cohort_week) AS cohort_week,
+         toString(week_offset) AS week_offset,
+         toString(uniqExact(student_id) OVER (PARTITION BY cohort_week)) AS cohort_size,
+         toString(uniqExact(student_id)) AS active
+       FROM activity
+       WHERE week_offset >= 0 AND week_offset <= {weeks:UInt16}
+       GROUP BY cohort_week, week_offset
+       ORDER BY cohort_week DESC, week_offset ASC`,
+      { tenantId, weeks },
+    );
+
+    const grouped = new Map<
+      string,
+      { size: number; retention: Record<string, number> }
+    >();
+    for (const r of rows) {
+      const cohortWeek = r.cohort_week;
+      const offset = Number(r.week_offset);
+      const size = Number(r.cohort_size);
+      const active = Number(r.active);
+      const pct = size === 0 ? 0 : Math.round((active * 100) / size);
+      if (!grouped.has(cohortWeek)) {
+        grouped.set(cohortWeek, { size, retention: {} });
+      }
+      const entry = grouped.get(cohortWeek)!;
+      entry.size = size;
+      if (offset >= 0) entry.retention[`week${offset}`] = pct;
+    }
+    return Array.from(grouped.entries()).map(([cohortWeek, v]) => ({
+      cohortWeek,
+      size: v.size,
+      retention: v.retention,
+    }));
+  }
+
+  async getFunnel(
+    tenantId: string,
+    lessonId: string,
+  ): Promise<Array<{ step: string; count: number }>> {
+    const rows = await this.clickhouse.query<{
+      event_type: string;
+      cnt: string;
+    }>(
+      `SELECT event_type, toString(uniqExact(student_id)) AS cnt
+       FROM events
+       WHERE tenant_id = {tenantId:UUID}
+         AND lesson_id = {lessonId:UUID}
+         AND event_type IN ('lesson_session', 'lesson_failed', 'lesson_completed')
+       GROUP BY event_type`,
+      { tenantId, lessonId },
+    );
+    const counts: Record<string, number> = {};
+    for (const r of rows) counts[r.event_type] = Number(r.cnt);
+
+    return [
+      { step: 'Sessiya boshlangan', count: counts['lesson_session'] ?? 0 },
+      {
+        step: 'Test topshirgan',
+        count: (counts['lesson_session'] ?? 0) - (counts['lesson_failed'] ?? 0),
+      },
+      {
+        step: 'Muvaffaqiyatli yakunlangan',
+        count: counts['lesson_completed'] ?? 0,
+      },
+    ];
+  }
+
+  async getLifecycle(
+    tenantId: string,
+  ): Promise<{ dau: number; wau: number; mau: number; stickiness: number }> {
+    const rows = await this.clickhouse.query<{
+      dau: string;
+      wau: string;
+      mau: string;
+    }>(
+      `SELECT
+         toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 1 DAY)) AS dau,
+         toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 7 DAY)) AS wau,
+         toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 30 DAY)) AS mau
+       FROM events
+       WHERE tenant_id = {tenantId:UUID} AND student_id IS NOT NULL`,
+      { tenantId },
+    );
+    if (rows.length === 0) return { dau: 0, wau: 0, mau: 0, stickiness: 0 };
+    const dau = Number(rows[0].dau);
+    const wau = Number(rows[0].wau);
+    const mau = Number(rows[0].mau);
+    const stickiness = mau === 0 ? 0 : Math.round((dau * 100) / mau) / 100;
+    return { dau, wau, mau, stickiness };
+  }
+
+  async getTopFailures(
+    tenantId: string,
+    limit = 10,
+  ): Promise<
+    Array<{
+      lessonId: string;
+      failedCount: number;
+      completedCount: number;
+      failureRate: number;
+    }>
+  > {
+    const rows = await this.clickhouse.query<{
+      lesson_id: string;
+      failed: string;
+      completed: string;
+    }>(
+      `SELECT
+         toString(lesson_id) AS lesson_id,
+         toString(sum(failed_count)) AS failed,
+         toString(sum(completed_count)) AS completed
+       FROM lesson_failures
+       WHERE tenant_id = {tenantId:UUID}
+       GROUP BY lesson_id
+       HAVING failed > 0
+       ORDER BY failed DESC
+       LIMIT {limit:UInt16}`,
+      { tenantId, limit },
+    );
+    return rows.map((r) => {
+      const failed = Number(r.failed);
+      const completed = Number(r.completed);
+      const total = failed + completed;
+      return {
+        lessonId: r.lesson_id,
+        failedCount: failed,
+        completedCount: completed,
+        failureRate: total === 0 ? 0 : Math.round((failed * 100) / total),
+      };
+    });
+  }
+
+  async getTenantComparison(): Promise<
+    Array<{
+      tenantId: string;
+      tenantName: string;
+      dau: number;
+      eventsLast30d: number;
+    }>
+  > {
+    const tenants = await this.prisma.tenant.findMany({
+      select: { id: true, name: true },
+      where: { status: 'active' },
+    });
+
+    if (tenants.length === 0) return [];
+
+    const tenantIds = tenants.map((t) => t.id);
+    const rows = await this.clickhouse.query<{
+      tenant_id: string;
+      dau: string;
+      events_30d: string;
+    }>(
+      `SELECT
+         toString(tenant_id) AS tenant_id,
+         toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 1 DAY)) AS dau,
+         toString(countIf(created_at >= now() - INTERVAL 30 DAY)) AS events_30d
+       FROM events
+       WHERE tenant_id IN {tenantIds:Array(UUID)}
+       GROUP BY tenant_id`,
+      { tenantIds },
+    );
+
+    const statsMap = new Map<string, { dau: number; eventsLast30d: number }>();
+    for (const r of rows) {
+      statsMap.set(r.tenant_id, {
+        dau: Number(r.dau),
+        eventsLast30d: Number(r.events_30d),
+      });
+    }
+
+    return tenants.map((t) => ({
+      tenantId: t.id,
+      tenantName: t.name,
+      dau: statsMap.get(t.id)?.dau ?? 0,
+      eventsLast30d: statsMap.get(t.id)?.eventsLast30d ?? 0,
+    }));
+  }
+
   async logEvent(params: {
     tenantId: string;
     eventType: string;
