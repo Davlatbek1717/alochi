@@ -1,12 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { RefreshCw, BarChart2, Trophy, GraduationCap } from 'lucide-react';
+import { RefreshCw, BarChart2, Trophy, GraduationCap, Award } from 'lucide-react';
 import { XpBar } from './_components/XpBar';
 import { StreakBadge } from './_components/StreakBadge';
 import { DailyQuests } from './_components/DailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
 import VirtualCity from './_components/VirtualCity';
+import PathMap500 from '@/components/PathMap500';
+import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
 import { Button, Skeleton, SkeletonCard } from '@/components/ui';
 
@@ -53,6 +55,14 @@ type Warning = {
   createdAt: string;
 };
 
+type Certificate = {
+  id: string;
+  level: string;
+  lessonsCompleted: number;
+  qrCode?: string;
+  issuedAt: string;
+};
+
 const STATUS_COLOR: Record<string, string> = {
   yashil: '🟢',
   sariq: '🟡',
@@ -71,13 +81,14 @@ export default function StudentDashboard() {
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes, certsRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
@@ -86,6 +97,7 @@ export default function StudentDashboard() {
           apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
           apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
           apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
+          apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -96,6 +108,7 @@ export default function StudentDashboard() {
         setStatusData(statusRes.data);
         setWarnings(warningsRes.data ?? []);
         setReviewItems(reviewRes.data ?? []);
+        setCertificates(certsRes.data ?? []);
       } catch {
         // keep defaults on error
       } finally {
@@ -169,6 +182,44 @@ export default function StudentDashboard() {
       </div>
 
       <DailyQuests quests={quests} />
+
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Yo&apos;l xaritasi
+        </p>
+        <PathMap500 currentStep={lessonProgress} />
+        <p className="text-xs text-gray-500 mt-2 text-right">
+          {lessonProgress} / 500 dars
+        </p>
+      </div>
+
+      {certificates.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Award size={16} className="text-amber-500" />
+            <h2 className="font-bold text-gray-800 text-sm">Sertifikatlar</h2>
+            <span className="text-xs text-gray-500">{certificates.length} ta</span>
+          </div>
+          <div className="space-y-3">
+            {certificates.slice(0, 3).map((cert) => (
+              <div
+                key={cert.id}
+                className="border border-amber-100 bg-amber-50/40 rounded-xl p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-amber-700 text-sm capitalize">
+                    {cert.level} sertifikati
+                  </p>
+                  <span className="text-xs text-gray-500">
+                    {cert.lessonsCompleted} dars
+                  </span>
+                </div>
+                <CertificateShare cert={cert} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {cityData && (
         <VirtualCity

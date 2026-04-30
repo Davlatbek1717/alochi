@@ -10,6 +10,11 @@ const mockPrisma = {
   studentLessonConfig: {
     upsert: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  kpiOverrideLog: {
+    create: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
@@ -42,14 +47,43 @@ describe('StudentConfigService', () => {
         id: 'l-1',
         maxNOverride: 10,
       });
+      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue(null);
       mockPrisma.studentLessonConfig.upsert.mockResolvedValue({
         nRepetitionsOverride: 5,
       });
+      mockPrisma.kpiOverrideLog.create.mockResolvedValue({ id: 'log-1' });
 
       const result = await service.setNOverride(baseDto);
 
       expect(mockPrisma.studentLessonConfig.upsert).toHaveBeenCalled();
       expect(result.nRepetitionsOverride).toBe(5);
+    });
+
+    it('writes a kpiOverrideLog row capturing previous N (Phase 20.9)', async () => {
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l-1',
+        maxNOverride: 10,
+      });
+      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue({
+        nRepetitionsOverride: 3,
+      });
+      mockPrisma.studentLessonConfig.upsert.mockResolvedValue({
+        nRepetitionsOverride: 5,
+      });
+      mockPrisma.kpiOverrideLog.create.mockResolvedValue({ id: 'log-1' });
+
+      await service.setNOverride({ ...baseDto, reason: 'too easy' });
+
+      expect(mockPrisma.kpiOverrideLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          studentId: 's-1',
+          lessonId: 'l-1',
+          oldN: 3,
+          newN: 5,
+          changedBy: 'm-1',
+          reason: 'too easy',
+        }),
+      });
     });
 
     it('throws BadRequestException when nRepetitions is below 1', async () => {
@@ -92,6 +126,22 @@ describe('StudentConfigService', () => {
 
       expect(mockPrisma.studentLessonConfig.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { studentId: 's-1' } }),
+      );
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('getOverrideHistory', () => {
+    it('returns override history for student/lesson pair', async () => {
+      const rows = [{ id: 'log-1', oldN: 3, newN: 5 }];
+      mockPrisma.kpiOverrideLog.findMany.mockResolvedValue(rows);
+
+      const result = await service.getOverrideHistory('s-1', 'l-1');
+
+      expect(mockPrisma.kpiOverrideLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { studentId: 's-1', lessonId: 'l-1' },
+        }),
       );
       expect(result).toHaveLength(1);
     });

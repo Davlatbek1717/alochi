@@ -57,6 +57,18 @@ export class AdaptiveService {
     });
   }
 
+  async getLastRun() {
+    const last = await this.prisma.adaptiveDifficultyLog.findFirst({
+      orderBy: { changedAt: 'desc' },
+      select: { changedAt: true },
+    });
+    const totalLogged = await this.prisma.adaptiveDifficultyLog.count();
+    return {
+      lastRunAt: last?.changedAt ?? null,
+      totalLogged,
+    };
+  }
+
   async runNightlyAdaptation(tenantId: string) {
     const config = await this.getAdaptiveConfig(tenantId);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

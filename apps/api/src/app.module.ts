@@ -37,6 +37,11 @@ import { AdaptiveModule } from './adaptive/adaptive.module';
 import { ContentQualityModule } from './content-quality/content-quality.module';
 import { ClickHouseModule } from './clickhouse/clickhouse.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { CultureLessonsModule } from './culture-lessons/culture-lessons.module';
+import { LetterCollectionModule } from './letter-collection/letter-collection.module';
+import { StaffGuidesModule } from './staff-guides/staff-guides.module';
+import { PromotionReportModule } from './promotion-report/promotion-report.module';
+import { ManagerSessionsModule } from './manager-sessions/manager-sessions.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -82,6 +87,11 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ContentQualityModule,
     ClickHouseModule,
     AnalyticsModule,
+    CultureLessonsModule,
+    LetterCollectionModule,
+    StaffGuidesModule,
+    PromotionReportModule,
+    ManagerSessionsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -15,11 +15,22 @@ interface Lesson {
   title: string;
   type: string;
   orderNumber: number;
+  subcategory?: string | null;
+  orderInSubcategory?: number | null;
   youtubeUrl: string;
   nRepetitions: number;
   isPublished: boolean;
   components: Record<string, boolean>;
 }
+
+const SUBCATEGORY_TABS = [
+  { key: 'all', label: 'Hammasi', count: 500 },
+  { key: 'worldview', label: 'Dunyoqarash (100)', count: 100 },
+  { key: 'critical_thinking', label: 'Tanqidiy (50)', count: 50 },
+  { key: 'skill_20', label: "Ko'nikma (50)", count: 50 },
+  { key: 'experiment', label: 'Eksperiment (50)', count: 50 },
+  { key: 'culture', label: 'Madaniyat', count: 0 },
+] as const;
 
 const TYPE_LABELS: Record<string, string> = {
   english: 'Ingliz tili',
@@ -40,6 +51,7 @@ export default function SuperadminLessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('all');
   const toast = useToast();
 
   useEffect(() => {
@@ -90,6 +102,38 @@ export default function SuperadminLessonsPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="px-4 pt-3 overflow-x-auto">
+        <div className="flex gap-2 pb-1">
+          {SUBCATEGORY_TABS.map((tab) => {
+            const count =
+              tab.key === 'all'
+                ? lessons.length
+                : lessons.filter((l) => l.subcategory === tab.key).length;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors ${
+                  isActive
+                    ? 'bg-[#0d9488] text-white border-[#0d9488]'
+                    : 'bg-white text-[#64748b] border-[#ede9e1] hover:bg-[#f7f4ef]'
+                }`}
+              >
+                {tab.label}{' '}
+                <span
+                  className={`ml-1 ${isActive ? 'text-white/80' : 'text-[#94a3b8]'}`}
+                >
+                  ({count})
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-3">
         {loading ? (
@@ -101,7 +145,12 @@ export default function SuperadminLessonsPage() {
               </div>
             ))}
           </div>
-        ) : lessons.length === 0 ? (
+        ) : (() => {
+          const filteredLessons =
+            activeTab === 'all'
+              ? lessons
+              : lessons.filter((l) => l.subcategory === activeTab);
+          return filteredLessons.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
             <EmptyState
               icon={<BookOpen size={28} />}
@@ -120,8 +169,8 @@ export default function SuperadminLessonsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{lessons.length} ta dars</p>
-            {lessons.map((lesson) => (
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{filteredLessons.length} ta dars</p>
+            {filteredLessons.map((lesson) => (
               <div key={lesson.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -178,7 +227,8 @@ export default function SuperadminLessonsPage() {
               </div>
             ))}
           </div>
-        )}
+        );
+        })()}
       </div>
     </div>
   );

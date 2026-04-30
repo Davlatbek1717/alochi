@@ -20,8 +20,27 @@ interface AdaptiveConfig {
   easyThreshold: number;
 }
 
+interface LastRunInfo {
+  lastRunAt: string | null;
+  totalLogged: number;
+}
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return 'hech qachon';
+  const then = new Date(iso).getTime();
+  const diffMs = Date.now() - then;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'hozirgina';
+  if (mins < 60) return `${mins} daqiqa oldin`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} soat oldin`;
+  const days = Math.floor(hrs / 24);
+  return `${days} kun oldin`;
+}
+
 export default function AdaptivePage() {
   const [config, setConfig] = useState<AdaptiveConfig | null>(null);
+  const [lastRun, setLastRun] = useState<LastRunInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
@@ -29,8 +48,16 @@ export default function AdaptivePage() {
   const token = () => localStorage.getItem('accessToken') ?? '';
 
   useEffect(() => {
-    apiRequest<AdaptiveConfig>('/adaptive/config', {}, token())
-      .then((r) => setConfig(r.data))
+    Promise.all([
+      apiRequest<AdaptiveConfig>('/adaptive/config', {}, token()),
+      apiRequest<LastRunInfo>('/adaptive/last-run', {}, token()).catch(
+        () => ({ data: { lastRunAt: null, totalLogged: 0 } as LastRunInfo }),
+      ),
+    ])
+      .then(([cfg, last]) => {
+        setConfig(cfg.data);
+        setLastRun(last.data);
+      })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -88,6 +115,25 @@ export default function AdaptivePage() {
         description="N-back algoritmi parametrlarini boshqaring"
         iconColor="text-blue-400"
       />
+
+      {lastRun && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Oxirgi adaptatsiya</CardTitle>
+            <CardDescription>
+              {lastRun.lastRunAt
+                ? `${new Date(lastRun.lastRunAt).toLocaleString('uz-UZ')} (${formatRelative(lastRun.lastRunAt)})`
+                : 'Hech qachon ishlamagan'}
+            </CardDescription>
+          </CardHeader>
+          <p className="text-sm text-slate-300">
+            Jami log yozuvlari:{' '}
+            <span className="font-bold text-blue-400">
+              {lastRun.totalLogged}
+            </span>
+          </p>
+        </Card>
+      )}
 
       {config && (
         <Card>

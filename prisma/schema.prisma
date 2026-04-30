@@ -79,44 +79,52 @@ model User {
   parentTelegramId String?    @map("parent_telegram_id")
   createdAt        DateTime   @default(now()) @map("created_at")
 
-  tenant                  Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch                  Branch?                    @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  refreshTokens           RefreshToken[]
-  studentProgress         StudentProgress[]          @relation("StudentProgress")
-  studentConfigs          StudentLessonConfig[]      @relation("StudentConfig")
-  managedConfigs          StudentLessonConfig[]      @relation("ManagerConfig")
-  studentStatuses         StudentStatus[]            @relation("StudentStatuses")
-  studentAttendances      AttendanceStudent[]        @relation("StudentAttendances")
-  staffAttendances        AttendanceStaff[]          @relation("StaffAttendances")
-  kpiScores               KpiScore[]                 @relation("KpiScores")
-  studentWarnings         Warning[]                  @relation("StudentWarnings")
-  studentPayments         Payment[]                  @relation("StudentPayments")
-  delegationsFrom         Delegation[]               @relation("DelegationFrom")
-  delegationsTo           Delegation[]               @relation("DelegationTo")
-  faceEmbeddings          FaceEmbedding[]            @relation("FaceEmbeddings")
-  faceRecognitionLogs     FaceRecognitionLog[]       @relation("FaceRecognitionLogs")
-  studentXp               StudentXp?                 @relation("StudentXp")
-  xpEvents                XpEvent[]                  @relation("XpEvents")
-  examPermissions         ExamPermission[]           @relation("ExamStudent")
-  examsGranted            ExamPermission[]           @relation("ExamGranter")
-  dailyQuests             DailyQuest[]               @relation("DailyQuests")
-  certificates            Certificate[]              @relation("Certificates")
-  friendsAsUser           Friendship[]               @relation("UserFriends")
-  friendsAsFriend         Friendship[]               @relation("FriendOf")
-  challengerDuels         Duel[]                     @relation("DuelChallenger")
-  challengedDuels         Duel[]                     @relation("DuelChallenged")
-  groupMessages           GroupMessage[]             @relation("GroupMessages")
-  feedEvents              SocialFeedEvent[]          @relation("FeedEventActor")
-  tasksCreated            Task[]                     @relation("TaskCreator")
-  tasksAssigned           Task[]                     @relation("TaskAssignee")
-  notifications           Notification[]
-  spacedRepetitionItems   SpacedRepetitionItem[]     @relation("SpacedRepetitionItems")
-  errorLogs               ErrorLog[]                 @relation("ErrorLogs")
-  tournamentRegistrations TournamentRegistration[]   @relation("TournamentRegistrations")
-  adaptiveLogs            AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
-  lessonFeedbacks         LessonFeedback[]           @relation("LessonFeedbacks")
-  variantAssignments      StudentVariantAssignment[] @relation("VariantAssignments")
-  churnScore              ChurnScore?                @relation("ChurnScores")
+  tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch                   Branch?                    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  refreshTokens            RefreshToken[]
+  studentProgress          StudentProgress[]          @relation("StudentProgress")
+  studentConfigs           StudentLessonConfig[]      @relation("StudentConfig")
+  managedConfigs           StudentLessonConfig[]      @relation("ManagerConfig")
+  studentStatuses          StudentStatus[]            @relation("StudentStatuses")
+  studentAttendances       AttendanceStudent[]        @relation("StudentAttendances")
+  staffAttendances         AttendanceStaff[]          @relation("StaffAttendances")
+  kpiScores                KpiScore[]                 @relation("KpiScores")
+  studentWarnings          Warning[]                  @relation("StudentWarnings")
+  studentPayments          Payment[]                  @relation("StudentPayments")
+  delegationsFrom          Delegation[]               @relation("DelegationFrom")
+  delegationsTo            Delegation[]               @relation("DelegationTo")
+  faceEmbeddings           FaceEmbedding[]            @relation("FaceEmbeddings")
+  faceRecognitionLogs      FaceRecognitionLog[]       @relation("FaceRecognitionLogs")
+  studentXp                StudentXp?                 @relation("StudentXp")
+  xpEvents                 XpEvent[]                  @relation("XpEvents")
+  examPermissions          ExamPermission[]           @relation("ExamStudent")
+  examsGranted             ExamPermission[]           @relation("ExamGranter")
+  dailyQuests              DailyQuest[]               @relation("DailyQuests")
+  certificates             Certificate[]              @relation("Certificates")
+  friendsAsUser            Friendship[]               @relation("UserFriends")
+  friendsAsFriend          Friendship[]               @relation("FriendOf")
+  challengerDuels          Duel[]                     @relation("DuelChallenger")
+  challengedDuels          Duel[]                     @relation("DuelChallenged")
+  groupMessages            GroupMessage[]             @relation("GroupMessages")
+  feedEvents               SocialFeedEvent[]          @relation("FeedEventActor")
+  tasksCreated             Task[]                     @relation("TaskCreator")
+  tasksAssigned            Task[]                     @relation("TaskAssignee")
+  notifications            Notification[]
+  spacedRepetitionItems    SpacedRepetitionItem[]     @relation("SpacedRepetitionItems")
+  errorLogs                ErrorLog[]                 @relation("ErrorLogs")
+  tournamentRegistrations  TournamentRegistration[]   @relation("TournamentRegistrations")
+  adaptiveLogs             AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
+  lessonFeedbacks          LessonFeedback[]           @relation("LessonFeedbacks")
+  variantAssignments       StudentVariantAssignment[] @relation("VariantAssignments")
+  churnScore               ChurnScore?                @relation("ChurnScores")
+  cultureAttendances       CultureLessonAttendance[]  @relation("CultureAttendances")
+  studentLetters           StudentLetter[]            @relation("StudentLetters")
+  staffVideoGuidesCreated  StaffVideoGuide[]          @relation("StaffVideoGuideCreator")
+  promotionReports         PromotionReport[]          @relation("FiladminPromotionReports")
+  managerSessions          ManagerSession[]           @relation("ManagerSessionsManager")
+  studentSessions          ManagerSession[]           @relation("ManagerSessionsStudent")
+  kpiOverrideLogsAsStudent KpiOverrideLog[]           @relation("KpiOverrideLogStudent")
+  kpiOverrideLogsAsActor   KpiOverrideLog[]           @relation("KpiOverrideLogChangedBy")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -146,19 +154,21 @@ enum LessonType {
 }
 
 model Lesson {
-  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId     String     @map("tenant_id") @db.Uuid
-  title        String
-  type         LessonType
-  orderNumber  Int        @map("order_number")
-  youtubeUrl   String     @map("youtube_url")
-  nRepetitions Int        @default(3) @map("n_repetitions")
-  maxNOverride Int        @default(10) @map("max_n_override")
-  components   Json       @default("{}")
-  hasExam      Boolean    @default(false) @map("has_exam")
-  isPublished  Boolean    @default(false) @map("is_published")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id                 String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId           String     @map("tenant_id") @db.Uuid
+  title              String
+  type               LessonType
+  orderNumber        Int        @map("order_number")
+  subcategory        String?
+  orderInSubcategory Int?       @map("order_in_subcategory")
+  youtubeUrl         String     @map("youtube_url")
+  nRepetitions       Int        @default(3) @map("n_repetitions")
+  maxNOverride       Int        @default(10) @map("max_n_override")
+  components         Json       @default("{}")
+  hasExam            Boolean    @default(false) @map("has_exam")
+  isPublished        Boolean    @default(false) @map("is_published")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
 
   tenant             Tenant                     @relation(fields: [tenantId], references: [id])
   components_data    LessonComponent[]
@@ -170,6 +180,7 @@ model Lesson {
   feedbacks          LessonFeedback[]           @relation("LessonFeedbacks")
   variants           LessonVariant[]            @relation("LessonVariants")
   variantAssignments StudentVariantAssignment[] @relation("VariantAssignments")
+  kpiOverrideLogs    KpiOverrideLog[]           @relation("KpiOverrideLogLesson")
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, isPublished])
@@ -987,4 +998,120 @@ model AnalyticsEvent {
   @@index([tenantId, eventType, createdAt])
   @@index([tenantId, branchId, createdAt])
   @@map("analytics_events")
+}
+
+// ---- PHASE 20: Master spec big features ----
+
+// 20.2 Culture lesson attendance
+model CultureLessonAttendance {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  staffId     String    @map("staff_id") @db.Uuid
+  date        DateTime  @db.Date
+  completedAt DateTime? @map("completed_at")
+  notes       String?
+
+  staff User @relation("CultureAttendances", fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@map("culture_lesson_attendance")
+}
+
+// 20.5 Letter collection (36 letters: A-Z + 10 special)
+model Letter {
+  id       String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  char     String @unique
+  imageUrl String @map("image_url")
+  rarity   String @default("common")
+
+  studentLetters StudentLetter[]
+
+  @@map("letters")
+}
+
+model StudentLetter {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  letterId  String   @map("letter_id") @db.Uuid
+  earnedAt  DateTime @default(now()) @map("earned_at")
+
+  student User   @relation("StudentLetters", fields: [studentId], references: [id], onDelete: Cascade)
+  letter  Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, letterId])
+  @@index([studentId])
+  @@map("student_letters")
+}
+
+// 20.6 Staff video guides
+model StaffVideoGuide {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  title     String
+  role      String
+  videoUrl  String   @map("video_url")
+  order     Int      @default(0)
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  creator User? @relation("StaffVideoGuideCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, role])
+  @@map("staff_video_guides")
+}
+
+// 20.7 Promotion report
+model PromotionReport {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  filadminId      String   @map("filadmin_id") @db.Uuid
+  branchId        String   @map("branch_id") @db.Uuid
+  schoolName      String   @map("school_name")
+  studentsReached Int      @default(0) @map("students_reached")
+  visitDate       DateTime @map("visit_date") @db.Date
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  filadmin User @relation("FiladminPromotionReports", fields: [filadminId], references: [id], onDelete: Cascade)
+
+  @@index([filadminId])
+  @@index([branchId])
+  @@map("promotion_reports")
+}
+
+// 20.8 Manager 1:1 sessions
+model ManagerSession {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  managerId   String    @map("manager_id") @db.Uuid
+  studentId   String    @map("student_id") @db.Uuid
+  scheduledAt DateTime  @map("scheduled_at")
+  completedAt DateTime? @map("completed_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  manager User @relation("ManagerSessionsManager", fields: [managerId], references: [id], onDelete: Cascade)
+  student User @relation("ManagerSessionsStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([managerId, scheduledAt])
+  @@index([studentId])
+  @@map("manager_sessions")
+}
+
+// 20.9 KPI override log (audit on student-lesson-config upserts)
+model KpiOverrideLog {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  lessonId  String   @map("lesson_id") @db.Uuid
+  oldN      Int?     @map("old_n")
+  newN      Int      @map("new_n")
+  changedBy String?  @map("changed_by") @db.Uuid
+  reason    String?
+  changedAt DateTime @default(now()) @map("changed_at")
+
+  student User   @relation("KpiOverrideLogStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation("KpiOverrideLogLesson", fields: [lessonId], references: [id], onDelete: Cascade)
+  actor   User?  @relation("KpiOverrideLogChangedBy", fields: [changedBy], references: [id], onDelete: SetNull)
+
+  @@index([studentId, lessonId])
+  @@index([changedAt])
+  @@map("kpi_override_log")
 }

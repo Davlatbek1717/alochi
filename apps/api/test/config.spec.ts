@@ -10,6 +10,11 @@ describe('StudentConfigService (N Override)', () => {
     studentLessonConfig: {
       upsert: jest.fn().mockResolvedValue({ nRepetitionsOverride: 5 }),
       findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
+    kpiOverrideLog: {
+      create: jest.fn().mockResolvedValue({ id: 'log-1' }),
+      findMany: jest.fn().mockResolvedValue([]),
     },
   };
 

@@ -42,4 +42,13 @@ export class StudentConfigController {
   getConfigs(@Param('studentId') studentId: string) {
     return this.config.getStudentConfigs(studentId);
   }
+
+  @Get(':studentId/:lessonId/history')
+  @Roles(UserRole.manager, UserRole.filadmin, UserRole.superadmin)
+  getOverrideHistory(
+    @Param('studentId') studentId: string,
+    @Param('lessonId') lessonId: string,
+  ) {
+    return this.config.getOverrideHistory(studentId, lessonId);
+  }
 }

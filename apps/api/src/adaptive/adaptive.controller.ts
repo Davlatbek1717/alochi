@@ -38,4 +38,10 @@ export class AdaptiveController {
   getLogs(@Param('studentId') studentId: string) {
     return this.adaptive.getStudentAdaptiveLogs(studentId);
   }
+
+  @Get('last-run')
+  @Roles(UserRole.superadmin)
+  getLastRun() {
+    return this.adaptive.getLastRun();
+  }
 }
