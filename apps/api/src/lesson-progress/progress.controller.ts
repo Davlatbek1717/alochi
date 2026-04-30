@@ -58,4 +58,15 @@ export class ProgressController {
   myProgress(@Request() req: any) {
     return this.progress.getStudentProgress(req.user.userId);
   }
+
+  /**
+   * GET /progress/:studentId/summary — staff-facing roll-up used by the
+   * mentor student-detail header (lesson count chip). Returns the count
+   * of academy-completed lessons for the student.
+   */
+  @Get(':studentId/summary')
+  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
+  getSummary(@Param('studentId') studentId: string) {
+    return this.progress.getSummary(studentId);
+  }
 }

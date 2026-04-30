@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, AlertTriangle } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
+import { ArrowLeft, Sparkles, AlertTriangle, Send } from 'lucide-react';
+import { apiRequest, ApiError } from '@/lib/api';
+import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { useToast } from '@/components/ui';
 
 type AnalysisResult = {
   weakAreas: string[];
@@ -11,13 +13,34 @@ type AnalysisResult = {
 
 type Student = { id: string; name: string; role: string };
 
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return payload.branchId ?? null;
-  } catch {
-    return null;
+type LatestStatus = {
+  englishStatus?: string | null;
+  personalStatus?: string | null;
+  criticalStatus?: string | null;
+} | null;
+
+type ProgressSummary = {
+  studentId: string;
+  completed: number;
+  inProgress: number;
+};
+
+const STATUS_LABELS_UZ: Record<string, string> = {
+  yashil: 'Yashil',
+  sariq: 'Sariq',
+  qizil: 'Qizil',
+};
+
+function statusChipColor(color: string | null | undefined): string {
+  switch (color) {
+    case 'yashil':
+      return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+    case 'sariq':
+      return 'bg-amber-100 text-amber-800 border border-amber-200';
+    case 'qizil':
+      return 'bg-rose-100 text-rose-700 border border-rose-200';
+    default:
+      return 'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]';
   }
 }
 
@@ -29,18 +52,32 @@ export default function StudentDetailPage() {
   const router = useRouter();
   const params = useParams();
   const studentId = params.id as string;
+  const { success, error: toastError } = useToast();
 
   const [studentName, setStudentName] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
   const [error, setError] = useState('');
+  const [latestStatus, setLatestStatus] = useState<LatestStatus>(null);
+  const [progressSummary, setProgressSummary] = useState<ProgressSummary | null>(null);
+
+  // Parent Telegram form
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    const groupId = getGroupIdFromToken();
     const branchId = getBranchIdFromToken();
+    const rosterPath = groupId
+      ? `/users/group/${groupId}`
+      : branchId
+        ? `/users/by-branch/${branchId}`
+        : null;
 
-    const fetchStudentName = branchId
-      ? apiRequest<Student[]>(`/users/by-branch/${branchId}`, {}, token)
+    const fetchStudentName = rosterPath
+      ? apiRequest<Student[]>(rosterPath, {}, token)
           .then((res) => {
             const found = res.data.find((u) => u.id === studentId);
             if (found) setStudentName(found.name);
@@ -57,8 +94,55 @@ export default function StudentDetailPage() {
       .catch(() => setError("Tahlil ma'lumotlarini yuklab bo'lmadi"))
       .finally(() => setLoadingAnalysis(false));
 
-    Promise.all([fetchStudentName, fetchAnalysis]);
+    const fetchStatus = apiRequest<LatestStatus>(`/status/${studentId}`, {}, token)
+      .then((res) => setLatestStatus(res.data))
+      .catch(() => {});
+
+    const fetchProgress = apiRequest<ProgressSummary>(
+      `/progress/${studentId}/summary`,
+      {},
+      token,
+    )
+      .then((res) => setProgressSummary(res.data))
+      .catch(() => {});
+
+    Promise.all([fetchStudentName, fetchAnalysis, fetchStatus, fetchProgress]);
   }, [studentId]);
+
+  // Pre-fill the parent message with the AI summary when it lands, but only
+  // if the mentor hasn't already started typing.
+  useEffect(() => {
+    if (!loadingAnalysis && analysis?.recommendation && !message) {
+      setMessage(analysis.recommendation);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingAnalysis, analysis?.recommendation]);
+
+  const sendToParent = useCallback(async () => {
+    if (!message.trim() || sending) return;
+    setSending(true);
+    setSent(false);
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      await apiRequest('/notifications/telegram', {
+        method: 'POST',
+        body: JSON.stringify({ studentId, message: message.trim() }),
+      }, token);
+      setSent(true);
+      success('Yuborildi');
+    } catch (err) {
+      const fallback = "Yuborib bo'lmadi";
+      const msg =
+        err instanceof ApiError
+          ? err.code === 'PARENT_TELEGRAM_NOT_LINKED'
+            ? "Ota-ona Telegram hisobi ulanmagan"
+            : err.message || fallback
+          : fallback;
+      toastError(msg);
+    } finally {
+      setSending(false);
+    }
+  }, [message, sending, studentId, success, toastError]);
 
   const severityColor = (index: number) => {
     if (index <= 1) return { dot: 'bg-[#e11d48] shadow-[0_0_6px_rgba(225,29,72,0.4)]', bar: 'bg-[#e11d48]' };
@@ -70,6 +154,9 @@ export default function StudentDetailPage() {
     const widths = [80, 60, 40, 20];
     return `${widths[index] ?? Math.max(10, 80 - index * 15)}%`;
   };
+
+  const personalStatus = latestStatus?.personalStatus ?? null;
+  const lessonCount = progressSummary?.completed ?? 0;
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
@@ -93,9 +180,19 @@ export default function StudentDetailPage() {
           </div>
           <div>
             <p className="text-white text-lg font-bold">{studentName || 'Yuklanmoqda...'}</p>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-wrap gap-2 mt-2">
               <span className="text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[#94a3b8]">
                 o&apos;quvchi
+              </span>
+              {personalStatus && (
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusChipColor(personalStatus)}`}
+                >
+                  {STATUS_LABELS_UZ[personalStatus] ?? personalStatus}
+                </span>
+              )}
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                {lessonCount} ta dars
               </span>
             </div>
           </div>
@@ -171,6 +268,51 @@ export default function StudentDetailPage() {
             </p>
           </div>
         )}
+
+        {/* Parent Telegram message */}
+        <div className="mt-2 p-5 rounded-[18px] bg-white border-[1.5px] border-[#ede9e1] shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Send size={14} className="text-[#0d9488]" />
+            <h3 className="font-semibold text-[#0f172a] text-sm">
+              Ota-onaga xabar yuborish
+            </h3>
+          </div>
+          <p className="text-xs text-[#64748b] mb-3">
+            Telegram orqali yuboriladi. AI tahlilini avval to&apos;ldiramiz, kerak
+            bo&apos;lsa tahrirlang.
+          </p>
+          <textarea
+            value={message}
+            onChange={(e) => {
+              setMessage(e.target.value);
+              if (sent) setSent(false);
+            }}
+            rows={4}
+            maxLength={500}
+            placeholder="Xabar matni..."
+            aria-label="Ota-onaga yuboriladigan xabar"
+            className="w-full border border-[#ede9e1] rounded-xl p-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#0d9488] bg-[#f7f4ef]"
+          />
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-[11px] text-[#94a3b8] font-mono">
+              {message.length}/500
+            </span>
+            <div className="flex items-center gap-3">
+              {sent && (
+                <span className="text-emerald-600 text-xs font-semibold">
+                  Yuborildi ✓
+                </span>
+              )}
+              <button
+                onClick={sendToParent}
+                disabled={sending || !message.trim()}
+                className="px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] disabled:bg-[#94a3b8] disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                {sending ? 'Yuborilmoqda...' : 'Telegramga yuborish'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

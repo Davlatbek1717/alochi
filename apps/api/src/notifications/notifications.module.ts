@@ -3,9 +3,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationEventHandler } from './notification-event.handler';
+import { TelegramModule } from '../telegram/telegram.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, TelegramModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationEventHandler],
   exports: [NotificationsService],

@@ -53,6 +53,16 @@ export class KpiController {
     return this.kpi.getDailyTotal(req.user.userId, new Date());
   }
 
+  /**
+   * Spec-aligned alias for `/kpi/today`. Same handler, different path so
+   * frontends can call `/kpi/daily` per design docs without breaking
+   * legacy callers.
+   */
+  @Get('daily')
+  async getDailyTotal(@Request() req: any) {
+    return this.kpi.getDailyTotal(req.user.userId, new Date());
+  }
+
   @Get('monthly')
   async getMonthlyTotal(
     @Request() req: any,

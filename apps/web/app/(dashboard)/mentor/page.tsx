@@ -13,20 +13,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
 import { Stat, Skeleton } from '@/components/ui';
 
 type Task = { id: string; status: string };
 type Student = { id: string; name: string; role: string };
-
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return payload.branchId ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export default function MentorDashboard() {
   const router = useRouter();
@@ -40,6 +31,7 @@ export default function MentorDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    const groupId = getGroupIdFromToken();
     const branchId = getBranchIdFromToken();
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setMentorName(user.name ?? '');
@@ -51,12 +43,18 @@ export default function MentorDashboard() {
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    Promise.all([
-      apiRequest<number>('/kpi/today', {}, token).catch(() => ({ data: 0 })),
-      apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token).catch(() => ({ data: 0 })),
-      branchId
+    // Prefer group-scoped roster (mentor own group) when JWT carries a
+    // groupId; fall back to the branch-wide list so legacy tokens still work.
+    const studentsPromise: Promise<{ data: Student[] }> = groupId
+      ? apiRequest<Student[]>(`/users/group/${groupId}`, {}, token).catch(() => ({ data: [] as Student[] }))
+      : branchId
         ? apiRequest<Student[]>(`/users/by-branch/${branchId}`, {}, token).catch(() => ({ data: [] as Student[] }))
-        : Promise.resolve({ data: [] as Student[] }),
+        : Promise.resolve({ data: [] as Student[] });
+
+    Promise.all([
+      apiRequest<number>('/kpi/daily', {}, token).catch(() => ({ data: 0 })),
+      apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token).catch(() => ({ data: 0 })),
+      studentsPromise,
       apiRequest<Task[]>('/tasks/my', {}, token).catch(() => ({ data: [] as Task[] })),
     ]).then(([kpiT, kpiM, studentsRes, tasksRes]) => {
       setKpiToday((kpiT as { data: number }).data ?? 0);

@@ -71,6 +71,28 @@ export class UsersService {
     });
   }
 
+  /**
+   * Group-scoped roster. Returns active users whose `groupId` matches and
+   * whose tenant matches the caller's tenant. Used by mentor frontend
+   * (`/users/group/:groupId`).
+   */
+  async findByGroup(groupId: string, tenantId: string) {
+    return this.prisma.user.findMany({
+      where: { groupId, tenantId, status: 'active' },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        status: true,
+        phone: true,
+        login: true,
+        branchId: true,
+        groupId: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findById(id: string, tenantId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id, tenantId },

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Users, CheckCircle, XCircle, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 type Status = 'green' | 'yellow' | 'red';
@@ -32,14 +33,6 @@ const STATUS_UZ: Record<Status, string> = {
 type LocalStudent = { id: string; name: string; status: Status; note: string; attendance: boolean };
 type ApiStudent   = { id: string; name: string; role: string };
 
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return payload.branchId ?? null;
-  } catch { return null; }
-}
-
 
 export default function MentorGroupPage() {
   const { success, error: toastError } = useToast();
@@ -52,9 +45,15 @@ export default function MentorGroupPage() {
     setLoading(true); setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
+      const groupId = getGroupIdFromToken();
       const branchId = getBranchIdFromToken();
-      if (!branchId) throw new Error('Filial topilmadi');
-      const res = await apiRequest<ApiStudent[]>(`/users/by-branch/${branchId}`, {}, token);
+      // Group-scoped roster takes precedence; fall back to branch when JWT
+      // carries no groupId (older tokens, manager users).
+      if (!groupId && !branchId) throw new Error('Guruh yoki filial topilmadi');
+      const path = groupId
+        ? `/users/group/${groupId}`
+        : `/users/by-branch/${branchId}`;
+      const res = await apiRequest<ApiStudent[]>(path, {}, token);
       setStudents(
         res.data.filter((u) => u.role === 'student')
           .map((s) => ({ ...s, status: 'green' as Status, note: '', attendance: true })),
@@ -208,7 +207,7 @@ export default function MentorGroupPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#0f172a]">{student.name}</p>
                     <Link href={`/mentor/students/${student.id}`} className="text-xs text-[#0d9488] font-medium">
-                      Xato tahlili
+                      Xato tahlili →
                     </Link>
                   </div>
 

@@ -68,6 +68,17 @@ export class UsersController {
     return this.users.findByBranch(branchId, req.user.tenantId);
   }
 
+  @Get('group/:groupId')
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
+  findByGroup(@Param('groupId') groupId: string, @Request() req: any) {
+    return this.users.findByGroup(groupId, req.user.tenantId);
+  }
+
   @Get(':id')
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   findOne(@Param('id') id: string, @Request() req: any) {

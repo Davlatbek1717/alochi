@@ -124,4 +124,21 @@ export class ProgressService {
       orderBy: { lesson: { orderNumber: 'asc' } },
     });
   }
+
+  /**
+   * Compact progress roll-up for staff UIs (mentor student-detail). Returns
+   * counts only — no per-lesson rows — so it stays cheap even when a
+   * student has dozens of progress entries.
+   */
+  async getSummary(studentId: string) {
+    const [completed, inProgress] = await Promise.all([
+      this.prisma.studentProgress.count({
+        where: { studentId, academyCompleted: true },
+      }),
+      this.prisma.studentProgress.count({
+        where: { studentId, academyCompleted: false },
+      }),
+    ]);
+    return { studentId, completed, inProgress };
+  }
 }
