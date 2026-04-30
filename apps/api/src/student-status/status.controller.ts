@@ -49,6 +49,7 @@ export class StatusController {
     return this.statusService.setStatus({
       ...body,
       tenantId: req.user.tenantId,
+      changedBy: req.user.userId,
     });
   }
 

@@ -24,11 +24,39 @@ export class AiController {
     private notifications: NotificationsService,
   ) {}
 
-  @Post('tutor/ask')
+  /**
+   * POST /ai/qa/start — start a tutor QA session.
+   * Body: { lessonContext, question? }. Returns { sessionId, firstResponse }.
+   * (No persistent session storage yet — sessionId is a UUID echoed back so
+   * the frontend can group subsequent answers; tutor history lives in the
+   * client until a sessions table is added in a later phase.)
+   */
+  @Post('qa/start')
   @Roles(UserRole.student)
-  askTutor(
+  async qaStart(
     @Body()
     body: {
+      lessonContext: string;
+      question?: string;
+    },
+  ) {
+    const sessionId = (globalThis.crypto as Crypto).randomUUID();
+    const tutorResponse = body.question
+      ? await this.ai.askTutor(body.lessonContext, body.question, [])
+      : null;
+    return { sessionId, response: tutorResponse };
+  }
+
+  /**
+   * POST /ai/qa/answer — submit student's answer / next question to QA.
+   * Body: { sessionId, lessonContext, question, history }.
+   */
+  @Post('qa/answer')
+  @Roles(UserRole.student)
+  qaAnswer(
+    @Body()
+    body: {
+      sessionId: string;
       lessonContext: string;
       question: string;
       history: { role: string; content: string }[];
@@ -37,6 +65,18 @@ export class AiController {
     return this.ai.askTutor(body.lessonContext, body.question, body.history);
   }
 
+  /**
+   * POST /ai/speech/assess — score a single-word pronunciation sample (Azure).
+   */
+  @Post('speech/assess')
+  @Roles(UserRole.student)
+  speechAssess(@Body() body: { wordEn: string; audioBase64: string }) {
+    return this.ai.checkPronunciation(body.wordEn, body.audioBase64);
+  }
+
+  /**
+   * POST /ai/evaluate — final lesson evaluation (Claude).
+   */
   @Post('evaluate')
   @Roles(UserRole.student, UserRole.tester)
   evaluate(
@@ -47,12 +87,6 @@ export class AiController {
     },
   ) {
     return this.ai.evaluate(body.lessonContext, body.studentAnswers);
-  }
-
-  @Post('speech/check')
-  @Roles(UserRole.student)
-  checkPronunciation(@Body() body: { wordEn: string; audioBase64: string }) {
-    return this.ai.checkPronunciation(body.wordEn, body.audioBase64);
   }
 
   @Post('spaced-repetition/answer')

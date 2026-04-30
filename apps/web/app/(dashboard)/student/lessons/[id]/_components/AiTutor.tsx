@@ -34,19 +34,21 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
     setQuestionCount((c) => c + 1);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/tutor/ask`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/qa/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lesson_context: lessonContext,
+          lessonContext,
           question,
-          conversation_history: historySnapshot.map((m) => ({ role: m.role, content: m.content })),
+          history: historySnapshot.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
+      const json = await res.json();
+      // Support both wrapped { success, data } and legacy raw response.
+      const data = json && typeof json === 'object' && 'data' in json ? json.data : json;
+      setMessages((prev) => [...prev, { role: 'assistant', content: data?.answer ?? '' }]);
     } catch {
       setMessages((prev) => [
         ...prev,

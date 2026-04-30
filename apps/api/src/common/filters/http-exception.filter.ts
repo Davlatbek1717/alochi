@@ -13,6 +13,17 @@ interface ValidationError {
   message: string;
 }
 
+interface EnrichedErrorBody {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+    errors?: ValidationError[];
+  };
+  meta: { timestamp: string };
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
@@ -26,19 +37,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    let message: string;
+    let code = this.statusToCode(status);
+    let message =
+      exception instanceof Error ? exception.message : 'Internal server error';
+    let details: unknown;
     let errors: ValidationError[] | undefined;
 
     if (exception instanceof HttpException) {
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null) {
         const r = res as Record<string, unknown>;
+
+        // Enriched shape: { code, message, details? }
+        if (typeof r.code === 'string') {
+          code = r.code;
+        }
+
         if (Array.isArray(r.message)) {
-          // class-validator produces string[] or ValidationError[]
           if (typeof r.message[0] === 'string') {
-            message = r.message.join(', ');
+            message = (r.message as string[]).join(', ');
             if (status === 422 || status === 400) {
-              errors = r.message.map((m: string) => {
+              errors = (r.message as string[]).map((m: string) => {
                 const match = /^([a-zA-Z_]+)\s/.exec(m);
                 return { field: match?.[1] ?? 'unknown', message: m };
               });
@@ -46,34 +65,63 @@ export class AllExceptionsFilter implements ExceptionFilter {
           } else {
             message = String(r.message[0]);
           }
+        } else if (typeof r.message === 'string') {
+          message = r.message;
         } else {
-          message =
-            typeof r.message === 'string' ? r.message : exception.message;
+          message = exception.message;
         }
+
+        if (r.details !== undefined) {
+          details = r.details;
+        }
+      } else if (typeof res === 'string') {
+        message = res;
       } else {
         message = exception.message;
       }
-    } else {
-      message =
-        exception instanceof Error
-          ? exception.message
-          : 'Internal server error';
     }
 
     if (status >= 500) {
       this.logger.error(
-        `${status} — ${message}`,
+        `${status} [${code}] — ${message}`,
         exception instanceof Error ? exception.stack : undefined,
       );
     }
 
-    const body: Record<string, unknown> = {
+    const body: EnrichedErrorBody = {
       success: false,
-      message,
+      error: {
+        code,
+        message,
+        ...(details !== undefined ? { details } : {}),
+        ...(errors ? { errors } : {}),
+      },
       meta: { timestamp: new Date().toISOString() },
     };
-    if (errors) body.errors = errors;
 
     response.status(status).json(body);
+  }
+
+  private statusToCode(status: number): string {
+    switch (status) {
+      case HttpStatus.BAD_REQUEST:
+        return 'BAD_REQUEST';
+      case HttpStatus.UNAUTHORIZED:
+        return 'UNAUTHORIZED';
+      case HttpStatus.FORBIDDEN:
+        return 'FORBIDDEN';
+      case HttpStatus.NOT_FOUND:
+        return 'NOT_FOUND';
+      case HttpStatus.CONFLICT:
+        return 'CONFLICT';
+      case HttpStatus.UNPROCESSABLE_ENTITY:
+        return 'UNPROCESSABLE_ENTITY';
+      case HttpStatus.TOO_MANY_REQUESTS:
+        return 'TOO_MANY_REQUESTS';
+      case HttpStatus.INTERNAL_SERVER_ERROR:
+        return 'INTERNAL_ERROR';
+      default:
+        return status >= 500 ? 'INTERNAL_ERROR' : 'ERROR';
+    }
   }
 }

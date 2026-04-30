@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface SetStatusDto {
   tenantId: string;
   studentId: string;
   date: string;
+  changedBy?: string;
   englishStatus?: string;
   englishNote?: string;
   personalStatus?: string;
@@ -15,12 +17,17 @@ interface SetStatusDto {
 
 @Injectable()
 export class StatusService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   async setStatus(dto: SetStatusDto) {
     const {
+      tenantId,
       studentId,
       date,
+      changedBy,
       englishStatus,
       englishNote,
       personalStatus,
@@ -30,7 +37,7 @@ export class StatusService {
     } = dto;
     const dateObj = new Date(date);
 
-    return this.prisma.studentStatus.upsert({
+    const result = await this.prisma.studentStatus.upsert({
       where: { studentId_date: { studentId, date: dateObj } },
       create: {
         studentId,
@@ -51,6 +58,38 @@ export class StatusService {
         criticalNote,
       },
     });
+
+    // Emit a domain event with the most-severe-color (qizil > sariq > yashil)
+    // so the gateway can broadcast `status:updated` after Uzbek→English mapping.
+    const worst = this.worstColor([
+      englishStatus,
+      personalStatus,
+      criticalStatus,
+    ]);
+    this.events.emit('status.updated', {
+      studentId,
+      color: worst,
+      changedBy: changedBy ?? null,
+      tenantId,
+      timestamp: new Date().toISOString(),
+    });
+
+    return result;
+  }
+
+  private worstColor(values: (string | undefined)[]): string | null {
+    const order: Record<string, number> = { qizil: 3, sariq: 2, yashil: 1 };
+    let best: string | null = null;
+    let bestRank = 0;
+    for (const v of values) {
+      if (!v) continue;
+      const rank = order[v] ?? 0;
+      if (rank > bestRank) {
+        bestRank = rank;
+        best = v;
+      }
+    }
+    return best;
   }
 
   async getLatest(studentId: string) {

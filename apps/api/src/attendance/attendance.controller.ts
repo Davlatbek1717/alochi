@@ -27,7 +27,7 @@ export class AttendanceController {
 
   // ── Student attendance ───────────────────────────────────────────────────────
 
-  @Post('students/bulk')
+  @Post('students')
   @Roles(UserRole.mentor, UserRole.tester)
   markBulk(
     @Body() body: { records: Array<{ studentId: string; status: string }> },

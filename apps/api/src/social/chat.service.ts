@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   OnModuleInit,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 // CJS interop: isomorphic-dompurify v2 exports the DOMPurify factory result
 // directly via module.exports — no `.default`. Use `import =` to dodge
 // `esModuleInterop` injecting an undefined `.default`.
@@ -35,7 +36,10 @@ interface SendMessageDto {
 export class ChatService implements OnModuleInit {
   private keywordCache = new Map<string, Set<string>>();
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   async onModuleInit() {
     await this.reloadKeywords();
@@ -176,11 +180,25 @@ export class ChatService implements OnModuleInit {
       );
     }
 
-    return this.prisma.messageReaction.upsert({
+    const reaction = await this.prisma.messageReaction.upsert({
       where: { messageId_userId_emoji: { messageId, userId, emoji } },
       create: { messageId, userId, emoji },
       update: {},
     });
+
+    // Look up groupId so the gateway can scope `chat:reaction` to the room.
+    const message = await this.prisma.groupMessage.findUnique({
+      where: { id: messageId },
+      select: { groupId: true },
+    });
+    this.events.emit('chat.reaction', {
+      messageId,
+      userId,
+      emoji,
+      groupId: message?.groupId,
+    });
+
+    return reaction;
   }
 
   async banUser(

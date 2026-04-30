@@ -77,4 +77,33 @@ export class UsersController {
   ) {
     return this.users.updateStatus(id, req.user.tenantId, status);
   }
+
+  /**
+   * GET /users/:id/block-status — derived block info from user.status
+   * + warnings + payment.unblockAt.
+   */
+  @Get(':id/block-status')
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
+  getBlockStatus(@Param('id') id: string, @Request() req: any) {
+    return this.users.getBlockStatus(id, req.user.tenantId);
+  }
+
+  /**
+   * POST /users/:id/unblock — manually unblock a student.
+   * Audit-logged via the users service.
+   */
+  @Post(':id/unblock')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  unblock(
+    @Param('id') id: string,
+    @Body('reason') reason: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.users.unblock(id, req.user.tenantId, req.user.userId, reason);
+  }
 }

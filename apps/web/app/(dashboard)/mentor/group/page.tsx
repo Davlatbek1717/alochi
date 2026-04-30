@@ -83,7 +83,7 @@ export default function MentorGroupPage() {
     const branchId = getBranchIdFromToken() ?? user.branchId ?? '';
     const today = new Date().toISOString().split('T')[0];
     try {
-      await apiRequest('/attendance/students/bulk', {
+      await apiRequest('/attendance/students', {
         method: 'POST',
         body: JSON.stringify({
           records: students.map((s) => ({

@@ -1,10 +1,12 @@
 import { Test } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AttendanceStudentsService } from './attendance-students.service';
 import { AttendanceStaffService } from './attendance-staff.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
 const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
+const mockEvents = { emit: jest.fn() };
 
 const mockPrismaStudents = {
   attendanceStudent: {
@@ -30,6 +32,7 @@ describe('AttendanceStudentsService', () => {
         AttendanceStudentsService,
         { provide: PrismaService, useValue: mockPrismaStudents },
         { provide: AnalyticsService, useValue: mockAnalytics },
+        { provide: EventEmitter2, useValue: mockEvents },
       ],
     }).compile();
     service = module.get(AttendanceStudentsService);

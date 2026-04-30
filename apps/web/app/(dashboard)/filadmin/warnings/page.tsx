@@ -66,11 +66,10 @@ export default function WarningsPage() {
     const { userId, tenantId } = getTokenPayload();
 
     try {
-      await apiRequest('/warnings', {
+      await apiRequest(`/warnings/${selectedStudent}`, {
         method: 'POST',
         body: JSON.stringify({
           tenantId,
-          studentId: selectedStudent,
           givenBy: userId,
           reasonType,
           reasonText,

@@ -16,7 +16,8 @@ describe('ChatService', () => {
     },
   };
 
-  const service = new ChatService(mockPrisma as any);
+  const mockEvents = { emit: jest.fn() };
+  const service = new ChatService(mockPrisma as any, mockEvents as any);
 
   it('blocks message over 200 chars', async () => {
     const longMsg = 'A'.repeat(201);

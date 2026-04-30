@@ -103,7 +103,7 @@ export default function MentorAttendancePage() {
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest(
-        '/attendance/students/bulk',
+        '/attendance/students',
         {
           method: 'POST',
           body: JSON.stringify({

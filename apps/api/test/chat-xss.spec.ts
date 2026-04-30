@@ -42,7 +42,8 @@ describe('Chat XSS sanitization (Phase 1.6)', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         chatKeyword: { findMany: jest.fn().mockResolvedValue([] as any[]) },
       };
-      const svc = new ChatService(mockPrisma as never);
+      const mockEvents = { emit: jest.fn() } as never;
+      const svc = new ChatService(mockPrisma as never, mockEvents);
       // skip onModuleInit to avoid touching prisma
       await svc.sendMessage({
         tenantId: 't',

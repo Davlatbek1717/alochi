@@ -67,7 +67,7 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
       formData.append('word', word);
       formData.append('lessonId', lessonId);
 
-      const res = await fetch(`${BASE_URL}/ai/speech`, {
+      const res = await fetch(`${BASE_URL}/ai/speech/assess`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

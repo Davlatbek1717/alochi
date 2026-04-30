@@ -42,7 +42,7 @@ export default function ManagerPaymentsPage() {
     setFetching(true);
     try {
       const res = await apiRequest<BranchStudent[]>(
-        `/payments/branch/${branchId}?month=${selectedMonth}`,
+        `/payments?branchId=${branchId}&month=${selectedMonth}`,
         {},
         token,
       );

@@ -118,6 +118,33 @@ describe('ProgressService', () => {
     });
   });
 
+  describe('startAcademySession', () => {
+    it('upserts a StudentProgress row when called', async () => {
+      mockPrisma.studentProgress.upsert.mockResolvedValue({
+        id: 'p1',
+        studentId: 's-1',
+        lessonId: 'l-1',
+        sessionCount: 0,
+        homeCompleted: false,
+      });
+
+      const result = await service.startAcademySession('s-1', 'l-1');
+
+      expect(mockPrisma.studentProgress.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { studentId_lessonId: { studentId: 's-1', lessonId: 'l-1' } },
+        }),
+      );
+      expect(result.id).toBe('p1');
+    });
+
+    it('throws NotFoundException when lessonId is missing', async () => {
+      await expect(
+        service.startAcademySession('s-1', '' as any),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('getStudentProgress', () => {
     it('returns progress list for a student', async () => {
       const progress = [

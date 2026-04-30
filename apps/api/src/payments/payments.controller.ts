@@ -2,12 +2,12 @@ import {
   Controller,
   Post,
   Get,
-  Put,
   Body,
   Param,
   Query,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -23,24 +23,30 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 export class PaymentsController {
   constructor(private payments: PaymentsService) {}
 
-  @Post()
-  @Roles(UserRole.filadmin)
-  markPaid(@Body() body: any, @Request() req: any) {
-    return this.payments.markPaid({
-      ...body,
-      tenantId: req.user.tenantId,
-      recordedBy: req.user.userId,
-      paidAt: new Date(body.paidAt),
-    });
+  /**
+   * Branch payment summary, super-admin only.
+   * (Stays under `/payments/summary` since the response is multi-branch.)
+   */
+  @Get('summary')
+  @Roles(UserRole.superadmin)
+  getBranchSummary(@Query('month') month: string, @Request() req: any) {
+    return this.payments.getBranchSummary(req.user.tenantId, month);
   }
 
-  @Get('branch/:branchId')
+  /**
+   * GET /payments?branchId=...&month=...  → single-branch payment status.
+   * Replaces legacy GET /payments/branch/:branchId.
+   */
+  @Get()
   @Roles(UserRole.filadmin, UserRole.manager, UserRole.superadmin)
   getBranchStatus(
-    @Param('branchId') branchId: string,
+    @Query('branchId') branchId: string,
     @Query('month') month: string,
     @Request() req: any,
   ) {
+    if (!branchId) {
+      throw new BadRequestException('branchId query param majburiy');
+    }
     return this.payments.getBranchPaymentStatus(
       branchId,
       req.user.tenantId,
@@ -48,35 +54,39 @@ export class PaymentsController {
     );
   }
 
-  @Get('summary')
-  @Roles(UserRole.superadmin)
-  getBranchSummary(@Query('month') month: string, @Request() req: any) {
-    return this.payments.getBranchSummary(req.user.tenantId, month);
-  }
-
-  @Get('student/:studentId')
+  /**
+   * GET /payments/:studentId/status → payment history for a student.
+   * Replaces legacy GET /payments/student/:studentId.
+   */
+  @Get(':studentId/status')
   @Roles(UserRole.filadmin, UserRole.manager)
   getStudentPayments(@Param('studentId') studentId: string) {
     return this.payments.getStudentPayments(studentId);
   }
 
-  @Get('settings')
-  @Roles(UserRole.superadmin)
-  getSettings(@Request() req: any) {
-    return this.payments.getSettingForTenant(req.user.tenantId);
-  }
-
-  @Put('settings')
-  @Roles(UserRole.superadmin)
-  updateSettings(
-    @Body() body: { startDay: number; endDay: number },
+  /**
+   * POST /payments/:studentId  → mark monthly payment as paid for a student.
+   * Replaces legacy POST /payments (body.studentId).
+   */
+  @Post(':studentId')
+  @Roles(UserRole.filadmin)
+  markPaid(
+    @Param('studentId') studentId: string,
+    @Body()
+    body: {
+      month: string;
+      amount: number;
+      paidAt: string;
+      delegationId?: string;
+    },
     @Request() req: any,
   ) {
-    return this.payments.updateSettings(
-      req.user.tenantId,
-      body.startDay,
-      body.endDay,
-      req.user.userId,
-    );
+    return this.payments.markPaid({
+      ...body,
+      studentId,
+      tenantId: req.user.tenantId,
+      recordedBy: req.user.userId,
+      paidAt: new Date(body.paidAt),
+    });
   }
 }

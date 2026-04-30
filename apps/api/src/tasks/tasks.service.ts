@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { XpService } from '../gamification/xp.service';
 
@@ -23,10 +24,11 @@ export class TasksService {
   constructor(
     private prisma: PrismaService,
     private xp: XpService,
+    private events: EventEmitter2,
   ) {}
 
-  create(dto: CreateTaskDto) {
-    return this.prisma.task.create({
+  async create(dto: CreateTaskDto) {
+    const task = await this.prisma.task.create({
       data: {
         tenantId: dto.tenantId,
         branchId: dto.branchId,
@@ -44,6 +46,16 @@ export class TasksService {
         assignee: { select: { name: true } },
       },
     });
+
+    this.events.emit('task.assigned', {
+      taskId: task.id,
+      assigneeId: task.assignedTo,
+      createdBy: task.createdBy,
+      deadline: task.deadline ? task.deadline.toISOString() : null,
+      title: task.title,
+    });
+
+    return task;
   }
 
   getMyTasks(userId: string) {

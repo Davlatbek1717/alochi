@@ -69,6 +69,29 @@ export class ProgressService {
     return progress;
   }
 
+  /**
+   * Start an academy session for a student. Creates a StudentProgress row
+   * (or updates lastActivityAt if one already exists). Returns the row.
+   */
+  async startAcademySession(studentId: string, lessonId: string) {
+    if (!lessonId) {
+      throw new NotFoundException('lessonId majburiy');
+    }
+    return this.prisma.studentProgress.upsert({
+      where: { studentId_lessonId: { studentId, lessonId } },
+      create: {
+        studentId,
+        lessonId,
+        sessionCount: 0,
+        homeCompleted: false,
+        lastActivityAt: new Date(),
+      },
+      update: {
+        lastActivityAt: new Date(),
+      },
+    });
+  }
+
   async markAcademyCompleted(studentId: string, lessonId: string) {
     const result = await this.prisma.studentProgress.update({
       where: { studentId_lessonId: { studentId, lessonId } },

@@ -1,7 +1,7 @@
 import {
   Controller,
   Post,
-  Delete,
+  Patch,
   Get,
   Body,
   Param,
@@ -22,33 +22,48 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 export class WarningsController {
   constructor(private warnings: WarningsService) {}
 
-  @Post()
-  @Roles(UserRole.filadmin, UserRole.manager)
-  give(@Body() body: any, @Request() req: any) {
-    return this.warnings.give({
-      ...body,
-      tenantId: req.user.tenantId,
-      givenBy: req.user.userId,
-    });
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.filadmin, UserRole.manager)
-  cancel(
-    @Param('id') id: string,
-    @Body('reason') reason: string,
-    @Request() req: any,
-  ) {
-    return this.warnings.cancel(id, req.user.userId, reason);
-  }
-
   @Get('my')
   @Roles(UserRole.student)
   getMyWarnings(@Request() req: any) {
     return this.warnings.findByStudent(req.user.userId);
   }
 
-  @Get('student/:studentId')
+  /**
+   * Issue a warning to :studentId.
+   * Path-based per spec (POST /warnings/:studentId).
+   */
+  @Post(':studentId')
+  @Roles(UserRole.filadmin, UserRole.manager)
+  give(
+    @Param('studentId') studentId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.warnings.give({
+      ...body,
+      studentId,
+      tenantId: req.user.tenantId,
+      givenBy: req.user.userId,
+    });
+  }
+
+  /**
+   * Cancel (soft) a warning. Replaces legacy DELETE /warnings/:id.
+   */
+  @Patch(':warningId/cancel')
+  @Roles(UserRole.filadmin, UserRole.manager)
+  cancelWarning(
+    @Param('warningId') warningId: string,
+    @Body('reason') reason: string,
+    @Request() req: any,
+  ) {
+    return this.warnings.cancel(warningId, req.user.userId, reason);
+  }
+
+  /**
+   * List warnings of :studentId. Replaces legacy GET /warnings/student/:studentId.
+   */
+  @Get(':studentId')
   @Roles(UserRole.filadmin, UserRole.manager, UserRole.mentor)
   getByStudent(@Param('studentId') studentId: string) {
     return this.warnings.findByStudent(studentId);

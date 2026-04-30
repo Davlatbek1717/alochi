@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
@@ -9,6 +10,7 @@ interface MarkRecord {
   tenantId: string;
   branchId: string;
   date: string;
+  lessonId?: string | null;
 }
 
 @Injectable()
@@ -16,6 +18,7 @@ export class AttendanceStudentsService {
   constructor(
     private prisma: PrismaService,
     private analytics: AnalyticsService,
+    private events: EventEmitter2,
   ) {}
 
   async markBulk(records: MarkRecord[]) {
@@ -40,6 +43,7 @@ export class AttendanceStudentsService {
         }),
       ),
     );
+    const timestamp = new Date().toISOString();
     for (const r of records) {
       this.analytics
         .logEvent({
@@ -53,6 +57,12 @@ export class AttendanceStudentsService {
           },
         })
         .catch(() => {});
+      this.events.emit('attendance.marked', {
+        studentId: r.studentId,
+        lessonId: r.lessonId ?? null,
+        status: r.status,
+        timestamp,
+      });
     }
     return results;
   }

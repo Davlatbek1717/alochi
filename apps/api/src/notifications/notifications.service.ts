@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   async send(
     userId: string,
@@ -12,9 +16,19 @@ export class NotificationsService {
     body: string,
     meta?: object,
   ) {
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: { userId, type, title, body, meta },
     });
+    this.events.emit('notification.new', {
+      userId,
+      type,
+      title,
+      body,
+      createdAt:
+        (created.createdAt as Date | undefined)?.toISOString?.() ??
+        new Date().toISOString(),
+    });
+    return created;
   }
 
   async getMyNotifications(userId: string) {

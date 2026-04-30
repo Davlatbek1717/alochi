@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { StatusService } from './status.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -10,6 +11,8 @@ const mockPrisma = {
   },
 };
 
+const mockEvents = { emit: jest.fn() };
+
 describe('StatusService', () => {
   let service: StatusService;
 
@@ -18,6 +21,7 @@ describe('StatusService', () => {
       providers: [
         StatusService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: mockEvents },
       ],
     }).compile();
     service = module.get(StatusService);

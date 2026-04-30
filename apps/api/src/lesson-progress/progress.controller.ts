@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Body,
   Param,
   UseGuards,
   Request,
@@ -37,6 +38,19 @@ export class ProgressController {
     @Param('studentId') studentId: string,
   ) {
     return this.progress.markAcademyCompleted(studentId, lessonId);
+  }
+
+  /**
+   * POST /progress/:studentId/academy — start academy session for a student.
+   * Body: { lessonId }. Returns the (created/upserted) StudentProgress row.
+   */
+  @Post(':studentId/academy')
+  @Roles(UserRole.tester, UserRole.mentor)
+  startAcademy(
+    @Param('studentId') studentId: string,
+    @Body() body: { lessonId: string },
+  ) {
+    return this.progress.startAcademySession(studentId, body.lessonId);
   }
 
   @Get('my')

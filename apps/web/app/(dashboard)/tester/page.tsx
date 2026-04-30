@@ -89,7 +89,7 @@ export default function TesterPage() {
     const tenantId = getTenantIdFromToken();
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
     try {
-      await apiRequest('/attendance/students/bulk', {
+      await apiRequest('/attendance/students', {
         method: 'POST',
         body: JSON.stringify({ date: today, records: [{ studentId, status: 'present', markedBy: user.id ?? '', tenantId, branchId }] }),
       }, token);

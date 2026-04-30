@@ -31,7 +31,7 @@ function PaymentSettingsPanel() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    apiRequest<PaymentSettings>('/payments/settings', {}, token)
+    apiRequest<PaymentSettings>('/payment-settings', {}, token)
       .then((res) => {
         setSettings(res.data);
         setStartDay(String(res.data?.paymentStartDay ?? 1));
@@ -47,7 +47,7 @@ function PaymentSettingsPanel() {
     setSaving(true);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
-      const res = await apiRequest<PaymentSettings>('/payments/settings', {
+      const res = await apiRequest<PaymentSettings>('/payment-settings', {
         method: 'PUT',
         body: JSON.stringify({ startDay: Number(startDay), endDay: Number(endDay) }),
       }, token);
