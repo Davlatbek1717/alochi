@@ -286,6 +286,7 @@ export default function TesterPage() {
             {rows.length === 0 && !error && (
               <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
                 <EmptyState
+                  theme="light"
                   icon={<Users size={28} />}
                   title="O'quvchilar topilmadi"
                   description="Bu filialda o'quvchilar ro'yxatga olinmagan"

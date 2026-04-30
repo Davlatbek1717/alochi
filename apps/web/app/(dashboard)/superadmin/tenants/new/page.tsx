@@ -8,6 +8,7 @@ export const metadata = {
 
 export default function NewTenantPage() {
   return (
+    <div className="min-h-full bg-slate-900">
     <div className="p-4 md:p-6 space-y-6">
       <PageHeader
         icon={<Building2 size={20} />}
@@ -16,6 +17,7 @@ export default function NewTenantPage() {
         iconColor="text-emerald-400"
       />
       <OnboardForm />
+    </div>
     </div>
   );
 }

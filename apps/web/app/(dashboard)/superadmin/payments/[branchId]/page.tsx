@@ -82,7 +82,7 @@ function BranchDetailContent() {
         {loading ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-2">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-12 rounded-xl" />
+              <Skeleton key={i} theme="light" className="h-12 rounded-xl" />
             ))}
           </div>
         ) : (

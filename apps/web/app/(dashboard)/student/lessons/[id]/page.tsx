@@ -193,8 +193,8 @@ export default function LessonPage() {
           </div>
         </div>
         <div className="px-4 pt-5 space-y-4">
-          <Skeleton className="w-full aspect-video rounded-xl" />
-          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton theme="light" className="w-full aspect-video rounded-xl" />
+          <Skeleton theme="light" className="h-12 w-full rounded-xl" />
         </div>
       </div>
     );

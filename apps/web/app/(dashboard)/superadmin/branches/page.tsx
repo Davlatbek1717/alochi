@@ -112,7 +112,7 @@ export default function SuperadminBranchesPage() {
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[58px] rounded-[14px]" />
+              <Skeleton key={i} className="h-[58px] rounded-[14px]" theme="light" />
             ))}
           </div>
         ) : branches.length === 0 ? (
@@ -121,6 +121,7 @@ export default function SuperadminBranchesPage() {
               icon={<Building2 size={28} />}
               title="Filiallar yo'q"
               description="Birinchi filialni yarating"
+              theme="light"
             />
           </div>
         ) : (

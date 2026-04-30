@@ -245,9 +245,9 @@ function SuperadminPaymentsContent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
-                <Skeleton className="h-5 w-32 mb-3" />
-                <Skeleton className="h-4 w-20 mb-2" />
-                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-5 w-32 mb-3" theme="light" />
+                <Skeleton className="h-4 w-20 mb-2" theme="light" />
+                <Skeleton className="h-4 w-40" theme="light" />
               </div>
             ))}
           </div>
@@ -257,6 +257,7 @@ function SuperadminPaymentsContent() {
               icon={<CreditCard size={28} />}
               title="Filiallar topilmadi"
               description="Bu oy uchun to'lov ma'lumotlari yo'q"
+              theme="light"
             />
           </div>
         ) : (

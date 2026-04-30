@@ -175,13 +175,13 @@ export default function FriendsPage() {
         {/* Pending requests */}
         {loading ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <Skeleton className="h-3 w-32 rounded" />
+            <Skeleton theme="light" className="h-3 w-32 rounded" />
             {[1, 2].map((i) => (
               <div key={i} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
-                <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
                 <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-28 rounded" />
-                  <Skeleton className="h-2.5 w-16 rounded" />
+                  <Skeleton theme="light" className="h-3.5 w-28 rounded" />
+                  <Skeleton theme="light" className="h-2.5 w-16 rounded" />
                 </div>
               </div>
             ))}
@@ -232,6 +232,7 @@ export default function FriendsPage() {
               </p>
               {friends.length === 0 ? (
                 <EmptyState
+                  theme="light"
                   icon={<UserX size={24} />}
                   title="Hali do'stlar yo'q"
                   description="Do'st qo'shish uchun yuqoridagi tugmani bosing"

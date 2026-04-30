@@ -109,14 +109,14 @@ export default function StudentDashboard() {
   if (loading) {
     return (
       <div className="max-w-lg mx-auto space-y-4 pb-20 pt-4 px-4">
-        <Skeleton className="h-28 w-full rounded-2xl" />
+        <Skeleton theme="light" className="h-28 w-full rounded-2xl" />
         <div className="grid grid-cols-3 gap-3">
-          <Skeleton className="h-16 rounded-xl" />
-          <Skeleton className="h-16 rounded-xl" />
-          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton theme="light" className="h-16 rounded-xl" />
+          <Skeleton theme="light" className="h-16 rounded-xl" />
+          <Skeleton theme="light" className="h-16 rounded-xl" />
         </div>
-        <SkeletonCard />
-        <SkeletonCard />
+        <SkeletonCard theme="light" />
+        <SkeletonCard theme="light" />
       </div>
     );
   }

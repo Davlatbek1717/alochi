@@ -55,10 +55,10 @@ export default function CurrentLessonPage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
       <div className="flex flex-col items-center gap-4">
-        <Skeleton className="w-16 h-16 rounded-2xl" />
+        <Skeleton theme="light" className="w-16 h-16 rounded-2xl" />
         <div className="space-y-2 w-48">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-3 w-3/4 mx-auto" />
+          <Skeleton theme="light" className="h-4 w-full" />
+          <Skeleton theme="light" className="h-3 w-3/4 mx-auto" />
         </div>
       </div>
     </div>

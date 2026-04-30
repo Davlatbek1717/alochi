@@ -93,6 +93,7 @@ export default function ChurnPage() {
 
   if (loading) {
     return (
+      <div className="min-h-full bg-slate-900">
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-slate-700/50 animate-pulse" />
@@ -101,6 +102,7 @@ export default function ChurnPage() {
         <SkeletonCard />
         <SkeletonCard />
       </div>
+      </div>
     );
   }
 
@@ -108,6 +110,7 @@ export default function ChurnPage() {
   const mediumColumns = buildColumns('yellow');
 
   return (
+    <div className="min-h-full bg-slate-900">
     <div className="p-6 space-y-6">
       <PageHeader
         icon={<AlertTriangle size={20} />}
@@ -165,6 +168,7 @@ export default function ChurnPage() {
           />
         )}
       </Card>
+    </div>
     </div>
   );
 }

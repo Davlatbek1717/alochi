@@ -96,7 +96,7 @@ export default function ManagerDashboard() {
           </div>
           <div className="flex-1">
             {loading ? (
-              <Skeleton className="h-4 w-40 mb-1" />
+              <Skeleton theme="light" className="h-4 w-40 mb-1" />
             ) : (
               <p className={`text-sm font-bold ${alertCount > 0 ? 'text-[#e11d48]' : 'text-[#0d9488]'}`}>
                 {alertCount > 0 ? `${alertCount} ta diqqatga sazovor o'quvchi` : "Barcha o'quvchilar yaxshi"}
@@ -120,12 +120,14 @@ export default function ManagerDashboard() {
         {!loading && (
           <div className="grid grid-cols-2 gap-3">
             <Stat
+              theme="light"
               icon={<AlertCircle size={18} />}
               label="Qizil o'quvchilar"
               value={redStudents.length}
               color="text-rose-400"
             />
             <Stat
+              theme="light"
               icon={<Trophy size={18} />}
               label="Yuqori natija"
               value={highPerformers.length}
@@ -137,7 +139,7 @@ export default function ManagerDashboard() {
         {/* Nav cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {navCards.map((card) => (
               <Link
                 key={card.href}
@@ -167,10 +169,10 @@ export default function ManagerDashboard() {
               {loading ? (
                 [1, 2].map((i) => (
                   <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
-                    <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                    <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
                     <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
+                      <Skeleton theme="light" className="h-4 w-1/2" />
+                      <Skeleton theme="light" className="h-3 w-1/3" />
                     </div>
                   </div>
                 ))
@@ -206,10 +208,10 @@ export default function ManagerDashboard() {
               {loading ? (
                 [1, 2].map((i) => (
                   <div key={i} className="bg-white rounded-[14px] p-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
-                    <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                    <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
                     <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
+                      <Skeleton theme="light" className="h-4 w-1/2" />
+                      <Skeleton theme="light" className="h-3 w-1/3" />
                     </div>
                   </div>
                 ))

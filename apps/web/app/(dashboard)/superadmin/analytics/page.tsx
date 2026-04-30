@@ -50,6 +50,7 @@ export default function AnalyticsPage() {
   }
 
   return (
+    <div className="min-h-full bg-slate-900">
     <div className="p-4 md:p-6 space-y-6">
       <PageHeader
         icon={<TrendingUp size={20} />}
@@ -84,6 +85,7 @@ export default function AnalyticsPage() {
         {active === 'failures' && <FailuresTab />}
         {active === 'comparison' && <ComparisonTab />}
       </Card>
+    </div>
     </div>
   );
 }

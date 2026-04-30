@@ -159,10 +159,10 @@ export default function EditLessonPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f4ef] p-4 md:p-6 space-y-4">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-24 w-full rounded-[18px]" />
-        <Skeleton className="h-12 w-full rounded-[18px]" />
+        <Skeleton theme="light" className="h-6 w-32" />
+        <Skeleton theme="light" className="h-8 w-64" />
+        <Skeleton theme="light" className="h-24 w-full rounded-[18px]" />
+        <Skeleton theme="light" className="h-12 w-full rounded-[18px]" />
       </div>
     );
   }
@@ -171,6 +171,7 @@ export default function EditLessonPage() {
     return (
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
         <EmptyState
+          theme="light"
           icon={<BookOpen size={28} />}
           title="Dars topilmadi"
           description="Bunday ID li dars mavjud emas"

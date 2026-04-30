@@ -96,8 +96,8 @@ export default function SuperadminLessonsPage() {
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
-                <Skeleton className="h-4 w-1/2 mb-2" />
-                <Skeleton className="h-3 w-1/4" />
+                <Skeleton className="h-4 w-1/2 mb-2" theme="light" />
+                <Skeleton className="h-3 w-1/4" theme="light" />
               </div>
             ))}
           </div>
@@ -107,6 +107,7 @@ export default function SuperadminLessonsPage() {
               icon={<BookOpen size={28} />}
               title="Hali dars yo'q"
               description="Birinchi darsni yarating"
+              theme="light"
               action={
                 <button
                   onClick={() => router.push('/superadmin/lessons/new')}

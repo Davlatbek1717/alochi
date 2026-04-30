@@ -113,8 +113,9 @@ export default function FiladminTournamentsPage() {
               </select>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-[#64748b] mb-1 block">Boshlanish</label>
+                  <label htmlFor="tournament-starts-at" className="text-xs text-[#64748b] mb-1 block">Boshlanish</label>
                   <input
+                    id="tournament-starts-at"
                     required
                     type="datetime-local"
                     value={form.startsAt}
@@ -123,8 +124,9 @@ export default function FiladminTournamentsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-[#64748b] mb-1 block">Tugash</label>
+                  <label htmlFor="tournament-ends-at" className="text-xs text-[#64748b] mb-1 block">Tugash</label>
                   <input
+                    id="tournament-ends-at"
                     required
                     type="datetime-local"
                     value={form.endsAt}
@@ -160,14 +162,15 @@ export default function FiladminTournamentsPage() {
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] space-y-2">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-3 w-1/3" />
+                <Skeleton theme="light" className="h-4 w-2/3" />
+                <Skeleton theme="light" className="h-3 w-1/3" />
               </div>
             ))}
           </div>
         ) : tournaments.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<Trophy size={28} />}
               title="Hali turnirlar yo'q"
               description="Birinchi turnirni yarating"

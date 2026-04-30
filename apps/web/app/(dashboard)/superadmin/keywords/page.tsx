@@ -108,7 +108,7 @@ export default function KeywordsPage() {
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[50px] rounded-[14px]" />
+              <Skeleton key={i} className="h-[50px] rounded-[14px]" theme="light" />
             ))}
           </div>
         ) : keywords.length === 0 ? (
@@ -117,6 +117,7 @@ export default function KeywordsPage() {
               icon={<ShieldAlert size={28} />}
               title="Taqiqlangan so'zlar yo'q"
               description="Hali birorta so'z qo'shilmagan"
+              theme="light"
             />
           </div>
         ) : (

@@ -81,19 +81,20 @@ export default function StudentTournamentsPage() {
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1]">
                 <div className="flex items-start gap-3 mb-3">
-                  <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  <Skeleton theme="light" className="w-10 h-10 rounded-xl shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-2/3 rounded" />
-                    <Skeleton className="h-3 w-1/2 rounded" />
+                    <Skeleton theme="light" className="h-4 w-2/3 rounded" />
+                    <Skeleton theme="light" className="h-3 w-1/2 rounded" />
                   </div>
                 </div>
-                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton theme="light" className="h-10 w-full rounded-xl" />
               </div>
             ))}
           </div>
         ) : tournaments.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<Trophy size={28} className="text-[#f59e0b]" />}
               title="Hali turnirlar yo'q"
               description="Tez orada yangi musobaqalar e'lon qilinadi"

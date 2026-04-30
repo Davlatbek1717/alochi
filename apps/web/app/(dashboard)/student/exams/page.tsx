@@ -93,9 +93,9 @@ export default function StudentExamsPage() {
           <Skeleton className="h-6 w-32 rounded" />
         </div>
         <div className="px-4 pt-5 space-y-4">
-          <Skeleton className="h-32 w-full rounded-[18px]" />
-          <Skeleton className="h-40 w-full rounded-[18px]" />
-          <Skeleton className="h-40 w-full rounded-[18px]" />
+          <Skeleton theme="light" className="h-32 w-full rounded-[18px]" />
+          <Skeleton theme="light" className="h-40 w-full rounded-[18px]" />
+          <Skeleton theme="light" className="h-40 w-full rounded-[18px]" />
         </div>
       </div>
     );
@@ -189,6 +189,7 @@ export default function StudentExamsPage() {
         <div className="flex items-center justify-center px-6 pt-20">
           <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-xs">
             <EmptyState
+              theme="light"
               icon={<Lock size={28} />}
               title="Imtihon qulflangan"
               description="Imtihon topshirish uchun akademiyaga keling va testerdan ruxsat oling."

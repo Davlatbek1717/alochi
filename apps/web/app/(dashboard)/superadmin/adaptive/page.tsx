@@ -58,6 +58,7 @@ export default function AdaptivePage() {
 
   if (loading) {
     return (
+      <div className="min-h-full bg-slate-900">
       <div className="p-4 md:p-6 max-w-2xl space-y-6">
         <div className="flex items-center gap-3 mb-8">
           <Skeleton className="w-10 h-10 rounded-xl" />
@@ -74,10 +75,12 @@ export default function AdaptivePage() {
           </div>
         </Card>
       </div>
+      </div>
     );
   }
 
   return (
+    <div className="min-h-full bg-slate-900">
     <div className="p-6 max-w-2xl space-y-6">
       <PageHeader
         icon={<Settings size={20} />}
@@ -160,6 +163,7 @@ export default function AdaptivePage() {
           </div>
         </Card>
       )}
+    </div>
     </div>
   );
 }

@@ -145,18 +145,21 @@ export default function MentorDashboard() {
           ) : (
             <div className="grid grid-cols-3 gap-2">
               <Stat
+                theme="light"
                 icon={<Users size={16} />}
                 label="Guruh a'zolari"
                 value={studentCount}
                 color="text-[#0d9488]"
               />
               <Stat
+                theme="light"
                 icon={<ClipboardList size={16} />}
                 label="Kutilayotgan vazifa"
                 value={pendingTasks}
                 color="text-[#e11d48]"
               />
               <Stat
+                theme="light"
                 icon={<Star size={16} />}
                 label="Oylik ball"
                 value={kpiMonthly}
@@ -197,7 +200,7 @@ export default function MentorDashboard() {
         {/* Nav cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {navCards.map((card) => (
               <button
                 key={card.href}

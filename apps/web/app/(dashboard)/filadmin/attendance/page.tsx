@@ -222,10 +222,10 @@ export default function FiladminAttendancePage() {
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
                 <div className="flex items-center gap-3">
-                  <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                  <Skeleton theme="light" className="w-10 h-10 rounded-full shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
+                    <Skeleton theme="light" className="h-4 w-1/3" />
+                    <Skeleton theme="light" className="h-3 w-1/4" />
                   </div>
                 </div>
               </div>
@@ -234,6 +234,7 @@ export default function FiladminAttendancePage() {
         ) : records.length === 0 && !error ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<ClipboardList size={28} />}
               title="Bu kun uchun davomat yo'q"
               description="Tanlangan sana uchun davomat ma'lumotlari topilmadi"

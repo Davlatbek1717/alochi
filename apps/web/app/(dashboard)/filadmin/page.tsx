@@ -94,7 +94,7 @@ export default function FiladminDashboard() {
       <div className="px-4 pt-5 pb-6 space-y-5">
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {NAV_CARDS.map((card) => (
               <Link
                 key={card.href}

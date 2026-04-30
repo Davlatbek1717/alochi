@@ -191,11 +191,11 @@ export default function MentorAttendancePage() {
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center justify-between gap-3">
-                <Skeleton className="h-5 flex-1 max-w-[180px]" />
+                <Skeleton theme="light" className="h-5 flex-1 max-w-[180px]" />
                 <div className="flex gap-1.5">
-                  <Skeleton className="h-8 w-16 rounded-xl" />
-                  <Skeleton className="h-8 w-16 rounded-xl" />
-                  <Skeleton className="h-8 w-20 rounded-xl" />
+                  <Skeleton theme="light" className="h-8 w-16 rounded-xl" />
+                  <Skeleton theme="light" className="h-8 w-16 rounded-xl" />
+                  <Skeleton theme="light" className="h-8 w-20 rounded-xl" />
                 </div>
               </div>
             ))}
@@ -208,6 +208,7 @@ export default function MentorAttendancePage() {
         ) : students.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<Users size={28} />}
               title="Bu filialda o'quvchilar topilmadi"
             />

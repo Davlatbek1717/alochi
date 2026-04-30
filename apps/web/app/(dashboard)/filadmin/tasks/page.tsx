@@ -171,14 +171,15 @@ export default function FiladminTasksPage() {
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-3 w-1/3" />
+                <Skeleton theme="light" className="h-4 w-2/3" />
+                <Skeleton theme="light" className="h-3 w-1/3" />
               </div>
             ))}
           </div>
         ) : tasks.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<ClipboardList size={28} />}
               title="Vazifalar yo'q"
               description="Bu bo'limda hali vazifalar mavjud emas"

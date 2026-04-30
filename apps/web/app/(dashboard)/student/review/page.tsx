@@ -66,6 +66,7 @@ export default function ReviewPage() {
       <div className="min-h-screen bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-sm">
           <EmptyState
+            theme="light"
             icon={<RefreshCw size={28} />}
             title="Bugun takrorlanadigan so'z yo'q!"
             description="Darslarni bajarib so'z boyligingizni oshiring."

@@ -93,12 +93,12 @@ export default function LessonsListPage() {
             {Array.from({ length: 6 }).map((_, i) => (
               <li key={i}>
                 <div className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center gap-3">
-                  <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                  <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-3 w-1/4" />
-                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton theme="light" className="h-3 w-1/4" />
+                    <Skeleton theme="light" className="h-4 w-3/4" />
                   </div>
-                  <Skeleton className="h-5 w-16 rounded-full shrink-0" />
+                  <Skeleton theme="light" className="h-5 w-16 rounded-full shrink-0" />
                 </div>
               </li>
             ))}
@@ -106,6 +106,7 @@ export default function LessonsListPage() {
         ) : lessons.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<BookOpen size={28} />}
               title="Hali darslar qo'shilmagan"
               description="Darslar tez orada qo'shiladi"

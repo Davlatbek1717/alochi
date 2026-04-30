@@ -164,8 +164,9 @@ export default function SuperadminUsersPage() {
                 { key: 'phone', label: 'Telefon (ixtiyoriy)', type: 'text' },
               ].map(({ key, label, type }) => (
                 <div key={key}>
-                  <label className="block text-xs text-[#94a3b8] mb-1">{label}</label>
+                  <label htmlFor={`user-${key}`} className="block text-xs text-[#94a3b8] mb-1">{label}</label>
                   <input
+                    id={`user-${key}`}
                     type={type}
                     value={form[key as keyof typeof form]}
                     onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
@@ -174,9 +175,10 @@ export default function SuperadminUsersPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Rol</label>
+                <label htmlFor="user-role" className="block text-xs text-[#94a3b8] mb-1">Rol</label>
                 <div className="relative">
                   <select
+                    id="user-role"
                     value={form.role}
                     onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
                     className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-8"
@@ -187,9 +189,10 @@ export default function SuperadminUsersPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#94a3b8] mb-1">Filial (ixtiyoriy)</label>
+                <label htmlFor="user-branch" className="block text-xs text-[#94a3b8] mb-1">Filial (ixtiyoriy)</label>
                 <div className="relative">
                   <select
+                    id="user-branch"
                     value={form.branchId}
                     onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
                     className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-8"
@@ -247,7 +250,7 @@ export default function SuperadminUsersPage() {
 
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-[18px]" />)}
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-[18px]" theme="light" />)}
           </div>
         ) : users.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
@@ -255,6 +258,7 @@ export default function SuperadminUsersPage() {
               icon={<Users size={28} />}
               title="Foydalanuvchilar topilmadi"
               description="Filtr shartlariga mos foydalanuvchi yo'q"
+              theme="light"
             />
           </div>
         ) : (

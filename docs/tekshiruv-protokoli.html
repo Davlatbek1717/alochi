@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="uz-Latn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A'lochi platformasi — To'liq tekshiruv protokoli</title>
+<style>
+  :root {
+    --brand: #4338ca;
+    --brand-light: #818cf8;
+    --bg: #f1f5f9;
+    --paper: #ffffff;
+    --text: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.55; font-size: 14px;
+  }
+
+  .page { max-width: 960px; margin: 0 auto; padding: 24px 20px 72px; }
+
+  .toolbar {
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .toolbar .label { font-size: 12px; color: var(--muted); }
+  .pdf-btn {
+    background: var(--brand); color: #fff; border: 0; border-radius: 6px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pdf-btn:hover { background: #312e81; }
+
+  .progress-bar {
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .progress-bar .bar-wrap {
+    flex: 1; min-width: 120px; height: 10px;
+    background: #e2e8f0; border-radius: 999px; overflow: hidden;
+  }
+  .progress-bar .bar-fill {
+    height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e);
+    width: 0%; transition: width 0.3s;
+  }
+  .progress-bar .count { font-size: 13px; color: var(--brand); font-weight: 700; min-width: 110px; text-align: right; }
+  .progress-bar .reset-btn {
+    background: #fff; border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 10px; font-size: 11px; color: var(--muted); cursor: pointer;
+  }
+  .progress-bar .reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  header.cover {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-light) 100%);
+    color: #fff; padding: 28px 32px; border-radius: 10px; margin-bottom: 20px;
+  }
+  header.cover h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.2; }
+  header.cover .lede { margin: 6px 0 0; opacity: 0.92; font-size: 13px; max-width: 720px; line-height: 1.5; }
+  header.cover .meta { margin-top: 14px; display: flex; gap: 20px; flex-wrap: wrap; font-size: 11px; opacity: 0.9; }
+  header.cover .meta b { font-weight: 700; }
+  header.cover .legend {
+    margin-top: 14px; display: flex; gap: 16px; flex-wrap: wrap;
+    font-size: 11px; background: rgba(255,255,255,0.12);
+    border-radius: 6px; padding: 8px 12px;
+  }
+  header.cover .legend span { display: flex; align-items: center; gap: 5px; }
+
+  h2 {
+    font-size: 15px; margin: 24px 0 10px;
+    color: var(--brand); border-bottom: 2px solid var(--brand);
+    padding-bottom: 5px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .section-num {
+    background: var(--brand); color: #fff;
+    font-size: 11px; font-weight: 700; padding: 1px 7px;
+    border-radius: 10px; flex-shrink: 0;
+  }
+
+  .feature {
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 7px; margin: 8px 0; padding: 12px 14px;
+    page-break-inside: avoid;
+  }
+  .feature-head {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .feature-head .f-title {
+    font-size: 13.5px; font-weight: 700; color: #0f172a; flex: 1;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .feature .f-desc {
+    font-size: 12px; color: var(--muted); font-style: italic;
+    margin: 0 0 8px 28px; line-height: 1.4;
+  }
+
+  .checks { list-style: none; padding: 0; margin: 0; }
+  .checks li {
+    display: flex; align-items: flex-start; gap: 7px;
+    padding: 3.5px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px;
+  }
+  .checks li:last-child { border-bottom: none; }
+  .checks .what { flex: 1; color: #1e293b; line-height: 1.4; }
+  .checks .note { color: var(--muted); font-size: 11px; font-style: italic; display: block; margin-top: 1px; }
+
+  table.simple {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    background: var(--paper); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; margin: 10px 0;
+  }
+  table.simple th, table.simple td {
+    padding: 7px 10px; text-align: left;
+    border-bottom: 1px solid var(--border); vertical-align: top;
+  }
+  table.simple th {
+    background: #f1f5f9; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+  }
+  table.simple tr:last-child td { border-bottom: none; }
+
+  .tag {
+    display: inline-flex; align-items: center;
+    font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px;
+    flex-shrink: 0;
+  }
+  .tag.green { background: #dcfce7; color: #166534; }
+  .tag.amber { background: #fef3c7; color: #92400e; }
+  .tag.red   { background: #fee2e2; color: #991b1b; }
+  .tag.blue  { background: #dbeafe; color: #1e40af; }
+  .tag.gray  { background: #f1f5f9; color: #475569; }
+  .tag.purple { background: #ede9fe; color: #5b21b6; }
+
+  .test-cb {
+    appearance: none; -webkit-appearance: none;
+    border: 2px solid var(--brand); border-radius: 3px;
+    cursor: pointer; background: #fff; flex-shrink: 0;
+    transition: all 0.12s; position: relative; display: inline-block;
+    vertical-align: middle;
+  }
+  .test-cb:hover { border-color: #312e81; box-shadow: 0 0 0 2px rgba(67,56,202,0.15); }
+  .test-cb:checked { background: var(--brand); border-color: var(--brand); }
+  .test-cb:checked::after {
+    content: "✓"; color: #fff; font-size: 0.8em; font-weight: 900;
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -55%); line-height: 1;
+  }
+  .cb-h2 { width: 22px; height: 22px; border-width: 3px; }
+  .cb-f  { width: 18px; height: 18px; border-width: 2.5px; }
+  .cb-li { width: 13px; height: 13px; border-width: 1.5px; }
+
+  footer.foot {
+    margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 11px; text-align: center;
+  }
+  .muted { color: var(--muted); font-size: 12px; }
+  p.intro { font-size: 13px; color: var(--muted); margin: 6px 0 12px; line-height: 1.55; }
+  .page-break-before { }
+
+  @media print {
+    .page-break-before { page-break-before: always; break-before: page; }
+    @page { size: A4; margin: 12mm 14mm; }
+    body { background: #fff; font-size: 10pt; }
+    .page { padding: 0; max-width: 100%; }
+    .toolbar, .progress-bar { display: none !important; }
+    header.cover { padding: 14px 18px; border-radius: 6px; page-break-inside: avoid; }
+    header.cover h1 { font-size: 16pt; }
+    header.cover .lede { font-size: 9pt; }
+    h2 { font-size: 11.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    .feature { padding: 8px 10px; margin: 5px 0; page-break-inside: avoid; }
+    .feature-head .f-title { font-size: 10.5pt; }
+    .feature .f-desc { font-size: 8.5pt; }
+    .checks li { font-size: 9pt; padding: 2.5pt 0; }
+    .checks .note { font-size: 8pt; }
+    table.simple th, table.simple td { padding: 5px 8px; font-size: 9pt; }
+    footer.foot { font-size: 8pt; }
+    .test-cb {
+      appearance: none !important; -webkit-appearance: none !important;
+      border: 2pt solid #000 !important; background: #fff !important;
+      border-radius: 1.5pt !important;
+    }
+    .test-cb::after { content: none !important; }
+    .cb-h2 { width: 16pt !important; height: 16pt !important; border-width: 2.5pt !important; }
+    .cb-f  { width: 14pt !important; height: 14pt !important; border-width: 2pt !important; }
+    .cb-li { width: 11pt !important; height: 11pt !important; border-width: 1.5pt !important; }
+  }
+  @media (max-width: 640px) {
+    header.cover { padding: 18px 20px; }
+    header.cover h1 { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="toolbar">
+    <span class="label">Chop etish: Ctrl+P → PDF sifatida saqlash (A4, 2 tomonlama)</span>
+    <button class="pdf-btn" onclick="window.print()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+        <path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M9 14h6m-6 4h6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Chop etish / PDF
+    </button>
+  </div>
+
+  <div class="progress-bar">
+    <span style="font-size:12px;color:var(--muted);white-space:nowrap;">Tekshiruv jarayoni:</span>
+    <div class="bar-wrap"><div class="bar-fill" id="pb-fill"></div></div>
+    <span class="count" id="pb-count">0 / 0</span>
+    <button class="reset-btn" id="pb-reset" type="button">Tozalash</button>
+  </div>
+
+  <header class="cover">
+    <h1>A'lochi platformasi — To'liq tekshiruv protokoli</h1>
+    <p class="lede">
+      O'quv markazini boshqarish platformasining barcha sahifalari va funksiyalari ushbu hujjatda ketma-ket keltirilgan.
+      Har bir funksiyani sinab ko'rgandan so'ng yonidagi katakchani belgilang. Foydalanuvchi rollari:
+      O'quvchi, Mentor, Tester, Manager, Filadmin va Superadmin. Kiosk (Yuz ID) — alohida planshet rejim.
+    </p>
+    <div class="meta">
+      <span><b>Versiya:</b> 1.1</span>
+      <span><b>Sana:</b> 2026-04-30</span>
+      <span><b>Bo'limlar:</b> 24 ta</span>
+      <span><b>Rollar:</b> 6 ta</span>
+    </div>
+    <div class="legend">
+      <span>🟢 Tayyor</span>
+      <span>🟡 Qisman</span>
+      <span>🔴 Xato</span>
+      <span>⚪ Sinalmagan</span>
+    </div>
+  </header>
+
+  <!-- ================================================
+       §1  KIRISH VA NAVIGATSIYA
+       ================================================ -->
+  <h2><span class="section-num">1</span> Tizimga kirish va navigatsiya</h2>
+  <p class="intro">Login sahifasi, profil va har rol uchun pastki menyu paneli.</p>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Login sahifasi</span>
+    </div>
+    <p class="f-desc">Chap tomonda branding paneli, o'ng tomonda kirish formasi.</p>
+    <ul class="checks">
+      <li><span class="what">Login va parol bilan kirish — har rol o'z dashboardiga yo'naltiriladi<span class="note">Student → /student, Mentor → /mentor, Manager → /manager, Filadmin → /filadmin, Superadmin → /superadmin, Tester → /tester</span></span></li>
+      <li><span class="what">Brauzer yopilsa ham kirish saqlanadi (qayta parol so'ralmaydi)</span></li>
+      <li><span class="what">"Chiqish" tugmasi bosilganda tizimdan chiqiladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Pastki navigatsiya paneli</span>
+    </div>
+    <p class="f-desc">Har rol uchun rolga mos tab paneli pastki qismda ko'rinadi.</p>
+    <ul class="checks">
+      <li><span class="what">O'quvchi: Bosh sahifa, Darslar, Do'stlar, Duel, Profil</span></li>
+      <li><span class="what">Mentor: Bosh sahifa, Guruh, Davomat</span></li>
+      <li><span class="what">Manager: Bosh sahifa, O'quvchilar, To'lovlar, Delegatsiyalar</span></li>
+      <li><span class="what">Filadmin: Bosh sahifa, Davomat, To'lovlar, Ogohlantirishlar</span></li>
+      <li><span class="what">Superadmin: Bosh sahifa, Filiallar, Foydalanuvchilar</span></li>
+      <li><span class="what">Tester: Mentor bilan bir xil 3 ta tab</span></li>
+      <li><span class="what">Aktiv tab boshqalardan ajralib turadi (rang + nuqta indikatori)</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §2  PROFIL VA YUZ ID
+       ================================================ -->
+  <h2><span class="section-num">2</span> Profil va Yuz ID ro'yxati</h2>
+  <p class="intro">/profile sahifasi har rol uchun umumiy: avatar, login ma'lumoti, Yuz ID, Telegram bog'lash.</p>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Profil bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: avatar (ism harflari bilan), to'liq ism, role, login</span></li>
+      <li><span class="what">Yuz ID kartasi: "✅ Ro'yxatdan o'tilgan" yoki "❌ Ro'yxatdan o'tilmagan"</span></li>
+      <li><span class="what">Ro'yxatdan o'tmagan bo'lsa: "Yuzni ro'yxatdan o'tkazish" tugmasi</span></li>
+      <li><span class="what">Ro'yxatdan o'tgan bo'lsa: "Qayta ro'yxatdan o'tish" + "Yuzni o'chirish" tugmalari</span></li>
+      <li><span class="what">Telegram bog'lash kartasi (faqat o'quvchilarga ko'rinadi)</span></li>
+      <li><span class="what">"Telegram'ni bog'lash" tugmasi → bot deep link orqali ulanish</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Yuz ID ro'yxat olish</span>
+    </div>
+    <p class="f-desc">5 burchakdan rasm tushiriladi — to'g'riga, chapga, o'ngga, yuqoriga, pastga.</p>
+    <ul class="checks">
+      <li><span class="what">Tushuntirish ekrani: 5 burchak haqida ma'lumot va maxfiylik eslatmasi</span></li>
+      <li><span class="what">"Boshlash" tugmasi → kamera ochiladi</span></li>
+      <li><span class="what">5 ta nuqta indikatori — har rasm tushirilgach ✅ ga aylanadi</span></li>
+      <li><span class="what">Yo'riq matni har bosqichda yangilanadi: "To'g'riga qarang" → "Chapga" → ...</span></li>
+      <li><span class="what">5 rasm tushirilgach: yashil ✅ + "Yuzingiz muvaffaqiyatli saqlandi!"</span></li>
+      <li><span class="what">"Profilga qaytish" tugmasi orqali yopish</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §3  KIOSK
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">3</span> Kiosk — Yuz ID davomati (planshet)</h2>
+  <p class="intro">Filial kirishidagi planshetda ishlaydigan alohida sahifa. Login talab qilmaydi, internet uzilsa ham ishlaydi.</p>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Kiosk bosh ekran</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "🏫 A'lochi — Xodimlar Kirishi"</span></li>
+      <li><span class="what">Markazda jonli kamera ko'rinishi</span></li>
+      <li><span class="what">Yo'riq matni: "Yuzingizni ko'rsating..."</span></li>
+      <li><span class="what">Pastki tugma: "🔑 Login bilan kirish" (alternativa)</span></li>
+      <li><span class="what">Bo'sh tursa avtomatik bosh holatga qaytadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Yuz orqali kirish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Kamera oldida turish → yashil ✅ ekran + "Xush kelibsiz, [Ism]!"</span></li>
+      <li><span class="what">Kelish vaqti: HH:MM ko'rsatiladi, 2 soniya kutib bosh ekranga qaytadi</span></li>
+      <li><span class="what">O'z vaqtida kelgan: yashil fon + "✅ O'z vaqtida"</span></li>
+      <li><span class="what">Kech kelgan: qizil fon + "⏰ N daqiqa kech"</span></li>
+      <li><span class="what">Bugun allaqachon belgilangan xodim: "Siz bugun allaqachon belgilangansiz (HH:MM)"</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Liveness va manual kirish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"Ko'zingizni yumib oching" — odam haqiqatan turibdi yoki rasm emasligini tekshiradi</span></li>
+      <li><span class="what">Yuz aniqlanmasa "Login bilan kirish" tugmasi orqali username + parol bilan kirish</span></li>
+      <li><span class="what">Manual kirish ham davomat sifatida yoziladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Offline rejim</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Internet uzilsa kiosk yuz orqali ishlashda davom etadi (lokal saqlash)</span></li>
+      <li><span class="what">Internet qaytsa, kutib turilgan davomatlar avtomat yuboriladi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §4  O'QUVCHI BOSH SAHIFA
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">4</span> O'quvchi — Bosh sahifa</h2>
+  <p class="intro">/student — XP, streak, status, kunlik vazifalar, virtual shahar va sotsial lenta bilan asosiy panel.</p>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">XP va daraja</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Joriy XP, daraja nomi va keyingi darajagacha qolgan XP ko'rinadi</span></li>
+      <li><span class="what">Progress bar foiz bilan to'ladi</span></li>
+      <li><span class="what">Daraja: Beginner → Scholar → Expert (yangi darajaga chiqilganda animatsiya)</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Streak va shield</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Joriy streak soni: "🔥 12 kun"</span></li>
+      <li><span class="what">Shield 🛡️ bor bo'lsa: 1 kun o'tkazilsa streak buzilmaydi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">3 ta status nuqtasi (English / Personal / Critical)</span>
+    </div>
+    <p class="f-desc">Mentor tomonidan belgilangan rangli nuqtalar.</p>
+    <ul class="checks">
+      <li><span class="what">3 ustun: English | Personal | Critical</span></li>
+      <li><span class="what">Yashil 🟢 — yaxshi, Sariq 🟡 — ogohlantirish, Qizil 🔴 — kritik</span></li>
+      <li><span class="what">Hali belgilanmagan: ⚪</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Kunlik vazifalar (Quests)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">3-4 ta quest: "Bugun 3 ta dars o'tgin", "1 marta duelda yutib chiqgin"</span></li>
+      <li><span class="what">Har quest: progress bar va mukofot XP raqami</span></li>
+      <li><span class="what">Bajarilganda yashil belgi va XP avtomat hisoblanadi</span></li>
+      <li><span class="what">Yangi kunda yangi questlar generatsiya qilinadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Virtual shahar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">XP to'plansa shahar binolari ochiladi</span></li>
+      <li><span class="what">Bino bosilganda kichik tushuntirish va qulflangan/ochilgan holat</span></li>
+      <li><span class="what">Yangi bino ochilganda animatsiya/notifikatsiya</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Kunlik so'z takrori</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"Bugun N ta so'z takrorlash" + "Boshlash" tugmasi → /student/review</span></li>
+      <li><span class="what">Takror so'zlar yo'q bo'lsa karta yashiriladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Tezkor menyu (2×2 grid)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Takrorlash → /student/review</span></li>
+      <li><span class="what">Xato tahlili → /student/errors</span></li>
+      <li><span class="what">Turnirlar → /student/tournaments</span></li>
+      <li><span class="what">Imtihonlar → /student/exams</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Do'stlar lentasi (sotsial feed)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"DO'STLAR LENTASI [Hammasi →]" sarlavha</span></li>
+      <li><span class="what">Voqealar: dars tugatish, streak, sertifikat, duel, challenge</span></li>
+      <li><span class="what">Misol: "Sardor Dars #48 ni o'tdi! +100 XP • 🔥 15 kun streak"</span></li>
+      <li><span class="what">Reaksiya tugmalari: 👍 🎉 💪 🔥 ❤️</span></li>
+      <li><span class="what">"⚡ Duelga chaqir" tugmasi do'st kartasi yonida</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Aktiv ogohlantirishlar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sariq/qizil banner: "Sizda N ta faol ogohlantirish bor"</span></li>
+      <li><span class="what">Ogohlantirish 0 bo'lsa banner ko'rinmaydi</span></li>
+      <li><span class="what">Bosib o'tilsa tafsilot sahifasiga yo'naltiradi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">"Bugungi darsni boshlash" suzuvchi tugma</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Pastki o'ng burchakda doimo ko'rinadi</span></li>
+      <li><span class="what">Bosilsa joriy darsga yo'naltiradi (/student/lessons/current)</span></li>
+      <li><span class="what">Bugungi dars yakunlangan bo'lsa yashil ✓ va boshqa matn</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §5  DARSLAR
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">5</span> O'quvchi — Darslar oqimi</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Darslar ro'yxati</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "Darslar — N tadan M ta tugatildi"</span></li>
+      <li><span class="what">Har dars kartasi: tartib raqam, sarlavha, status badgi</span></li>
+      <li><span class="what">Status: Yangi / Jarayonda / Akademiyani kutmoqda / Tugatilgan</span></li>
+      <li><span class="what">Oldingi dars tugatilmagan bo'lsa keyingisi qulflangan (🔒 belgi)</span></li>
+      <li><span class="what">Kartani bosish dars tafsilotini ochadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Dars tafsiloti va komponentlar</span>
+    </div>
+    <p class="f-desc">Dars ichida dinamik komponentlar: matn, video, MCQ savol, drag-drop, audio.</p>
+    <ul class="checks">
+      <li><span class="what">Komponentlar ketma-ket render qilinadi</span></li>
+      <li><span class="what">MCQ savol: 4 javob, radio-button, "Tasdiqlash" tugmasi</span></li>
+      <li><span class="what">To'g'ri javob: yashil belgi va keyingi savolga o'tish</span></li>
+      <li><span class="what">Noto'g'ri javob: qizil belgi, to'g'ri javob ko'rsatiladi</span></li>
+      <li><span class="what">Drag-drop: elementlarni joyiga sudrash (mobile da touch ishlaydi)</span></li>
+      <li><span class="what">Audio komponent: o'ynatish/pauza/qayta o'ynatish tugmalari</span></li>
+      <li><span class="what">Dars oxiri: "Akademiya" bo'limi (mentor tasdiqi uchun)</span></li>
+      <li><span class="what">Dars yakunida: feedback widget — 3 emoji (😊 😐 😕), bir marta beriladi</span></li>
+      <li><span class="what">XP avtomat hisoblanadi va ko'rsatiladi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §6  IMTIHON
+       ================================================ -->
+  <h2><span class="section-num">6</span> O'quvchi — Imtihon</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Imtihon sahifasi (kamera kuzatuvi bilan)</span>
+    </div>
+    <p class="f-desc">Tester yoki mentor imtihon ochmaguncha qulflangan turadi.</p>
+    <ul class="checks">
+      <li><span class="what">Faol imtihon yo'q: qulflangan ekran + tushuntirish</span></li>
+      <li><span class="what">Faol imtihon: dars sarlavhasi, "Boshlash" tugmasi</span></li>
+      <li><span class="what">Boshlanganda kamera ruxsati so'raladi</span></li>
+      <li><span class="what">Yuz to'g'ri turibdi: yashil indikator yuqorida</span></li>
+      <li><span class="what">Boshqa joyga qarash: ogohlantirish "1/3", "2/3"</span></li>
+      <li><span class="what">3 marta ogohlantirish → imtihon avtomat to'xtaydi (qizil banner)</span></li>
+      <li><span class="what">MCQ savollar tartibli (1, 2, 3...)</span></li>
+      <li><span class="what">Submit tugmasi barcha javob berilgancha o'chiq</span></li>
+      <li><span class="what">Natija ekran: foiz, ball, "Tabriklaymiz" yoki "Qayta urinish"</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §7  TAKROR
+       ================================================ -->
+  <h2><span class="section-num">7</span> O'quvchi — So'z takrori</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Spaced Repetition flashcard</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: orqaga tugma, progress hisoblagich (X/N)</span></li>
+      <li><span class="what">Progress bar (oranj rang)</span></li>
+      <li><span class="what">Flashcard: bosilsa aylanib tarjima ko'rsatiladi</span></li>
+      <li><span class="what">2 ta tugma: "Bilmadim" (qizil) / "Bilaman" (yashil)</span></li>
+      <li><span class="what">"Bilmadim" bosilgan so'z keyingi rounddagi takror ro'yxatida qoladi</span></li>
+      <li><span class="what">Tugagach: 🏆 trofey, foiz, "Yana takrorlash" tugmasi</span></li>
+      <li><span class="what">Bo'sh holat: "Bugun takror uchun so'zlar yo'q"</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §8  XATO TAHLILI
+       ================================================ -->
+  <h2><span class="section-num">8</span> O'quvchi — AI xato tahlili</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Kuchsiz mavzular ro'yxati</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yuqorida: AI tavsiya bloki (qora-binafsha gradient fon)</span></li>
+      <li><span class="what">"Kuchsiz mavzular" ro'yxati severity bo'yicha tartiblangan</span></li>
+      <li><span class="what">Har mavzu: severity nuqta (qizil/sariq/yashil), nom, badge</span></li>
+      <li><span class="what">Severity badge: "Juda kuchsiz" / "Kuchsiz" / "O'rtacha" / "Yaxshi"</span></li>
+      <li><span class="what">Progress bar har mavzu uchun</span></li>
+      <li><span class="what">"Darslarga qaytish" tugmasi pastki qismda</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §9  DO'STLAR
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">9</span> O'quvchi — Do'stlar</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Do'st qo'shish va so'rovlar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"Do'st qo'shish" formasi: Friend ID + Branch ID maydonlari</span></li>
+      <li><span class="what">"So'rov yuborish" tugmasi → so'rov yuboriladi</span></li>
+      <li><span class="what">"Kelgan so'rovlar" bo'limi: ism, sana, [✅ Qabul] [❌ Rad] tugmalari</span></li>
+      <li><span class="what">Qabul qilish do'stni ro'yxatga qo'shadi</span></li>
+      <li><span class="what">13 yoshdan kichik o'quvchi: Branch tab yoki forma ko'rinmaydi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Do'stlar ro'yxati va Duelga chaqirish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Initiallar avatar, ism, XP, streak ko'rinadi</span></li>
+      <li><span class="what">Har do'st kartasida "⚡ Duelga chaqir" tugmasi</span></li>
+      <li><span class="what">Bosilganda tasdiq oynasi: "Duelga chaqirish [Ism]?"</span></li>
+      <li><span class="what">Tasdiqlangach do'stga bildirishnoma boradi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §10  REYTING
+       ================================================ -->
+  <h2><span class="section-num">10</span> O'quvchi — Reyting</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filial va Milliy reyting</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">2 ta tab: "Filial" | "Milliy"</span></li>
+      <li><span class="what">Milliy tab uchun davr filtri: "Haftalik" | "Oylik"</span></li>
+      <li><span class="what">Reyting qatori: rank badge (1=oltin, 2=kumush, 3=bronza), ism, streak (🔥), XP</span></li>
+      <li><span class="what">O'z foydalanuvchi qatori ajratib ko'rsatiladi</span></li>
+      <li><span class="what">Milliy reytingda ismlar anonim ko'rinadi</span></li>
+      <li><span class="what">Filial tabida o'z filialdagi o'quvchilar</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §11  TURNIRLAR
+       ================================================ -->
+  <h2><span class="section-num">11</span> O'quvchi — Turnirlar</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Turnir kartalari va ro'yxatdan o'tish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Turnir kartasi: status badgi (LIVE/UPCOMING), turi, sana (📅), ishtirokchilar (👥)</span></li>
+      <li><span class="what">"Ro'yxatdan o'tish" tugmasi (muddat tugamagan bo'lsa)</span></li>
+      <li><span class="what">Allaqachon ro'yxatdan o'tgan: ✅ "Ro'yxatdan o'tilgan"</span></li>
+      <li><span class="what">LIVE turnir: jonli ko'rsatkichlar, vaqt qoldi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §12  DUEL
+       ================================================ -->
+  <h2><span class="section-num">12</span> O'quvchi — Duel rejimi</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">1v1 Duel — savollar va natija</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">10 ta MCQ savol (ikkala ishtirokchi uchun bir xil)</span></li>
+      <li><span class="what">Navigatsiya: [&lt; Orqaga] [Keyingi &gt;]</span></li>
+      <li><span class="what">"Savol N/10" hisoblagich</span></li>
+      <li><span class="what">"Submit" tugmasi 10 ta javob berilgancha o'chiq</span></li>
+      <li><span class="what">Submit'dan keyin raqib javob bermagan bo'lsa kutib turish ekran</span></li>
+      <li><span class="what">Ikkalasi javob bergach: natija "⚡ DUEL NATIJASI" ekran</span></li>
+      <li><span class="what">2 ustun: ism, ball (X/10), ✅ G'OLIB badgi, qo'shilgan XP</span></li>
+      <li><span class="what">G'olib: +150 XP, mag'lub: +30 XP</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §13  GURUH CHATI
+       ================================================ -->
+  <h2><span class="section-num">13</span> O'quvchi — Guruh chati</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Guruh chatida xabar yozish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "💬 [Guruh nomi] Chati • Mentor: [Ism]"</span></li>
+      <li><span class="what">Xabarlar xronologik tartibda (eski → yangi)</span></li>
+      <li><span class="what">Mentor xabarlari 📌 pin belgisi bilan ajraladi</span></li>
+      <li><span class="what">O'z xabarlari o'ngga, boshqalarniki chapga align</span></li>
+      <li><span class="what">Pastdagi forma: emoji, matn (200 belgi max), [➤ Yuborish]</span></li>
+      <li><span class="what">Reaksiya: long-press → emoji bar (👍 🎉 💪 🔥 ❤️)</span></li>
+      <li><span class="what">Taqiqlangan kalit so'z bo'lsa xabar mentor moderatsiyasiga jo'natiladi</span></li>
+      <li><span class="what">Mentor tasdiqlasa chiqadi, rad qilsa o'chiriladi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §14  MENTOR
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">14</span> Mentor — Bosh sahifa va Guruh</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Mentor bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Salomlashish: "Salom, [Ism]!" + bugungi sana</span></li>
+      <li><span class="what">KPI hero karta: bugungi KPI ball (0-50) + SVG progress halqa</span></li>
+      <li><span class="what">Oylik jami XP raqami</span></li>
+      <li><span class="what">Stat kartalar (3 ustun): Guruh o'quvchilar, Kutilayotgan vazifalar, Oylik KPI</span></li>
+      <li><span class="what">Davomat keng karta: "✅ Belgilangan" yoki "⚠️ Belgilanmagan" + tugma</span></li>
+      <li><span class="what">Tezkor menyu (2×2): Guruh, Davomat, Vazifalar, O'quvchilar</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Guruh boshqaruvi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "Guruh — [Guruh nomi]" + statistika (kelganlar / jami)</span></li>
+      <li><span class="what">Har o'quvchi qatori: davomat toggle, ism, status nuqtalari, izoh maydoni</span></li>
+      <li><span class="what">Status (qizil/sariq) tanlanganda izoh maydoni ko'rinadi (majburiy)</span></li>
+      <li><span class="what">"Saqlash" tugmasi → "✓ Saqlandi" tasdiq</span></li>
+      <li><span class="what">"Xato tahlili →" link → o'quvchi tafsiloti sahifasi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Mentor davomat sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: bugungi sana, Saqlash tugmasi</span></li>
+      <li><span class="what">Stat qator (3 ustun): kelgan, kelmagan, kechikan</span></li>
+      <li><span class="what">Har o'quvchi: 3 toggle tugma (✅ Keldi / ❌ Kelmadi / ⏰ Kechikdi)</span></li>
+      <li><span class="what">Default: barchasi "Keldi"</span></li>
+      <li><span class="what">Saqlanganda bosh sahifada davomat kartasi "Belgilangan" holatga o'tadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">O'quvchi xato tahlili va ota-onaga xabar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"O'quvchilar" sahifasi: initialli avatar bilan ro'yxat</span></li>
+      <li><span class="what">"AI tahlilini ko'rish →" link orqali tafsilot ochiladi</span></li>
+      <li><span class="what">Tafsilot: kuchsiz mavzular ro'yxati va severity (1-2 qizil, 3 sariq, 4+ yashil)</span></li>
+      <li><span class="what">"📤 Ota-onaga xabar yuborish" tugmasi</span></li>
+      <li><span class="what">Yuborilgach Telegram orqali ota-onaga matn boradi</span></li>
+      <li><span class="what">Tugma "✓ Yuborildi" matnga o'zgaradi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Mentor vazifalari</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Vazifa kartalari: sarlavha, tafsilot, status badgi</span></li>
+      <li><span class="what">Status: Yuborildi / Ko'rildi / Jarayonda / Bajarildi / Tasdiqlandi</span></li>
+      <li><span class="what">Yaratuvchi ism + KPI ball ko'rinadi</span></li>
+      <li><span class="what">Tugmalar: "Boshlash" yoki "Bajarildi deb belgilash"</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §15  MANAGER
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">15</span> Manager — Bosh sahifa</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Manager bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yuqorida holat banneri (qizil — muammolar bor; teal — barchasi yaxshi)</span></li>
+      <li><span class="what">Tezkor menyu (2×2): O'quvchilar, To'lovlar, Vazifalar, Delegatsiyalar</span></li>
+      <li><span class="what">"🔴 Qizil O'quvchilar" bo'limi — ro'yxat va soni</span></li>
+      <li><span class="what">"🟡 Sariq O'quvchilar" bo'limi — ro'yxat va soni</span></li>
+      <li><span class="what">"⭐ Yuqori natijali" bo'limi — 200%+ bajarilganlar</span></li>
+      <li><span class="what">"⚠️ Xavfli o'quvchilar" — high-risk churn (top 5)</span></li>
+      <li><span class="what">Har o'quvchi ismi link: tafsilot sahifasiga olib boradi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">O'quvchi tafsiloti</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">O'quvchining haqiqiy ismi va status badgilar (yashil/sariq/qizil)</span></li>
+      <li><span class="what">"1:1 Sessiya" tugmasi → delegatsiya yaratish formasi (sabab avtomat to'ldiriladi)</span></li>
+      <li><span class="what">XP tarixi, streak, dars statistikasi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Manager to'lovlari (faqat ko'rish)</span>
+    </div>
+    <p class="f-desc">"To'landi" tugmasi yo'q — read-only.</p>
+    <ul class="checks">
+      <li><span class="what">Oy tanlash (default = joriy oy)</span></li>
+      <li><span class="what">Jadval: o'quvchi, status, summa, to'lov sanasi</span></li>
+      <li><span class="what">Filter tab: "Barchasi" / "To'lamagan" / "Bloklangan"</span></li>
+      <li><span class="what">Sort: summa ustuni — yuqoriga/pastga</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Manager vazifalari</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Vazifa yaratish: sarlavha, tafsilot, qabul qiluvchi, KPI ball</span></li>
+      <li><span class="what">Mavjud vazifalar: holat bo'yicha filter</span></li>
+      <li><span class="what">Vazifa bajarilgach: tasdiqlash + KPI berish</span></li>
+      <li><span class="what">Rad etish: sabab kiritish</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Manager KPI mukofot</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Xodim tanlash (faqat non-student rolelar)</span></li>
+      <li><span class="what">Ball preset tugmalari: 5, 10, 15, 20, 25, 30, 50</span></li>
+      <li><span class="what">Manual ball: 1-50 oraliq</span></li>
+      <li><span class="what">Sabab maydon: 200 belgi max (counter ko'rinadi)</span></li>
+      <li><span class="what">Submit: yashil banner "Ball muvaffaqiyatli berildi!"</span></li>
+      <li><span class="what">"Bugun berilgan jami" badge yuqorida ko'rinadi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §16  FILADMIN BOSH
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">16</span> Filadmin — Bosh sahifa va Davomat</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filadmin bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "Filadmin Paneli" (gradient indigo-purple fon)</span></li>
+      <li><span class="what">6 ta tezkor karta:</span></li>
+      <li><span class="what">— 📋 Davomat → /filadmin/attendance</span></li>
+      <li><span class="what">— 💳 To'lovlar → /filadmin/payments</span></li>
+      <li><span class="what">— ⚠️ Ogohlantirishlar → /filadmin/warnings</span></li>
+      <li><span class="what">— ⭐ KPI Mukofot → /filadmin/kpi</span></li>
+      <li><span class="what">— 📱 Qurilmalar → /filadmin/devices</span></li>
+      <li><span class="what">— 🏆 Turnirlar → /filadmin/tournaments</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Xodimlar davomati</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sana tanlovchi (default = bugun)</span></li>
+      <li><span class="what">Ustunlar: Xodim | Kirish vaqti | Usul | Kechikdi | Tasdiqlangan</span></li>
+      <li><span class="what">Kirish vaqti: HH:MM yoki "—"</span></li>
+      <li><span class="what">Usul belgisi: 📷 Yuz ID, ✍️ Qo'lda, 👤 Admin</span></li>
+      <li><span class="what">Kechikan xodim qizil belgi bilan</span></li>
+      <li><span class="what">"[✓ Tasdiqlash]" tugmasi → bosilgach "✓ HH:MM" matn ko'rinadi</span></li>
+      <li><span class="what">Kelmagan xodim: "Kelmagan" matn</span></li>
+      <li><span class="what">Filter: status (Hammasi/O'z vaqtida/Kech/Kelmagan), usul (Hammasi/Yuz/Qo'lda/Admin)</span></li>
+      <li><span class="what">Eksport tugmasi: CSV/Excel ko'chirish</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Yuz ID davomat tahlili</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yuz orqali yozilgan davomat ro'yxati</span></li>
+      <li><span class="what">Recognition method bo'yicha filter</span></li>
+      <li><span class="what">Failed attempts (manual fallback) alohida ko'rinadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Qurilmalar (Kiosk planshetlari)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Qurilmalar ro'yxati: nom, oxirgi sync vaqti, status</span></li>
+      <li><span class="what">Status indikatori: 🟢 Online, 🟡 Warning, 🔴 Offline</span></li>
+      <li><span class="what">"Cache yangilash" tugmasi har qurilma uchun</span></li>
+      <li><span class="what">"Yangi qurilma qo'shish" tugmasi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §17  FILADMIN TO'LOV VA OGOH
+       ================================================ -->
+  <h2><span class="section-num">17</span> Filadmin — To'lovlar, Ogohlantirishlar, KPI</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">To'lovlar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Oy tanlovchi: default = joriy oy</span></li>
+      <li><span class="what">Jadval: o'quvchi, status, summa, to'lov sanasi, "To'landi" tugmasi</span></li>
+      <li><span class="what">Filter tab: "Barchasi (N)" / "To'lamagan (N)" / "Bloklangan (N)" — son to'g'ri yangilanadi</span></li>
+      <li><span class="what">Sort: summa ustuni</span></li>
+      <li><span class="what">"To'landi" tugmasi → qator yangilanadi va hisoblar qayta hisoblanadi</span></li>
+      <li><span class="what">Bo'sh holat: "Qarzdorlar topilmadi"</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Ogohlantirishlar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yangi ogohlantirish: o'quvchi tanlash, sabab, qattiqlik (yashil/sariq/qizil)</span></li>
+      <li><span class="what">3 ta qizil ogohlantirish to'plansa o'quvchi avtomat bloklanadi</span></li>
+      <li><span class="what">Bloklangan o'quvchini ochish uchun "Ochish" tugmasi (faqat filadmin)</span></li>
+      <li><span class="what">Tarix: kim qachon bergan, sabab matni</span></li>
+      <li><span class="what">Filter: o'quvchi/sana/qattiqlik bo'yicha</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filadmin KPI mukofot</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Xodim tanlash (faqat non-student rolelar)</span></li>
+      <li><span class="what">Tanlangan user: indigo fon, chap chegara, ✓ ikon</span></li>
+      <li><span class="what">Ball preset tugmalari: 5, 10, 15, 20, 25, 30, 50</span></li>
+      <li><span class="what">Manual ball: 1-50</span></li>
+      <li><span class="what">Sabab textarea: 200 belgi max</span></li>
+      <li><span class="what">Submit: yashil banner "Ball muvaffaqiyatli berildi!"</span></li>
+      <li><span class="what">"Bugun berilgan jami" badge yuqorida</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filadmin turnirlar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Turnir yaratish: nom, sana, ishtirokchilar, qoidalar</span></li>
+      <li><span class="what">Mavjud turnirlar: status badgi (LIVE/UPCOMING/ENDED)</span></li>
+      <li><span class="what">Tafsilot sahifasiga o'tish</span></li>
+      <li><span class="what">Ishtirokchilarni boshqarish (qo'shish/o'chirish)</span></li>
+      <li><span class="what">Natijalar e'lon qilish</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §18  SUPERADMIN BOSH
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">18</span> Superadmin — Bosh sahifa va Foydalanuvchilar</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Superadmin bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: Shield ikon + "Tizim administratori"</span></li>
+      <li><span class="what">Stat kartalar: Filiallar soni, Darslar soni, Foydalanuvchilar soni</span></li>
+      <li><span class="what">10 ta tezkor menyu kartasi:</span></li>
+      <li><span class="what">— Darslar (yaratish/tahrir/nashr) → /superadmin/lessons</span></li>
+      <li><span class="what">— To'lovlar (filiallar bo'yicha) → /superadmin/payments</span></li>
+      <li><span class="what">— Foydalanuvchilar → /superadmin/users</span></li>
+      <li><span class="what">— Filiallar → /superadmin/branches</span></li>
+      <li><span class="what">— Taqiqlangan so'zlar → /superadmin/keywords</span></li>
+      <li><span class="what">— Adaptiv qiyinlik → /superadmin/adaptive</span></li>
+      <li><span class="what">— Sifat (A/B test) → /superadmin/content-quality</span></li>
+      <li><span class="what">— Churn monitor → /superadmin/churn</span></li>
+      <li><span class="what">— Analitika → /superadmin/analytics</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Foydalanuvchilar boshqaruvi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Jadval: ism, login, role, filial, holat (active/blocked), oxirgi kirish</span></li>
+      <li><span class="what">"Yangi foydalanuvchi" tugmasi: ism, login, parol, role, filial</span></li>
+      <li><span class="what">Tahrirlash: parolni o'zgartirish, role'ni o'zgartirish</span></li>
+      <li><span class="what">Bloklash / qayta faollashtirish</span></li>
+      <li><span class="what">Filter: role, filial, holat bo'yicha</span></li>
+      <li><span class="what">Qidiruv: ism yoki login bo'yicha</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filiallar boshqaruvi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Filiallar ro'yxati: nom, manzil, xodimlar soni, o'quvchilar soni</span></li>
+      <li><span class="what">"Yangi filial" tugmasi: nom, manzil, ish boshlanish vaqti, kechikish chegarasi (daqiqa)</span></li>
+      <li><span class="what">Filialni tahrirlash</span></li>
+      <li><span class="what">O'chirish (faqat bog'liq ma'lumot bo'lmasa)</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §19  SUPERADMIN DARSLAR
+       ================================================ -->
+  <h2><span class="section-num">19</span> Superadmin — Darslar boshqaruvi</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Darslar ro'yxati</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Jadval: dars raqami, sarlavha, status (Draft/Published), yaratilgan sana</span></li>
+      <li><span class="what">"Yangi dars" tugmasi → dars yaratish sahifasi</span></li>
+      <li><span class="what">Dars satriga bosish → tahrir sahifasi</span></li>
+      <li><span class="what">Filter: status, kategoriya bo'yicha</span></li>
+      <li><span class="what">Tartibni o'zgartirish (drag-drop yoki nomerlar)</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Yangi dars yaratish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Asosiy maydonlar: sarlavha, raqam, kategoriya, qiyinlik darajasi</span></li>
+      <li><span class="what">Komponent qo'shish: matn, video, MCQ savol, drag-drop, audio</span></li>
+      <li><span class="what">Komponentlar tartibini o'zgartirish (drag yoki tugmalar bilan)</span></li>
+      <li><span class="what">Saqlash → Draft holatda</span></li>
+      <li><span class="what">"Nashr qilish" tugmasi → status Published'ga o'tadi va o'quvchilarga ochiladi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §20  SUPERADMIN TO'LOVLAR JAMI
+       ================================================ -->
+  <h2><span class="section-num">20</span> Superadmin — To'lovlar (filiallar bo'yicha)</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filiallar bo'yicha jamlanma</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Oy tanlash (default = joriy oy)</span></li>
+      <li><span class="what">Karta grid: 2 ustun mobile, 3 ustun desktop</span></li>
+      <li><span class="what">Har karta: filial nomi, jami o'quvchilar, to'laganlar (✅), to'lamaganlar (❌), bloklanganlar (🔒), jami yig'ilgan summa</span></li>
+      <li><span class="what">Karta bosilsa filial tafsilotiga o'tadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Filial tafsiloti (drill-down)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Tanlangan filial qarzdorlari jadvali (faqat ko'rish)</span></li>
+      <li><span class="what">"← Jamlanmaga qaytish" link</span></li>
+      <li><span class="what">Tanlangan oy URL'da saqlanadi (refresh keyin ham)</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §21  SUPERADMIN ANALITIKA
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">21</span> Superadmin — Sifat, Adaptiv, Churn, Analitika</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Adaptiv qiyinlik konfiguratsiyasi</span>
+    </div>
+    <p class="f-desc">Tizim avtomat ravishda darslar takror sonini xato darajasiga qarab moslaydi.</p>
+    <ul class="checks">
+      <li><span class="what">Forma maydonlari: Min N (default 1), Max N (default 10)</span></li>
+      <li><span class="what">Threshold foizlari: Hard (default 40%), Easy (default 15%)</span></li>
+      <li><span class="what">"Saqlash" tugmasi → yashil banner "Saqlandi"</span></li>
+      <li><span class="what">Oxirgi adaptatsiya vaqti ko'rsatiladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Sifat dashboard (A/B test)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Jadval: dars nomi, pass rate (progress bar), feedback avg, sessiyalar soni</span></li>
+      <li><span class="what">Pass rate &lt; 50% bo'lgan qatorlar qizil fon</span></li>
+      <li><span class="what">Pass bar: yashil → sariq → qizil gradient</span></li>
+      <li><span class="what">"A/B test boshlash" tugmasi har dars uchun → modal ochiladi</span></li>
+      <li><span class="what">Modal: A va B variantlar taqqoslash</span></li>
+      <li><span class="what">"Yutuvchini tanlash" tugmasi B variantni asosiy qilib o'rnatadi</span></li>
+      <li><span class="what">Feedback emoji o'rtachasi: 😊 (3) / 😐 (2) / 😕 (1)</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Churn monitor (xavfli o'quvchilar)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yuqori xavf jadvali (score &gt; 60): ism, score, signallar</span></li>
+      <li><span class="what">O'rta xavf jadvali (31-60): ism, score</span></li>
+      <li><span class="what">Signallar matni: "3 kun kelmagan + Qizil status"</span></li>
+      <li><span class="what">Filial filtri (dropdown)</span></li>
+      <li><span class="what">Score ustuni bo'yicha sort (eng yuqori → past)</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Analitika dashboardi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">1-bo'lim: dars statistikalari (pass rate, feedback, sessiyalar)</span></li>
+      <li><span class="what">2-bo'lim: filiallar taqqosi (faol o'quvchilar, o'rtacha streak, o'rtacha XP)</span></li>
+      <li><span class="what">3-bo'lim: 30-kunlik faollik chizig'i (line chart)</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Taqiqlangan so'zlar (chat filter)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">So'zlar ro'yxati</span></li>
+      <li><span class="what">"Yangi so'z qo'shish" formasi</span></li>
+      <li><span class="what">Har so'z yonida o'chirish tugmasi</span></li>
+      <li><span class="what">Saqlanganda barcha guruhlar chatida darhol qo'llanadi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §22  TESTER
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">22</span> Tester — Imtihon navbati va vazifalar</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Tester bosh sahifasi</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: bugungi sana + 3 hisoblagich (kelganlar, tugatganlar, kutayotganlar)</span></li>
+      <li><span class="what">"Hozir testlanmoqda" qutisi: faol o'quvchi nomi, "Tugatildi" tugmasi</span></li>
+      <li><span class="what">"Kelgan" o'quvchilar: yashil ✓ ikon, status badgi (Kutmoqda/Test/Tugadi)</span></li>
+      <li><span class="what">Kutayotgan o'quvchi yonida "Imtihon berish" tugmasi</span></li>
+      <li><span class="what">"Kelmagan" o'quvchilar: qizil ❌ ikon, "Kelganini belgilash" tugmasi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Imtihon berish modal</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"Imtihon berish" bosilganda pastdan modal ochiladi</span></li>
+      <li><span class="what">Modal: o'quvchi nomi, dars dropdown, "Yuborish" tugmasi</span></li>
+      <li><span class="what">Yuborilgach o'quvchining /student/exams sahifasida imtihon ochiladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Tester vazifalari</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Mentor bilan bir xil vazifa ro'yxati</span></li>
+      <li><span class="what">Status badgilar va tugmalar</span></li>
+      <li><span class="what">"Tugatildi" tugmasi orqali yopish</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §23  DELEGATSIYA
+       ================================================ -->
+  <h2><span class="section-num">23</span> Delegatsiya tizimi</h2>
+  <p class="intro">/delegations sahifasi barcha rolelar uchun umumiy. Vaqtinchalik vakolat berish — sabab majburiy.</p>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Delegatsiyalar ro'yxati</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Tab switcher: Hammasi / Faol / Kutilmoqda / Tugatildi / Rad etilgan</span></li>
+      <li><span class="what">Karta: status badgi (🟢 Faol / ⏳ Kutilmoqda / ✅ Tugatildi / ❌ Rad / 🚫 Bekor)</span></li>
+      <li><span class="what">"Beruvchi → Oluvchi" ismlari</span></li>
+      <li><span class="what">Sana oraliq (start - end), role tagi va sabab matni</span></li>
+      <li><span class="what">"+ Yangi" tugmasi (Superadmin/Filadmin/Manager faqat)</span></li>
+      <li><span class="what">Superadmin: barcha filiallarni ko'radi</span></li>
+      <li><span class="what">Filadmin: faqat o'z filialdagi delegatsiyalar</span></li>
+      <li><span class="what">Mentor/Tester: faqat o'ziga berilganlar</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Yangi delegatsiya yaratish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Qabul qiluvchi dropdown: filial xodimlari ro'yxati</span></li>
+      <li><span class="what">Dropdown formati: "Ism (role)"</span></li>
+      <li><span class="what">Role tanlash: Filadmin / Manager</span></li>
+      <li><span class="what">Boshlanish va tugash sanasi</span></li>
+      <li><span class="what">Ruxsatlar checklist: Ogohlantirishlar, To'lovlar, Xodim boshqaruv va h.k.</span></li>
+      <li><span class="what">Sabab textarea — majburiy</span></li>
+      <li><span class="what">"1:1 Sessiya" tugmasidan kelganda sabab avtomat to'ldirilgan keladi</span></li>
+      <li><span class="what">Saqlangach delegatsiya pending holatda yaratiladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Delegatsiya tafsiloti va timeline</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Sarlavha: "Beruvchi → Oluvchi • Sana oraliq • Status badgi"</span></li>
+      <li><span class="what">Sabab matni va ruxsatlar ro'yxati ko'rinadi</span></li>
+      <li><span class="what">Timeline (xronologik): 📤 yaratildi, ✅ qabul, ❌ rad, ⚠️ ogohlantirish berildi, 💳 to'lov belgilandi, ✅ tugatildi</span></li>
+      <li><span class="what">Har voqea: vaqt, kim bajardi, harakat, tafsilot</span></li>
+      <li><span class="what">PDF eksport tugmasi</span></li>
+      <li><span class="what">Beruvchi va oluvchi ikkalasi ham timelineni ko'radi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Qabul qilish va rad etish</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yangi delegatsiya kelganda: in-app + Telegram bildirishnoma</span></li>
+      <li><span class="what">Bildirishnomada: beruvchi nomi, role, sana, ruxsatlar, sabab</span></li>
+      <li><span class="what">Tugmalar: [✅ Qabul qilaman] [❌ Rad etaman]</span></li>
+      <li><span class="what">Qabul: status faol holatga o'tadi, ruxsatlar darhol kuchga kiradi</span></li>
+      <li><span class="what">Rad: sabab majburiy</span></li>
+      <li><span class="what">Rad qilingach beruvchi in-app + Telegram bildirishnoma oladi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Bekor qilish (delegatorga ruxsat)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">"Bekor qilish" tugmasi faqat faol/pending delegatsiyalarda</span></li>
+      <li><span class="what">Sabab majburiy</span></li>
+      <li><span class="what">Recipient in-app + Telegram bildirishnoma oladi</span></li>
+      <li><span class="what">Ruxsatlar darhol qaytarib olinadi</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       §24  PWA & TELEGRAM
+       ================================================ -->
+  <h2 class="page-break-before"><span class="section-num">24</span> Telefon ilovasi va bildirishnomalar</h2>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Telefonning bosh ekraniga o'rnatish (PWA)</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Android Chrome: pastda banner "Alochi'ni o'rnatish"</span></li>
+      <li><span class="what">"O'rnatish" tugmasi → bosh ekranga ilova qo'shiladi</span></li>
+      <li><span class="what">"Bekor" tugmasi → banner boshqa ko'rinmaydi</span></li>
+      <li><span class="what">iOS Safari: "Share → Add to Home Screen" yo'riqi banner</span></li>
+      <li><span class="what">O'rnatilgach ilova ko'rinishida ochiladi (URL bar yo'q, to'liq ekran)</span></li>
+      <li><span class="what">Ilova belgisi — A'lochi logosi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Offline rejim</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Internet uzilsa, oldindan ochilgan sahifalar ko'rinishda davom etadi</span></li>
+      <li><span class="what">Yangi sahifaga o'tib bo'lmaydi: maxsus "Internet aloqasi yo'q" sahifa ko'rinadi</span></li>
+      <li><span class="what">Offline sahifada "Qayta urinish" tugmasi</span></li>
+      <li><span class="what">Internet qaytsa, sahifa avtomat tiklanadi</span></li>
+    </ul>
+  </div>
+
+  <div class="feature">
+    <div class="feature-head">
+      <span class="f-title">Telegram bildirishnomalar</span>
+    </div>
+    <ul class="checks">
+      <li><span class="what">Yangi delegatsiya — recipientga (Telegram + in-app)</span></li>
+      <li><span class="what">Delegatsiya rad etilganda — beruvchiga (Telegram + in-app)</span></li>
+      <li><span class="what">Delegatsiya bekor qilinganda — recipientga (Telegram + in-app)</span></li>
+      <li><span class="what">O'quvchining kuchsiz mavzulari haqida — ota-onaga (Telegram)</span></li>
+      <li><span class="what">Duel chaqirig'i va natija — ishtirokchilarga (in-app)</span></li>
+      <li><span class="what">Profile → "Telegram'ni bog'lash" tugmasi orqali bot bilan ulanish</span></li>
+    </ul>
+  </div>
+
+  <!-- ================================================
+       UMUMIY XULOSA
+       ================================================ -->
+  <h2><span class="section-num">★</span> Umumiy xulosa jadvali</h2>
+  <p class="intro">Har bo'lim qisqacha: rolelar va asosiy funksiyalar.</p>
+
+  <table class="simple">
+    <thead>
+      <tr>
+        <th>Bo'lim</th>
+        <th>Asosiy funksiyalar</th>
+        <th>Holat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Tizimga kirish</td><td>Login, sessiya, BottomNav</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Profil va Yuz ID</td><td>Avatar, Telegram, 5 burchakli ro'yxat</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Kiosk (Yuz ID)</td><td>Yuz orqali kirish, liveness, manual login, offline</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>O'quvchi bosh sahifasi</td><td>XP, streak, status, quest, virtual shahar, sotsial feed</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Darslar</td><td>Ro'yxat, dars detali, MCQ, drag-drop, audio, feedback</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Imtihon</td><td>Kamera kuzatuvi, MCQ, abort, natija</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>So'z takrori</td><td>Flashcard, kunlik review</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>AI xato tahlili</td><td>Kuchsiz mavzular, severity, tavsiya</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Do'stlar va Duel</td><td>So'rov, qabul, ro'yxat, duelga chaqirish</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Reyting</td><td>Filial / Milliy, Haftalik / Oylik</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Turnirlar</td><td>Ro'yxatdan o'tish, LIVE/UPCOMING</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Duel rejimi</td><td>10 ta MCQ, natija, XP</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Guruh chati</td><td>Xabar, moderatsiya, reaksiya</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Mentor — Bosh, Guruh, Davomat</td><td>KPI hero, attendance, tasks, error analysis</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Manager</td><td>Red/yellow students, churn, payments view, KPI</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Filadmin — Davomat, Qurilmalar</td><td>Kiosk boshqaruv, staff attendance, face logs</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Filadmin — To'lov, KPI</td><td>Qarzdorlar, ogohlantirish, mukofot, turnir</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Superadmin — Bosh, Foydalanuvchi, Filial</td><td>CRUD, role boshqaruv</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Superadmin — Darslar</td><td>Yaratish, tahrirlash, nashr</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Superadmin — To'lov jamlanma</td><td>Filiallar bo'yicha summary, drill-down</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Superadmin — Sifat, Adaptiv, Churn</td><td>A/B test, threshold, churn score, analitika</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Tester</td><td>Imtihon navbati, modal, vazifalar</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>Delegatsiya tizimi</td><td>List, create, timeline, accept/reject, cancel</td><td><span class="tag green">Tayyor</span></td></tr>
+      <tr><td>PWA va Telegram</td><td>Bosh ekranga o'rnatish, offline, bildirishnoma</td><td><span class="tag green">Tayyor</span></td></tr>
+    </tbody>
+  </table>
+
+  <footer class="foot">
+    © 2026 A'lochi Platform · To'liq tekshiruv protokoli v1.1
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var STORAGE_KEY = "alochi-tekshiruv-v1:";
+
+  function hashKey(text) {
+    var h = 0;
+    for (var i = 0; i < text.length; i++) {
+      h = ((h << 5) - h) + text.charCodeAt(i);
+      h = h & h;
+    }
+    return Math.abs(h).toString(36);
+  }
+
+  function makeCb(level, text) {
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.className = "test-cb cb-" + level;
+    var key = STORAGE_KEY + level + ":" + hashKey(text.trim().slice(0, 200));
+    cb.dataset.key = key;
+    try { cb.checked = localStorage.getItem(key) === "1"; } catch(e) {}
+    cb.addEventListener("change", function () {
+      try {
+        if (cb.checked) localStorage.setItem(key, "1");
+        else localStorage.removeItem(key);
+      } catch(e) {}
+      updateProgress();
+    });
+    cb.addEventListener("click", function (e) { e.stopPropagation(); });
+    return cb;
+  }
+
+  function updateProgress() {
+    var all = document.querySelectorAll(".test-cb");
+    var chk = document.querySelectorAll(".test-cb:checked");
+    var pct = all.length === 0 ? 0 : Math.round(chk.length / all.length * 100);
+    var fill = document.getElementById("pb-fill");
+    var count = document.getElementById("pb-count");
+    if (fill) fill.style.width = pct + "%";
+    if (count) count.textContent = chk.length + " / " + all.length + " (" + pct + "%)";
+  }
+
+  function init() {
+    document.querySelectorAll("h2").forEach(function (h) {
+      if (h.closest(".toolbar") || h.closest(".progress-bar")) return;
+      h.insertBefore(makeCb("h2", h.textContent), h.firstChild);
+    });
+
+    document.querySelectorAll(".feature-head .f-title").forEach(function (t) {
+      t.insertBefore(makeCb("f", t.textContent), t.firstChild);
+    });
+
+    document.querySelectorAll(".checks li").forEach(function (li) {
+      var cb = makeCb("li", li.textContent);
+      li.insertBefore(cb, li.firstChild);
+    });
+
+    var reset = document.getElementById("pb-reset");
+    if (reset) {
+      reset.addEventListener("click", function () {
+        if (!confirm("Barcha belgilarni tozalashni xohlaysizmi?")) return;
+        document.querySelectorAll(".test-cb").forEach(function (cb) {
+          cb.checked = false;
+          try { localStorage.removeItem(cb.dataset.key); } catch(e) {}
+        });
+        updateProgress();
+      });
+    }
+    updateProgress();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+</body>
+</html>

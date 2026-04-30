@@ -108,8 +108,9 @@ export function OnboardForm() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Markaz nomi *</label>
+              <label htmlFor="tenant-name" className="block text-xs text-slate-400 mb-1.5">Markaz nomi *</label>
               <input
+                id="tenant-name"
                 type="text"
                 required
                 minLength={2}
@@ -121,8 +122,9 @@ export function OnboardForm() {
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Slug *</label>
+              <label htmlFor="tenant-slug" className="block text-xs text-slate-400 mb-1.5">Slug *</label>
               <input
+                id="tenant-slug"
                 type="text"
                 required
                 pattern="[a-z0-9\-]{3,50}"
@@ -150,8 +152,9 @@ export function OnboardForm() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Ism *</label>
+                <label htmlFor="admin-name" className="block text-xs text-slate-400 mb-1.5">Ism *</label>
                 <input
+                  id="admin-name"
                   type="text"
                   required
                   minLength={2}
@@ -162,8 +165,9 @@ export function OnboardForm() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Login *</label>
+                <label htmlFor="admin-login" className="block text-xs text-slate-400 mb-1.5">Login *</label>
                 <input
+                  id="admin-login"
                   type="text"
                   required
                   minLength={3}
@@ -176,11 +180,12 @@ export function OnboardForm() {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="admin-password" className="block text-xs text-slate-400 mb-1.5 flex items-center gap-1.5">
                 <Lock size={12} /> Parol *
               </label>
               <div className="flex gap-2">
                 <input
+                  id="admin-password"
                   type="text"
                   required
                   minLength={6}
@@ -203,8 +208,9 @@ export function OnboardForm() {
               </div>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1.5">Telefon (ixtiyoriy)</label>
+              <label htmlFor="admin-phone" className="block text-xs text-slate-400 mb-1.5">Telefon (ixtiyoriy)</label>
               <input
+                id="admin-phone"
                 type="text"
                 maxLength={20}
                 value={adminPhone}
@@ -228,8 +234,9 @@ export function OnboardForm() {
           </label>
           {includeBranch && (
             <div className="mt-4">
-              <label className="block text-xs text-slate-400 mb-1.5">Filial nomi *</label>
+              <label htmlFor="branch-name" className="block text-xs text-slate-400 mb-1.5">Filial nomi *</label>
               <input
+                id="branch-name"
                 type="text"
                 required={includeBranch}
                 minLength={2}

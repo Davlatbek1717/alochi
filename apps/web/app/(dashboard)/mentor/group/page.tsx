@@ -124,10 +124,10 @@ export default function MentorGroupPage() {
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4">
               <div className="flex items-center gap-3">
-                <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
+                <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
                 <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-3 w-1/4" />
+                  <Skeleton theme="light" className="h-4 w-1/2" />
+                  <Skeleton theme="light" className="h-3 w-1/4" />
                 </div>
               </div>
             </div>
@@ -182,6 +182,7 @@ export default function MentorGroupPage() {
         {students.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
             <EmptyState
+              theme="light"
               icon={<Users size={28} />}
               title="Guruhda o'quvchilar yo'q"
               description="Bu filialda o'quvchilar topilmadi"
