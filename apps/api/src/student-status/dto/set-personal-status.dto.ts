@@ -1,6 +1,9 @@
 import { IsUUID, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { StatusColor } from '../status.types';
 
-export type StatusColor = 'yashil' | 'sariq' | 'qizil';
+// Re-export so existing imports of `StatusColor` from this DTO module
+// keep working. New code should import from '../status.types' directly.
+export type { StatusColor };
 
 export class SetPersonalStatusDto {
   @IsUUID()

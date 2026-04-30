@@ -4,11 +4,21 @@ import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SetPersonalStatusDto } from './dto/set-personal-status.dto';
 import { SetCriticalStatusDto } from './dto/set-critical-status.dto';
+import { StatusColor, worstStatusColor } from './status.types';
 
 interface ActorContext {
   userId: string;
   tenantId: string;
   role: UserRole;
+}
+
+interface SetEnglishStatusMeta {
+  /** Free-form audit tag (e.g. 'ai_evaluation'). Logged on the event. */
+  source?: string;
+  lessonId?: string;
+  score?: number;
+  /** Optional override for the actor that triggered the change. */
+  changedBy?: string;
 }
 
 @Injectable()
@@ -38,7 +48,7 @@ export class StatusService {
     const englishToday = existing?.englishStatus ?? null;
     const previousCritical = existing?.criticalStatus ?? null;
     const oldColor = existing
-      ? this.worstColor([
+      ? worstStatusColor([
           existing.englishStatus,
           existing.personalStatus,
           existing.criticalStatus,
@@ -80,7 +90,7 @@ export class StatusService {
       }
     }
 
-    const newColor = this.worstColor([
+    const newColor = worstStatusColor([
       result.englishStatus,
       result.personalStatus,
       result.criticalStatus,
@@ -109,7 +119,7 @@ export class StatusService {
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },
     });
     const oldColor = existing
-      ? this.worstColor([
+      ? worstStatusColor([
           existing.englishStatus,
           existing.personalStatus,
           existing.criticalStatus,
@@ -130,7 +140,7 @@ export class StatusService {
       },
     });
 
-    const newColor = this.worstColor([
+    const newColor = worstStatusColor([
       result.englishStatus,
       result.personalStatus,
       result.criticalStatus,
@@ -166,6 +176,104 @@ export class StatusService {
     return result;
   }
 
+  /**
+   * AI- (or system-) driven setter for the ENGLISH status colour.
+   *
+   * Used after a Claude evaluation finalises a lesson — the mapped colour
+   * (>=80 yashil / >=50 sariq / <50 qizil) is persisted on today's row,
+   * and the auto-yellow rule is re-evaluated from this side too:
+   * when englishStatus flips to `yashil` AND personalStatus is also
+   * `yashil` AND prior criticalStatus !== `yashil`, criticalStatus is
+   * auto-flipped to `yashil` and a notification fires to the branch
+   * manager.
+   *
+   * Tenant comes from the student's row (this is a system call, no
+   * authenticated actor).
+   */
+  async setEnglishStatus(
+    studentId: string,
+    color: StatusColor,
+    meta: SetEnglishStatusMeta = {},
+  ) {
+    const dateObj = startOfToday();
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { tenantId: true, branchId: true },
+    });
+    if (!student) {
+      // Caller (AI evaluation) gave a bad id — silently skip rather than
+      // explode the lesson-completion path.
+      return null;
+    }
+
+    const existing = await this.prisma.studentStatus.findUnique({
+      where: { studentId_date: { studentId, date: dateObj } },
+    });
+
+    const personalToday = existing?.personalStatus ?? null;
+    const previousCritical = existing?.criticalStatus ?? null;
+    const oldColor = existing
+      ? worstStatusColor([
+          existing.englishStatus,
+          existing.personalStatus,
+          existing.criticalStatus,
+        ])
+      : null;
+
+    const autoGreen =
+      color === 'yashil' &&
+      personalToday === 'yashil' &&
+      previousCritical !== 'yashil';
+
+    const result = await this.prisma.studentStatus.upsert({
+      where: { studentId_date: { studentId, date: dateObj } },
+      create: {
+        studentId,
+        date: dateObj,
+        englishStatus: color,
+        ...(autoGreen ? { criticalStatus: 'yashil' } : {}),
+      },
+      update: {
+        englishStatus: color,
+        ...(autoGreen ? { criticalStatus: 'yashil' } : {}),
+      },
+    });
+
+    if (autoGreen) {
+      const manager = await this.findBranchManager(studentId);
+      if (manager) {
+        this.events.emit('notification.new', {
+          userId: manager.id,
+          tenantId: student.tenantId,
+          type: 'status.auto_green',
+          message: "Sardor o'quvchining holati yashilga tushdi (avtomatik)",
+          studentId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    const newColor = worstStatusColor([
+      result.englishStatus,
+      result.personalStatus,
+      result.criticalStatus,
+    ]);
+    this.events.emit('status.updated', {
+      studentId,
+      oldColor,
+      newColor,
+      color: newColor,
+      changedBy: meta.changedBy ?? 'system',
+      tenantId: student.tenantId,
+      source: meta.source,
+      lessonId: meta.lessonId,
+      score: meta.score,
+      timestamp: new Date().toISOString(),
+    });
+
+    return result;
+  }
+
   private async findBranchManager(
     studentId: string,
   ): Promise<{ id: string } | null> {
@@ -196,21 +304,6 @@ export class StatusService {
     });
   }
 
-  private worstColor(values: (string | null | undefined)[]): string | null {
-    const order: Record<string, number> = { qizil: 3, sariq: 2, yashil: 1 };
-    let best: string | null = null;
-    let bestRank = 0;
-    for (const v of values) {
-      if (!v) continue;
-      const rank = order[v] ?? 0;
-      if (rank > bestRank) {
-        bestRank = rank;
-        best = v;
-      }
-    }
-    return best;
-  }
-
   async getLatest(studentId: string) {
     return this.prisma.studentStatus.findFirst({
       where: { studentId },
@@ -234,7 +327,7 @@ export class StatusService {
     return this.getStudentsByColor(tenantId, 'sariq');
   }
 
-  private getStudentsByColor(tenantId: string, color: string) {
+  private getStudentsByColor(tenantId: string, color: StatusColor) {
     return this.prisma.studentStatus.findMany({
       where: {
         student: { tenantId },

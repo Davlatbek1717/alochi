@@ -26,9 +26,12 @@ describe('TelegramService', () => {
       studentName: 'Alibek Rahimov',
       date: '23-Aprel',
       lessons: 1,
-      englishStatus: 'green',
-      personalStatus: 'yellow',
-      criticalStatus: 'yellow',
+      // Status values arrive in Uzbek canonical from the cron — the
+      // formatter renders the emoji, no English literals at the boundary
+      // since the parent message is fully Uzbek.
+      englishStatus: 'yashil',
+      personalStatus: 'sariq',
+      criticalStatus: 'sariq',
       studyMinutes: 45,
       streak: 12,
       totalXp: 2340,

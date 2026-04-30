@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Context } from 'grammy';
+import { statusEmoji } from '../../student-status/status.types';
 
 @Injectable()
 export class ParentHandler {
@@ -21,15 +22,14 @@ export class ParentHandler {
         orderBy: { date: 'desc' },
       });
 
-      const s = (v: string | null | undefined) =>
-        v === 'green' ? '🟢' : v === 'yellow' ? '🟡' : '🔴';
-
+      // statusEmoji handles Uzbek canonical (yashil/sariq/qizil) and
+      // returns ⚪ for null/unknown.
       await ctx.reply(
         [
           `📊 Farzand: ${child.name}`,
-          `Ingliz: ${s(status?.englishStatus)} ${status?.englishStatus ?? 'nomalum'}`,
-          `Shaxsiy: ${s(status?.personalStatus)} ${status?.personalStatus ?? 'nomalum'}`,
-          `Tanqidiy: ${s(status?.criticalStatus)} ${status?.criticalStatus ?? 'nomalum'}`,
+          `Ingliz: ${statusEmoji(status?.englishStatus)} ${status?.englishStatus ?? 'nomalum'}`,
+          `Shaxsiy: ${statusEmoji(status?.personalStatus)} ${status?.personalStatus ?? 'nomalum'}`,
+          `Tanqidiy: ${statusEmoji(status?.criticalStatus)} ${status?.criticalStatus ?? 'nomalum'}`,
         ].join('\n'),
       );
     } catch {

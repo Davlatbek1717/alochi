@@ -12,6 +12,11 @@ import { JwtService } from '@nestjs/jwt';
 import { OnEvent } from '@nestjs/event-emitter';
 import { ChatService } from './chat.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  StatusColorEn,
+  isStatusColor,
+  toEnglish,
+} from '../student-status/status.types';
 
 interface JwtPayload {
   userId: string;
@@ -168,20 +173,13 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   // ── Domain-event → WebSocket forwarders ────────────────────────────────
 
-  /** Uzbek (yashil/sariq/qizil) → English color name. */
-  private mapStatusColor(
-    uz?: string | null,
-  ): 'green' | 'yellow' | 'red' | null {
-    switch (uz) {
-      case 'yashil':
-        return 'green';
-      case 'sariq':
-        return 'yellow';
-      case 'qizil':
-        return 'red';
-      default:
-        return null;
-    }
+  /**
+   * Uzbek (yashil/sariq/qizil) → English colour name. Boundary-only
+   * translator — internal code/storage uses Uzbek canonical via
+   * {@link StatusColor}.
+   */
+  private mapStatusColor(uz?: string | null): StatusColorEn | null {
+    return isStatusColor(uz) ? toEnglish(uz) : null;
   }
 
   @OnEvent('status.updated')

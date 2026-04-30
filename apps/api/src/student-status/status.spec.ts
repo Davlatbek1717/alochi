@@ -315,6 +315,111 @@ describe('StatusService', () => {
     });
   });
 
+  describe('setEnglishStatus', () => {
+    it('persists englishStatus and emits status.updated', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        tenantId: 't1',
+        branchId: 'b1',
+      });
+      mockPrisma.studentStatus.findUnique.mockResolvedValue(null);
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        englishStatus: 'sariq',
+        personalStatus: null,
+        criticalStatus: null,
+      });
+
+      await service.setEnglishStatus('u1', 'sariq', {
+        source: 'ai_evaluation',
+        lessonId: 'l1',
+        score: 65,
+      });
+
+      expect(mockPrisma.studentStatus.upsert).toHaveBeenCalledTimes(1);
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.create.englishStatus).toBe('sariq');
+      // No auto-flip because score=sariq (not yashil) → criticalStatus
+      // must NOT be touched.
+      expect(upsertArg.create.criticalStatus).toBeUndefined();
+      const updatedCall = mockEvents.emit.mock.calls.find(
+        (c) => c[0] === 'status.updated',
+      );
+      expect(updatedCall).toBeDefined();
+      expect(updatedCall![1]).toMatchObject({
+        studentId: 'u1',
+        source: 'ai_evaluation',
+        lessonId: 'l1',
+        score: 65,
+        changedBy: 'system',
+      });
+    });
+
+    it('does NOT auto-flip critical when englishStatus=yashil but personal≠yashil', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        tenantId: 't1',
+        branchId: 'b1',
+      });
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: 'sariq',
+        personalStatus: 'sariq',
+        criticalStatus: 'sariq',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        englishStatus: 'yashil',
+        personalStatus: 'sariq',
+        criticalStatus: 'sariq',
+      });
+
+      await service.setEnglishStatus('u1', 'yashil');
+
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.update.criticalStatus).toBeUndefined();
+      const notifCalls = mockEvents.emit.mock.calls.filter(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notifCalls).toHaveLength(0);
+    });
+
+    it('AUTO-flips critical when englishStatus=yashil AND personal=yashil AND prior critical≠yashil', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ tenantId: 't1', branchId: 'b1' }) // student lookup
+        .mockResolvedValueOnce({ tenantId: 't1', branchId: 'b1' }); // findBranchManager → student
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: 'sariq',
+        personalStatus: 'yashil',
+        criticalStatus: 'sariq',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        englishStatus: 'yashil',
+        personalStatus: 'yashil',
+        criticalStatus: 'yashil',
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'manager1' });
+
+      await service.setEnglishStatus('u1', 'yashil', { score: 92 });
+
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.update.criticalStatus).toBe('yashil');
+      const notif = mockEvents.emit.mock.calls.find(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notif).toBeDefined();
+      expect(notif![1]).toMatchObject({
+        userId: 'manager1',
+        type: 'status.auto_green',
+      });
+    });
+
+    it('returns null when student does not exist', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+      const result = await service.setEnglishStatus('ghost', 'qizil');
+      expect(result).toBeNull();
+      expect(mockPrisma.studentStatus.upsert).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getYellowStudents', () => {
     it('returns students whose latest record has at least one sariq status', async () => {
       const yellowStudents = [

@@ -76,6 +76,11 @@ export class AiController {
 
   /**
    * POST /ai/evaluate — final lesson evaluation (Claude).
+   *
+   * For role=student, the score returned by the Python service is
+   * automatically mapped to today's englishStatus
+   * (>=80 yashil, 50–79 sariq, <50 qizil). Testers can pass `studentId`
+   * explicitly when probing the endpoint.
    */
   @Post('evaluate')
   @Roles(UserRole.student, UserRole.tester)
@@ -84,9 +89,19 @@ export class AiController {
     body: {
       lessonContext: string;
       studentAnswers: { question: string; student_answer: string }[];
+      lessonId?: string;
+      studentId?: string;
     },
+    @Request() req: any,
   ) {
-    return this.ai.evaluate(body.lessonContext, body.studentAnswers);
+    const studentId =
+      req.user.role === UserRole.student ? req.user.userId : body.studentId;
+    return this.ai.evaluate(
+      body.lessonContext,
+      body.studentAnswers,
+      studentId,
+      body.lessonId,
+    );
   }
 
   @Post('spaced-repetition/answer')

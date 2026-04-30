@@ -1,19 +1,27 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import Anthropic from '@anthropic-ai/sdk';
+import { StatusService } from '../student-status/status.service';
+import { StatusColor } from '../student-status/status.types';
 
 @Injectable()
 export class AiService {
   private readonly aiServiceUrl: string;
   private anthropic: Anthropic;
+  private readonly logger = new Logger(AiService.name);
 
   constructor(
     private http: HttpService,
     private config: ConfigService,
     private prisma: PrismaService,
+    private statusService: StatusService,
   ) {
     this.aiServiceUrl = this.config.get(
       'AI_SERVICE_URL',
@@ -43,10 +51,22 @@ export class AiService {
     }
   }
 
+  /**
+   * Score a student's lesson answers via the Python evaluation service
+   * (Claude under the hood). When `studentId` is provided, the resulting
+   * score is also mapped to a {@link StatusColor} and persisted onto
+   * today's `englishStatus` slot via {@link StatusService.setEnglishStatus}.
+   *
+   * Score → colour mapping (spec):
+   *   ≥ 80 → yashil, 50–79 → sariq, < 50 → qizil
+   */
   async evaluate(
     lessonContext: string,
     studentAnswers: { question: string; student_answer: string }[],
+    studentId?: string,
+    lessonId?: string,
   ) {
+    let data: { score?: number } & Record<string, unknown>;
     try {
       const res = await firstValueFrom(
         this.http.post(`${this.aiServiceUrl}/ai/evaluate/`, {
@@ -54,12 +74,39 @@ export class AiService {
           student_answers: studentAnswers,
         }),
       );
-      return res.data;
+      data = res.data;
     } catch {
       throw new ServiceUnavailableException(
         'Baholash servisi vaqtincha ishlamayapti',
       );
     }
+
+    // Persist Uzbek-canonical englishStatus when caller gave us a student.
+    if (studentId && typeof data?.score === 'number') {
+      const color = AiService.scoreToStatusColor(data.score);
+      try {
+        await this.statusService.setEnglishStatus(studentId, color, {
+          source: 'ai_evaluation',
+          lessonId,
+          score: data.score,
+        });
+      } catch (err) {
+        // Status update is best-effort; never fail the evaluation
+        // response on a downstream notification glitch.
+        this.logger.warn(
+          `setEnglishStatus failed for student ${studentId}: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return data;
+  }
+
+  /** ≥80 yashil, 50-79 sariq, <50 qizil. */
+  static scoreToStatusColor(score: number): StatusColor {
+    if (score >= 80) return 'yashil';
+    if (score >= 50) return 'sariq';
+    return 'qizil';
   }
 
   async checkPronunciation(wordEn: string, audioBase64: string) {

@@ -11,6 +11,7 @@ import { StudentHandler } from './handlers/student.handler';
 import { StaffHandler } from './handlers/staff.handler';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
+import { statusEmoji } from '../student-status/status.types';
 
 @Injectable()
 export class TelegramService implements OnModuleInit, OnModuleDestroy {
@@ -274,17 +275,17 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     streak: number;
     totalXp: number;
   }): string {
-    const s = (status: string) =>
-      status === 'green' ? '🟢' : status === 'yellow' ? '🟡' : '🔴';
+    // Statuses arrive in Uzbek canonical (yashil/sariq/qizil); the
+    // helper handles unknown / 'nomalum' values gracefully.
     return [
       `📚 <b>A'lochi — Kunlik Hisobot</b>`,
       `👦 Farzand: ${data.studentName}`,
       `📅 Sana: ${data.date}`,
       ``,
       `✅ Bugun ${data.lessons} dars tamomladı`,
-      `📊 Ingliz tili:     ${s(data.englishStatus)}`,
-      `📊 Shaxsiy rivojl.: ${s(data.personalStatus)}`,
-      `📊 Tanqidiy fikrl.: ${s(data.criticalStatus)}`,
+      `📊 Ingliz tili:     ${statusEmoji(data.englishStatus)}`,
+      `📊 Shaxsiy rivojl.: ${statusEmoji(data.personalStatus)}`,
+      `📊 Tanqidiy fikrl.: ${statusEmoji(data.criticalStatus)}`,
       `⏱ O'qish vaqti: ${data.studyMinutes} daqiqa`,
       `🔥 Streak: ${data.streak} kun ketma-ket`,
       `🏅 Umumiy ball: ${data.totalXp} XP`,

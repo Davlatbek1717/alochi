@@ -5,9 +5,16 @@ import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StudentStatusModule } from '../student-status/status.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, PrismaModule, NotificationsModule],
+  imports: [
+    HttpModule,
+    ConfigModule,
+    PrismaModule,
+    NotificationsModule,
+    StudentStatusModule,
+  ],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],
