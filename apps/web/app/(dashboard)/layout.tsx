@@ -5,6 +5,7 @@ import Link from 'next/link';
 import BottomNav from './_components/BottomNav';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
 import { NotificationBell } from './_components/NotificationBell';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import {
   Home, BookOpen, Users, GraduationCap, BarChart2, ClipboardList,
   CreditCard, AlertTriangle, Building2, BookMarked, Send,
@@ -149,6 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Bottom nav — mobile only */}
         <BottomNav />
       </div>
+      <InstallPrompt />
     </DuelNotificationProvider>
   );
 }
