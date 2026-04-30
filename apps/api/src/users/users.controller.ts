@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -31,8 +32,15 @@ export class UsersController {
 
   @Post()
   @Roles(UserRole.superadmin, UserRole.filadmin)
-  create(@Body() dto: CreateUserDto) {
-    return this.users.create(dto);
+  create(
+    @Body() dto: CreateUserDto,
+    @Request() req: any,
+    @CurrentDelegation() delegationId: string | null,
+  ) {
+    return this.users.create(dto, {
+      userId: req.user.userId,
+      delegationId,
+    });
   }
 
   @Get()

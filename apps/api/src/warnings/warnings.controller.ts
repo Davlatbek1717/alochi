@@ -14,6 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
 
 @ApiTags('warnings')
 @ApiBearerAuth()
@@ -38,12 +39,14 @@ export class WarningsController {
     @Param('studentId') studentId: string,
     @Body() body: any,
     @Request() req: any,
+    @CurrentDelegation() delegationId: string | null,
   ) {
     return this.warnings.give({
       ...body,
       studentId,
       tenantId: req.user.tenantId,
       givenBy: req.user.userId,
+      delegationId: delegationId ?? undefined,
     });
   }
 

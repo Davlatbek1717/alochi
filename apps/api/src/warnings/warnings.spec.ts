@@ -15,6 +15,9 @@ const mockPrisma = {
     update: jest.fn(),
     findUniqueOrThrow: jest.fn(),
   },
+  delegationAuditLog: {
+    create: jest.fn(),
+  },
 };
 
 const mockEvents = {
@@ -87,6 +90,34 @@ describe('WarningsService', () => {
         activeCount: 3,
       });
       expect(result.activeCount).toBe(3);
+    });
+
+    it('writes a DelegationAuditLog row when delegationId is provided', async () => {
+      const createdWarning = { id: 'w3', ...dto };
+      mockPrisma.warning.create.mockResolvedValue(createdWarning);
+      mockPrisma.warning.count.mockResolvedValue(1);
+      mockPrisma.delegationAuditLog.create.mockResolvedValue({});
+
+      await service.give({ ...dto, delegationId: 'del-1' });
+
+      expect(mockPrisma.delegationAuditLog.create).toHaveBeenCalledWith({
+        data: {
+          delegationId: 'del-1',
+          actorId: dto.givenBy,
+          actionType: 'warning_given',
+          targetId: dto.studentId,
+          meta: { warningId: createdWarning.id, reasonType: dto.reasonType },
+        },
+      });
+    });
+
+    it('does NOT write a DelegationAuditLog row when delegationId is absent', async () => {
+      mockPrisma.warning.create.mockResolvedValue({ id: 'w4', ...dto });
+      mockPrisma.warning.count.mockResolvedValue(1);
+
+      await service.give(dto);
+
+      expect(mockPrisma.delegationAuditLog.create).not.toHaveBeenCalled();
     });
   });
 

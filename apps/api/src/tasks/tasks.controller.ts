@@ -11,7 +11,7 @@ import {
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { UserRole, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -58,7 +58,7 @@ export class TasksController {
   @Patch(':id/status')
   updateStatus(
     @Param('id') id: string,
-    @Body('status') status: string,
+    @Body('status') status: TaskStatus,
     @Request() req: any,
   ) {
     return this.tasks.updateStatus(id, req.user.userId, status);

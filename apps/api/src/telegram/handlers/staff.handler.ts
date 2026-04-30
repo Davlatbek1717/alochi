@@ -85,7 +85,7 @@ export class StaffHandler {
       const tasks = await this.prisma.task.findMany({
         where: {
           assignedTo: staff.id,
-          status: { not: 'completed' },
+          status: { not: 'confirmed' },
           OR: [{ deadline: null }, { deadline: { lt: tomorrow } }],
         },
         orderBy: { deadline: 'asc' },

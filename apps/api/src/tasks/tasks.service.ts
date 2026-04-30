@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { XpService } from '../gamification/xp.service';
 
@@ -74,16 +75,16 @@ export class TasksService {
     });
   }
 
-  async updateStatus(taskId: string, userId: string, status: string) {
+  async updateStatus(taskId: string, userId: string, status: TaskStatus) {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Vazifa topilmadi');
     if (task.assignedTo !== userId)
       throw new ForbiddenException('Bu vazifa sizga tegishli emas');
 
-    const allowed: Record<string, string[]> = {
-      sent: ['seen', 'in_progress'],
-      seen: ['in_progress'],
-      in_progress: ['done'],
+    const allowed: Record<string, TaskStatus[]> = {
+      sent: [TaskStatus.seen, TaskStatus.in_progress],
+      seen: [TaskStatus.in_progress],
+      in_progress: [TaskStatus.done],
     };
     if (!allowed[task.status]?.includes(status)) {
       throw new ForbiddenException(
@@ -91,9 +92,18 @@ export class TasksService {
       );
     }
 
+    const data: {
+      status: TaskStatus;
+      seenAt?: Date;
+      startedAt?: Date;
+    } = { status };
+    if (status === TaskStatus.seen && !task.seenAt) data.seenAt = new Date();
+    if (status === TaskStatus.in_progress && !task.startedAt)
+      data.startedAt = new Date();
+
     return this.prisma.task.update({
       where: { id: taskId },
-      data: { status },
+      data,
     });
   }
 

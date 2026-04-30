@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { FeedEventType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SocialGateway } from './social.gateway';
 
@@ -12,13 +13,13 @@ export class FeedEventService {
   async emit(
     tenantId: string,
     actorId: string,
-    eventType: string,
+    eventType: FeedEventType,
     meta: Record<string, unknown> = {},
   ): Promise<void> {
-    const event = await this.prisma.socialFeedEvent.create({
+    const event = (await this.prisma.socialFeedEvent.create({
       data: { tenantId, actorId, eventType, meta: meta as any },
       include: { actor: { select: { name: true } } },
-    });
+    })) as { createdAt: Date; actor?: { name: string } | null };
 
     const friendships = await this.prisma.friendship.findMany({
       where: {

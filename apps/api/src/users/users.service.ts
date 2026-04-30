@@ -23,7 +23,10 @@ export class UsersService {
     private events: EventEmitter2,
   ) {}
 
-  async create(dto: CreateUserDto) {
+  async create(
+    dto: CreateUserDto,
+    actor?: { userId: string; delegationId?: string | null },
+  ) {
     const exists = await this.prisma.user.findFirst({
       where: { tenantId: dto.tenantId, login: dto.login },
     });
@@ -32,7 +35,25 @@ export class UsersService {
     const { password, ...data } = dto;
     const passwordHash = await bcrypt.hash(password, 12);
 
-    return this.prisma.user.create({ data: { ...data, passwordHash } });
+    const user = await this.prisma.user.create({
+      data: { ...data, passwordHash },
+    });
+
+    // Audit-log staff creation when actor was acting under a delegation.
+    const isStaffRole = dto.role !== UserRole.student;
+    if (actor?.delegationId && isStaffRole) {
+      await this.prisma.delegationAuditLog.create({
+        data: {
+          delegationId: actor.delegationId,
+          actorId: actor.userId,
+          actionType: 'staff_added',
+          targetId: user.id,
+          meta: { role: dto.role, login: dto.login, name: dto.name },
+        },
+      });
+    }
+
+    return user;
   }
 
   async findByBranch(branchId: string, tenantId: string) {

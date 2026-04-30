@@ -11,11 +11,7 @@ import { Friendship } from '@prisma/client';
 export class FriendsService {
   constructor(private prisma: PrismaService) {}
 
-  async sendRequest(
-    userId: string,
-    friendId: string,
-    branchId: string,
-  ): Promise<Friendship> {
+  async sendRequest(userId: string, friendId: string): Promise<Friendship> {
     const sender = (await this.prisma.user.findUnique({
       where: { id: userId },
       select: { birthDate: true } as never,
@@ -34,7 +30,7 @@ export class FriendsService {
     if (existing) throw new ConflictException('Friend request already exists');
 
     return this.prisma.friendship.create({
-      data: { userId, friendId, scope: branchId, status: 'pending' },
+      data: { userId, friendId, scope: 'branch', status: 'pending' },
     });
   }
 

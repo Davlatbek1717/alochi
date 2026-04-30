@@ -27,6 +27,18 @@ export class WarningsService {
 
     const warning = await this.prisma.warning.create({ data: dto });
 
+    if (dto.delegationId) {
+      await this.prisma.delegationAuditLog.create({
+        data: {
+          delegationId: dto.delegationId,
+          actorId: dto.givenBy,
+          actionType: 'warning_given',
+          targetId: dto.studentId,
+          meta: { warningId: warning.id, reasonType: dto.reasonType },
+        },
+      });
+    }
+
     const activeCount = await this.prisma.warning.count({
       where: { studentId: dto.studentId, isCancelled: false },
     });

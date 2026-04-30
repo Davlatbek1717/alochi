@@ -37,6 +37,7 @@ import { ContentQualityModule } from './content-quality/content-quality.module';
 import { ClickHouseModule } from './clickhouse/clickhouse.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 
 @Module({
@@ -83,6 +84,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: DelegationContextInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })

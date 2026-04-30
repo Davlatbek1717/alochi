@@ -35,7 +35,7 @@ export class PaymentsService {
   async markPaid(dto: MarkPaidDto) {
     const unblockAt = this.nextDayMidnight(dto.paidAt);
 
-    return this.prisma.payment.upsert({
+    const payment = await this.prisma.payment.upsert({
       where: {
         studentId_month: { studentId: dto.studentId, month: dto.month },
       },
@@ -47,6 +47,24 @@ export class PaymentsService {
         unblockAt,
       },
     });
+
+    if (dto.delegationId) {
+      await this.prisma.delegationAuditLog.create({
+        data: {
+          delegationId: dto.delegationId,
+          actorId: dto.recordedBy,
+          actionType: 'payment_marked',
+          targetId: dto.studentId,
+          meta: {
+            paymentId: payment.id,
+            month: dto.month,
+            amount: dto.amount,
+          },
+        },
+      });
+    }
+
+    return payment;
   }
 
   async getStudentPayments(studentId: string) {

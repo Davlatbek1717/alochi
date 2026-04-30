@@ -26,11 +26,12 @@ enum UserStatus {
 }
 
 model Tenant {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name      String
-  slug      String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now()) @map("created_at")
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name              String
+  slug              String   @unique
+  status            String   @default("active")
+  warningBlockLimit Int      @default(3) @map("warning_block_limit")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   branches     Branch[]
   users        User[]
@@ -292,19 +293,27 @@ model KpiScore {
 }
 
 // ---- WARNINGS ----
+enum WarningType {
+  not_prepared
+  no_homework
+  discipline
+  other
+}
+
 model Warning {
-  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId     String    @map("tenant_id") @db.Uuid
-  studentId    String    @map("student_id") @db.Uuid
-  givenBy      String    @map("given_by") @db.Uuid
-  reasonType   String    @map("reason_type")
-  reasonText   String    @map("reason_text")
-  isCancelled  Boolean   @default(false) @map("is_cancelled")
-  cancelledBy  String?   @map("cancelled_by") @db.Uuid
-  cancelledAt  DateTime? @map("cancelled_at")
-  cancelReason String?   @map("cancel_reason")
-  delegationId String?   @map("delegation_id") @db.Uuid
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String      @map("tenant_id") @db.Uuid
+  studentId    String      @map("student_id") @db.Uuid
+  givenBy      String      @map("given_by") @db.Uuid
+  reasonType   String      @map("reason_type")
+  reasonText   String      @map("reason_text")
+  type         WarningType @default(other)
+  isCancelled  Boolean     @default(false) @map("is_cancelled")
+  cancelledBy  String?     @map("cancelled_by") @db.Uuid
+  cancelledAt  DateTime?   @map("cancelled_at")
+  cancelReason String?     @map("cancel_reason")
+  delegationId String?     @map("delegation_id") @db.Uuid
+  createdAt    DateTime    @default(now()) @map("created_at")
 
   student      User      @relation("StudentWarnings", fields: [studentId], references: [id])
 
@@ -351,6 +360,11 @@ enum DelegationStatus {
   rejected
 }
 
+enum DelegationAction {
+  accepted
+  rejected
+}
+
 model Delegation {
   id            String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   tenantId      String           @map("tenant_id") @db.Uuid
@@ -378,11 +392,11 @@ model Delegation {
 }
 
 model DelegationResponse {
-  id           String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  delegationId String    @map("delegation_id") @db.Uuid
-  action       String
+  id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  delegationId String           @map("delegation_id") @db.Uuid
+  action       DelegationAction
   reason       String?
-  respondedAt  DateTime  @default(now()) @map("responded_at")
+  respondedAt  DateTime         @default(now()) @map("responded_at")
 
   delegation   Delegation @relation(fields: [delegationId], references: [id])
 
@@ -444,13 +458,14 @@ model FaceRecognitionLog {
 }
 
 model BranchDevice {
-  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  branchId      String    @map("branch_id") @db.Uuid
-  deviceName    String    @map("device_name")
-  deviceToken   String    @unique @map("device_token")
-  lastCacheSync DateTime? @map("last_cache_sync")
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  branchId       String    @map("branch_id") @db.Uuid
+  deviceName     String    @map("device_name")
+  deviceToken    String    @unique @map("device_token")
+  lastCacheSync  DateTime? @map("last_cache_sync")
+  tokenExpiresAt DateTime? @map("token_expires_at")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   branch        Branch    @relation(fields: [branchId], references: [id])
 
@@ -521,13 +536,18 @@ model Certificate {
 
 // ---- SOCIAL ----
 
+enum FriendshipScope {
+  group
+  branch
+}
+
 model Friendship {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  friendId  String   @map("friend_id") @db.Uuid
-  scope     String
-  status    String   @default("pending")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  friendId  String          @map("friend_id") @db.Uuid
+  scope     FriendshipScope @default(branch)
+  status    String          @default("pending")
+  createdAt DateTime        @default(now()) @map("created_at")
 
   user   User @relation("UserFriends", fields: [userId], references: [id])
   friend User @relation("FriendOf", fields: [friendId], references: [id])
@@ -536,18 +556,26 @@ model Friendship {
   @@map("friendships")
 }
 
+enum DuelStatus {
+  pending
+  active
+  completed
+  expired
+  rejected
+}
+
 model Duel {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  challengerId    String   @map("challenger_id") @db.Uuid
-  challengedId    String   @map("challenged_id") @db.Uuid
-  tenantId        String   @map("tenant_id") @db.Uuid
+  id              String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  challengerId    String     @map("challenger_id") @db.Uuid
+  challengedId    String     @map("challenged_id") @db.Uuid
+  tenantId        String     @map("tenant_id") @db.Uuid
   questions       Json
-  status          String   @default("pending")
-  challengerScore Int      @default(0) @map("challenger_score")
-  challengedScore Int      @default(0) @map("challenged_score")
-  winnerId        String?  @map("winner_id") @db.Uuid
-  expiresAt       DateTime @map("expires_at")
-  createdAt       DateTime @default(now()) @map("created_at")
+  status          DuelStatus @default(pending)
+  challengerScore Int        @default(0) @map("challenger_score")
+  challengedScore Int        @default(0) @map("challenged_score")
+  winnerId        String?    @map("winner_id") @db.Uuid
+  expiresAt       DateTime   @map("expires_at")
+  createdAt       DateTime   @default(now()) @map("created_at")
 
   challenger User         @relation("DuelChallenger", fields: [challengerId], references: [id])
   challenged User         @relation("DuelChallenged", fields: [challengedId], references: [id])
@@ -572,30 +600,39 @@ model DuelAnswer {
 }
 
 model GroupChallenge {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  groupAId  String   @map("group_a_id") @db.Uuid
-  groupBId  String   @map("group_b_id") @db.Uuid
-  startDate DateTime @map("start_date")
-  endDate   DateTime @map("end_date")
-  groupAXp  Int      @default(0) @map("group_a_xp")
-  groupBXp  Int      @default(0) @map("group_b_xp")
-  status    String   @default("active")
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  groupAId      String   @map("group_a_id") @db.Uuid
+  groupBId      String   @map("group_b_id") @db.Uuid
+  startDate     DateTime @map("start_date")
+  endDate       DateTime @map("end_date")
+  groupAXp      Int      @default(0) @map("group_a_xp")
+  groupBXp      Int      @default(0) @map("group_b_xp")
+  status        String   @default("active")
+  winnerGroupId String?  @map("winner_group_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@map("group_challenges")
 }
 
+enum ChatModerationStatus {
+  approved
+  pending
+  rejected
+}
+
 model GroupMessage {
-  id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  groupId   String    @map("group_id") @db.Uuid
-  senderId  String    @map("sender_id") @db.Uuid
-  content   String    @db.VarChar(200)
-  isDeleted Boolean   @default(false) @map("is_deleted")
-  deletedBy String?   @map("deleted_by") @db.Uuid
-  deletedAt DateTime? @map("deleted_at")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id               String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId         String               @map("tenant_id") @db.Uuid
+  groupId          String               @map("group_id") @db.Uuid
+  senderId         String               @map("sender_id") @db.Uuid
+  content          String               @db.VarChar(200)
+  isPinned         Boolean              @default(false) @map("is_pinned")
+  moderationStatus ChatModerationStatus @default(approved) @map("moderation_status")
+  isDeleted        Boolean              @default(false) @map("is_deleted")
+  deletedBy        String?              @map("deleted_by") @db.Uuid
+  deletedAt        DateTime?            @map("deleted_at")
+  createdAt        DateTime             @default(now()) @map("created_at")
 
   sender    User              @relation("GroupMessages", fields: [senderId], references: [id])
   reactions MessageReaction[]
@@ -620,6 +657,7 @@ model ChatBan {
   id        String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   bannedBy  String    @map("banned_by") @db.Uuid
+  groupId   String?   @map("group_id") @db.Uuid
   reason    String
   expiresAt DateTime? @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -627,13 +665,23 @@ model ChatBan {
   @@map("chat_bans")
 }
 
+enum FeedEventType {
+  lesson_done
+  streak_milestone
+  cert_earned
+  duel_won
+  streak_broken
+  city_upgraded
+  challenge_won
+}
+
 model SocialFeedEvent {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  actorId   String   @map("actor_id") @db.Uuid
-  eventType String   @map("event_type")
-  meta      Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String        @map("tenant_id") @db.Uuid
+  actorId   String        @map("actor_id") @db.Uuid
+  eventType FeedEventType @map("event_type")
+  meta      Json          @default("{}")
+  createdAt DateTime      @default(now()) @map("created_at")
 
   actor User @relation("FeedEventActor", fields: [actorId], references: [id], onDelete: Cascade)
 
@@ -667,20 +715,30 @@ model Notification {
   @@map("notifications")
 }
 
+enum TaskStatus {
+  sent
+  seen
+  in_progress
+  done
+  confirmed
+}
+
 model Task {
-  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId    String    @map("tenant_id") @db.Uuid
-  branchId    String    @map("branch_id") @db.Uuid
-  createdBy   String    @map("created_by") @db.Uuid
-  assignedTo  String    @map("assigned_to") @db.Uuid
+  id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String     @map("tenant_id") @db.Uuid
+  branchId    String     @map("branch_id") @db.Uuid
+  createdBy   String     @map("created_by") @db.Uuid
+  assignedTo  String     @map("assigned_to") @db.Uuid
   title       String
   description String?
-  checklist   Json      @default("[]")
+  checklist   Json       @default("[]")
   deadline    DateTime?
-  kpiBall     Int       @default(0) @map("kpi_ball")
-  status      String    @default("sent")
-  confirmedAt DateTime? @map("confirmed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  kpiBall     Int        @default(0) @map("kpi_ball")
+  status      TaskStatus @default(sent)
+  seenAt      DateTime?  @map("seen_at")
+  startedAt   DateTime?  @map("started_at")
+  confirmedAt DateTime?  @map("confirmed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   creator  User @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   assignee User @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: Cascade)

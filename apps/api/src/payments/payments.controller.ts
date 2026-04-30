@@ -15,6 +15,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -80,6 +81,7 @@ export class PaymentsController {
       delegationId?: string;
     },
     @Request() req: any,
+    @CurrentDelegation() delegationId: string | null,
   ) {
     return this.payments.markPaid({
       ...body,
@@ -87,6 +89,8 @@ export class PaymentsController {
       tenantId: req.user.tenantId,
       recordedBy: req.user.userId,
       paidAt: new Date(body.paidAt),
+      // Decorator-derived id wins over body-supplied id (which is legacy / for backwards compat)
+      delegationId: delegationId ?? body.delegationId,
     });
   }
 }

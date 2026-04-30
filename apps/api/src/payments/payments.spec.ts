@@ -17,6 +17,9 @@ const mockPrisma = {
   branch: {
     findMany: jest.fn(),
   },
+  delegationAuditLog: {
+    create: jest.fn(),
+  },
 };
 
 describe('PaymentsService', () => {
@@ -75,6 +78,36 @@ describe('PaymentsService', () => {
       );
       expect(call.update).not.toHaveProperty('studentId');
       expect(call.update).not.toHaveProperty('month');
+    });
+
+    it('writes a DelegationAuditLog row when delegationId is provided', async () => {
+      const expectedRecord = { id: 'pay-7', ...baseDto };
+      mockPrisma.payment.upsert.mockResolvedValue(expectedRecord);
+      mockPrisma.delegationAuditLog.create.mockResolvedValue({});
+
+      await service.markPaid({ ...baseDto, delegationId: 'del-1' });
+
+      expect(mockPrisma.delegationAuditLog.create).toHaveBeenCalledWith({
+        data: {
+          delegationId: 'del-1',
+          actorId: baseDto.recordedBy,
+          actionType: 'payment_marked',
+          targetId: baseDto.studentId,
+          meta: {
+            paymentId: expectedRecord.id,
+            month: baseDto.month,
+            amount: baseDto.amount,
+          },
+        },
+      });
+    });
+
+    it('does NOT write a DelegationAuditLog row when delegationId is absent', async () => {
+      mockPrisma.payment.upsert.mockResolvedValue({ id: 'pay-8', ...baseDto });
+
+      await service.markPaid(baseDto);
+
+      expect(mockPrisma.delegationAuditLog.create).not.toHaveBeenCalled();
     });
   });
 
