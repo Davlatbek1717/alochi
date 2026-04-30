@@ -11,7 +11,7 @@ interface GiveWarningDto {
   delegationId?: string;
 }
 
-const WARNING_BLOCK_LIMIT = 3;
+const DEFAULT_WARNING_BLOCK_LIMIT = 3;
 
 @Injectable()
 export class WarningsService {
@@ -19,6 +19,14 @@ export class WarningsService {
     private prisma: PrismaService,
     private events: EventEmitter2,
   ) {}
+
+  private async getBlockLimit(tenantId: string): Promise<number> {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { warningBlockLimit: true },
+    });
+    return tenant?.warningBlockLimit ?? DEFAULT_WARNING_BLOCK_LIMIT;
+  }
 
   async give(dto: GiveWarningDto) {
     if (!dto.reasonText.trim()) {
@@ -39,11 +47,14 @@ export class WarningsService {
       });
     }
 
-    const activeCount = await this.prisma.warning.count({
-      where: { studentId: dto.studentId, isCancelled: false },
-    });
+    const [activeCount, blockLimit] = await Promise.all([
+      this.prisma.warning.count({
+        where: { studentId: dto.studentId, isCancelled: false },
+      }),
+      this.getBlockLimit(dto.tenantId),
+    ]);
 
-    if (activeCount >= WARNING_BLOCK_LIMIT) {
+    if (activeCount >= blockLimit) {
       await this.prisma.user.update({
         where: { id: dto.studentId },
         data: { status: 'blocked_warning' },
@@ -83,7 +94,8 @@ export class WarningsService {
       where: { studentId: w.studentId, isCancelled: false },
     });
 
-    if (activeCount < WARNING_BLOCK_LIMIT) {
+    const blockLimit = await this.getBlockLimit(w.tenantId);
+    if (activeCount < blockLimit) {
       const student = await this.prisma.user.findUniqueOrThrow({
         where: { id: w.studentId },
       });

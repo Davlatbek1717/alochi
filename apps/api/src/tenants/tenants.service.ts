@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { OnboardTenantDto } from './dto/onboard-tenant.dto';
+import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
 
 const SLUG_TAKEN_MESSAGE = 'Bu slug band, boshqasini tanlang';
 
@@ -49,6 +50,33 @@ export class TenantsService {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
     if (!tenant) throw new NotFoundException('Tenant topilmadi');
     return tenant;
+  }
+
+  /**
+   * Update mutable tenant-level settings (Phase 5: warningBlockLimit).
+   * Returns the updated tenant row.
+   */
+  async updateSettings(tenantId: string, dto: UpdateTenantSettingsDto) {
+    const exists = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Tenant topilmadi');
+
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(dto.warningBlockLimit !== undefined
+          ? { warningBlockLimit: dto.warningBlockLimit }
+          : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        warningBlockLimit: true,
+      },
+    });
   }
 
   async onboardTenant(dto: OnboardTenantDto) {

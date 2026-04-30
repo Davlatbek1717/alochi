@@ -32,9 +32,10 @@ export class WarningsController {
   /**
    * Issue a warning to :studentId.
    * Path-based per spec (POST /warnings/:studentId).
+   * Per spec §3.1.4 + §3.2.4: only filadmin and superadmin can give warnings.
    */
   @Post(':studentId')
-  @Roles(UserRole.filadmin, UserRole.manager)
+  @Roles(UserRole.filadmin, UserRole.superadmin)
   give(
     @Param('studentId') studentId: string,
     @Body() body: any,
@@ -54,7 +55,7 @@ export class WarningsController {
    * Cancel (soft) a warning. Replaces legacy DELETE /warnings/:id.
    */
   @Patch(':warningId/cancel')
-  @Roles(UserRole.filadmin, UserRole.manager)
+  @Roles(UserRole.filadmin, UserRole.superadmin)
   cancelWarning(
     @Param('warningId') warningId: string,
     @Body('reason') reason: string,

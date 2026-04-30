@@ -25,7 +25,7 @@ export class DelegationsController {
   constructor(private delegations: DelegationsService) {}
 
   @Post()
-  @Roles(UserRole.filadmin, UserRole.manager)
+  @Roles(UserRole.filadmin, UserRole.manager, UserRole.superadmin)
   create(@Body() body: any, @Request() req: any) {
     return this.delegations.create({
       ...body,

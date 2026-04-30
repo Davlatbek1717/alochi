@@ -15,6 +15,9 @@ const mockPrisma = {
     update: jest.fn(),
     findUniqueOrThrow: jest.fn(),
   },
+  tenant: {
+    findUnique: jest.fn(),
+  },
   delegationAuditLog: {
     create: jest.fn(),
   },
@@ -39,6 +42,11 @@ describe('WarningsService', () => {
   });
 
   afterEach(() => jest.clearAllMocks());
+
+  beforeEach(() => {
+    // Default tenant block-limit lookup → fall back to 3.
+    mockPrisma.tenant.findUnique.mockResolvedValue({ warningBlockLimit: 3 });
+  });
 
   describe('give', () => {
     const dto = {
@@ -129,7 +137,7 @@ describe('WarningsService', () => {
     });
 
     it('cancels warning and unblocks student when active count drops below limit', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
+      const cancelledWarning = { id: 'w1', studentId: 's1', tenantId: 't1', isCancelled: true };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(2);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
@@ -148,7 +156,7 @@ describe('WarningsService', () => {
     });
 
     it('does not change status when cancelled student was not blocked_warning', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
+      const cancelledWarning = { id: 'w1', studentId: 's1', tenantId: 't1', isCancelled: true };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(1);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({

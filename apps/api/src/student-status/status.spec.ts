@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserRole } from '@prisma/client';
 import { StatusService } from './status.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -8,6 +9,15 @@ const mockPrisma = {
     upsert: jest.fn(),
     findFirst: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+  },
+  lesson: {
+    count: jest.fn(),
   },
 };
 
@@ -29,27 +39,190 @@ describe('StatusService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  describe('setStatus', () => {
-    it('upserts a status record and returns it', async () => {
-      const record = {
-        id: 's1',
-        studentId: 'u1',
-        date: new Date('2026-04-25'),
-        englishStatus: 'yashil',
-        personalStatus: null,
-        criticalStatus: null,
-      };
-      mockPrisma.studentStatus.upsert.mockResolvedValue(record);
+  describe('setPersonalStatus', () => {
+    const actor = {
+      userId: 'mentor1',
+      tenantId: 't1',
+      role: UserRole.mentor,
+    };
 
-      const result = await service.setStatus({
-        tenantId: 't1',
+    it('upserts personalStatus and emits status.updated', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue(null);
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
         studentId: 'u1',
-        date: '2026-04-25',
-        englishStatus: 'yashil',
+        personalStatus: 'sariq',
+        englishStatus: null,
+        criticalStatus: null,
+      });
+
+      await service.setPersonalStatus(actor, {
+        studentId: 'u1',
+        color: 'sariq',
+        note: 'Bugun darsda',
       });
 
       expect(mockPrisma.studentStatus.upsert).toHaveBeenCalledTimes(1);
-      expect(result.englishStatus).toBe('yashil');
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.create.personalStatus).toBe('sariq');
+      // No auto-yellow when color != yashil → criticalStatus must NOT be set.
+      expect(upsertArg.create.criticalStatus).toBeUndefined();
+      expect(mockEvents.emit).toHaveBeenCalledWith(
+        'status.updated',
+        expect.objectContaining({ studentId: 'u1' }),
+      );
+    });
+
+    it('does NOT auto-set critical when only personal=yashil (english≠yashil)', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: 'sariq',
+        criticalStatus: 'sariq',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        personalStatus: 'yashil',
+        englishStatus: 'sariq',
+        criticalStatus: 'sariq',
+      });
+
+      await service.setPersonalStatus(actor, {
+        studentId: 'u1',
+        color: 'yashil',
+      });
+
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.update.criticalStatus).toBeUndefined();
+      // No notification.new emitted because no auto-flip occurred.
+      const notifCalls = mockEvents.emit.mock.calls.filter(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notifCalls).toHaveLength(0);
+    });
+
+    it('AUTO-flips critical to yashil when personal+english both yashil and prior critical≠yashil', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: 'yashil',
+        criticalStatus: 'sariq',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        personalStatus: 'yashil',
+        englishStatus: 'yashil',
+        criticalStatus: 'yashil',
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        branchId: 'b1',
+        tenantId: 't1',
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'manager1' });
+
+      await service.setPersonalStatus(actor, {
+        studentId: 'u1',
+        color: 'yashil',
+      });
+
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.update.criticalStatus).toBe('yashil');
+      const notifCalls = mockEvents.emit.mock.calls.filter(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notifCalls).toHaveLength(1);
+      expect(notifCalls[0][1]).toMatchObject({
+        userId: 'manager1',
+        type: 'status.auto_green',
+      });
+    });
+
+    it('does NOT auto-flip when prior critical was already yashil', async () => {
+      mockPrisma.studentStatus.findUnique.mockResolvedValue({
+        englishStatus: 'yashil',
+        criticalStatus: 'yashil',
+      });
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        personalStatus: 'yashil',
+        englishStatus: 'yashil',
+        criticalStatus: 'yashil',
+      });
+
+      await service.setPersonalStatus(actor, {
+        studentId: 'u1',
+        color: 'yashil',
+      });
+
+      const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
+      expect(upsertArg.update.criticalStatus).toBeUndefined();
+    });
+  });
+
+  describe('setCriticalStatus', () => {
+    const actor = {
+      userId: 'manager1',
+      tenantId: 't1',
+      role: UserRole.manager,
+    };
+
+    it('upserts critical and emits status.updated', async () => {
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'qizil',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'filadmin1' });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'qizil',
+      });
+
+      expect(mockPrisma.studentStatus.upsert).toHaveBeenCalledTimes(1);
+      const events = mockEvents.emit.mock.calls.map((c) => c[0]);
+      expect(events).toContain('status.updated');
+      expect(events).toContain('notification.new');
+    });
+
+    it('emits filadmin notification on sariq escalation', async () => {
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'sariq',
+        personalStatus: null,
+        englishStatus: null,
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'filadmin1' });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'sariq',
+      });
+
+      const notifCall = mockEvents.emit.mock.calls.find(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notifCall).toBeDefined();
+      expect(notifCall![1]).toMatchObject({
+        userId: 'filadmin1',
+        type: 'status.critical_escalation',
+        color: 'sariq',
+      });
+    });
+
+    it('does NOT emit filadmin notification when color = yashil', async () => {
+      mockPrisma.studentStatus.upsert.mockResolvedValue({
+        studentId: 'u1',
+        criticalStatus: 'yashil',
+        personalStatus: null,
+        englishStatus: null,
+      });
+
+      await service.setCriticalStatus(actor, {
+        studentId: 'u1',
+        color: 'yashil',
+      });
+
+      const notifCalls = mockEvents.emit.mock.calls.filter(
+        (c) => c[0] === 'notification.new',
+      );
+      expect(notifCalls).toHaveLength(0);
     });
   });
 

@@ -94,9 +94,9 @@ export default function MentorGroupPage() {
         }),
       }, token);
       await Promise.all(students.map((s) =>
-        apiRequest('/status', {
+        apiRequest('/status/personal', {
           method: 'POST',
-          body: JSON.stringify({ studentId: s.id, date: today, personalStatus: STATUS_UZ[s.status], personalNote: s.note || undefined }),
+          body: JSON.stringify({ studentId: s.id, date: today, color: STATUS_UZ[s.status], note: s.note || undefined }),
         }, token),
       ));
       localStorage.setItem(`attendance_marked_${today}`, '1');

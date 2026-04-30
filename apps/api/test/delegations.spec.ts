@@ -1,4 +1,8 @@
+import { Reflector } from '@nestjs/core';
+import { UserRole } from '@prisma/client';
 import { DelegationsService } from '../src/delegations/delegations.service';
+import { DelegationsController } from '../src/delegations/delegations.controller';
+import { ROLES_KEY } from '../src/auth/roles.decorator';
 
 describe('DelegationsService', () => {
   const mockPrisma = {
@@ -71,5 +75,35 @@ describe('DelegationsService', () => {
     await expect(
       service.respond('del-1', 'to', 'rejected', ''),
     ).rejects.toThrow('Rad etish sababi majburiy');
+  });
+
+  it('allows a superadmin to create a delegation (returns pending)', async () => {
+    mockPrisma.delegation.findFirst.mockResolvedValue(null);
+    const result = await service.create({
+      tenantId: 't',
+      branchId: 'b',
+      fromUserId: 'super',
+      toUserId: 'to',
+      delegatedRole: 'filadmin',
+      permissions: ['users.create'],
+      reason: 'Yangi filadmin tayinlash',
+      startsAt: new Date(),
+      endsAt: new Date(),
+    });
+    expect(result.status).toBe('pending');
+  });
+});
+
+describe('DelegationsController — RBAC (Phase 5)', () => {
+  // Per spec §2.3.4: superadmin gains delegation-create rights.
+  const reflector = new Reflector();
+  it('POST /delegations allows filadmin, manager, superadmin', () => {
+    const roles = reflector.get<UserRole[]>(
+      ROLES_KEY,
+      DelegationsController.prototype.create,
+    );
+    expect(roles).toContain(UserRole.filadmin);
+    expect(roles).toContain(UserRole.manager);
+    expect(roles).toContain(UserRole.superadmin);
   });
 });

@@ -89,11 +89,22 @@ export class UsersService {
     return user;
   }
 
-  async findAll(tenantId: string, branchId?: string, role?: UserRole) {
+  async findAll(
+    tenantId: string,
+    branchId?: string,
+    role?: UserRole,
+    caller?: { role: UserRole; branchId: string | null },
+  ) {
+    // Manager callers are scoped to their own branch regardless of query.
+    const effectiveBranchId =
+      caller?.role === UserRole.manager
+        ? (caller.branchId ?? '__no_branch__')
+        : branchId;
+
     return this.prisma.user.findMany({
       where: {
         tenantId,
-        ...(branchId ? { branchId } : {}),
+        ...(effectiveBranchId ? { branchId: effectiveBranchId } : {}),
         ...(role ? { role } : {}),
       },
       select: {

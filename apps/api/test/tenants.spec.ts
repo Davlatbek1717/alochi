@@ -179,6 +179,51 @@ describe('TenantsService — onboardTenant', () => {
     expect(result[1]._count).toEqual({ users: 5, branches: 1 });
   });
 
+  describe('updateSettings (Phase 5)', () => {
+    it('persists warningBlockLimit change for an existing tenant', async () => {
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue({ id: 't1' }),
+          update: jest.fn().mockResolvedValue({
+            id: 't1',
+            name: 'Markaz',
+            slug: 'markaz',
+            warningBlockLimit: 5,
+          }),
+        },
+      };
+      const service = new TenantsService(mockPrisma as never);
+      const result = await service.updateSettings('t1', {
+        warningBlockLimit: 5,
+      });
+      expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
+        where: { id: 't1' },
+        data: { warningBlockLimit: 5 },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          warningBlockLimit: true,
+        },
+      });
+      expect(result.warningBlockLimit).toBe(5);
+    });
+
+    it('throws NotFoundException for missing tenant', async () => {
+      const mockPrisma = {
+        tenant: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          update: jest.fn(),
+        },
+      };
+      const service = new TenantsService(mockPrisma as never);
+      await expect(
+        service.updateSettings('missing', { warningBlockLimit: 5 }),
+      ).rejects.toThrow('Tenant topilmadi');
+      expect(mockPrisma.tenant.update).not.toHaveBeenCalled();
+    });
+  });
+
   it('converts Prisma P2002 (unique violation) into ConflictException — race-condition safety', async () => {
     const mockPrisma = makeMockPrisma();
     mockPrisma.tenant.findUnique.mockResolvedValue(null); // pre-check passes (TOCTOU window)

@@ -44,13 +44,17 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.superadmin, UserRole.filadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   findAll(
     @Query('branchId') branchId: string,
     @Query('role') role: UserRole,
     @Request() req: any,
   ) {
-    return this.users.findAll(req.user.tenantId, branchId, role);
+    // Manager is automatically scoped to its own branch in the service.
+    return this.users.findAll(req.user.tenantId, branchId, role, {
+      role: req.user.role,
+      branchId: req.user.branchId ?? null,
+    });
   }
 
   @Get('by-branch/:branchId')

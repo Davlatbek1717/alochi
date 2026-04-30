@@ -19,6 +19,7 @@ const NAV_CARDS = [
   { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate',           color: 'hover:border-purple-300 hover:bg-purple-50' },
   { href: '/superadmin/churn',           icon: <AlertTriangle size={22} />, title: 'Churn Monitor',        desc: 'Xavfli o\'quvchilar',           color: 'hover:border-red-300 hover:bg-red-50' },
   { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika',     color: 'hover:border-green-300 hover:bg-green-50' },
+  { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi, tenant',    color: 'hover:border-slate-300 hover:bg-slate-50' },
 ];
 
 export default function SuperadminDashboard() {

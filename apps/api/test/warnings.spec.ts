@@ -1,8 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { UserRole } from '@prisma/client';
 import { WarningsService } from '../src/warnings/warnings.service';
+import { WarningsController } from '../src/warnings/warnings.controller';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ROLES_KEY } from '../src/auth/roles.decorator';
 
 const mockPrisma = {
   warning: {
@@ -14,6 +18,9 @@ const mockPrisma = {
   user: {
     update: jest.fn(),
     findUniqueOrThrow: jest.fn(),
+  },
+  tenant: {
+    findUnique: jest.fn(),
   },
 };
 
@@ -45,6 +52,11 @@ describe('WarningsService', () => {
       reasonType: 'discipline',
       reasonText: 'Late arrival',
     };
+
+    beforeEach(() => {
+      // Default: no tenant override, falls back to default block limit (3).
+      mockPrisma.tenant.findUnique.mockResolvedValue({ warningBlockLimit: 3 });
+    });
 
     it('throws BadRequestException when reasonText is blank', async () => {
       await expect(service.give({ ...dto, reasonText: '   ' })).rejects.toThrow(
@@ -88,9 +100,44 @@ describe('WarningsService', () => {
       });
       expect(result.activeCount).toBe(3);
     });
+
+    it('honours tenant.warningBlockLimit override (e.g. 5)', async () => {
+      // Tenant configured to allow 5 active warnings before blocking.
+      mockPrisma.tenant.findUnique.mockResolvedValue({ warningBlockLimit: 5 });
+      mockPrisma.warning.create.mockResolvedValue({ id: 'w3', ...dto });
+      // 4 active warnings → still under the new limit.
+      mockPrisma.warning.count.mockResolvedValue(4);
+
+      const result = await service.give(dto);
+
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockEvents.emit).toHaveBeenCalledWith(
+        'warning.given',
+        expect.objectContaining({ count: 4 }),
+      );
+      expect(result.activeCount).toBe(4);
+    });
+
+    it('falls back to default limit (3) when tenant lookup returns null', async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValue(null);
+      mockPrisma.warning.create.mockResolvedValue({ id: 'w4', ...dto });
+      mockPrisma.warning.count.mockResolvedValue(3);
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.give(dto);
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: dto.studentId },
+        data: { status: 'blocked_warning' },
+      });
+    });
   });
 
   describe('cancel', () => {
+    beforeEach(() => {
+      mockPrisma.tenant.findUnique.mockResolvedValue({ warningBlockLimit: 3 });
+    });
+
     it('throws BadRequestException when cancelReason is blank', async () => {
       await expect(service.cancel('w1', 'admin1', '  ')).rejects.toThrow(
         BadRequestException,
@@ -98,7 +145,12 @@ describe('WarningsService', () => {
     });
 
     it('cancels warning and unblocks student when active count drops below limit', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
+      const cancelledWarning = {
+        id: 'w1',
+        studentId: 's1',
+        tenantId: 't1',
+        isCancelled: true,
+      };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(2);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
@@ -117,7 +169,12 @@ describe('WarningsService', () => {
     });
 
     it('preserves existing status when student was not blocked_warning', async () => {
-      const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
+      const cancelledWarning = {
+        id: 'w1',
+        studentId: 's1',
+        tenantId: 't1',
+        isCancelled: true,
+      };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(1);
       mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
@@ -148,5 +205,31 @@ describe('WarningsService', () => {
       });
       expect(result).toEqual(warnings);
     });
+  });
+});
+
+describe('WarningsController — RBAC', () => {
+  // Spec §3.1.4 + §3.2.4: only filadmin & superadmin may give/cancel warnings
+  // (manager removed in Phase 5).
+  const reflector = new Reflector();
+
+  it('POST /warnings/:studentId allows filadmin & superadmin (manager 403)', () => {
+    const roles = reflector.get<UserRole[]>(
+      ROLES_KEY,
+      WarningsController.prototype.give,
+    );
+    expect(roles).toContain(UserRole.filadmin);
+    expect(roles).toContain(UserRole.superadmin);
+    expect(roles).not.toContain(UserRole.manager);
+  });
+
+  it('PATCH /warnings/:warningId/cancel excludes manager', () => {
+    const roles = reflector.get<UserRole[]>(
+      ROLES_KEY,
+      WarningsController.prototype.cancelWarning,
+    );
+    expect(roles).toContain(UserRole.filadmin);
+    expect(roles).toContain(UserRole.superadmin);
+    expect(roles).not.toContain(UserRole.manager);
   });
 });

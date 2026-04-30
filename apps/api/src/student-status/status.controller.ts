@@ -13,6 +13,8 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { SetPersonalStatusDto } from './dto/set-personal-status.dto';
+import { SetCriticalStatusDto } from './dto/set-critical-status.dto';
 
 interface AuthRequest extends Request {
   user: {
@@ -30,27 +32,40 @@ interface AuthRequest extends Request {
 export class StatusController {
   constructor(private statusService: StatusService) {}
 
-  @Post()
-  @Roles(UserRole.mentor, UserRole.manager)
-  setStatus(
-    @Body()
-    body: {
-      studentId: string;
-      date: string;
-      englishStatus?: string;
-      englishNote?: string;
-      personalStatus?: string;
-      personalNote?: string;
-      criticalStatus?: string;
-      criticalNote?: string;
-    },
-    @Request() req: AuthRequest,
-  ) {
-    return this.statusService.setStatus({
-      ...body,
-      tenantId: req.user.tenantId,
-      changedBy: req.user.userId,
-    });
+  /**
+   * Mentor sets a student's PERSONAL status colour.
+   * Spec §5.2: when personal=yashil and english=yashil, critical
+   * is auto-set to yashil and a notification is sent to the manager.
+   */
+  @Post('personal')
+  @Roles(UserRole.mentor)
+  setPersonal(@Body() dto: SetPersonalStatusDto, @Request() req: AuthRequest) {
+    return this.statusService.setPersonalStatus(
+      {
+        userId: req.user.userId,
+        tenantId: req.user.tenantId,
+        role: req.user.role,
+      },
+      dto,
+    );
+  }
+
+  /**
+   * Manager / filadmin sets a student's CRITICAL status colour.
+   * Sariq / qizil values trigger an additional filadmin notification
+   * (Phase 6 will route this to Telegram).
+   */
+  @Post('critical')
+  @Roles(UserRole.manager, UserRole.filadmin)
+  setCritical(@Body() dto: SetCriticalStatusDto, @Request() req: AuthRequest) {
+    return this.statusService.setCriticalStatus(
+      {
+        userId: req.user.userId,
+        tenantId: req.user.tenantId,
+        role: req.user.role,
+      },
+      dto,
+    );
   }
 
   @Get('my')

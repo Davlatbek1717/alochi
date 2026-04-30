@@ -123,6 +123,57 @@ describe('UsersService', () => {
     });
   });
 
+  describe('findAll — branch scoping (Phase 5)', () => {
+    it('manager caller is forced to own branch (ignores query branchId)', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      const service = new UsersService(
+        mockPrisma as any,
+        { emit: jest.fn() } as any,
+      );
+
+      await service.findAll('t1', 'other-branch', undefined, {
+        role: UserRole.manager,
+        branchId: 'b-mine',
+      });
+
+      const arg = mockPrisma.user.findMany.mock.calls[0][0];
+      // Service must override the query branchId with caller's own.
+      expect(arg.where.branchId).toBe('b-mine');
+    });
+
+    it('superadmin caller honours optional branchId filter', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      const service = new UsersService(
+        mockPrisma as any,
+        { emit: jest.fn() } as any,
+      );
+
+      await service.findAll('t1', 'b-X', undefined, {
+        role: UserRole.superadmin,
+        branchId: null,
+      });
+
+      const arg = mockPrisma.user.findMany.mock.calls[0][0];
+      expect(arg.where.branchId).toBe('b-X');
+    });
+
+    it('superadmin caller without branchId filter returns tenant-wide', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      const service = new UsersService(
+        mockPrisma as any,
+        { emit: jest.fn() } as any,
+      );
+
+      await service.findAll('t1', undefined, undefined, {
+        role: UserRole.superadmin,
+        branchId: null,
+      });
+
+      const arg = mockPrisma.user.findMany.mock.calls[0][0];
+      expect(arg.where.branchId).toBeUndefined();
+    });
+  });
+
   describe('unblock', () => {
     it('flips status to active and emits student.unblocked', async () => {
       mockPrisma.user.findFirst.mockResolvedValue({
