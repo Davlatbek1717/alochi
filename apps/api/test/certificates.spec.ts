@@ -22,14 +22,20 @@ describe('CertificatesService', () => {
   it('awards gold at 250 lessons', async () => {
     mockPrisma.studentProgress.count.mockResolvedValue(250);
     mockPrisma.certificate.findFirst.mockResolvedValue(null);
-    mockPrisma.certificate.create.mockResolvedValueOnce({ id: 'cert-1', level: 'gold' });
+    mockPrisma.certificate.create.mockResolvedValueOnce({
+      id: 'cert-1',
+      level: 'gold',
+    });
     const result = await service.checkAndAward('student-id', 'tenant-id');
     expect(result?.level).toBe('gold');
   });
 
   it('does not award if already has that level', async () => {
     mockPrisma.studentProgress.count.mockResolvedValue(50);
-    mockPrisma.certificate.findFirst.mockResolvedValue({ id: 'existing', level: 'bronze' });
+    mockPrisma.certificate.findFirst.mockResolvedValue({
+      id: 'existing',
+      level: 'bronze',
+    });
     const result = await service.checkAndAward('student-id', 'tenant-id');
     expect(result).toBeNull();
   });

@@ -69,10 +69,14 @@ export class StudentHandler {
         where: { studentId: student.id },
       });
 
-      const shieldStatus = (xp?.shieldCount ?? 0) > 0 ? 'mavjud' : 'ishlatilgan';
+      const shieldStatus =
+        (xp?.shieldCount ?? 0) > 0 ? 'mavjud' : 'ishlatilgan';
 
       await ctx.reply(
-        [`🔥 Streak: ${xp?.currentStreak ?? 0} kun`, `🛡 Shield: ${shieldStatus}`].join('\n'),
+        [
+          `🔥 Streak: ${xp?.currentStreak ?? 0} kun`,
+          `🛡 Shield: ${shieldStatus}`,
+        ].join('\n'),
       );
     } catch {
       await ctx.reply('Xatolik yuz berdi');

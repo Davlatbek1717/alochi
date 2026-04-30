@@ -5,9 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ContentQualityService {
   constructor(private prisma: PrismaService) {}
 
-  private async assertLessonOwnership(lessonId: string, tenantId: string): Promise<void> {
-    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
-    if (!lesson) throw new Error('Dars topilmadi yoki ruxsat yo\'q');
+  private async assertLessonOwnership(
+    lessonId: string,
+    tenantId: string,
+  ): Promise<void> {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { id: lessonId, tenantId },
+    });
+    if (!lesson) throw new Error("Dars topilmadi yoki ruxsat yo'q");
   }
 
   async getLessonStats(tenantId: string) {
@@ -20,7 +25,9 @@ export class ContentQualityService {
       lessons.map(async (lesson) => {
         const [total, passed, feedbackAgg] = await Promise.all([
           this.prisma.studentProgress.count({ where: { lessonId: lesson.id } }),
-          this.prisma.studentProgress.count({ where: { lessonId: lesson.id, academyCompleted: true } }),
+          this.prisma.studentProgress.count({
+            where: { lessonId: lesson.id, academyCompleted: true },
+          }),
           this.prisma.lessonFeedback.aggregate({
             where: { lessonId: lesson.id },
             _avg: { rating: true },
@@ -34,7 +41,10 @@ export class ContentQualityService {
           title: lesson.title,
           passRate,
           totalStudents: total,
-          feedbackAvg: feedbackAgg._avg.rating != null ? Number(feedbackAgg._avg.rating) : null,
+          feedbackAvg:
+            feedbackAgg._avg.rating != null
+              ? Number(feedbackAgg._avg.rating)
+              : null,
           feedbackCount: feedbackAgg._count,
         };
       }),
@@ -43,7 +53,7 @@ export class ContentQualityService {
 
   async submitFeedback(studentId: string, lessonId: string, rating: number) {
     if (rating < 1 || rating > 3) {
-      throw new BadRequestException('Rating 1, 2 yoki 3 bo\'lishi kerak');
+      throw new BadRequestException("Rating 1, 2 yoki 3 bo'lishi kerak");
     }
     return this.prisma.lessonFeedback.upsert({
       where: { studentId_lessonId: { studentId, lessonId } },
@@ -92,16 +102,27 @@ export class ContentQualityService {
 
     return Promise.all(
       variants.map(async (v) => {
-        const assignments = await this.prisma.studentVariantAssignment.findMany({
-          where: { variantId: v.id },
-          select: { studentId: true },
-        });
+        const assignments = await this.prisma.studentVariantAssignment.findMany(
+          {
+            where: { variantId: v.id },
+            select: { studentId: true },
+          },
+        );
         const studentIds = assignments.map((a) => a.studentId);
-        if (studentIds.length === 0) return { variant: v.variant, students: 0, passRate: 0 };
+        if (studentIds.length === 0)
+          return { variant: v.variant, students: 0, passRate: 0 };
 
         const [total, passed] = await Promise.all([
-          this.prisma.studentProgress.count({ where: { lessonId, studentId: { in: studentIds } } }),
-          this.prisma.studentProgress.count({ where: { lessonId, studentId: { in: studentIds }, academyCompleted: true } }),
+          this.prisma.studentProgress.count({
+            where: { lessonId, studentId: { in: studentIds } },
+          }),
+          this.prisma.studentProgress.count({
+            where: {
+              lessonId,
+              studentId: { in: studentIds },
+              academyCompleted: true,
+            },
+          }),
         ]);
 
         return {

@@ -29,16 +29,20 @@ export class AuthService {
       include: { tenant: true },
     });
 
-    if (!user) throw new UnauthorizedException('Login yoki parol noto\'g\'ri');
+    if (!user) throw new UnauthorizedException("Login yoki parol noto'g'ri");
     if (user.status === UserStatus.blocked_warning)
-      throw new UnauthorizedException('Profilingiz 3 ta ogohlantirish sababli bloklangan. Filadmin bilan bog\'laning.');
+      throw new UnauthorizedException(
+        "Profilingiz 3 ta ogohlantirish sababli bloklangan. Filadmin bilan bog'laning.",
+      );
     if (user.status === UserStatus.blocked_payment)
-      throw new UnauthorizedException('To\'lov amalga oshirilmagan. Iltimos, to\'lovni to\'lang.');
+      throw new UnauthorizedException(
+        "To'lov amalga oshirilmagan. Iltimos, to'lovni to'lang.",
+      );
     if (user.status !== UserStatus.active)
       throw new UnauthorizedException('Profilingiz bloklangan');
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!match) throw new UnauthorizedException('Login yoki parol noto\'g\'ri');
+    if (!match) throw new UnauthorizedException("Login yoki parol noto'g'ri");
 
     const payload = {
       sub: user.id,
@@ -62,14 +66,21 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, name: user.name, role: user.role, tenantId: user.tenantId },
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+      },
     };
   }
 
   async refresh(token: string) {
     // First verify the JWT signature and expiry
     try {
-      await this.jwt.verifyAsync(token, { secret: this.config.get<string>('JWT_REFRESH_SECRET') });
+      await this.jwt.verifyAsync(token, {
+        secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      });
     } catch {
       throw new UnauthorizedException('Refresh token yaroqsiz');
     }
@@ -102,7 +113,11 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     await this.prisma.refreshToken.create({
-      data: { userId: stored.user.id, token: this.hashToken(newRefresh), expiresAt },
+      data: {
+        userId: stored.user.id,
+        token: this.hashToken(newRefresh),
+        expiresAt,
+      },
     });
 
     return { accessToken: newAccess, refreshToken: newRefresh };

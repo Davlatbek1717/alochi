@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -31,15 +41,16 @@ export class PaymentsController {
     @Query('month') month: string,
     @Request() req: any,
   ) {
-    return this.payments.getBranchPaymentStatus(branchId, req.user.tenantId, month);
+    return this.payments.getBranchPaymentStatus(
+      branchId,
+      req.user.tenantId,
+      month,
+    );
   }
 
   @Get('summary')
   @Roles(UserRole.superadmin)
-  getBranchSummary(
-    @Query('month') month: string,
-    @Request() req: any,
-  ) {
+  getBranchSummary(@Query('month') month: string, @Request() req: any) {
     return this.payments.getBranchSummary(req.user.tenantId, month);
   }
 

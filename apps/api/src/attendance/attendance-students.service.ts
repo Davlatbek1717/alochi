@@ -22,7 +22,9 @@ export class AttendanceStudentsService {
     const results = await Promise.all(
       records.map((r) =>
         this.prisma.attendanceStudent.upsert({
-          where: { studentId_date: { studentId: r.studentId, date: new Date(r.date) } },
+          where: {
+            studentId_date: { studentId: r.studentId, date: new Date(r.date) },
+          },
           create: {
             tenantId: r.tenantId,
             branchId: r.branchId,
@@ -39,13 +41,18 @@ export class AttendanceStudentsService {
       ),
     );
     for (const r of records) {
-      this.analytics.logEvent({
-        tenantId: r.tenantId,
-        eventType: 'attendance_marked',
-        studentId: r.studentId,
-        branchId: r.branchId,
-        data: { isPresent: r.status === 'present', isLate: r.status === 'late' },
-      }).catch(() => {});
+      this.analytics
+        .logEvent({
+          tenantId: r.tenantId,
+          eventType: 'attendance_marked',
+          studentId: r.studentId,
+          branchId: r.branchId,
+          data: {
+            isPresent: r.status === 'present',
+            isLate: r.status === 'late',
+          },
+        })
+        .catch(() => {});
     }
     return results;
   }

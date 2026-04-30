@@ -46,10 +46,20 @@ describe('ProgressService', () => {
 
   describe('completeSession', () => {
     it('marks homeCompleted when session count reaches nRepetitions', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l1', nRepetitions: 3, maxNOverride: 10 });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l1',
+        nRepetitions: 3,
+        maxNOverride: 10,
+      });
       mockPrisma.studentLessonConfig.findUnique.mockResolvedValue(null);
-      mockPrisma.studentProgress.findUnique.mockResolvedValue({ sessionCount: 2, homeCompleted: false });
-      mockPrisma.studentProgress.upsert.mockResolvedValue({ sessionCount: 3, homeCompleted: true });
+      mockPrisma.studentProgress.findUnique.mockResolvedValue({
+        sessionCount: 2,
+        homeCompleted: false,
+      });
+      mockPrisma.studentProgress.upsert.mockResolvedValue({
+        sessionCount: 3,
+        homeCompleted: true,
+      });
 
       const result = await service.completeSession('s-1', 'l-1', 't-1');
 
@@ -57,10 +67,22 @@ describe('ProgressService', () => {
     });
 
     it('uses N override when student has a custom config', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l1', nRepetitions: 5, maxNOverride: 10 });
-      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue({ nRepetitionsOverride: 2 });
-      mockPrisma.studentProgress.findUnique.mockResolvedValue({ sessionCount: 1, homeCompleted: false });
-      mockPrisma.studentProgress.upsert.mockResolvedValue({ sessionCount: 2, homeCompleted: true });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l1',
+        nRepetitions: 5,
+        maxNOverride: 10,
+      });
+      mockPrisma.studentLessonConfig.findUnique.mockResolvedValue({
+        nRepetitionsOverride: 2,
+      });
+      mockPrisma.studentProgress.findUnique.mockResolvedValue({
+        sessionCount: 1,
+        homeCompleted: false,
+      });
+      mockPrisma.studentProgress.upsert.mockResolvedValue({
+        sessionCount: 2,
+        homeCompleted: true,
+      });
 
       const result = await service.completeSession('s-1', 'l-1', 't-1');
 
@@ -70,14 +92,21 @@ describe('ProgressService', () => {
     it('throws NotFoundException when lesson does not exist', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
 
-      await expect(service.completeSession('s-1', 'no-lesson', 't-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.completeSession('s-1', 'no-lesson', 't-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('markAcademyCompleted', () => {
     it('sets academyCompleted to true', async () => {
-      mockPrisma.studentProgress.update.mockResolvedValue({ academyCompleted: true });
-      mockPrisma.lesson.findUnique.mockResolvedValue({ title: 'Test Lesson', tenantId: 't-1' });
+      mockPrisma.studentProgress.update.mockResolvedValue({
+        academyCompleted: true,
+      });
+      mockPrisma.lesson.findUnique.mockResolvedValue({
+        title: 'Test Lesson',
+        tenantId: 't-1',
+      });
 
       const result = await service.markAcademyCompleted('s-1', 'l-1');
 

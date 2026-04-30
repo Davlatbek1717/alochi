@@ -31,7 +31,11 @@ describe('ComponentsService', () => {
       mockPrisma.lessonComponent.createMany.mockResolvedValue({ count: 1 });
 
       await service.setMcq('lesson-1', [
-        { text: 'What is "apple"?', options: ['Olma', 'Nok', 'Uzum', 'Limon'], correct: 0 },
+        {
+          text: 'What is "apple"?',
+          options: ['Olma', 'Nok', 'Uzum', 'Limon'],
+          correct: 0,
+        },
       ]);
 
       expect(mockPrisma.lessonComponent.deleteMany).toHaveBeenCalledWith({
@@ -62,7 +66,10 @@ describe('ComponentsService', () => {
       expect(mockPrisma.lessonComponent.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.arrayContaining([
-            expect.objectContaining({ lessonId: 'lesson-1', type: 'word_order' }),
+            expect.objectContaining({
+              lessonId: 'lesson-1',
+              type: 'word_order',
+            }),
           ]),
         }),
       );

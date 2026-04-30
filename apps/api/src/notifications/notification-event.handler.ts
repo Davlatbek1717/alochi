@@ -30,7 +30,7 @@ export class NotificationEventHandler {
         payload.studentId,
         'blocked',
         'Hisob bloklandi',
-        `Hisobingiz ${payload.reason === 'warning' ? '3 ta ogohlantirish sababli' : 'to\'lov amalga oshirilmaganligi sababli'} bloklandi.`,
+        `Hisobingiz ${payload.reason === 'warning' ? '3 ta ogohlantirish sababli' : "to'lov amalga oshirilmaganligi sababli"} bloklandi.`,
         { reason: payload.reason },
       );
     } catch (err) {
@@ -39,7 +39,12 @@ export class NotificationEventHandler {
   }
 
   @OnEvent('delegation.created')
-  async onDelegationCreated(payload: { toUserId: string; fromUserName: string; role: string; endsAt: string }) {
+  async onDelegationCreated(payload: {
+    toUserId: string;
+    fromUserName: string;
+    role: string;
+    endsAt: string;
+  }) {
     try {
       await this.notifications.send(
         payload.toUserId,
@@ -54,7 +59,10 @@ export class NotificationEventHandler {
   }
 
   @OnEvent('delegation.rejected')
-  async onDelegationRejected(payload: { fromUserId: string; toUserName: string }) {
+  async onDelegationRejected(payload: {
+    fromUserId: string;
+    toUserName: string;
+  }) {
     try {
       await this.notifications.send(
         payload.fromUserId,
@@ -69,7 +77,10 @@ export class NotificationEventHandler {
   }
 
   @OnEvent('delegation.cancelled')
-  async onDelegationCancelled(payload: { toUserId: string; fromUserName: string }) {
+  async onDelegationCancelled(payload: {
+    toUserId: string;
+    fromUserName: string;
+  }) {
     try {
       await this.notifications.send(
         payload.toUserId,

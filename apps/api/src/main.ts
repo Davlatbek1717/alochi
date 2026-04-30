@@ -19,12 +19,15 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production'
-      ? process.env.ALLOWED_ORIGIN ?? 'https://yourdomain.com'
-      : true,
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? (process.env.ALLOWED_ORIGIN ?? 'https://yourdomain.com')
+        : true,
     credentials: true,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();

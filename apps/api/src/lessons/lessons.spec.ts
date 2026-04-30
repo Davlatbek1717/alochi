@@ -42,7 +42,10 @@ describe('LessonsService', () => {
   describe('create', () => {
     it('creates and returns a lesson when orderNumber is unique', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
-      mockPrisma.lesson.create.mockResolvedValue({ id: 'lesson-1', ...baseDto });
+      mockPrisma.lesson.create.mockResolvedValue({
+        id: 'lesson-1',
+        ...baseDto,
+      });
 
       const result = await service.create(baseDto);
 
@@ -64,7 +67,11 @@ describe('LessonsService', () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
       mockPrisma.lesson.create.mockResolvedValue({ id: 'lesson-2' });
 
-      await service.create({ ...baseDto, mcqEnabled: true, wordOrderEnabled: true });
+      await service.create({
+        ...baseDto,
+        mcqEnabled: true,
+        wordOrderEnabled: true,
+      });
 
       const callArg = mockPrisma.lesson.create.mock.calls[0][0];
       expect(callArg.data.components.mcq).toBe(true);
@@ -75,7 +82,10 @@ describe('LessonsService', () => {
 
   describe('findByTenant', () => {
     it('returns lessons ordered by orderNumber', async () => {
-      const lessons = [{ id: 'l1', orderNumber: 1 }, { id: 'l2', orderNumber: 2 }];
+      const lessons = [
+        { id: 'l1', orderNumber: 1 },
+        { id: 'l2', orderNumber: 2 },
+      ];
       mockPrisma.lesson.findMany.mockResolvedValue(lessons);
 
       const result = await service.findByTenant('tenant-1');
@@ -89,8 +99,14 @@ describe('LessonsService', () => {
 
   describe('publish', () => {
     it('sets isPublished to true', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'lesson-1', tenantId: 'tenant-1' });
-      mockPrisma.lesson.update.mockResolvedValue({ id: 'lesson-1', isPublished: true });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'lesson-1',
+        tenantId: 'tenant-1',
+      });
+      mockPrisma.lesson.update.mockResolvedValue({
+        id: 'lesson-1',
+        isPublished: true,
+      });
 
       const result = await service.publish('lesson-1', 'tenant-1');
 
@@ -104,7 +120,9 @@ describe('LessonsService', () => {
     it('throws NotFoundException when lesson does not exist', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
 
-      await expect(service.publish('no-lesson', 'tenant-1')).rejects.toThrow(NotFoundException);
+      await expect(service.publish('no-lesson', 'tenant-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -1,4 +1,15 @@
-import { IsString, IsEnum, IsInt, IsUrl, IsBoolean, IsOptional, Min, Max, IsNotEmpty, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsInt,
+  IsUrl,
+  IsBoolean,
+  IsOptional,
+  Min,
+  Max,
+  IsNotEmpty,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateLessonDto {
   @IsUUID()
@@ -8,7 +19,12 @@ export class CreateLessonDto {
   @IsNotEmpty()
   title: string;
 
-  @IsEnum(['english', 'personal_development', 'critical_thinking', 'experiment'])
+  @IsEnum([
+    'english',
+    'personal_development',
+    'critical_thinking',
+    'experiment',
+  ])
   type: string;
 
   @IsInt()

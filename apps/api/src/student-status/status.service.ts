@@ -18,7 +18,16 @@ export class StatusService {
   constructor(private prisma: PrismaService) {}
 
   async setStatus(dto: SetStatusDto) {
-    const { studentId, date, englishStatus, englishNote, personalStatus, personalNote, criticalStatus, criticalNote } = dto;
+    const {
+      studentId,
+      date,
+      englishStatus,
+      englishNote,
+      personalStatus,
+      personalNote,
+      criticalStatus,
+      criticalNote,
+    } = dto;
     const dateObj = new Date(date);
 
     return this.prisma.studentStatus.upsert({
@@ -105,7 +114,11 @@ export class StatusService {
         studentStatuses: {
           orderBy: { date: 'desc' },
           take: 1,
-          select: { englishStatus: true, personalStatus: true, criticalStatus: true },
+          select: {
+            englishStatus: true,
+            personalStatus: true,
+            criticalStatus: true,
+          },
         },
         studentProgress: {
           where: { academyCompleted: true },

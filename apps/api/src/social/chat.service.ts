@@ -1,9 +1,28 @@
-import { Injectable, BadRequestException, ForbiddenException, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  OnModuleInit,
+} from '@nestjs/common';
+// CJS interop: isomorphic-dompurify v2 exports the DOMPurify factory result
+// directly via module.exports — no `.default`. Use `import =` to dodge
+// `esModuleInterop` injecting an undefined `.default`.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import DOMPurify = require('isomorphic-dompurify');
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_MESSAGE_LENGTH = 200;
 const MAX_DAILY_MESSAGES = 20;
 const ALLOWED_EMOJIS = ['👍', '🎉', '💪', '🔥', '❤️'];
+
+/**
+ * Strip ALL HTML — chat messages are plain text only.
+ * DOMPurify with empty allow-lists removes every tag and attribute,
+ * which neutralizes XSS payloads like `<img src=x onerror=alert(1)>`.
+ */
+export function sanitizeChatText(input: string): string {
+  return DOMPurify.sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+}
 
 interface SendMessageDto {
   tenantId: string;
@@ -72,18 +91,26 @@ export class ChatService implements OnModuleInit {
   }
 
   async sendMessage(dto: SendMessageDto) {
-    if (dto.content.length > MAX_MESSAGE_LENGTH) {
+    // PHASE 1.6 — XSS hardening: strip every HTML tag/attribute before any
+    // further processing. Length and keyword checks run on the sanitized text
+    // so a payload like `<script>` cannot smuggle disallowed words past the
+    // filter via tag-only camouflage.
+    const cleanContent = sanitizeChatText(dto.content);
+
+    if (cleanContent.length > MAX_MESSAGE_LENGTH) {
       throw new BadRequestException(
         `Xabar ${MAX_MESSAGE_LENGTH} belgidan uzun bo'lmasligi kerak`,
       );
     }
 
-    const lowerContent = dto.content.toLowerCase();
+    const lowerContent = cleanContent.toLowerCase();
     const tenantKeywords = this.keywordCache.get(dto.tenantId);
     if (tenantKeywords) {
       for (const kw of tenantKeywords) {
         if (lowerContent.includes(kw)) {
-          throw new BadRequestException("Xabar taqiqlangan so'z o'z ichiga oldi");
+          throw new BadRequestException(
+            "Xabar taqiqlangan so'z o'z ichiga oldi",
+          );
         }
       }
     }
@@ -91,10 +118,7 @@ export class ChatService implements OnModuleInit {
     const ban = await this.prisma.chatBan.findFirst({
       where: {
         userId: dto.senderId,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
     });
 
@@ -121,7 +145,7 @@ export class ChatService implements OnModuleInit {
     }
 
     return this.prisma.groupMessage.create({
-      data: dto,
+      data: { ...dto, content: cleanContent },
       include: { sender: { select: { name: true, role: true } } },
     });
   }
@@ -159,10 +183,14 @@ export class ChatService implements OnModuleInit {
     });
   }
 
-  async banUser(userId: string, bannedBy: string, reason: string, expiresAt?: Date) {
+  async banUser(
+    userId: string,
+    bannedBy: string,
+    reason: string,
+    expiresAt?: Date,
+  ) {
     return this.prisma.chatBan.create({
       data: { userId, bannedBy, reason, expiresAt },
     });
   }
-
 }

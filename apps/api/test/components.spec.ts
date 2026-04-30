@@ -5,9 +5,9 @@ describe('ComponentsService', () => {
     lessonComponent: {
       deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       createMany: jest.fn().mockResolvedValue({ count: 2 }),
-      findMany: jest.fn().mockResolvedValue([
-        { type: 'mcq', config: { questions: [] } },
-      ]),
+      findMany: jest
+        .fn()
+        .mockResolvedValue([{ type: 'mcq', config: { questions: [] } }]),
     },
   };
 
@@ -17,7 +17,11 @@ describe('ComponentsService', () => {
 
   it('saves MCQ questions for a lesson', async () => {
     await service.setMcq('lesson-id', [
-      { text: 'What is "apple"?', options: ['Olma', 'Nok', 'Uzum', 'Limon'], correct: 0 },
+      {
+        text: 'What is "apple"?',
+        options: ['Olma', 'Nok', 'Uzum', 'Limon'],
+        correct: 0,
+      },
     ]);
     expect(mockPrisma.lessonComponent.createMany).toHaveBeenCalled();
   });

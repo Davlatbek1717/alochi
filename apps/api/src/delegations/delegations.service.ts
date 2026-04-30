@@ -1,5 +1,8 @@
 import {
-  Injectable, BadRequestException, ForbiddenException, NotFoundException,
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -29,7 +32,9 @@ export class DelegationsService {
     if (!dto.reason.trim()) throw new BadRequestException('Sabab majburiy');
 
     if (!ALLOWED_DELEGATED_ROLES.includes(dto.delegatedRole)) {
-      throw new BadRequestException('Faqat filadmin yoki manager roliga delegatsiya mumkin');
+      throw new BadRequestException(
+        'Faqat filadmin yoki manager roliga delegatsiya mumkin',
+      );
     }
 
     const existing = await this.prisma.delegation.findFirst({
@@ -50,7 +55,10 @@ export class DelegationsService {
       },
     });
 
-    const fromUser = await this.prisma.user.findUnique({ where: { id: dto.fromUserId }, select: { name: true } });
+    const fromUser = await this.prisma.user.findUnique({
+      where: { id: dto.fromUserId },
+      select: { name: true },
+    });
     this.events.emit('delegation.created', {
       toUserId: dto.toUserId,
       fromUserName: fromUser?.name ?? '',
@@ -105,7 +113,10 @@ export class DelegationsService {
     ]);
 
     if (action === 'rejected') {
-      const toUser = await this.prisma.user.findUnique({ where: { id: responderId }, select: { name: true } });
+      const toUser = await this.prisma.user.findUnique({
+        where: { id: responderId },
+        select: { name: true },
+      });
       this.events.emit('delegation.rejected', {
         fromUserId: delegation.fromUserId,
         toUserName: toUser?.name ?? '',
@@ -117,9 +128,12 @@ export class DelegationsService {
   }
 
   async cancel(delegationId: string, cancelledBy: string, reason: string) {
-    if (!reason.trim()) throw new BadRequestException('Bekor qilish sababi majburiy');
+    if (!reason.trim())
+      throw new BadRequestException('Bekor qilish sababi majburiy');
 
-    const delegation = await this.prisma.delegation.findUnique({ where: { id: delegationId } });
+    const delegation = await this.prisma.delegation.findUnique({
+      where: { id: delegationId },
+    });
     if (!delegation) throw new NotFoundException('Delegatsiya topilmadi');
 
     if (!['pending', 'active'].includes(delegation.status)) {
@@ -129,14 +143,27 @@ export class DelegationsService {
     const [updated] = await Promise.all([
       this.prisma.delegation.update({
         where: { id: delegationId },
-        data: { status: 'cancelled', cancelledAt: new Date(), cancelledBy, cancelReason: reason },
+        data: {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancelledBy,
+          cancelReason: reason,
+        },
       }),
       this.prisma.delegationAuditLog.create({
-        data: { delegationId, actorId: cancelledBy, actionType: 'cancelled', meta: { reason } },
+        data: {
+          delegationId,
+          actorId: cancelledBy,
+          actionType: 'cancelled',
+          meta: { reason },
+        },
       }),
     ]);
 
-    const fromUser = await this.prisma.user.findUnique({ where: { id: cancelledBy }, select: { name: true } });
+    const fromUser = await this.prisma.user.findUnique({
+      where: { id: cancelledBy },
+      select: { name: true },
+    });
     this.events.emit('delegation.cancelled', {
       toUserId: delegation.toUserId,
       fromUserName: fromUser?.name ?? '',
@@ -177,7 +204,7 @@ export class DelegationsService {
   async exportToPdf(delegationId: string): Promise<Buffer> {
     const delegation = await this.findOne(delegationId);
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
     const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
@@ -193,13 +220,23 @@ export class DelegationsService {
     };
 
     const row = (label: string, value: string) => {
-      doc.fontSize(11).font('Helvetica-Bold').text(`${label}: `, { continued: true });
+      doc
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(`${label}: `, { continued: true });
       doc.font('Helvetica').text(value);
     };
 
-    doc.fontSize(22).font('Helvetica-Bold').text("Delegatsiya Hujjati", { align: 'center' });
+    doc
+      .fontSize(22)
+      .font('Helvetica-Bold')
+      .text('Delegatsiya Hujjati', { align: 'center' });
     doc.moveDown(0.5);
-    doc.fontSize(10).font('Helvetica').fillColor('gray').text(`ID: ${delegation.id}`, { align: 'center' });
+    doc
+      .fontSize(10)
+      .font('Helvetica')
+      .fillColor('gray')
+      .text(`ID: ${delegation.id}`, { align: 'center' });
     doc.fillColor('black').moveDown(1.5);
 
     row('Kim tomonidan', delegation.fromUser.name);
@@ -221,7 +258,10 @@ export class DelegationsService {
 
       for (const log of delegation.auditLogs) {
         const time = log.performedAt.toLocaleString('uz-UZ');
-        doc.fontSize(10).font('Helvetica').text(`• [${time}] ${log.actionType}`, { indent: 10 });
+        doc
+          .fontSize(10)
+          .font('Helvetica')
+          .text(`• [${time}] ${log.actionType}`, { indent: 10 });
       }
     }
 

@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { StatusService } from './status.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -38,7 +46,10 @@ export class StatusController {
     },
     @Request() req: AuthRequest,
   ) {
-    return this.statusService.setStatus({ ...body, tenantId: req.user.tenantId });
+    return this.statusService.setStatus({
+      ...body,
+      tenantId: req.user.tenantId,
+    });
   }
 
   @Get('my')
@@ -62,7 +73,10 @@ export class StatusController {
   @Get('high-performers')
   @Roles(UserRole.manager, UserRole.filadmin)
   getHighPerformers(@Request() req: AuthRequest) {
-    return this.statusService.getHighPerformers(req.user.tenantId, req.user.branchId);
+    return this.statusService.getHighPerformers(
+      req.user.tenantId,
+      req.user.branchId,
+    );
   }
 
   @Get('history/:studentId')

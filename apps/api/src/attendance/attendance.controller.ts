@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AttendanceStudentsService } from './attendance-students.service';
 import { AttendanceStaffService } from './attendance-staff.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -21,9 +29,17 @@ export class AttendanceController {
 
   @Post('students/bulk')
   @Roles(UserRole.mentor, UserRole.tester)
-  markBulk(@Body() body: { records: Array<{ studentId: string; status: string }> }, @Request() req: any) {
-    const { tenantId, branchId, userId } = req.user as { tenantId: string; branchId: string; userId: string };
-    const date: string = (body as any).date ?? new Date().toISOString().split('T')[0];
+  markBulk(
+    @Body() body: { records: Array<{ studentId: string; status: string }> },
+    @Request() req: any,
+  ) {
+    const { tenantId, branchId, userId } = req.user as {
+      tenantId: string;
+      branchId: string;
+      userId: string;
+    };
+    const date: string =
+      (body as any).date ?? new Date().toISOString().split('T')[0];
 
     const records = body.records.map((r) => ({
       ...r,
@@ -38,7 +54,10 @@ export class AttendanceController {
 
   @Get('students/:branchId/:date')
   @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin, UserRole.tester)
-  getDailyList(@Param('branchId') branchId: string, @Param('date') date: string) {
+  getDailyList(
+    @Param('branchId') branchId: string,
+    @Param('date') date: string,
+  ) {
     return this.studentsService.getDailyList(branchId, date);
   }
 
@@ -47,8 +66,17 @@ export class AttendanceController {
   @Post('staff/checkin')
   @Roles(UserRole.mentor, UserRole.manager, UserRole.tester)
   checkIn(@Body('method') method: string, @Request() req: any) {
-    const { userId, tenantId, branchId } = req.user as { userId: string; tenantId: string; branchId: string };
-    return this.staffService.checkIn(userId, tenantId, branchId, method ?? 'manual');
+    const { userId, tenantId, branchId } = req.user as {
+      userId: string;
+      tenantId: string;
+      branchId: string;
+    };
+    return this.staffService.checkIn(
+      userId,
+      tenantId,
+      branchId,
+      method ?? 'manual',
+    );
   }
 
   @Post('staff/confirm/:userId')
@@ -65,7 +93,10 @@ export class AttendanceController {
 
   @Get('staff/:branchId/:date')
   @Roles(UserRole.filadmin, UserRole.manager)
-  getDailyStaff(@Param('branchId') branchId: string, @Param('date') date: string) {
+  getDailyStaff(
+    @Param('branchId') branchId: string,
+    @Param('date') date: string,
+  ) {
     return this.staffService.getDailyStaff(branchId, date);
   }
 }

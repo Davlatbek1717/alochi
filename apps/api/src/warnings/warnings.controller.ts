@@ -1,4 +1,13 @@
-import { Controller, Post, Delete, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { WarningsService } from './warnings.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -16,12 +25,20 @@ export class WarningsController {
   @Post()
   @Roles(UserRole.filadmin, UserRole.manager)
   give(@Body() body: any, @Request() req: any) {
-    return this.warnings.give({ ...body, tenantId: req.user.tenantId, givenBy: req.user.userId });
+    return this.warnings.give({
+      ...body,
+      tenantId: req.user.tenantId,
+      givenBy: req.user.userId,
+    });
   }
 
   @Delete(':id')
   @Roles(UserRole.filadmin, UserRole.manager)
-  cancel(@Param('id') id: string, @Body('reason') reason: string, @Request() req: any) {
+  cancel(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Request() req: any,
+  ) {
     return this.warnings.cancel(id, req.user.userId, reason);
   }
 

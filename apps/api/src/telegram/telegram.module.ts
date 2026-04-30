@@ -9,7 +9,19 @@ import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
   imports: [ConfigModule, PrismaModule],
-  providers: [TelegramService, ParentHandler, StudentHandler, StaffHandler, NotificationHandler],
-  exports: [TelegramService, ParentHandler, StudentHandler, StaffHandler, NotificationHandler],
+  providers: [
+    TelegramService,
+    ParentHandler,
+    StudentHandler,
+    StaffHandler,
+    NotificationHandler,
+  ],
+  exports: [
+    TelegramService,
+    ParentHandler,
+    StudentHandler,
+    StaffHandler,
+    NotificationHandler,
+  ],
 })
 export class TelegramModule {}

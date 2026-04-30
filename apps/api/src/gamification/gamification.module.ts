@@ -10,8 +10,22 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 
 @Module({
   imports: [AnalyticsModule],
-  providers: [XpService, StreakService, QuestService, CertificatesService, CityService, LeaderboardService],
+  providers: [
+    XpService,
+    StreakService,
+    QuestService,
+    CertificatesService,
+    CityService,
+    LeaderboardService,
+  ],
   controllers: [GamificationController],
-  exports: [XpService, StreakService, QuestService, CertificatesService, CityService, LeaderboardService],
+  exports: [
+    XpService,
+    StreakService,
+    QuestService,
+    CertificatesService,
+    CityService,
+    LeaderboardService,
+  ],
 })
 export class GamificationModule {}

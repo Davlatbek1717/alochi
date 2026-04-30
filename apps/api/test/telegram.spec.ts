@@ -39,7 +39,11 @@ describe('TelegramService', () => {
 
   it('formats warning notification with block message when count >= 3', () => {
     const service = makeService();
-    const msg = service.formatWarningNotification('Test User', 3, 'Darsga kelmadi');
+    const msg = service.formatWarningNotification(
+      'Test User',
+      3,
+      'Darsga kelmadi',
+    );
     expect(msg).toContain('bloklandi');
     expect(msg).toContain('Test User');
   });

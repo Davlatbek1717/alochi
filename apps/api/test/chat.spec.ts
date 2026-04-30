@@ -22,7 +22,10 @@ describe('ChatService', () => {
     const longMsg = 'A'.repeat(201);
     await expect(
       service.sendMessage({
-        tenantId: 't', groupId: 'g', senderId: 's', content: longMsg,
+        tenantId: 't',
+        groupId: 'g',
+        senderId: 's',
+        content: longMsg,
       }),
     ).rejects.toThrow('200');
   });
@@ -31,18 +34,25 @@ describe('ChatService', () => {
     mockPrisma.groupMessage.count.mockResolvedValueOnce(20);
     await expect(
       service.sendMessage({
-        tenantId: 't', groupId: 'g', senderId: 's', content: 'Salom',
+        tenantId: 't',
+        groupId: 'g',
+        senderId: 's',
+        content: 'Salom',
       }),
     ).rejects.toThrow('20');
   });
 
   it('blocks banned user', async () => {
     mockPrisma.chatBan.findFirst.mockResolvedValueOnce({
-      id: 'ban-1', expiresAt: null,
+      id: 'ban-1',
+      expiresAt: null,
     });
     await expect(
       service.sendMessage({
-        tenantId: 't', groupId: 'g', senderId: 's', content: 'Salom',
+        tenantId: 't',
+        groupId: 'g',
+        senderId: 's',
+        content: 'Salom',
       }),
     ).rejects.toThrow('ban');
   });

@@ -26,7 +26,10 @@ export interface BranchCachePackage {
 export class CacheService {
   constructor(private prisma: PrismaService) {}
 
-  async generateBranchCache(branchId: string, tenantId: string): Promise<BranchCachePackage> {
+  async generateBranchCache(
+    branchId: string,
+    tenantId: string,
+  ): Promise<BranchCachePackage> {
     const rows = await this.prisma.$queryRaw<EmbeddingRow[]>`
       SELECT
         u.id AS user_id,

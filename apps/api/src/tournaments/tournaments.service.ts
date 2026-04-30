@@ -15,12 +15,15 @@ export class TournamentsService {
     });
   }
 
-  async create(tenantId: string, body: {
-    title: string;
-    type: string;
-    startsAt: string;
-    endsAt: string;
-  }) {
+  async create(
+    tenantId: string,
+    body: {
+      title: string;
+      type: string;
+      startsAt: string;
+      endsAt: string;
+    },
+  ) {
     return this.prisma.tournament.create({
       data: {
         tenantId,

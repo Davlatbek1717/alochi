@@ -21,7 +21,9 @@ export class QuestService {
     });
     if (existing.length > 0) return existing;
 
-    const shuffled = [...QUEST_TEMPLATES].sort(() => Math.random() - 0.5).slice(0, 3);
+    const shuffled = [...QUEST_TEMPLATES]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
 
     return Promise.all(
       shuffled.map((template) =>

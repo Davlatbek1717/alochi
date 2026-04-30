@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Friendship } from '@prisma/client';
 
@@ -6,11 +11,15 @@ import { Friendship } from '@prisma/client';
 export class FriendsService {
   constructor(private prisma: PrismaService) {}
 
-  async sendRequest(userId: string, friendId: string, branchId: string): Promise<Friendship> {
-    const sender = await this.prisma.user.findUnique({
+  async sendRequest(
+    userId: string,
+    friendId: string,
+    branchId: string,
+  ): Promise<Friendship> {
+    const sender = (await this.prisma.user.findUnique({
       where: { id: userId },
       select: { birthDate: true } as never,
-    }) as { birthDate?: Date | null } | null;
+    })) as { birthDate?: Date | null } | null;
 
     if (sender?.birthDate) {
       const ageDays = (Date.now() - sender.birthDate.getTime()) / 86_400_000;
@@ -29,10 +38,17 @@ export class FriendsService {
     });
   }
 
-  async respond(requestId: string, userId: string, accept: boolean): Promise<Friendship> {
-    const request = await this.prisma.friendship.findUnique({ where: { id: requestId } });
+  async respond(
+    requestId: string,
+    userId: string,
+    accept: boolean,
+  ): Promise<Friendship> {
+    const request = await this.prisma.friendship.findUnique({
+      where: { id: requestId },
+    });
     if (!request) throw new NotFoundException('Friend request not found');
-    if (request.friendId !== userId) throw new ForbiddenException('Not authorized to respond to this request');
+    if (request.friendId !== userId)
+      throw new ForbiddenException('Not authorized to respond to this request');
 
     return this.prisma.friendship.update({
       where: { id: requestId },
@@ -40,7 +56,9 @@ export class FriendsService {
     });
   }
 
-  async getFriends(userId: string): Promise<{ id: string; name: string; role: string }[]> {
+  async getFriends(
+    userId: string,
+  ): Promise<{ id: string; name: string; role: string }[]> {
     const friendships = await this.prisma.friendship.findMany({
       where: {
         status: 'accepted',
@@ -86,7 +104,10 @@ export class FriendsService {
     });
 
     return events
-      .filter((e): e is typeof e & { actor: NonNullable<typeof e.actor> } => e.actor != null)
+      .filter(
+        (e): e is typeof e & { actor: NonNullable<typeof e.actor> } =>
+          e.actor != null,
+      )
       .map((e) => ({
         id: e.id,
         actorId: e.actorId,

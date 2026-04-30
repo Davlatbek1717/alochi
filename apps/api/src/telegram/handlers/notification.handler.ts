@@ -13,15 +13,28 @@ export class NotificationHandler {
   ) {}
 
   @OnEvent('warning.given')
-  async onWarningGiven(payload: { studentId: string; count: number; warning: { reasonText: string } }) {
+  async onWarningGiven(payload: {
+    studentId: string;
+    count: number;
+    warning: { reasonText: string };
+  }) {
     try {
       const student = await this.prisma.user.findUnique({
         where: { id: payload.studentId },
-        select: { name: true, telegramId: true, branchId: true, tenantId: true },
+        select: {
+          name: true,
+          telegramId: true,
+          branchId: true,
+          tenantId: true,
+        },
       });
       if (!student) return;
 
-      const msg = this.telegram.formatWarningNotification(student.name, payload.count, payload.warning.reasonText);
+      const msg = this.telegram.formatWarningNotification(
+        student.name,
+        payload.count,
+        payload.warning.reasonText,
+      );
 
       if (student.telegramId) {
         await this.telegram.sendMessage(student.telegramId, msg);
@@ -29,7 +42,11 @@ export class NotificationHandler {
 
       if (payload.count >= 2 && student.branchId) {
         const mentor = await this.prisma.user.findFirst({
-          where: { branchId: student.branchId, role: 'mentor', telegramId: { not: null } },
+          where: {
+            branchId: student.branchId,
+            role: 'mentor',
+            telegramId: { not: null },
+          },
           select: { telegramId: true },
         });
         if (mentor?.telegramId) {
@@ -42,7 +59,11 @@ export class NotificationHandler {
   }
 
   @OnEvent('student.blocked')
-  async onStudentBlocked(payload: { studentId: string; reason: string; activeCount: number }) {
+  async onStudentBlocked(payload: {
+    studentId: string;
+    reason: string;
+    activeCount: number;
+  }) {
     try {
       const student = await this.prisma.user.findUnique({
         where: { id: payload.studentId },
@@ -50,7 +71,11 @@ export class NotificationHandler {
       });
       if (!student) return;
 
-      const msg = this.telegram.formatWarningNotification(student.name, payload.activeCount, payload.reason);
+      const msg = this.telegram.formatWarningNotification(
+        student.name,
+        payload.activeCount,
+        payload.reason,
+      );
 
       if (student.telegramId) {
         await this.telegram.sendMessage(student.telegramId, msg);
@@ -64,14 +89,22 @@ export class NotificationHandler {
         },
         select: { telegramId: true },
       });
-      await Promise.all(admins.map((a) => this.telegram.sendMessage(a.telegramId!, msg)));
+      await Promise.all(
+        admins.map((a) => this.telegram.sendMessage(a.telegramId!, msg)),
+      );
     } catch (err) {
       this.logger.error(`student.blocked handler xatosi: ${err}`);
     }
   }
 
   @OnEvent('delegation.created')
-  async onDelegationCreated(payload: { toUserId: string; fromUserName: string; role: string; endsAt: string; reason: string }) {
+  async onDelegationCreated(payload: {
+    toUserId: string;
+    fromUserName: string;
+    role: string;
+    endsAt: string;
+    reason: string;
+  }) {
     try {
       const recipient = await this.prisma.user.findUnique({
         where: { id: payload.toUserId },
@@ -94,7 +127,11 @@ export class NotificationHandler {
   }
 
   @OnEvent('delegation.rejected')
-  async onDelegationRejected(payload: { fromUserId: string; toUserName: string; reason: string }) {
+  async onDelegationRejected(payload: {
+    fromUserId: string;
+    toUserName: string;
+    reason: string;
+  }) {
     try {
       const sender = await this.prisma.user.findUnique({
         where: { id: payload.fromUserId },
@@ -115,7 +152,11 @@ export class NotificationHandler {
   }
 
   @OnEvent('delegation.cancelled')
-  async onDelegationCancelled(payload: { toUserId: string; fromUserName: string; reason: string }) {
+  async onDelegationCancelled(payload: {
+    toUserId: string;
+    fromUserName: string;
+    reason: string;
+  }) {
     try {
       const recipient = await this.prisma.user.findUnique({
         where: { id: payload.toUserId },

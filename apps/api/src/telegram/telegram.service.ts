@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot } from 'grammy';
 import { ParentHandler } from './handlers/parent.handler';
@@ -22,7 +27,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
     if (!token) {
-      this.logger.warn("TELEGRAM_BOT_TOKEN yo'q — bot ishga tushmadi (Faza 1 da ixtiyoriy)");
+      this.logger.warn(
+        "TELEGRAM_BOT_TOKEN yo'q — bot ishga tushmadi (Faza 1 da ixtiyoriy)",
+      );
       return;
     }
 
@@ -62,14 +69,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             });
             await ctx.reply(
               `✅ Muvaffaqiyatli bog'landi!\nFarzand: ${student.name}\n\n` +
-              `/status — bugungi holat\n/progress — oylik progress\n/payment — to'lov holati`,
+                `/status — bugungi holat\n/progress — oylik progress\n/payment — to'lov holati`,
             );
             return;
           }
         } catch (err) {
           this.logger.error(`Telegram parent link: ${err}`);
         }
-        await ctx.reply("Havola topilmadi yoki eskirgan.");
+        await ctx.reply('Havola topilmadi yoki eskirgan.');
       } else {
         await ctx.reply(
           "A'lochi platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
@@ -78,11 +85,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.bot.command('bugun', async (ctx) => {
-      await ctx.reply("📚 Bugungi darslar: (profil bog'langandan so'ng ko'rsatiladi)");
+      await ctx.reply(
+        "📚 Bugungi darslar: (profil bog'langandan so'ng ko'rsatiladi)",
+      );
     });
 
     this.bot.command('statistika', async (ctx) => {
-      await ctx.reply("📊 Statistika: (profil bog'langandan so'ng ko'rsatiladi)");
+      await ctx.reply(
+        "📊 Statistika: (profil bog'langandan so'ng ko'rsatiladi)",
+      );
     });
 
     this.bot.command('status', async (ctx) => {
@@ -145,7 +156,9 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         parse_mode: 'HTML',
       });
     } catch (err) {
-      this.logger.warn(`Telegram xabar yuborib bo'lmadi (${telegramId}): ${err}`);
+      this.logger.warn(
+        `Telegram xabar yuborib bo'lmadi (${telegramId}): ${err}`,
+      );
     }
   }
 
@@ -177,7 +190,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     ].join('\n');
   }
 
-  formatWarningNotification(studentName: string, warningCount: number, reason: string): string {
+  formatWarningNotification(
+    studentName: string,
+    warningCount: number,
+    reason: string,
+  ): string {
     if (warningCount >= 3) {
       return [
         `⛔ <b>Profil bloklandi!</b>`,

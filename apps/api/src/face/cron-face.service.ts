@@ -50,7 +50,9 @@ export class CronFaceService {
     });
 
     for (const device of staleDevices) {
-      this.logger.warn(`Stale cache: ${device.deviceName} (${device.branch.name})`);
+      this.logger.warn(
+        `Stale cache: ${device.deviceName} (${device.branch.name})`,
+      );
     }
   }
 
@@ -80,7 +82,8 @@ export class CronFaceService {
     let total = 0;
     for (const branch of branches) {
       const unenrolled = branch.users.filter(
-        (u: { id: string; name: string; faceEmbeddings: { id: string }[] }) => u.faceEmbeddings.length === 0,
+        (u: { id: string; name: string; faceEmbeddings: { id: string }[] }) =>
+          u.faceEmbeddings.length === 0,
       );
       if (unenrolled.length === 0) continue;
 

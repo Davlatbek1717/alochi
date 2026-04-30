@@ -5,12 +5,19 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AttendanceStaffService {
   constructor(private prisma: PrismaService) {}
 
-  async checkIn(userId: string, tenantId: string, branchId: string, method: string) {
+  async checkIn(
+    userId: string,
+    tenantId: string,
+    branchId: string,
+    method: string,
+  ) {
     const now = new Date();
     const today = new Date(now.toISOString().split('T')[0]);
 
     // Determine if late: after 09:00 local time (use UTC for simplicity)
-    const isLate = now.getUTCHours() > 9 || (now.getUTCHours() === 9 && now.getUTCMinutes() > 0);
+    const isLate =
+      now.getUTCHours() > 9 ||
+      (now.getUTCHours() === 9 && now.getUTCMinutes() > 0);
 
     return this.prisma.attendanceStaff.upsert({
       where: { userId_date: { userId, date: today } },

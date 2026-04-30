@@ -72,7 +72,10 @@ export class StaffHandler {
         where: { telegramId },
         select: { id: true },
       });
-      if (!staff) { await ctx.reply('Profil topilmadi.'); return; }
+      if (!staff) {
+        await ctx.reply('Profil topilmadi.');
+        return;
+      }
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -83,10 +86,7 @@ export class StaffHandler {
         where: {
           assignedTo: staff.id,
           status: { not: 'completed' },
-          OR: [
-            { deadline: null },
-            { deadline: { lt: tomorrow } },
-          ],
+          OR: [{ deadline: null }, { deadline: { lt: tomorrow } }],
         },
         orderBy: { deadline: 'asc' },
         take: 10,

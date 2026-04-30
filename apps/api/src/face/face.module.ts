@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { CacheService } from './cache.service';
 import { CronFaceService } from './cron-face.service';
 import { FaceController } from './face.controller';
@@ -9,7 +8,7 @@ import { DevicesController } from './devices.controller';
 import { AttendanceModule } from '../attendance/attendance.module';
 
 @Module({
-  imports: [AttendanceModule, HttpModule],
+  imports: [AttendanceModule],
   controllers: [FaceController, DevicesController],
   providers: [CacheService, CronFaceService, FaceService, DevicesService],
   exports: [CacheService, FaceService, DevicesService],

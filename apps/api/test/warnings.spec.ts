@@ -101,7 +101,10 @@ describe('WarningsService', () => {
       const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(2);
-      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ id: 's1', status: 'blocked_warning' });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
+        id: 's1',
+        status: 'blocked_warning',
+      });
       mockPrisma.user.update.mockResolvedValue({});
 
       const result = await service.cancel('w1', 'admin1', 'Mistake');
@@ -117,7 +120,10 @@ describe('WarningsService', () => {
       const cancelledWarning = { id: 'w1', studentId: 's1', isCancelled: true };
       mockPrisma.warning.update.mockResolvedValue(cancelledWarning);
       mockPrisma.warning.count.mockResolvedValue(1);
-      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({ id: 's1', status: 'active' });
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValue({
+        id: 's1',
+        status: 'active',
+      });
       mockPrisma.user.update.mockResolvedValue({});
 
       await service.cancel('w1', 'admin1', 'Mistake');

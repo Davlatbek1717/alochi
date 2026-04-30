@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ExamsService } from './exams.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -15,7 +23,10 @@ export class ExamsController {
 
   @Post('grant')
   @Roles(UserRole.tester)
-  grant(@Body() body: { studentId: string; lessonId: string }, @Request() req: any) {
+  grant(
+    @Body() body: { studentId: string; lessonId: string },
+    @Request() req: any,
+  ) {
     return this.exams.grant(req.user.userId, body.studentId, body.lessonId);
   }
 
@@ -27,7 +38,11 @@ export class ExamsController {
 
   @Post(':id/submit')
   @Roles(UserRole.student)
-  submit(@Param('id') id: string, @Body('answers') answers: number[], @Request() req: any) {
+  submit(
+    @Param('id') id: string,
+    @Body('answers') answers: number[],
+    @Request() req: any,
+  ) {
     return this.exams.submit(id, req.user.userId, answers ?? []);
   }
 

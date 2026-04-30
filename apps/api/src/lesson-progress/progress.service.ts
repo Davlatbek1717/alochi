@@ -11,15 +11,22 @@ export class ProgressService {
     private analytics: AnalyticsService,
   ) {}
 
-  private async getEffectiveN(studentId: string, lessonId: string, tenantId: string): Promise<number> {
-    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId, tenantId } });
+  private async getEffectiveN(
+    studentId: string,
+    lessonId: string,
+    tenantId: string,
+  ): Promise<number> {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { id: lessonId, tenantId },
+    });
     if (!lesson) throw new NotFoundException('Dars topilmadi');
 
     const override = await this.prisma.studentLessonConfig.findUnique({
       where: { studentId_lessonId: { studentId, lessonId } },
     });
 
-    if (override) return Math.min(override.nRepetitionsOverride, lesson.maxNOverride);
+    if (override)
+      return Math.min(override.nRepetitionsOverride, lesson.maxNOverride);
     return lesson.nRepetitions;
   }
 
@@ -51,12 +58,14 @@ export class ProgressService {
       },
     });
 
-    this.analytics.logEvent({
-      tenantId,
-      eventType: homeCompleted ? 'lesson_completed' : 'lesson_failed',
-      studentId,
-      data: { lessonId, sessionCount: newCount },
-    }).catch(() => {});
+    this.analytics
+      .logEvent({
+        tenantId,
+        eventType: homeCompleted ? 'lesson_completed' : 'lesson_failed',
+        studentId,
+        data: { lessonId, sessionCount: newCount },
+      })
+      .catch(() => {});
     return progress;
   }
 
@@ -86,7 +95,9 @@ export class ProgressService {
   async getStudentProgress(studentId: string) {
     return this.prisma.studentProgress.findMany({
       where: { studentId },
-      include: { lesson: { select: { id: true, title: true, orderNumber: true } } },
+      include: {
+        lesson: { select: { id: true, title: true, orderNumber: true } },
+      },
       orderBy: { lesson: { orderNumber: 'asc' } },
     });
   }

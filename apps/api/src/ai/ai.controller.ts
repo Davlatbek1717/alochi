@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Request, UseGuards, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Request,
+  UseGuards,
+  Query,
+} from '@nestjs/common';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -68,7 +76,11 @@ export class AiController {
     @Body() body: { lessonId: string; question: string },
     @Request() req: any,
   ) {
-    const result = await this.ai.recordError(req.user.userId, body.lessonId, body.question);
+    const result = await this.ai.recordError(
+      req.user.userId,
+      body.lessonId,
+      body.question,
+    );
 
     if (result.errorCount >= 3 && !result.notified) {
       const student = await this.prisma.user.findUnique({
@@ -81,16 +93,24 @@ export class AiController {
           select: { id: true },
         });
         if (mentor) {
-          await this.notifications.send(
-            mentor.id,
-            'error_pattern',
-            "O'quvchi xatosi",
-            `${student.name} "${body.question}" savolida 3 marta xato qildi`,
-          ).catch(() => {});
+          await this.notifications
+            .send(
+              mentor.id,
+              'error_pattern',
+              "O'quvchi xatosi",
+              `${student.name} "${body.question}" savolida 3 marta xato qildi`,
+            )
+            .catch(() => {});
         }
       }
       await this.prisma.errorLog.update({
-        where: { studentId_lessonId_question: { studentId: req.user.userId, lessonId: body.lessonId, question: body.question } },
+        where: {
+          studentId_lessonId_question: {
+            studentId: req.user.userId,
+            lessonId: body.lessonId,
+            question: body.question,
+          },
+        },
         data: { notified: true },
       });
     }

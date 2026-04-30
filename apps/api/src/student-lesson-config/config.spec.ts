@@ -38,8 +38,13 @@ describe('StudentConfigService', () => {
 
   describe('setNOverride', () => {
     it('saves config when nRepetitions is within valid range', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l-1', maxNOverride: 10 });
-      mockPrisma.studentLessonConfig.upsert.mockResolvedValue({ nRepetitionsOverride: 5 });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l-1',
+        maxNOverride: 10,
+      });
+      mockPrisma.studentLessonConfig.upsert.mockResolvedValue({
+        nRepetitionsOverride: 5,
+      });
 
       const result = await service.setNOverride(baseDto);
 
@@ -48,25 +53,33 @@ describe('StudentConfigService', () => {
     });
 
     it('throws BadRequestException when nRepetitions is below 1', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l-1', maxNOverride: 10 });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l-1',
+        maxNOverride: 10,
+      });
 
-      await expect(service.setNOverride({ ...baseDto, nRepetitions: 0 })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.setNOverride({ ...baseDto, nRepetitions: 0 }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws BadRequestException when nRepetitions exceeds maxNOverride', async () => {
-      mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'l-1', maxNOverride: 10 });
+      mockPrisma.lesson.findFirst.mockResolvedValue({
+        id: 'l-1',
+        maxNOverride: 10,
+      });
 
-      await expect(service.setNOverride({ ...baseDto, nRepetitions: 15 })).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.setNOverride({ ...baseDto, nRepetitions: 15 }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws NotFoundException when lesson does not exist', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
 
-      await expect(service.setNOverride(baseDto)).rejects.toThrow(NotFoundException);
+      await expect(service.setNOverride(baseDto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

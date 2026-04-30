@@ -15,10 +15,7 @@ describe('KpiService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        KpiService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [KpiService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     service = module.get(KpiService);
   });
@@ -42,7 +39,14 @@ describe('KpiService', () => {
     });
 
     it('passes optional taskId and delegationId when provided', async () => {
-      const dto = { tenantId: 't1', userId: 'u1', score: 5, reason: 'task', taskId: 'task-1', delegationId: 'del-1' };
+      const dto = {
+        tenantId: 't1',
+        userId: 'u1',
+        score: 5,
+        reason: 'task',
+        taskId: 'task-1',
+        delegationId: 'del-1',
+      };
       mockPrisma.kpiScore.create.mockResolvedValue({ id: 'kpi-2', ...dto });
 
       await service.award(dto);
@@ -64,7 +68,9 @@ describe('KpiService', () => {
     });
 
     it('returns 0 when there are no scores for the day', async () => {
-      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: null } });
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({
+        _sum: { score: null },
+      });
 
       const total = await service.getDailyTotal('u1', new Date('2026-04-25'));
 
@@ -93,7 +99,9 @@ describe('KpiService', () => {
     });
 
     it('returns 0 when there are no scores for the month', async () => {
-      mockPrisma.kpiScore.aggregate.mockResolvedValue({ _sum: { score: null } });
+      mockPrisma.kpiScore.aggregate.mockResolvedValue({
+        _sum: { score: null },
+      });
 
       const total = await service.getMonthlyTotal('u1', 2026, 4);
 

@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 
@@ -10,9 +14,19 @@ export class LessonsService {
     const existing = await this.prisma.lesson.findFirst({
       where: { tenantId: dto.tenantId, orderNumber: dto.orderNumber },
     });
-    if (existing) throw new ConflictException(`${dto.orderNumber} tartib raqami allaqachon mavjud`);
+    if (existing)
+      throw new ConflictException(
+        `${dto.orderNumber} tartib raqami allaqachon mavjud`,
+      );
 
-    const { mcqEnabled, wordOrderEnabled, vocabularyEnabled, hasExam, type, ...data } = dto;
+    const {
+      mcqEnabled,
+      wordOrderEnabled,
+      vocabularyEnabled,
+      hasExam,
+      type,
+      ...data
+    } = dto;
     return this.prisma.lesson.create({
       data: {
         ...data,

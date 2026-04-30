@@ -41,7 +41,10 @@ export class StreakService {
       return xp;
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: studentId }, select: { tenantId: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { tenantId: true },
+    });
 
     if (daysSinceLast === 1) {
       const newStreak = xp.currentStreak + 1;
@@ -51,16 +54,19 @@ export class StreakService {
           currentStreak: newStreak,
           longestStreak: Math.max(xp.longestStreak, newStreak),
           lastActivity: today,
-          shieldCount: newStreak % 7 === 0 ? xp.shieldCount + 1 : xp.shieldCount,
+          shieldCount:
+            newStreak % 7 === 0 ? xp.shieldCount + 1 : xp.shieldCount,
         },
       });
       if (user) {
-        this.analytics.logEvent({
-          tenantId: user.tenantId,
-          eventType: 'streak_updated',
-          studentId,
-          data: { newStreak, oldStreak: xp.currentStreak },
-        }).catch(() => {});
+        this.analytics
+          .logEvent({
+            tenantId: user.tenantId,
+            eventType: 'streak_updated',
+            studentId,
+            data: { newStreak, oldStreak: xp.currentStreak },
+          })
+          .catch(() => {});
       }
       return updated;
     }
@@ -77,12 +83,14 @@ export class StreakService {
         },
       });
       if (user) {
-        this.analytics.logEvent({
-          tenantId: user.tenantId,
-          eventType: 'streak_updated',
-          studentId,
-          data: { newStreak, oldStreak: xp.currentStreak },
-        }).catch(() => {});
+        this.analytics
+          .logEvent({
+            tenantId: user.tenantId,
+            eventType: 'streak_updated',
+            studentId,
+            data: { newStreak, oldStreak: xp.currentStreak },
+          })
+          .catch(() => {});
       }
       return updated;
     }
@@ -93,7 +101,9 @@ export class StreakService {
     });
   }
 
-  async getStudentStreak(studentId: string): Promise<{ streak: number; hasShield: boolean }> {
+  async getStudentStreak(
+    studentId: string,
+  ): Promise<{ streak: number; hasShield: boolean }> {
     const xp = await this.prisma.studentXp.findUnique({ where: { studentId } });
     if (!xp) return { streak: 0, hasShield: false };
     return { streak: xp.currentStreak, hasShield: xp.shieldCount > 0 };

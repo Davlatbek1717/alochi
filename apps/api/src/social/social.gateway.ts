@@ -45,6 +45,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   handleDisconnect(_client: Socket) {}
 
   @SubscribeMessage('chat:join')
@@ -116,14 +117,23 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   emitDuelChallenge(toUserId: string, duelId: string, challengerName: string) {
-    this.server.to(`feed:${toUserId}`).emit('duel:challenged', { duelId, challengerName });
+    this.server
+      .to(`feed:${toUserId}`)
+      .emit('duel:challenged', { duelId, challengerName });
   }
 
-  emitDuelResult(toUserId: string, result: { won: boolean; xpEarned: number; score: string }) {
+  emitDuelResult(
+    toUserId: string,
+    result: { won: boolean; xpEarned: number; score: string },
+  ) {
     this.server.to(`feed:${toUserId}`).emit('duel:result', result);
   }
 
-  emitChallengeUpdate(groupAId: string, groupBId: string, update: { groupAXp: number; groupBXp: number }) {
+  emitChallengeUpdate(
+    groupAId: string,
+    groupBId: string,
+    update: { groupAXp: number; groupBXp: number },
+  ) {
     this.server.to(`group:${groupAId}`).emit('challenge:update', update);
     this.server.to(`group:${groupBId}`).emit('challenge:update', update);
   }

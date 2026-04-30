@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Delete, Body, Param, Res, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Body,
+  Param,
+  Res,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { DelegationsService } from './delegations.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -52,12 +62,25 @@ export class DelegationsController {
   }
 
   @Post(':id/respond')
-  respond(@Param('id') id: string, @Body() body: { action: 'accepted' | 'rejected'; reason?: string }, @Request() req: any) {
-    return this.delegations.respond(id, req.user.userId, body.action, body.reason);
+  respond(
+    @Param('id') id: string,
+    @Body() body: { action: 'accepted' | 'rejected'; reason?: string },
+    @Request() req: any,
+  ) {
+    return this.delegations.respond(
+      id,
+      req.user.userId,
+      body.action,
+      body.reason,
+    );
   }
 
   @Delete(':id')
-  cancel(@Param('id') id: string, @Body('reason') reason: string, @Request() req: any) {
+  cancel(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Request() req: any,
+  ) {
     return this.delegations.cancel(id, req.user.userId, reason);
   }
 }

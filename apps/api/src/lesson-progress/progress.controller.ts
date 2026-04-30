@@ -1,4 +1,11 @@
-import { Controller, Post, Get, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -16,7 +23,11 @@ export class ProgressController {
   @Post(':lessonId/complete-session')
   @Roles(UserRole.student)
   completeSession(@Param('lessonId') lessonId: string, @Request() req: any) {
-    return this.progress.completeSession(req.user.userId, lessonId, req.user.tenantId);
+    return this.progress.completeSession(
+      req.user.userId,
+      lessonId,
+      req.user.tenantId,
+    );
   }
 
   @Post(':lessonId/complete-academy/:studentId')

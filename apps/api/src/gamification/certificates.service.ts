@@ -18,7 +18,9 @@ export class CertificatesService {
       where: { studentId, academyCompleted: true },
     });
 
-    const eligible = CERTIFICATE_LEVELS.find((l) => completedCount >= l.minLessons);
+    const eligible = CERTIFICATE_LEVELS.find(
+      (l) => completedCount >= l.minLessons,
+    );
     if (!eligible) return null;
 
     const existing = await this.prisma.certificate.findFirst({
@@ -57,7 +59,7 @@ export class CertificatesService {
       },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
     const PDFDocument = require('pdfkit');
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape' });
 
@@ -77,15 +79,22 @@ export class CertificatesService {
       .text("A'LOCHI SERTIFIKATI", { align: 'center' });
 
     doc.moveDown();
-    doc.fontSize(20).font('Helvetica').text(cert.student.name, { align: 'center' });
+    doc
+      .fontSize(20)
+      .font('Helvetica')
+      .text(cert.student.name, { align: 'center' });
 
     doc.moveDown(0.5);
-    doc.fontSize(24).text(levelLabels[cert.level] ?? cert.level, { align: 'center' });
+    doc
+      .fontSize(24)
+      .text(levelLabels[cert.level] ?? cert.level, { align: 'center' });
 
     doc.moveDown(0.5);
     doc
       .fontSize(14)
-      .text(`${cert.lessonsCompleted} ta darsni muvaffaqiyatli tamomladı`, { align: 'center' });
+      .text(`${cert.lessonsCompleted} ta darsni muvaffaqiyatli tamomladı`, {
+        align: 'center',
+      });
 
     doc.moveDown(0.5);
     doc

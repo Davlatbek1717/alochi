@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Param, Query, Res, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Query,
+  Res,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { XpService } from './xp.service';
@@ -69,7 +78,10 @@ export class GamificationController {
   }
 
   @Get('leaderboard/national')
-  getNationalLeaderboard(@Query('period') period: 'weekly' | 'monthly' = 'weekly', @Request() req: any) {
+  getNationalLeaderboard(
+    @Query('period') period: 'weekly' | 'monthly' = 'weekly',
+    @Request() req: any,
+  ) {
     return this.leaderboard.getNationalLeaderboard(period, req.user.tenantId);
   }
 }

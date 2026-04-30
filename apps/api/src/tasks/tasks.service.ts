@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { XpService } from '../gamification/xp.service';
 
@@ -61,7 +65,8 @@ export class TasksService {
   async updateStatus(taskId: string, userId: string, status: string) {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Vazifa topilmadi');
-    if (task.assignedTo !== userId) throw new ForbiddenException('Bu vazifa sizga tegishli emas');
+    if (task.assignedTo !== userId)
+      throw new ForbiddenException('Bu vazifa sizga tegishli emas');
 
     const allowed: Record<string, string[]> = {
       sent: ['seen', 'in_progress'],
@@ -69,7 +74,9 @@ export class TasksService {
       in_progress: ['done'],
     };
     if (!allowed[task.status]?.includes(status)) {
-      throw new ForbiddenException(`${task.status} → ${status} o'tish mumkin emas`);
+      throw new ForbiddenException(
+        `${task.status} → ${status} o'tish mumkin emas`,
+      );
     }
 
     return this.prisma.task.update({
@@ -81,8 +88,10 @@ export class TasksService {
   async confirm(taskId: string, userId: string) {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Vazifa topilmadi');
-    if (task.createdBy !== userId) throw new ForbiddenException('Faqat yaratuvchi tasdiqlashi mumkin');
-    if (task.status !== 'done') throw new ForbiddenException('Vazifa hali bajarilmagan');
+    if (task.createdBy !== userId)
+      throw new ForbiddenException('Faqat yaratuvchi tasdiqlashi mumkin');
+    if (task.status !== 'done')
+      throw new ForbiddenException('Vazifa hali bajarilmagan');
 
     const updated = await this.prisma.task.update({
       where: { id: taskId },

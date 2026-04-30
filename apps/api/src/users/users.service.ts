@@ -64,7 +64,15 @@ export class UsersService {
         ...(branchId ? { branchId } : {}),
         ...(role ? { role } : {}),
       },
-      select: { id: true, name: true, role: true, status: true, phone: true, login: true, branchId: true },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        status: true,
+        phone: true,
+        login: true,
+        branchId: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -91,7 +99,11 @@ export class UsersService {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: {
-        id: true, name: true, login: true, role: true, tenantId: true,
+        id: true,
+        name: true,
+        login: true,
+        role: true,
+        tenantId: true,
         parentTelegramId: true,
         faceEmbeddings: { where: { isActive: true }, select: { id: true } },
       },

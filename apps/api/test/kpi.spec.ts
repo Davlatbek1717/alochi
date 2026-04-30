@@ -5,7 +5,7 @@ describe('KpiService', () => {
     kpiScore: {
       create: jest.fn().mockResolvedValue({ id: 'kpi-1', score: 5 }),
       findMany: jest.fn().mockResolvedValue([
-        { score: 5, reason: 'Dars o\'tdi' },
+        { score: 5, reason: "Dars o'tdi" },
         { score: 10, reason: 'Qizildan sariqqa' },
       ]),
       aggregate: jest.fn().mockResolvedValue({ _sum: { score: 15 } }),
@@ -15,7 +15,10 @@ describe('KpiService', () => {
 
   it('awards KPI points with reason', async () => {
     const result = await service.award({
-      tenantId: 't', userId: 'u', score: 5, reason: 'Dars o\'tdi',
+      tenantId: 't',
+      userId: 'u',
+      score: 5,
+      reason: "Dars o'tdi",
     });
     expect(result.score).toBe(5);
   });

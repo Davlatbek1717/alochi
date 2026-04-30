@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { TournamentsService } from './tournaments.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -14,7 +22,13 @@ export class TournamentsController {
   constructor(private tournaments: TournamentsService) {}
 
   @Get()
-  @Roles(UserRole.student, UserRole.mentor, UserRole.manager, UserRole.filadmin, UserRole.superadmin)
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.filadmin,
+    UserRole.superadmin,
+  )
   list(@Request() req: any) {
     return this.tournaments.list(req.user.tenantId);
   }
@@ -22,7 +36,8 @@ export class TournamentsController {
   @Post()
   @Roles(UserRole.superadmin, UserRole.filadmin)
   create(
-    @Body() body: { title: string; type: string; startsAt: string; endsAt: string },
+    @Body()
+    body: { title: string; type: string; startsAt: string; endsAt: string },
     @Request() req: any,
   ) {
     return this.tournaments.create(req.user.tenantId, body);
@@ -35,7 +50,12 @@ export class TournamentsController {
   }
 
   @Get(':id/registrations')
-  @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin, UserRole.superadmin)
+  @Roles(
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.filadmin,
+    UserRole.superadmin,
+  )
   registrations(@Param('id') id: string) {
     return this.tournaments.getRegistrations(id);
   }

@@ -36,9 +36,17 @@ export class WarningsService {
         where: { id: dto.studentId },
         data: { status: 'blocked_warning' },
       });
-      this.events.emit('student.blocked', { studentId: dto.studentId, reason: 'warning', activeCount });
+      this.events.emit('student.blocked', {
+        studentId: dto.studentId,
+        reason: 'warning',
+        activeCount,
+      });
     } else {
-      this.events.emit('warning.given', { studentId: dto.studentId, count: activeCount, warning });
+      this.events.emit('warning.given', {
+        studentId: dto.studentId,
+        count: activeCount,
+        warning,
+      });
     }
 
     return { warning, activeCount };
@@ -51,7 +59,12 @@ export class WarningsService {
 
     const w = await this.prisma.warning.update({
       where: { id: warningId },
-      data: { isCancelled: true, cancelledBy, cancelledAt: new Date(), cancelReason },
+      data: {
+        isCancelled: true,
+        cancelledBy,
+        cancelledAt: new Date(),
+        cancelReason,
+      },
     });
 
     const activeCount = await this.prisma.warning.count({
@@ -59,10 +72,15 @@ export class WarningsService {
     });
 
     if (activeCount < WARNING_BLOCK_LIMIT) {
-      const student = await this.prisma.user.findUniqueOrThrow({ where: { id: w.studentId } });
+      const student = await this.prisma.user.findUniqueOrThrow({
+        where: { id: w.studentId },
+      });
       await this.prisma.user.update({
         where: { id: w.studentId },
-        data: { status: student.status === 'blocked_warning' ? 'active' : student.status },
+        data: {
+          status:
+            student.status === 'blocked_warning' ? 'active' : student.status,
+        },
       });
     }
 

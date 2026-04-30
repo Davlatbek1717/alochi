@@ -46,7 +46,12 @@ export class UsersController {
   }
 
   @Get('by-branch/:branchId')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager, UserRole.mentor)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   findByBranch(@Param('branchId') branchId: string, @Request() req: any) {
     return this.users.findByBranch(branchId, req.user.tenantId);
   }

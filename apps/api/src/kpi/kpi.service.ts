@@ -52,7 +52,11 @@ export class KpiService {
     return agg._sum.score ?? 0;
   }
 
-  async getMonthlyTotal(userId: string, year: number, month: number): Promise<number> {
+  async getMonthlyTotal(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<number> {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
 

@@ -17,10 +17,7 @@ describe('XpService', () => {
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [
-        XpService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [XpService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     service = module.get(XpService);
   });
@@ -58,7 +55,12 @@ describe('XpService', () => {
       const result = await service.award('student-1', 'LESSON_COMPLETE');
 
       expect(mockPrisma.xpEvent.create).toHaveBeenCalledWith({
-        data: { studentId: 'student-1', amount: XP_AMOUNTS.LESSON_COMPLETE, reason: 'LESSON_COMPLETE', metadata: undefined },
+        data: {
+          studentId: 'student-1',
+          amount: XP_AMOUNTS.LESSON_COMPLETE,
+          reason: 'LESSON_COMPLETE',
+          metadata: undefined,
+        },
       });
       expect(mockPrisma.studentXp.upsert).toHaveBeenCalledWith({
         where: { studentId: 'student-1' },
@@ -70,7 +72,10 @@ describe('XpService', () => {
 
     it('accepts lowercase reason keys', async () => {
       mockPrisma.xpEvent.create.mockResolvedValue({});
-      mockPrisma.studentXp.upsert.mockResolvedValue({ studentId: 'student-1', totalXp: 50 });
+      mockPrisma.studentXp.upsert.mockResolvedValue({
+        studentId: 'student-1',
+        totalXp: 50,
+      });
 
       await service.award('student-1', 'perfect_test');
 
@@ -101,7 +106,11 @@ describe('XpService', () => {
     });
 
     it('returns xp with computed level and nextLevelXp', async () => {
-      mockPrisma.studentXp.findUnique.mockResolvedValue({ studentId: 'student-1', totalXp: 2500, currentStreak: 3 });
+      mockPrisma.studentXp.findUnique.mockResolvedValue({
+        studentId: 'student-1',
+        totalXp: 2500,
+        currentStreak: 3,
+      });
 
       const result = await service.getStudentXp('student-1');
 

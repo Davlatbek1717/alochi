@@ -40,8 +40,20 @@ describe('AttendanceStudentsService', () => {
   describe('markBulk', () => {
     it('upserts one record per student and returns results array', async () => {
       const records = [
-        { studentId: 'u1', status: 'present', tenantId: 't1', branchId: 'b1', date: '2026-04-25' },
-        { studentId: 'u2', status: 'absent', tenantId: 't1', branchId: 'b1', date: '2026-04-25' },
+        {
+          studentId: 'u1',
+          status: 'present',
+          tenantId: 't1',
+          branchId: 'b1',
+          date: '2026-04-25',
+        },
+        {
+          studentId: 'u2',
+          status: 'absent',
+          tenantId: 't1',
+          branchId: 'b1',
+          date: '2026-04-25',
+        },
       ];
       mockPrismaStudents.attendanceStudent.upsert
         .mockResolvedValueOnce({ id: 'a1', studentId: 'u1', status: 'present' })
@@ -49,7 +61,9 @@ describe('AttendanceStudentsService', () => {
 
       const result = await service.markBulk(records);
 
-      expect(mockPrismaStudents.attendanceStudent.upsert).toHaveBeenCalledTimes(2);
+      expect(mockPrismaStudents.attendanceStudent.upsert).toHaveBeenCalledTimes(
+        2,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].status).toBe('present');
       expect(result[1].status).toBe('absent');
@@ -58,7 +72,9 @@ describe('AttendanceStudentsService', () => {
     it('returns empty array when given empty records list', async () => {
       const result = await service.markBulk([]);
 
-      expect(mockPrismaStudents.attendanceStudent.upsert).not.toHaveBeenCalled();
+      expect(
+        mockPrismaStudents.attendanceStudent.upsert,
+      ).not.toHaveBeenCalled();
       expect(result).toHaveLength(0);
     });
   });
@@ -73,11 +89,15 @@ describe('AttendanceStudentsService', () => {
           student: { id: 'u1', name: 'Ali Valiyev' },
         },
       ];
-      mockPrismaStudents.attendanceStudent.findMany.mockResolvedValue(attendance);
+      mockPrismaStudents.attendanceStudent.findMany.mockResolvedValue(
+        attendance,
+      );
 
       const result = await service.getDailyList('b1', '2026-04-25');
 
-      expect(mockPrismaStudents.attendanceStudent.findMany).toHaveBeenCalledWith(
+      expect(
+        mockPrismaStudents.attendanceStudent.findMany,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { branchId: 'b1', date: new Date('2026-04-25') },
         }),
@@ -149,7 +169,9 @@ describe('AttendanceStaffService', () => {
 
       expect(mockPrismaStaff.attendanceStaff.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { userId_date: { userId: 'u1', date: new Date('2026-04-25') } },
+          where: {
+            userId_date: { userId: 'u1', date: new Date('2026-04-25') },
+          },
           data: expect.objectContaining({ confirmedBy: 'admin1' }),
         }),
       );

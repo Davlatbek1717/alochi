@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { BranchesService } from './branches.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -30,7 +39,11 @@ export class BranchesController {
 
   @Patch(':id')
   @Roles(UserRole.superadmin)
-  update(@Param('id') id: string, @Body() body: { name: string }, @Request() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() body: { name: string },
+    @Request() req: any,
+  ) {
     return this.branches.update(id, req.user.tenantId, { name: body.name });
   }
 
@@ -43,7 +56,8 @@ export class BranchesController {
     @Request() req: any,
   ) {
     // Superadmin passes tenantId in body; other roles use JWT tenantId
-    const tenantId = req.user.role === UserRole.superadmin ? bodyTenantId : req.user.tenantId;
+    const tenantId =
+      req.user.role === UserRole.superadmin ? bodyTenantId : req.user.tenantId;
     return this.branches.assignFiladmin(id, filadminId, tenantId);
   }
 }

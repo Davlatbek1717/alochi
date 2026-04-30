@@ -1,5 +1,12 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, UseGuards, Request,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -18,7 +25,8 @@ export class TasksController {
   @Post()
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   create(
-    @Body() body: {
+    @Body()
+    body: {
       assignedTo: string;
       title: string;
       description?: string;

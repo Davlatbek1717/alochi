@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -21,13 +29,20 @@ export class ContentQualityController {
 
   @Post('feedback')
   @Roles(UserRole.student)
-  submitFeedback(@Request() req: any, @Body() body: { lessonId: string; rating: number }) {
+  submitFeedback(
+    @Request() req: any,
+    @Body() body: { lessonId: string; rating: number },
+  ) {
     return this.cq.submitFeedback(req.user.userId, body.lessonId, body.rating);
   }
 
   @Post('lessons/:id/variant')
   @Roles(UserRole.superadmin)
-  createVariant(@Param('id') id: string, @Body() body: { config: object }, @Request() req: any) {
+  createVariant(
+    @Param('id') id: string,
+    @Body() body: { config: object },
+    @Request() req: any,
+  ) {
     return this.cq.createVariant(id, body.config, req.user.tenantId);
   }
 
@@ -39,7 +54,11 @@ export class ContentQualityController {
 
   @Post('lessons/:id/promote/:variant')
   @Roles(UserRole.superadmin)
-  promoteVariant(@Param('id') id: string, @Param('variant') variant: 'A' | 'B', @Request() req: any) {
+  promoteVariant(
+    @Param('id') id: string,
+    @Param('variant') variant: 'A' | 'B',
+    @Request() req: any,
+  ) {
     return this.cq.promoteVariant(id, variant, req.user.tenantId);
   }
 }

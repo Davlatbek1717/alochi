@@ -409,12 +409,15 @@ model DelegationAuditLog {
 // Bu model faqat dokumentatsiya uchun; actual CRUD raw query bilan
 
 model FaceEmbedding {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  enrolledAt  DateTime @default(now()) @map("enrolled_at")
-  enrolledVia String   @map("enrolled_via")
-  isActive    Boolean  @default(true) @map("is_active")
+  id                 String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  enrolledAt         DateTime @default(now()) @map("enrolled_at")
+  enrolledVia        String   @map("enrolled_via")
+  isActive           Boolean  @default(true) @map("is_active")
+  // PDPL §533 — AES-256-GCM ciphertext of the averaged 128-dim descriptor.
+  // Decrypt with FACE_VECTOR_KEY env var (base64-encoded 32 bytes).
+  embeddingEncrypted String?  @map("embedding_encrypted")
 
   user        User     @relation("FaceEmbeddings", fields: [userId], references: [id])
 

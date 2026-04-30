@@ -28,9 +28,15 @@ describe('DelegationsService', () => {
 
   it('creates delegation and logs it', async () => {
     const result = await service.create({
-      tenantId: 't', branchId: 'b', fromUserId: 'from', toUserId: 'to',
-      delegatedRole: 'manager', permissions: ['warnings'],
-      reason: "Ta'tilda ketaman", startsAt: new Date(), endsAt: new Date(),
+      tenantId: 't',
+      branchId: 'b',
+      fromUserId: 'from',
+      toUserId: 'to',
+      delegatedRole: 'manager',
+      permissions: ['warnings'],
+      reason: "Ta'tilda ketaman",
+      startsAt: new Date(),
+      endsAt: new Date(),
     });
     expect(result.status).toBe('pending');
     expect(mockPrisma.delegationAuditLog.create).toHaveBeenCalledWith(
@@ -43,17 +49,24 @@ describe('DelegationsService', () => {
   it('requires non-empty reason on creation', async () => {
     await expect(
       service.create({
-        tenantId: 't', branchId: 'b', fromUserId: 'from', toUserId: 'to',
-        delegatedRole: 'manager', permissions: ['warnings'],
+        tenantId: 't',
+        branchId: 'b',
+        fromUserId: 'from',
+        toUserId: 'to',
+        delegatedRole: 'manager',
+        permissions: ['warnings'],
         reason: '',
-        startsAt: new Date(), endsAt: new Date(),
+        startsAt: new Date(),
+        endsAt: new Date(),
       }),
     ).rejects.toThrow('Sabab majburiy');
   });
 
   it('requires non-empty reason on rejection', async () => {
     mockPrisma.delegation.findUnique.mockResolvedValue({
-      id: 'del-1', status: 'pending', toUserId: 'to',
+      id: 'del-1',
+      status: 'pending',
+      toUserId: 'to',
     });
     await expect(
       service.respond('del-1', 'to', 'rejected', ''),

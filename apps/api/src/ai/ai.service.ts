@@ -15,8 +15,13 @@ export class AiService {
     private config: ConfigService,
     private prisma: PrismaService,
   ) {
-    this.aiServiceUrl = this.config.get('AI_SERVICE_URL', 'http://localhost:8000');
-    this.anthropic = new Anthropic({ apiKey: this.config.get('ANTHROPIC_API_KEY', '') });
+    this.aiServiceUrl = this.config.get(
+      'AI_SERVICE_URL',
+      'http://localhost:8000',
+    );
+    this.anthropic = new Anthropic({
+      apiKey: this.config.get('ANTHROPIC_API_KEY', ''),
+    });
   }
 
   async askTutor(
@@ -51,7 +56,9 @@ export class AiService {
       );
       return res.data;
     } catch {
-      throw new ServiceUnavailableException('Baholash servisi vaqtincha ishlamayapti');
+      throw new ServiceUnavailableException(
+        'Baholash servisi vaqtincha ishlamayapti',
+      );
     }
   }
 
@@ -65,20 +72,36 @@ export class AiService {
       );
       return res.data;
     } catch {
-      return { is_correct: true, accuracy_score: 100, feedback: 'Fallback mode' };
+      return {
+        is_correct: true,
+        accuracy_score: 100,
+        feedback: 'Fallback mode',
+      };
     }
   }
 
-  private sm2(quality: number, easeFactor: number, interval: number, repetitions: number) {
+  private sm2(
+    quality: number,
+    easeFactor: number,
+    interval: number,
+    repetitions: number,
+  ) {
     if (quality < 3) {
       return { interval: 1, easeFactor, repetitions: 0 };
     }
-    const newEf = Math.max(1.3, easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    const newEf = Math.max(
+      1.3,
+      easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02),
+    );
     let newInterval: number;
     if (repetitions === 0) newInterval = 1;
     else if (repetitions === 1) newInterval = 6;
     else newInterval = Math.round(interval * newEf);
-    return { interval: newInterval, easeFactor: newEf, repetitions: repetitions + 1 };
+    return {
+      interval: newInterval,
+      easeFactor: newEf,
+      repetitions: repetitions + 1,
+    };
   }
 
   async recordSpacedAnswer(studentId: string, word: string, correct: boolean) {
@@ -101,7 +124,14 @@ export class AiService {
     await this.prisma.spacedRepetitionItem.upsert({
       where: { studentId_word: { studentId, word } },
       update: { easeFactor, interval, repetitions, nextReview },
-      create: { studentId, word, easeFactor, interval, repetitions, nextReview },
+      create: {
+        studentId,
+        word,
+        easeFactor,
+        interval,
+        repetitions,
+        nextReview,
+      },
     });
 
     return { word, nextReview, interval };
@@ -127,7 +157,9 @@ export class AiService {
     return updated;
   }
 
-  async analyzeErrors(studentId: string): Promise<{ weakAreas: string[]; recommendation: string }> {
+  async analyzeErrors(
+    studentId: string,
+  ): Promise<{ weakAreas: string[]; recommendation: string }> {
     const errors = await this.prisma.errorLog.findMany({
       where: { studentId, errorCount: { gte: 2 } },
       orderBy: { errorCount: 'desc' },
@@ -139,7 +171,9 @@ export class AiService {
       return { weakAreas: [], recommendation: "Hozircha xatolar yo'q." };
     }
 
-    const errorList = errors.map((e) => `"${e.question}" (${e.errorCount} marta xato)`).join('\n');
+    const errorList = errors
+      .map((e) => `"${e.question}" (${e.errorCount} marta xato)`)
+      .join('\n');
 
     const message = await this.anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -156,11 +190,18 @@ export class AiService {
     });
 
     try {
-      const text = message.content[0].type === 'text' ? message.content[0].text : '{}';
-      const parsed = JSON.parse(text) as { weakAreas: string[]; recommendation: string };
+      const text =
+        message.content[0].type === 'text' ? message.content[0].text : '{}';
+      const parsed = JSON.parse(text) as {
+        weakAreas: string[];
+        recommendation: string;
+      };
       return parsed;
     } catch {
-      return { weakAreas: ["Grammatika", "Lug'at"], recommendation: "Qayta ko'rib chiqing." };
+      return {
+        weakAreas: ['Grammatika', "Lug'at"],
+        recommendation: "Qayta ko'rib chiqing.",
+      };
     }
   }
 }

@@ -36,9 +36,16 @@ export class PaymentsService {
     const unblockAt = this.nextDayMidnight(dto.paidAt);
 
     return this.prisma.payment.upsert({
-      where: { studentId_month: { studentId: dto.studentId, month: dto.month } },
+      where: {
+        studentId_month: { studentId: dto.studentId, month: dto.month },
+      },
       create: { ...dto, unblockAt },
-      update: { amount: dto.amount, paidAt: dto.paidAt, recordedBy: dto.recordedBy, unblockAt },
+      update: {
+        amount: dto.amount,
+        paidAt: dto.paidAt,
+        recordedBy: dto.recordedBy,
+        unblockAt,
+      },
     });
   }
 
@@ -49,9 +56,18 @@ export class PaymentsService {
     });
   }
 
-  async getBranchPaymentStatus(branchId: string, tenantId: string, month: string) {
+  async getBranchPaymentStatus(
+    branchId: string,
+    tenantId: string,
+    month: string,
+  ) {
     const students = await this.prisma.user.findMany({
-      where: { branchId, tenantId, role: 'student', status: { not: 'inactive' } },
+      where: {
+        branchId,
+        tenantId,
+        role: 'student',
+        status: { not: 'inactive' },
+      },
       select: { id: true, name: true, status: true },
     });
 
@@ -73,15 +89,28 @@ export class PaymentsService {
     return this.prisma.paymentSetting.findUnique({ where: { tenantId } });
   }
 
-  async updateSettings(tenantId: string, startDay: number, endDay: number, updatedBy: string) {
+  async updateSettings(
+    tenantId: string,
+    startDay: number,
+    endDay: number,
+    updatedBy: string,
+  ) {
     return this.prisma.paymentSetting.upsert({
       where: { tenantId },
-      create: { tenantId, paymentStartDay: startDay, paymentEndDay: endDay, updatedBy },
+      create: {
+        tenantId,
+        paymentStartDay: startDay,
+        paymentEndDay: endDay,
+        updatedBy,
+      },
       update: { paymentStartDay: startDay, paymentEndDay: endDay, updatedBy },
     });
   }
 
-  async getBranchSummary(tenantId: string, month: string): Promise<BranchPaymentSummary[]> {
+  async getBranchSummary(
+    tenantId: string,
+    month: string,
+  ): Promise<BranchPaymentSummary[]> {
     const branches = await this.prisma.branch.findMany({
       where: { tenantId },
       select: { id: true, name: true },

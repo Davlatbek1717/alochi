@@ -80,7 +80,10 @@ describe('PaymentsService', () => {
 
   describe('getStudentPayments', () => {
     it('returns payments for student ordered by month desc', async () => {
-      const payments = [{ id: 'p1', month: '2025-04' }, { id: 'p2', month: '2025-03' }];
+      const payments = [
+        { id: 'p1', month: '2025-04' },
+        { id: 'p2', month: '2025-03' },
+      ];
       mockPrisma.payment.findMany.mockResolvedValue(payments);
 
       const result = await service.getStudentPayments('s1');
@@ -105,12 +108,22 @@ describe('PaymentsService', () => {
       mockPrisma.user.findMany.mockResolvedValue(students);
       mockPrisma.payment.findMany.mockResolvedValue(payments);
 
-      const result = await service.getBranchPaymentStatus('b1', 't1', '2025-04');
+      const result = await service.getBranchPaymentStatus(
+        'b1',
+        't1',
+        '2025-04',
+      );
 
       expect(result).toHaveLength(2);
-      expect(result.find((r: { id: string }) => r.id === 's1')?.hasPaid).toBe(true);
-      expect(result.find((r: { id: string }) => r.id === 's2')?.hasPaid).toBe(false);
-      expect(result.find((r: { id: string }) => r.id === 's2')?.payment).toBeNull();
+      expect(result.find((r: { id: string }) => r.id === 's1')?.hasPaid).toBe(
+        true,
+      );
+      expect(result.find((r: { id: string }) => r.id === 's2')?.hasPaid).toBe(
+        false,
+      );
+      expect(
+        result.find((r: { id: string }) => r.id === 's2')?.payment,
+      ).toBeNull();
     });
   });
 
@@ -122,7 +135,12 @@ describe('PaymentsService', () => {
 
       expect(mockPrisma.paymentSetting.upsert).toHaveBeenCalledWith({
         where: { tenantId: 't1' },
-        create: { tenantId: 't1', paymentStartDay: 1, paymentEndDay: 25, updatedBy: 'admin1' },
+        create: {
+          tenantId: 't1',
+          paymentStartDay: 1,
+          paymentEndDay: 25,
+          updatedBy: 'admin1',
+        },
         update: { paymentStartDay: 1, paymentEndDay: 25, updatedBy: 'admin1' },
       });
     });
@@ -163,7 +181,9 @@ describe('PaymentsService', () => {
     });
 
     it('returns zero counts for a branch with no students', async () => {
-      mockPrisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Empty Branch' }]);
+      mockPrisma.branch.findMany.mockResolvedValue([
+        { id: 'b1', name: 'Empty Branch' },
+      ]);
       mockPrisma.user.findMany.mockResolvedValue([]);
       mockPrisma.payment.findMany.mockResolvedValue([]);
 
@@ -175,21 +195,25 @@ describe('PaymentsService', () => {
     });
 
     it('counts a blocked_payment student who has paid as paid, not blocked', async () => {
-      mockPrisma.branch.findMany.mockResolvedValue([{ id: 'b1', name: 'Test' }]);
+      mockPrisma.branch.findMany.mockResolvedValue([
+        { id: 'b1', name: 'Test' },
+      ]);
       mockPrisma.user.findMany.mockResolvedValue([
         { id: 's1', branchId: 'b1', status: 'blocked_payment' },
         { id: 's2', branchId: 'b1', status: 'active' },
       ]);
       // s1 has paid even though still blocked_payment status
-      mockPrisma.payment.findMany.mockResolvedValue([{ studentId: 's1', amount: 300000 }]);
+      mockPrisma.payment.findMany.mockResolvedValue([
+        { studentId: 's1', amount: 300000 },
+      ]);
 
       const result = await service.getBranchSummary('t1', '2026-04');
 
       const b1 = result[0];
       expect(b1.total).toBe(2);
-      expect(b1.paid).toBe(1);   // s1 paid
+      expect(b1.paid).toBe(1); // s1 paid
       expect(b1.blocked).toBe(0); // s1 should NOT be in blocked (paid takes precedence)
-      expect(b1.unpaid).toBe(1);  // s2 is unpaid
+      expect(b1.unpaid).toBe(1); // s2 is unpaid
       expect(b1.paid + b1.unpaid + b1.blocked).toBe(b1.total);
     });
 
@@ -201,13 +225,19 @@ describe('PaymentsService', () => {
       await service.getBranchSummary('tenant-xyz', '2026-04');
 
       expect(mockPrisma.branch.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ tenantId: 'tenant-xyz' }),
+        }),
       );
       expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ tenantId: 'tenant-xyz' }),
+        }),
       );
       expect(mockPrisma.payment.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-xyz' }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ tenantId: 'tenant-xyz' }),
+        }),
       );
     });
   });

@@ -41,7 +41,10 @@ describe('StreakService', () => {
   describe('recordActivity', () => {
     it('creates a streak of 1 when student has no existing record', async () => {
       mockPrisma.studentXp.findUnique.mockResolvedValue(null);
-      mockPrisma.studentXp.upsert.mockResolvedValue({ studentId: 's1', currentStreak: 1 });
+      mockPrisma.studentXp.upsert.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 1,
+      });
 
       const result = await service.recordActivity('s1');
 
@@ -61,7 +64,10 @@ describe('StreakService', () => {
         shieldCount: 0,
         lastActivity: daysAgo(1),
       });
-      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 6 });
+      mockPrisma.studentXp.update.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 6,
+      });
 
       const result = await service.recordActivity('s1');
 
@@ -78,7 +84,10 @@ describe('StreakService', () => {
         shieldCount: 0,
         lastActivity: daysAgo(3),
       });
-      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 1 });
+      mockPrisma.studentXp.update.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 1,
+      });
 
       await service.recordActivity('s1');
 
@@ -94,7 +103,11 @@ describe('StreakService', () => {
         shieldCount: 2,
         lastActivity: daysAgo(2),
       });
-      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 9, shieldCount: 1 });
+      mockPrisma.studentXp.update.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 9,
+        shieldCount: 1,
+      });
 
       await service.recordActivity('s1');
 
@@ -104,7 +117,13 @@ describe('StreakService', () => {
     });
 
     it('returns existing record unchanged when activity is recorded on the same day', async () => {
-      const xp = { studentId: 's1', currentStreak: 4, longestStreak: 4, shieldCount: 0, lastActivity: new Date() };
+      const xp = {
+        studentId: 's1',
+        currentStreak: 4,
+        longestStreak: 4,
+        shieldCount: 0,
+        lastActivity: new Date(),
+      };
       mockPrisma.studentXp.findUnique.mockResolvedValue(xp);
 
       const result = await service.recordActivity('s1');
@@ -122,7 +141,11 @@ describe('StreakService', () => {
         shieldCount: 0,
         lastActivity: daysAgo(1),
       });
-      mockPrisma.studentXp.update.mockResolvedValue({ studentId: 's1', currentStreak: 7, shieldCount: 1 });
+      mockPrisma.studentXp.update.mockResolvedValue({
+        studentId: 's1',
+        currentStreak: 7,
+        shieldCount: 1,
+      });
 
       await service.recordActivity('s1');
 

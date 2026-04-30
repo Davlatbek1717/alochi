@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface SetNOverrideDto {
@@ -21,14 +25,21 @@ export class StudentConfigService {
     if (!lesson) throw new NotFoundException('Dars topilmadi');
 
     if (dto.nRepetitions < 1) {
-      throw new BadRequestException('N kamida 1 bo\'lishi kerak');
+      throw new BadRequestException("N kamida 1 bo'lishi kerak");
     }
     if (dto.nRepetitions > lesson.maxNOverride) {
-      throw new BadRequestException(`N ${lesson.maxNOverride} (maximal) dan oshib ketdi`);
+      throw new BadRequestException(
+        `N ${lesson.maxNOverride} (maximal) dan oshib ketdi`,
+      );
     }
 
     return this.prisma.studentLessonConfig.upsert({
-      where: { studentId_lessonId: { studentId: dto.studentId, lessonId: dto.lessonId } },
+      where: {
+        studentId_lessonId: {
+          studentId: dto.studentId,
+          lessonId: dto.lessonId,
+        },
+      },
       create: {
         studentId: dto.studentId,
         lessonId: dto.lessonId,

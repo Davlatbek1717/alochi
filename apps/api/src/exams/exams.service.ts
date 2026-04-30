@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExamStatus } from '@prisma/client';
 
@@ -9,14 +14,23 @@ export class ExamsService {
   constructor(private prisma: PrismaService) {}
 
   async grant(grantedBy: string, studentId: string, lessonId: string) {
-    const lesson = await this.prisma.lesson.findFirst({ where: { id: lessonId } });
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { id: lessonId },
+    });
     if (!lesson) throw new NotFoundException('Dars topilmadi');
-    if (!lesson.hasExam) throw new BadRequestException("Bu darsda imtihon mavjud emas");
+    if (!lesson.hasExam)
+      throw new BadRequestException('Bu darsda imtihon mavjud emas');
 
     return this.prisma.examPermission.upsert({
       where: { studentId_lessonId: { studentId, lessonId } },
       create: { studentId, lessonId, grantedBy, status: ExamStatus.active },
-      update: { grantedBy, status: ExamStatus.active, passed: null, score: null, completedAt: null },
+      update: {
+        grantedBy,
+        status: ExamStatus.active,
+        passed: null,
+        score: null,
+        completedAt: null,
+      },
       include: { lesson: { select: { id: true, title: true } } },
     });
   }
@@ -36,11 +50,14 @@ export class ExamsService {
   async submit(examId: string, studentId: string, answers: number[]) {
     const exam = await this.prisma.examPermission.findUnique({
       where: { id: examId },
-      include: { lesson: { include: { components_data: { where: { type: 'mcq' } } } } },
+      include: {
+        lesson: { include: { components_data: { where: { type: 'mcq' } } } },
+      },
     });
     if (!exam) throw new NotFoundException('Imtihon topilmadi');
     if (exam.studentId !== studentId) throw new ForbiddenException();
-    if (exam.status !== ExamStatus.active) throw new BadRequestException('Imtihon allaqachon yakunlangan');
+    if (exam.status !== ExamStatus.active)
+      throw new BadRequestException('Imtihon allaqachon yakunlangan');
 
     const questions = exam.lesson.components_data.map((c) => {
       const cfg = c.config as { correctIndex: number };
@@ -67,7 +84,13 @@ export class ExamsService {
     if (passed) {
       await this.prisma.studentProgress.upsert({
         where: { studentId_lessonId: { studentId, lessonId: exam.lessonId } },
-        create: { studentId, lessonId: exam.lessonId, academyCompleted: true, completedAt: new Date(), lastActivityAt: new Date() },
+        create: {
+          studentId,
+          lessonId: exam.lessonId,
+          academyCompleted: true,
+          completedAt: new Date(),
+          lastActivityAt: new Date(),
+        },
         update: { academyCompleted: true, completedAt: new Date() },
       });
     }
@@ -78,7 +101,9 @@ export class ExamsService {
   async getStudentExams(studentId: string) {
     return this.prisma.examPermission.findMany({
       where: { studentId },
-      include: { lesson: { select: { id: true, title: true, orderNumber: true } } },
+      include: {
+        lesson: { select: { id: true, title: true, orderNumber: true } },
+      },
       orderBy: { grantedAt: 'desc' },
     });
   }

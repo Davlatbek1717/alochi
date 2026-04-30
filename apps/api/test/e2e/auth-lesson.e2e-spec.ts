@@ -50,9 +50,7 @@ describe('Auth + Lesson flow (e2e)', () => {
   });
 
   it('GET /lessons — unauthenticated returns 401', async () => {
-    await request(app.getHttpServer())
-      .get('/lessons')
-      .expect(401);
+    await request(app.getHttpServer()).get('/lessons').expect(401);
   });
 
   it('GET /gamification/xp — student can access own XP', async () => {

@@ -1,11 +1,14 @@
 import { RolesGuard } from '../src/auth/roles.guard';
-import { Reflector } from '@nestjs/core';
 
 describe('RolesGuard', () => {
   function buildCtx(userRole: string, requiredRoles: string[]) {
-    const mockReflector = { getAllAndOverride: jest.fn().mockReturnValue(requiredRoles) };
+    const mockReflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(requiredRoles),
+    };
     const mockCtx = {
-      switchToHttp: () => ({ getRequest: () => ({ user: { role: userRole } }) }),
+      switchToHttp: () => ({
+        getRequest: () => ({ user: { role: userRole } }),
+      }),
       getHandler: jest.fn(),
       getClass: jest.fn(),
     };
@@ -33,7 +36,9 @@ describe('RolesGuard', () => {
   });
 
   it('no user in request — fails', () => {
-    const mockReflector = { getAllAndOverride: jest.fn().mockReturnValue(['mentor']) };
+    const mockReflector = {
+      getAllAndOverride: jest.fn().mockReturnValue(['mentor']),
+    };
     const mockCtx = {
       switchToHttp: () => ({ getRequest: () => ({ user: null }) }),
       getHandler: jest.fn(),

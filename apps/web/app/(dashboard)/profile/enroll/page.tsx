@@ -9,7 +9,7 @@ export default function EnrollPage() {
   const [stage, setStage] = useState<'intro' | 'camera' | 'uploading' | 'done'>('intro');
   const [error, setError] = useState('');
 
-  async function handleImages(images: string[]) {
+  async function handleEmbeddings(embeddings: number[][]) {
     setStage('uploading');
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -25,7 +25,7 @@ export default function EnrollPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/face/enroll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ user_id: userId, tenant_id: tenantId, images_base64: images, enrolled_via: 'web' }),
+        body: JSON.stringify({ user_id: userId, tenant_id: tenantId, embeddings, enrolled_via: 'web' }),
       });
       if (!res.ok) throw new Error("Ro'yxatdan o'tkazib bo'lmadi");
       setStage('done');
@@ -88,7 +88,7 @@ export default function EnrollPage() {
             {error && (
               <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
             )}
-            <EnrollmentCamera onComplete={handleImages} />
+            <EnrollmentCamera onComplete={handleEmbeddings} />
           </div>
         )}
 

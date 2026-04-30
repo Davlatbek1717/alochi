@@ -4,14 +4,18 @@ describe('ContentQualityService', () => {
   const mockPrisma = {
     lesson: {
       findMany: jest.fn().mockResolvedValue([]),
-      findFirst: jest.fn().mockResolvedValue({ id: 'lesson-1', tenantId: 'tenant-1' }),
+      findFirst: jest
+        .fn()
+        .mockResolvedValue({ id: 'lesson-1', tenantId: 'tenant-1' }),
     },
     studentProgress: {
       count: jest.fn().mockResolvedValue(0),
     },
     lessonFeedback: {
       upsert: jest.fn().mockResolvedValue({ id: 'fb-1', rating: 3 }),
-      aggregate: jest.fn().mockResolvedValue({ _avg: { rating: null }, _count: 0 }),
+      aggregate: jest
+        .fn()
+        .mockResolvedValue({ _avg: { rating: null }, _count: 0 }),
     },
     lessonVariant: {
       create: jest.fn().mockResolvedValue({ id: 'v-1', variant: 'B' }),
@@ -32,7 +36,9 @@ describe('ContentQualityService', () => {
     await service.submitFeedback('student-1', 'lesson-1', 3);
     expect(mockPrisma.lessonFeedback.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { studentId_lessonId: { studentId: 'student-1', lessonId: 'lesson-1' } },
+        where: {
+          studentId_lessonId: { studentId: 'student-1', lessonId: 'lesson-1' },
+        },
         create: expect.objectContaining({ rating: 3 }),
         update: expect.objectContaining({ rating: 3 }),
       }),
@@ -40,7 +46,9 @@ describe('ContentQualityService', () => {
   });
 
   it('getVariantForStudent returns existing assignment', async () => {
-    mockPrisma.studentVariantAssignment.findUnique.mockResolvedValue({ variantId: 'v-A' });
+    mockPrisma.studentVariantAssignment.findUnique.mockResolvedValue({
+      variantId: 'v-A',
+    });
     const result = await service.getVariantForStudent('s-1', 'l-1');
     expect(result).toEqual({ variantId: 'v-A' });
     expect(mockPrisma.studentVariantAssignment.create).not.toHaveBeenCalled();

@@ -19,7 +19,9 @@ export class BranchesService {
   }
 
   async findById(id: string, tenantId: string) {
-    const branch = await this.prisma.branch.findFirst({ where: { id, tenantId } });
+    const branch = await this.prisma.branch.findFirst({
+      where: { id, tenantId },
+    });
     if (!branch) throw new NotFoundException('Filial topilmadi');
     return branch;
   }

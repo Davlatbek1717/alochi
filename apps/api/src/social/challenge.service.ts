@@ -6,7 +6,12 @@ import { GroupChallenge } from '@prisma/client';
 export class ChallengeService {
   constructor(private prisma: PrismaService) {}
 
-  async create(tenantId: string, groupAId: string, groupBId: string, endDate: Date): Promise<GroupChallenge> {
+  async create(
+    tenantId: string,
+    groupAId: string,
+    groupBId: string,
+    endDate: Date,
+  ): Promise<GroupChallenge> {
     return this.prisma.groupChallenge.create({
       data: {
         tenantId,
@@ -28,13 +33,21 @@ export class ChallengeService {
     });
   }
 
-  async addXp(challengeId: string, groupId: string, xp: number): Promise<GroupChallenge> {
-    const challenge = await this.prisma.groupChallenge.findUnique({ where: { id: challengeId } });
+  async addXp(
+    challengeId: string,
+    groupId: string,
+    xp: number,
+  ): Promise<GroupChallenge> {
+    const challenge = await this.prisma.groupChallenge.findUnique({
+      where: { id: challengeId },
+    });
     const isGroupA = challenge?.groupAId === groupId;
 
     return this.prisma.groupChallenge.update({
       where: { id: challengeId },
-      data: isGroupA ? { groupAXp: { increment: xp } } : { groupBXp: { increment: xp } },
+      data: isGroupA
+        ? { groupAXp: { increment: xp } }
+        : { groupBXp: { increment: xp } },
     });
   }
 

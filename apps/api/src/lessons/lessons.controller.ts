@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { LessonsService } from './lessons.service';
 import { ComponentsService } from './components.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
@@ -13,7 +22,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @Controller('lessons')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class LessonsController {
-  constructor(private lessons: LessonsService, private components: ComponentsService) {}
+  constructor(
+    private lessons: LessonsService,
+    private components: ComponentsService,
+  ) {}
 
   @Post()
   @Roles(UserRole.superadmin)

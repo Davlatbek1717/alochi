@@ -14,16 +14,25 @@ export class AdaptiveService {
 
   constructor(private prisma: PrismaService) {}
 
-  computeNewN(currentN: number, errorCount: number, totalQuestions: number, config: AdaptiveConfig): number {
+  computeNewN(
+    currentN: number,
+    errorCount: number,
+    totalQuestions: number,
+    config: AdaptiveConfig,
+  ): number {
     if (totalQuestions === 0) return currentN;
     const errorRate = errorCount / totalQuestions;
-    if (errorRate > config.hardThreshold) return Math.min(currentN + 1, config.maxN);
-    if (errorRate < config.easyThreshold) return Math.max(currentN - 1, config.minN);
+    if (errorRate > config.hardThreshold)
+      return Math.min(currentN + 1, config.maxN);
+    if (errorRate < config.easyThreshold)
+      return Math.max(currentN - 1, config.minN);
     return currentN;
   }
 
   async getAdaptiveConfig(tenantId: string) {
-    const existing = await this.prisma.adaptiveDifficultyConfig.findUnique({ where: { tenantId } });
+    const existing = await this.prisma.adaptiveDifficultyConfig.findUnique({
+      where: { tenantId },
+    });
     if (existing) return existing;
     return this.prisma.adaptiveDifficultyConfig.upsert({
       where: { tenantId },
@@ -79,23 +88,40 @@ export class AdaptiveService {
         if (totalQuestions === 0) continue;
 
         const agg = await this.prisma.errorLog.aggregate({
-          where: { studentId: student.id, lessonId: lesson.id, lastError: { gte: sevenDaysAgo } },
+          where: {
+            studentId: student.id,
+            lessonId: lesson.id,
+            lastError: { gte: sevenDaysAgo },
+          },
           _sum: { errorCount: true },
         });
         const errorCount = agg._sum.errorCount ?? 0;
 
         const existing = await this.prisma.studentLessonConfig.findUnique({
-          where: { studentId_lessonId: { studentId: student.id, lessonId: lesson.id } },
+          where: {
+            studentId_lessonId: { studentId: student.id, lessonId: lesson.id },
+          },
         });
 
         const currentN = existing?.nRepetitionsOverride ?? lesson.nRepetitions;
-        const newN = this.computeNewN(currentN, errorCount, totalQuestions, config);
+        const newN = this.computeNewN(
+          currentN,
+          errorCount,
+          totalQuestions,
+          config,
+        );
 
         if (newN === currentN) continue;
 
         await this.prisma.studentLessonConfig.upsert({
-          where: { studentId_lessonId: { studentId: student.id, lessonId: lesson.id } },
-          create: { studentId: student.id, lessonId: lesson.id, nRepetitionsOverride: newN },
+          where: {
+            studentId_lessonId: { studentId: student.id, lessonId: lesson.id },
+          },
+          create: {
+            studentId: student.id,
+            lessonId: lesson.id,
+            nRepetitionsOverride: newN,
+          },
           update: { nRepetitionsOverride: newN },
         });
 
@@ -113,7 +139,9 @@ export class AdaptiveService {
       }
     }
 
-    this.logger.log(`Tenant ${tenantId}: ${adjusted} adaptatsiya amalga oshirildi`);
+    this.logger.log(
+      `Tenant ${tenantId}: ${adjusted} adaptatsiya amalga oshirildi`,
+    );
     return adjusted;
   }
 }

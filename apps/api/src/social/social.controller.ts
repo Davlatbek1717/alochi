@@ -1,5 +1,14 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, ForbiddenException,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -24,11 +33,12 @@ export class SocialController {
   ) {}
 
   @Post('duels')
-  createDuel(
-    @Body() body: { challengedId: string },
-    @Request() req: any,
-  ) {
-    return this.duel.create(req.user.userId, body.challengedId, req.user.tenantId);
+  createDuel(@Body() body: { challengedId: string }, @Request() req: any) {
+    return this.duel.create(
+      req.user.userId,
+      body.challengedId,
+      req.user.tenantId,
+    );
   }
 
   @Post('duels/:id/answer')
@@ -37,7 +47,12 @@ export class SocialController {
     @Body() body: { questionIdx: number; answer: number },
     @Request() req: any,
   ) {
-    return this.duel.submitAnswer(id, req.user.userId, body.questionIdx, body.answer);
+    return this.duel.submitAnswer(
+      id,
+      req.user.userId,
+      body.questionIdx,
+      body.answer,
+    );
   }
 
   @Patch('duels/:id/respond')
@@ -66,10 +81,7 @@ export class SocialController {
 
   @Delete('groups/:groupId/messages/:msgId')
   @Roles(UserRole.mentor, UserRole.filadmin, UserRole.superadmin)
-  deleteGroupMessage(
-    @Param('msgId') msgId: string,
-    @Request() req: any,
-  ) {
+  deleteGroupMessage(@Param('msgId') msgId: string, @Request() req: any) {
     return this.chat.deleteMessage(msgId, req.user.userId);
   }
 
@@ -80,11 +92,17 @@ export class SocialController {
     @Body() body: { reason?: string; hours?: number },
     @Request() req: any,
   ) {
-    if (studentId === req.user.userId) throw new ForbiddenException('O\'zingizni ban qila olmaysiz');
+    if (studentId === req.user.userId)
+      throw new ForbiddenException("O'zingizni ban qila olmaysiz");
     const expiresAt = body.hours
       ? new Date(Date.now() + body.hours * 3_600_000)
       : new Date(Date.now() + 24 * 3_600_000);
-    return this.chat.banUser(studentId, req.user.userId, body.reason ?? 'Moderator tomonidan', expiresAt);
+    return this.chat.banUser(
+      studentId,
+      req.user.userId,
+      body.reason ?? 'Moderator tomonidan',
+      expiresAt,
+    );
   }
 
   @Post('messages/:id/react')
@@ -106,7 +124,11 @@ export class SocialController {
     @Body() body: { friendId: string; branchId: string },
     @Request() req: any,
   ) {
-    return this.friends.sendRequest(req.user.userId, body.friendId, body.branchId);
+    return this.friends.sendRequest(
+      req.user.userId,
+      body.friendId,
+      body.branchId,
+    );
   }
 
   @Post('friends/:id/respond')
@@ -128,7 +150,12 @@ export class SocialController {
     @Body() body: { groupAId: string; groupBId: string; endDate: Date },
     @Request() req: any,
   ) {
-    return this.challenge.create(req.user.tenantId, body.groupAId, body.groupBId, body.endDate);
+    return this.challenge.create(
+      req.user.tenantId,
+      body.groupAId,
+      body.groupBId,
+      body.endDate,
+    );
   }
 
   @Get('challenges/active/:groupId')
