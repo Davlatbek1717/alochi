@@ -18,6 +18,25 @@ services:
       timeout: 5s
       retries: 5
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    container_name: alochi_clickhouse
+    environment:
+      CLICKHOUSE_USER: alochi
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme_dev_password}
+      CLICKHOUSE_DB: alochi_analytics
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8123/ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: .
@@ -29,9 +48,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:password@db:5432/alochi?schema=public
       PORT: '3001'
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: alochi
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme_dev_password}
+      CLICKHOUSE_DB: alochi_analytics
 
   web:
     build:
@@ -71,3 +96,4 @@ services:
 
 volumes:
   db_data:
+  clickhouse_data:

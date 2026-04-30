@@ -34,6 +34,7 @@ import { ExamsModule } from './exams/exams.module';
 import { ChurnModule } from './churn/churn.module';
 import { AdaptiveModule } from './adaptive/adaptive.module';
 import { ContentQualityModule } from './content-quality/content-quality.module';
+import { ClickHouseModule } from './clickhouse/clickhouse.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -76,6 +77,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ChurnModule,
     AdaptiveModule,
     ContentQualityModule,
+    ClickHouseModule,
     AnalyticsModule,
   ],
   providers: [
