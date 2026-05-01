@@ -59,7 +59,10 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
       {
         name: 'default',
         ttl: 60000,
-        limit: process.env.NODE_ENV === 'production' ? 300 : 2000,
+        // Production: 300 req/min protects the server from abuse.
+        // Development: huge ceiling so React StrictMode double-mounts +
+        // hot-reload + many widget fetches per page never trigger 429.
+        limit: process.env.NODE_ENV === 'production' ? 300 : 100000,
       },
     ]),
     EventEmitterModule.forRoot(),
