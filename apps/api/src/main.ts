@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
+import { EmptyStringToUndefinedInterceptor } from './common/interceptors/empty-string-to-undefined.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -25,6 +26,7 @@ async function bootstrap() {
         : true,
     credentials: true,
   });
+  app.useGlobalInterceptors(new EmptyStringToUndefinedInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
   );
