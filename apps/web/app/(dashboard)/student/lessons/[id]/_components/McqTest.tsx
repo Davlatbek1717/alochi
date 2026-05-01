@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState, type KeyboardEvent } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
@@ -31,6 +31,7 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
   const [wrongs, setWrongs] = useState(0);
   const [floaterKey, setFloaterKey] = useState(0);
   const [showFloater, setShowFloater] = useState(false);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   // Filter out malformed questions (missing options/text). Server data may be
   // partial during early lesson editing — fall back gracefully instead of crashing.
@@ -65,6 +66,26 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
   function handleSelect(idx: number) {
     if (showResult) return;
     setSelected(idx);
+  }
+
+  function handleOptionKeyDown(e: KeyboardEvent<HTMLButtonElement>, idx: number) {
+    if (showResult) return;
+    const len = q.options.length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = (idx + 1) % len;
+      optionRefs.current[next]?.focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prev = (idx - 1 + len) % len;
+      optionRefs.current[prev]?.focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      // Default button behaviour selects, but we also auto-check if already selected.
+      if (selected === idx) {
+        e.preventDefault();
+        handleCheck();
+      }
+    }
   }
 
   function handleCheck() {
@@ -164,10 +185,15 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
           return (
             <button
               key={idx}
+              ref={(el) => {
+                optionRefs.current[idx] = el;
+              }}
               type="button"
               onClick={() => handleSelect(idx)}
+              onKeyDown={(e) => handleOptionKeyDown(e, idx)}
               disabled={showResult}
               aria-pressed={isSelected}
+              aria-label={`${String.fromCharCode(65 + idx)}: ${opt}`}
               className={`w-full min-h-[64px] flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-b-[4px] font-bold text-base text-left transition-all duration-150 ${tileStyle} ${
                 !showResult ? 'active:translate-y-[2px] active:border-b-2' : ''
               } disabled:cursor-default`}

@@ -29,7 +29,8 @@ export const Hearts: FC<HeartsProps> = ({ remaining, max = 3 }) => {
     <div
       className="flex items-center gap-1"
       role="status"
-      aria-label={`${safeRemaining} ta yurakdan ${safeMax}`}
+      aria-live="polite"
+      aria-label={`${safeRemaining} ta yurak qoldi`}
     >
       {Array.from({ length: safeMax }).map((_, i) => {
         const filled = i < safeRemaining;

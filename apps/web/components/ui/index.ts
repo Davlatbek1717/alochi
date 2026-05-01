@@ -10,3 +10,4 @@ export { PageHeader } from './PageHeader';
 export { Stat } from './Stat';
 export { Mascot } from './Mascot';
 export type { MascotExpression } from './Mascot';
+export { Switch } from './Switch';

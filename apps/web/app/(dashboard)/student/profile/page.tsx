@@ -16,7 +16,8 @@ import {
   Crown,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Mascot, Modal, Skeleton, useToast } from '@/components/ui';
+import { Mascot, Modal, Skeleton, Switch, useToast } from '@/components/ui';
+import { isSoundEnabled, setSoundEnabled } from '@/lib/sound';
 import { AnimatedCounter } from '../_components/AnimatedCounter';
 import {
   AchievementCarousel,
@@ -96,6 +97,16 @@ export default function StudentProfilePage() {
   const [parentTg, setParentTg] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Settings — sound toggle (mirrored from localStorage on mount).
+  const [soundOn, setSoundOn] = useState(true);
+  useEffect(() => {
+    setSoundOn(isSoundEnabled());
+  }, []);
+  function toggleSound(next: boolean) {
+    setSoundOn(next);
+    setSoundEnabled(next);
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -393,6 +404,28 @@ export default function StudentProfilePage() {
             {profile.group?.name && (
               <Field label="Guruh" value={profile.group.name} />
             )}
+          </div>
+        </section>
+
+        {/* Settings — sound effects toggle */}
+        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-5">
+          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-3">
+            Sozlamalar
+          </p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-[#0f172a]">
+                Ovoz effektlari
+              </p>
+              <p className="text-xs text-[#64748b] font-semibold mt-0.5">
+                Toʻgʻri javob, xato va daraja ovozlari
+              </p>
+            </div>
+            <Switch
+              checked={soundOn}
+              onChange={toggleSound}
+              label="Ovoz effektlari"
+            />
           </div>
         </section>
 

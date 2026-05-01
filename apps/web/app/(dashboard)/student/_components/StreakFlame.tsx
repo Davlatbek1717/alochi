@@ -39,7 +39,8 @@ export const StreakFlame: FC<StreakFlameProps> = ({
       <div
         className="relative"
         style={{ width: size, height: size }}
-        aria-label={`${streak} kunlik streak`}
+        role="img"
+        aria-label={`${streak} kunlik zanjir`}
       >
         <svg
           viewBox="0 0 32 36"

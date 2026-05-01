@@ -115,7 +115,9 @@ export const LessonNode = forwardRef<HTMLButtonElement, Props>(function LessonNo
         type="button"
         onClick={isLocked ? undefined : onClick}
         disabled={isLocked}
-        aria-label={ariaLabel ?? `Dars ${positionLabel}`}
+        aria-label={`${ariaLabel ?? `Dars ${positionLabel}`}, ${
+          isLocked ? 'qulflangan' : isCompleted ? 'tugatilgan' : 'joriy'
+        }`}
         aria-disabled={isLocked || undefined}
         className={buttonClasses}
         style={bodyStyle}

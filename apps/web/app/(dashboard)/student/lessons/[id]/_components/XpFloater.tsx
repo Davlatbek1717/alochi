@@ -36,6 +36,8 @@ export function XpFloater({ amount, durationMs = 900, onDone, className = '' }: 
 
   return (
     <span
+      role="status"
+      aria-live="polite"
       className={`pointer-events-none select-none font-extrabold text-[#fbbf24] drop-shadow-[0_1px_0_rgba(0,0,0,0.18)] motion-safe:[animation:float-up_900ms_ease-out_forwards] ${className}`}
       style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
     >

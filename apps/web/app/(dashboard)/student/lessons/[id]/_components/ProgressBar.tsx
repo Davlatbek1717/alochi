@@ -32,9 +32,10 @@ export const ProgressBar: FC<ProgressBarProps> = ({
     <div
       className={`relative h-2 rounded-full bg-[#e8e0d0] overflow-hidden ${className}`}
       role="progressbar"
-      aria-valuenow={Math.round(pct)}
+      aria-valuenow={Math.min(completed, denom)}
       aria-valuemin={0}
-      aria-valuemax={100}
+      aria-valuemax={denom}
+      aria-valuetext={`${Math.min(completed, denom)} / ${denom}`}
       aria-label="Dars jarayoni"
     >
       <div

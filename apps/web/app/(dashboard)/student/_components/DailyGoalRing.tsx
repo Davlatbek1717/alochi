@@ -68,7 +68,10 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
         animatedPop ? 'motion-safe:animate-[pop_500ms_ease-out]' : ''
       }`}
       style={{ width: size, height: size }}
-      role="img"
+      role="meter"
+      aria-valuenow={safeXp}
+      aria-valuemin={0}
+      aria-valuemax={safeGoal}
       aria-label={`Bugungi maqsad: ${safeXp} XP / ${safeGoal} XP`}
     >
       <svg width={size} height={size} className="-rotate-90">

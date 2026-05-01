@@ -107,6 +107,17 @@ export default function LessonPage() {
   const [sessionError, setSessionError] = useState(false);
   const [exitModalOpen, setExitModalOpen] = useState(false);
 
+  // Global Escape key opens the exit modal — keyboard accessibility shortcut.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !exitModalOpen) {
+        setExitModalOpen(true);
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [exitModalOpen]);
+
   // Hearts ("lives") — decremented on wrong answers from any exercise.
   // When this hits 0, we show the "out of hearts" modal which routes the
   // user back to the start of the cycle (same effect as restartCycle).
