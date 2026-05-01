@@ -5,7 +5,15 @@ import { X, ArrowRight, AlertTriangle } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
+import { TranslateInput } from './_components/TranslateInput';
+import { FillBlank } from './_components/FillBlank';
+import { OrderSentences } from './_components/OrderSentences';
 import { AiTutor } from './_components/AiTutor';
+import type {
+  TranslateConfig,
+  FillBlankConfig,
+  OrderSentencesConfig,
+} from './_components/exercise-types';
 import { FeedbackWidget } from './_components/FeedbackWidget';
 import { Hearts } from './_components/Hearts';
 import { ProgressBar } from './_components/ProgressBar';
@@ -24,7 +32,13 @@ type ComponentFlags = {
 
 type LessonComponent = {
   id: string;
-  type: 'mcq' | 'word_order' | 'vocabulary';
+  type:
+    | 'mcq'
+    | 'word_order'
+    | 'vocabulary'
+    | 'translate'
+    | 'fill_blank'
+    | 'order_sentences';
   config: Record<string, unknown>;
 };
 
@@ -76,17 +90,52 @@ type StreakData = {
 
 /** Steps the runner walks through. `intro` is the welcome screen, `done`
  * is the celebration. Everything between is a real exercise. */
-type Step = 'intro' | 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'done';
+type Step =
+  | 'intro'
+  | 'video'
+  | 'mcq'
+  | 'word_order'
+  | 'translate'
+  | 'fill_blank'
+  | 'order_sentences'
+  | 'ai_tutor'
+  | 'done';
 
 /** The set of *exercise* steps shown in the progress bar (excludes intro/done). */
-const EXERCISE_STEPS: Step[] = ['video', 'mcq', 'word_order', 'ai_tutor'];
+const EXERCISE_STEPS: Step[] = [
+  'video',
+  'mcq',
+  'word_order',
+  'translate',
+  'fill_blank',
+  'order_sentences',
+  'ai_tutor',
+];
 
 const HEARTS_MAX = 3;
 
-function buildSteps(components: ComponentFlags): Step[] {
+/**
+ * Detect "any present" for the new Pass 2 exercise types from
+ * `lesson.components_data`. Returns true when at least one component of the
+ * given type has a non-empty config — keeps the runner from showing an empty
+ * step when authors leave a placeholder behind.
+ */
+function hasComponentOfType(
+  componentsData: LessonComponent[] | undefined,
+  type: LessonComponent['type'],
+): boolean {
+  if (!componentsData) return false;
+  return componentsData.some((c) => c.type === type && c.config && Object.keys(c.config).length > 0);
+}
+
+function buildSteps(lesson: Lesson): Step[] {
+  const { components, components_data } = lesson;
   const steps: Step[] = ['intro', 'video'];
   if (components.mcq) steps.push('mcq');
   if (components.word_order) steps.push('word_order');
+  if (hasComponentOfType(components_data, 'translate')) steps.push('translate');
+  if (hasComponentOfType(components_data, 'fill_blank')) steps.push('fill_blank');
+  if (hasComponentOfType(components_data, 'order_sentences')) steps.push('order_sentences');
   if (components.ai_tutor) steps.push('ai_tutor');
   steps.push('done');
   return steps;
@@ -207,9 +256,36 @@ export default function LessonPage() {
       .filter((s) => s.words.length > 0 && s.correct);
   }
 
+  /** Pass 2 — Translate configs (A). */
+  function getTranslateConfigs(): TranslateConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'translate')
+      .map((c) => c.config as unknown as TranslateConfig)
+      .filter((cfg) => cfg && cfg.sourceText && cfg.correctAnswer);
+  }
+
+  /** Pass 2 — Fill-in-the-blank configs (F). */
+  function getFillBlankConfigs(): FillBlankConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'fill_blank')
+      .map((c) => c.config as unknown as FillBlankConfig)
+      .filter((cfg) => cfg && cfg.sentence && cfg.blank && cfg.sentence.includes('___'));
+  }
+
+  /** Pass 2 — Order-sentences configs (H). */
+  function getOrderSentenceConfigs(): OrderSentencesConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'order_sentences')
+      .map((c) => c.config as unknown as OrderSentencesConfig)
+      .filter((cfg) => cfg && Array.isArray(cfg.sentences) && cfg.sentences.length >= 2);
+  }
+
   function goToNextStep() {
     if (!lesson) return;
-    const steps = buildSteps(lesson.components);
+    const steps = buildSteps(lesson);
     const idx = steps.indexOf(step);
     if (idx + 1 < steps.length) {
       const nextStep = steps[idx + 1];
@@ -225,7 +301,7 @@ export default function LessonPage() {
     // First *real* step after the intro. Buildable from the components flags;
     // video is always present, so we know steps[1] === 'video' here.
     if (!lesson) return;
-    const steps = buildSteps(lesson.components);
+    const steps = buildSteps(lesson);
     const next = steps[1];
     if (next) setStep(next);
   }
@@ -268,28 +344,40 @@ export default function LessonPage() {
     setExitModalOpen(true);
   }
 
-  // Total exercises in the lesson (denominator for the progress bar).
-  // We count only the exercise steps that are actually enabled.
-  const totalExercises = useMemo(() => {
-    if (!lesson) return 1;
+  /**
+   * Resolve which exercise steps are actually present for this lesson.
+   *
+   * Video is always on; mcq / word_order / ai_tutor follow the
+   * `components` flags; translate / fill_blank / order_sentences follow
+   * `components_data`. Mirrors `buildSteps()` but excludes the bookend
+   * `intro` / `done` so this list is suitable for the progress bar.
+   */
+  const enabledExerciseSteps = useMemo<Step[]>(() => {
+    if (!lesson) return ['video'];
     return EXERCISE_STEPS.filter((s) => {
       if (s === 'video') return true;
+      if (s === 'translate') return hasComponentOfType(lesson.components_data, 'translate');
+      if (s === 'fill_blank') return hasComponentOfType(lesson.components_data, 'fill_blank');
+      if (s === 'order_sentences')
+        return hasComponentOfType(lesson.components_data, 'order_sentences');
       return Boolean(lesson.components[s as keyof ComponentFlags]);
-    }).length;
+    });
   }, [lesson]);
+
+  // Total exercises in the lesson (denominator for the progress bar).
+  const totalExercises = useMemo(
+    () => enabledExerciseSteps.length || 1,
+    [enabledExerciseSteps],
+  );
 
   // How many exercises we've already finished (used by the bar's filled width).
   const completedExercises = useMemo(() => {
     if (!lesson) return 0;
     if (step === 'intro') return 0;
     if (step === 'done') return totalExercises;
-    const enabled = EXERCISE_STEPS.filter((s) => {
-      if (s === 'video') return true;
-      return Boolean(lesson.components[s as keyof ComponentFlags]);
-    });
-    const idx = enabled.indexOf(step as Step);
+    const idx = enabledExerciseSteps.indexOf(step as Step);
     return idx === -1 ? 0 : idx;
-  }, [lesson, step, totalExercises]);
+  }, [lesson, step, totalExercises, enabledExerciseSteps]);
 
   if (loading) {
     return (
@@ -332,6 +420,9 @@ export default function LessonPage() {
 
   const mcqQuestions = getMcqQuestions();
   const wordOrderSentences = getWordOrderSentences();
+  const translateConfigs = getTranslateConfigs();
+  const fillBlankConfigs = getFillBlankConfigs();
+  const orderSentenceConfigs = getOrderSentenceConfigs();
 
   // Compute level-up + accuracy + xp delta for the completion screen.
   const xpEarned =
@@ -545,6 +636,42 @@ export default function LessonPage() {
 
         {step === 'word_order' && wordOrderSentences.length === 0 && (
           <SkipPanel label="So'z tartibi topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'translate' && translateConfigs[0] && (
+          <TranslateInput
+            config={translateConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'translate' && !translateConfigs[0] && (
+          <SkipPanel label="Tarjima topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'fill_blank' && fillBlankConfigs[0] && (
+          <FillBlank
+            config={fillBlankConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'fill_blank' && !fillBlankConfigs[0] && (
+          <SkipPanel label="Bo'sh joy topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'order_sentences' && orderSentenceConfigs[0] && (
+          <OrderSentences
+            config={orderSentenceConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'order_sentences' && !orderSentenceConfigs[0] && (
+          <SkipPanel label="Tartiblash topshiriqlari topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'ai_tutor' && (
