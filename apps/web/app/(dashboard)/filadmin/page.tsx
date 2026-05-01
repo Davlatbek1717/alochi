@@ -246,7 +246,7 @@ export default function FiladminDashboard() {
               <Link
                 key={card.href}
                 href={card.href}
-                className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
+                className={`bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
               >
                 <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
                   {card.icon}

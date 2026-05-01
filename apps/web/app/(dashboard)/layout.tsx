@@ -157,7 +157,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Main content */}
-          <main id="main-content" className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
+          <main id="main-content" className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">{children}</main>
         </div>
 
         {/* Bottom nav — mobile only */}
