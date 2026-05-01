@@ -19,6 +19,25 @@ export class GradeTranslationDto {
   @MaxLength(500)
   studentAnswer!: string;
 
+  /**
+   * Canonical correct answer from the lesson config. Used (a) as ground
+   * truth in the strict-match fallback when the AI call fails, and (b) as
+   * an extra signal in the prompt so the AI doesn't have to re-guess the
+   * "right" translation. Optional so existing callers keep working.
+   */
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  correctAnswer?: string;
+
+  /**
+   * Additional valid translations from lesson config. Used in the strict
+   * fallback so authors can teach common variants ("I'm a student",
+   * "I am a pupil", etc.) without re-validating through the AI.
+   */
+  @IsOptional()
+  acceptedAnswers?: string[];
+
   @IsString()
   @IsOptional()
   @MaxLength(500)

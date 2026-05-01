@@ -10,6 +10,12 @@ export interface GradeTranslationDto {
   sourceText: string;
   targetLanguage: 'en' | 'uz';
   studentAnswer: string;
+  /** Canonical correct answer from lesson config — ground truth for the
+   *  strict-match fast path + fallback. Send when available so a missing
+   *  Claude key never blocks correct answers. */
+  correctAnswer?: string;
+  /** Author-curated alternate translations (e.g., "I'm a student"). */
+  acceptedAnswers?: string[];
   context?: string;
 }
 

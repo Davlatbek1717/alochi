@@ -69,18 +69,63 @@ export class AiService {
     question: string,
     history: { role: string; content: string }[],
   ) {
+    // Try the Python AI microservice first (richer pedagogical features when
+    // available). On any failure — including when the service simply isn't
+    // running — fall through to a direct Claude call so the student is never
+    // blocked. Keeps the behaviour simple in dev where only the API + DB
+    // containers are up.
+    if (this.aiServiceUrl) {
+      try {
+        const res = await withRetry(
+          () =>
+            firstValueFrom(
+              this.http.post(`${this.aiServiceUrl}/ai/tutor/ask`, {
+                lesson_context: lessonContext,
+                question,
+                conversation_history: history,
+              }),
+            ),
+          1,
+        );
+        return res.data;
+      } catch (err) {
+        this.logger.warn(
+          `askTutor: Python AI service unreachable, falling back to Claude. ${(err as Error).message}`,
+        );
+      }
+    }
+
+    // Direct Claude fallback. Encourages short, friendly Uzbek answers
+    // appropriate for 3-7 graders and stays within the lesson context so
+    // the tutor doesn't drift off-topic.
+    const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+    for (const turn of history) {
+      const role = turn.role === 'assistant' ? 'assistant' : 'user';
+      if (turn.content) messages.push({ role, content: turn.content });
+    }
+    messages.push({ role: 'user', content: question });
+
     try {
-      const res = await withRetry(() =>
-        firstValueFrom(
-          this.http.post(`${this.aiServiceUrl}/ai/tutor/ask`, {
-            lesson_context: lessonContext,
-            question,
-            conversation_history: history,
-          }),
-        ),
+      const message = await withRetry(() =>
+        this.anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 350,
+          system:
+            "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
+            "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
+            "Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. " +
+            'Faqat darsdagi mavzuga oid javob ber.\n\n' +
+            `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
+          messages,
+        }),
       );
-      return res.data;
-    } catch {
+      const text =
+        message.content[0]?.type === 'text' ? message.content[0].text : '';
+      return { answer: text || "Kechirasiz, hozir javob bera olmayman. Yana savol bering." };
+    } catch (err) {
+      this.logger.error(
+        `askTutor: Claude fallback also failed. ${(err as Error).message}`,
+      );
       throw new ServiceUnavailableException('AI servis vaqtincha ishlamayapti');
     }
   }
@@ -370,6 +415,8 @@ export class AiService {
     sourceText: string;
     targetLanguage: 'en' | 'uz';
     studentAnswer: string;
+    correctAnswer?: string;
+    acceptedAnswers?: string[];
     context?: string;
   }): Promise<{
     correct: boolean;
@@ -377,11 +424,30 @@ export class AiService {
     feedback: string;
     accepted_answers?: string[];
   }> {
+    // Strict-match shortcut: if the student typed exactly the canonical
+    // answer (or any accepted variant), short-circuit to "correct" without
+    // burning a Claude call. This also makes the lesson resilient to a
+    // missing/misconfigured ANTHROPIC_API_KEY.
+    if (input.correctAnswer) {
+      const fast = AiService.strictTranslationMatch(
+        input.studentAnswer,
+        input.correctAnswer,
+        input.acceptedAnswers,
+      );
+      if (fast) return fast;
+    }
+
     const prompt =
       `You are a strict but fair English-Uzbek translation grader for grade 3-7 students.\n\n` +
       `SOURCE: "${input.sourceText}"\n` +
       `TARGET LANGUAGE: ${input.targetLanguage}\n` +
       `STUDENT ANSWER: "${input.studentAnswer}"\n` +
+      (input.correctAnswer
+        ? `CANONICAL CORRECT TRANSLATION: "${input.correctAnswer}"\n`
+        : '') +
+      (input.acceptedAnswers?.length
+        ? `OTHER ACCEPTED TRANSLATIONS: ${input.acceptedAnswers.map((a) => `"${a}"`).join(', ')}\n`
+        : '') +
       `CONTEXT: ${input.context ?? 'none'}\n\n` +
       `Rules:\n` +
       `- Forgive minor typos (1-2 character differences) — score >= 70 still\n` +
@@ -415,31 +481,63 @@ export class AiService {
       );
     }
     return AiService.strictTranslationFallback(
-      input.sourceText,
       input.studentAnswer,
+      input.correctAnswer,
+      input.acceptedAnswers,
     );
   }
 
   /**
+   * Pass 1 (revised): Strict-match shortcut. If the student typed exactly
+   * the canonical answer or any accepted variant (case-insensitive trim),
+   * pass without calling the AI. Returns null when no match so the caller
+   * can fall through to Claude.
+   */
+  static strictTranslationMatch(
+    studentAnswer: string,
+    correctAnswer: string,
+    acceptedAnswers?: string[],
+  ): { correct: boolean; score: number; feedback: string } | null {
+    const norm = studentAnswer.trim().toLowerCase();
+    if (!norm) return null;
+    const candidates = [correctAnswer, ...(acceptedAnswers ?? [])]
+      .map((a) => a?.trim().toLowerCase())
+      .filter((a): a is string => Boolean(a));
+    if (candidates.includes(norm)) {
+      return {
+        correct: true,
+        score: 100,
+        feedback: "To'g'ri javob.",
+      };
+    }
+    return null;
+  }
+
+  /**
    * Pass 1: Strict-match fallback used by {@link gradeTranslation} when the
-   * AI call fails. Case-insensitive trimmed equality; anything else is
-   * graded zero. Exposed for unit testing.
+   * AI call fails. Case-insensitive trimmed equality against the canonical
+   * answer (or any accepted variant). Exposed for unit testing.
    */
   static strictTranslationFallback(
-    sourceText: string,
     studentAnswer: string,
+    correctAnswer?: string,
+    acceptedAnswers?: string[],
   ): {
     correct: boolean;
     score: number;
     feedback: string;
   } {
-    const a = sourceText.trim().toLowerCase();
-    const b = studentAnswer.trim().toLowerCase();
-    if (a && b && a === b) {
+    if (correctAnswer) {
+      const match = AiService.strictTranslationMatch(
+        studentAnswer,
+        correctAnswer,
+        acceptedAnswers,
+      );
+      if (match) return match;
       return {
-        correct: true,
-        score: 100,
-        feedback: "To'g'ri javob.",
+        correct: false,
+        score: 0,
+        feedback: `To'g'ri javob: ${correctAnswer}`,
       };
     }
     return {

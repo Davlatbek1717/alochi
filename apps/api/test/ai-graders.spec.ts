@@ -144,11 +144,13 @@ describe('AiService — graders (Pass 1)', () => {
     it('falls back to strict-match when Anthropic throws', async () => {
       anthropicCreate.mockRejectedValue(new Error('network down'));
       const out = await service.gradeTranslation({
-        sourceText: 'Apple',
+        sourceText: 'Olma',
         targetLanguage: 'en',
         studentAnswer: 'apple',
+        correctAnswer: 'Apple',
       });
-      // Strict fallback: case-insensitive trim → score 100.
+      // Strict fallback: case-insensitive trim against correctAnswer → score 100.
+      // (The fast path before the AI call also matches; either way we get 100.)
       expect(out.score).toBe(100);
       expect(out.correct).toBe(true);
     });

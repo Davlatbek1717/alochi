@@ -103,6 +103,9 @@ export function TranslateInput({ config, onPassed, onFailed }: TranslateInputPro
           sourceText,
           targetLanguage,
           studentAnswer: trimmed,
+          correctAnswer,
+          acceptedAnswers,
+          context: config.hint,
         },
         token,
       );

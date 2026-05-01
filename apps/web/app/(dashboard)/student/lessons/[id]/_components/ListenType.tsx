@@ -207,6 +207,8 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
             sourceText: text,
             targetLanguage: 'en',
             studentAnswer: trimmed,
+            correctAnswer: text,
+            acceptedAnswers: config.acceptedAnswers,
             context,
           },
           token,
