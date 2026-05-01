@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
+import { DevServiceWorkerCleanup } from "@/components/DevServiceWorkerCleanup";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
+        <DevServiceWorkerCleanup />
         <ToastProvider>
           {children}
         </ToastProvider>
