@@ -1211,3 +1211,23 @@ model ManagerReward {
   @@index([studentId])
   @@map("manager_rewards")
 }
+
+// One row per building unlocked in a student's Virtual City. Buildings
+// accumulate over the lifetime of the account — exactly one per home-completed
+// lesson. Type is chosen from the current tier's rotation pool when the row
+// is inserted; index is the student-scoped 0-based slot used for spatial
+// layout in the cityscape SVG. lessonId is recorded so the (studentId,
+// lessonId) pair can be used as an idempotency key for retries.
+model StudentBuilding {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  type       String
+  tier       Int
+  index      Int
+  lessonId   String?  @map("lesson_id") @db.Uuid
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@map("student_buildings")
+}

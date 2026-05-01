@@ -134,6 +134,16 @@ export class ProgressService {
             stage: 'home',
           })
           .catch(() => {});
+
+        // Per spec §17.1: each completed lesson adds one building to the
+        // student's Virtual City. Idempotent on (studentId, lessonId) so
+        // repeated completion attempts don't duplicate. Best-effort —
+        // a city failure must not roll back the lesson the student earned.
+        if (this.city) {
+          this.city
+            .addBuildingForLesson(studentId, lesson.tenantId, lessonId)
+            .catch(() => {});
+        }
       }
     }
     return progress;
@@ -190,11 +200,6 @@ export class ProgressService {
   }
 
   async markAcademyCompleted(studentId: string, lessonId: string) {
-    // Capture pre-update count to detect a city-level boundary crossing.
-    const oldCount = await this.prisma.studentProgress.count({
-      where: { studentId, academyCompleted: true },
-    });
-
     const result = await this.prisma.studentProgress.update({
       where: { studentId_lessonId: { studentId, lessonId } },
       data: { academyCompleted: true, completedAt: new Date() },
@@ -213,10 +218,14 @@ export class ProgressService {
         })
         .catch(() => {});
 
-      // City level-up feed event (if a threshold was crossed).
+      // City: ensure a building exists for this lesson once the mentor
+      // has approved academy completion. Idempotent — if the home-completion
+      // path already added one, this is a no-op. If the home-completion
+      // path was skipped (mentor-only path) this guarantees the student
+      // still gets credit. Best-effort.
       if (this.city) {
         await this.city
-          .checkCityLevelUp(studentId, lesson.tenantId, oldCount, oldCount + 1)
+          .addBuildingForLesson(studentId, lesson.tenantId, lessonId)
           .catch(() => undefined);
       }
     }

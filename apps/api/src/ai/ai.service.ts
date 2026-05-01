@@ -113,7 +113,7 @@ export class AiService {
           system:
             "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
             "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
-            "Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. " +
+            'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
             'Faqat darsdagi mavzuga oid javob ber.\n\n' +
             `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
           messages,
@@ -121,7 +121,10 @@ export class AiService {
       );
       const text =
         message.content[0]?.type === 'text' ? message.content[0].text : '';
-      return { answer: text || "Kechirasiz, hozir javob bera olmayman. Yana savol bering." };
+      return {
+        answer:
+          text || 'Kechirasiz, hozir javob bera olmayman. Yana savol bering.',
+      };
     } catch (err) {
       this.logger.error(
         `askTutor: Claude fallback also failed. ${(err as Error).message}`,

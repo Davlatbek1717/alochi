@@ -77,8 +77,8 @@ export class GamificationController {
   }
 
   @Get('city')
-  getCityLevel(@Request() req: any) {
-    return this.cityService.getCityLevel(req.user.userId);
+  getCity(@Request() req: any) {
+    return this.cityService.getCity(req.user.userId);
   }
 
   @Get('leaderboard/branch')

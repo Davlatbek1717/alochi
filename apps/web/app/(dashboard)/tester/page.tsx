@@ -32,11 +32,21 @@ type StreakData = {
 };
 
 type CityData = {
-  level: number;
-  buildings: string[];
+  buildings: Array<{
+    id: string;
+    type: string;
+    tier: number;
+    index: number;
+    unlockedAt: string;
+    isNewest: boolean;
+  }>;
+  tier: { level: number; name: string };
   lessonsCompleted: number;
-  nextLevelAt: number | null;
+  nextTierAt: number | null;
+  // Back-compat fields the API still returns
+  level?: number;
   name?: string;
+  nextLevelAt?: number | null;
 };
 
 type StatusData = {
@@ -227,11 +237,10 @@ export default function TesterDashboard() {
 
       {cityData && (
         <VirtualCity
-          level={cityData?.level ?? 1}
-          buildings={cityData?.buildings ?? []}
-          lessonsCompleted={cityData?.lessonsCompleted ?? 0}
-          nextLevelAt={cityData?.nextLevelAt ?? null}
-          name={cityData?.name}
+          buildings={cityData.buildings ?? []}
+          tier={cityData.tier ?? { level: cityData.level ?? 1, name: cityData.name ?? 'Qishloq' }}
+          lessonsCompleted={cityData.lessonsCompleted ?? 0}
+          nextTierAt={cityData.nextTierAt ?? cityData.nextLevelAt ?? null}
         />
       )}
 
