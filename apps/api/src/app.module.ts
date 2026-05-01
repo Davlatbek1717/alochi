@@ -55,13 +55,18 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule.forRoot(loggerConfig),
     ThrottlerModule.forRoot([
-      { name: 'auth', ttl: 60000, limit: 5 },
+      // SINGLE global throttler. Every route shares this budget. In dev
+      // we lift the ceiling so StrictMode double-mounts + hot reload +
+      // many widget fetches per page never trigger 429. In production a
+      // sane 300 req/min/IP protects against abuse.
+      //
+      // NOTE: Auth-specific throttling (5 req/min for login + refresh)
+      // is applied per-controller via @Throttle on AuthController —
+      // NOT a separate named global throttler, because @nestjs/throttler
+      // applies every named throttler to every route by default.
       {
         name: 'default',
         ttl: 60000,
-        // Production: 300 req/min protects the server from abuse.
-        // Development: huge ceiling so React StrictMode double-mounts +
-        // hot-reload + many widget fetches per page never trigger 429.
         limit: process.env.NODE_ENV === 'production' ? 300 : 100000,
       },
     ]),
