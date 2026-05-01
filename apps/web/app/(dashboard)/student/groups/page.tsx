@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { GraduationCap, MessageCircle, ChevronRight } from 'lucide-react';
+import { GraduationCap, MessageCircle, ChevronRight, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { EmptyState, Skeleton } from '@/components/ui';
+import { Mascot, Skeleton } from '@/components/ui';
 import { getGroupIdFromToken } from '@/lib/jwt';
 
 type Profile = {
@@ -14,9 +14,12 @@ type Profile = {
   group?: { id: string; name?: string } | null;
 };
 
+type GroupMember = { id: string; role: string; name?: string };
+
 export default function StudentGroupsPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [memberCount, setMemberCount] = useState<number>(0);
+  const [members, setMembers] = useState<GroupMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -26,14 +29,20 @@ export default function StudentGroupsPage() {
     Promise.all([
       apiRequest<Profile>('/users/my-profile', {}, token),
       groupId
-        ? apiRequest<Array<{ id: string; role: string }>>(`/users/group/${groupId}`, {}, token).catch(() => ({ data: [] as Array<{ id: string; role: string }> }))
-        : Promise.resolve({ data: [] as Array<{ id: string; role: string }> }),
+        ? apiRequest<GroupMember[]>(`/users/group/${groupId}`, {}, token).catch(
+            () => ({ data: [] as GroupMember[] }),
+          )
+        : Promise.resolve({ data: [] as GroupMember[] }),
     ])
-      .then(([p, members]) => {
+      .then(([p, m]) => {
         setProfile(p.data);
-        setMemberCount((members.data ?? []).filter((u) => u.role === 'student').length);
+        const all = m.data ?? [];
+        setMembers(all.filter((u) => u.role === 'student'));
+        setMemberCount(all.filter((u) => u.role === 'student').length);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Yuklab boʻlmadi'))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : 'Yuklab boʻlmadi'),
+      )
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,58 +50,95 @@ export default function StudentGroupsPage() {
   const groupName = profile?.group?.name ?? 'Mening guruhim';
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0d9488]/15 border border-[#0d9488]/30 flex items-center justify-center">
-            <GraduationCap size={20} className="text-[#0d9488]" />
-          </div>
-          <div>
-            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Oʻquvchi</p>
-            <p className="text-white text-lg font-bold">Mening guruhim</p>
-          </div>
+    <div className="min-h-full bg-[#fffaf0] pb-8">
+      <header className="sticky top-0 z-10 bg-[#fffaf0]/90 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
+          <GraduationCap size={20} className="text-[#10b981]" />
+          <h1 className="text-[#0f172a] text-lg font-extrabold">Mening guruhim</h1>
         </div>
-      </div>
+      </header>
 
       <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
         {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">{error}</div>
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
+            {error}
+          </div>
         )}
 
         {loading ? (
           <Skeleton className="h-24 rounded-2xl" theme="light" />
         ) : !groupId ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
-            <EmptyState
-              icon={<GraduationCap size={28} />}
-              title="Guruh tayinlanmagan"
-              description="Filadmin sizni guruhga qoʻshganidan keyin koʻrinadi"
-              theme="light"
-            />
+          <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-3">
+            <Mascot expression="sleeping" size={120} className="mx-auto" />
+            <div>
+              <p className="text-[#0f172a] font-bold text-lg">
+                Guruh tayinlanmagan
+              </p>
+              <p className="text-[#64748b] text-sm mt-1">
+                Filadmin sizni guruhga qoʻshganidan keyin koʻrinadi.
+              </p>
+            </div>
           </div>
         ) : (
-          <Link
-            href={`/student/groups/${groupId}/chat`}
-            className="block bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 hover:border-[#cbd5e1] transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-[#0d9488]/10 border border-[#0d9488]/20 flex items-center justify-center text-[#0d9488] shrink-0">
-                <MessageCircle size={22} />
+          <>
+            <Link
+              href={`/student/groups/${groupId}/chat`}
+              className="block bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4 hover:border-[#10b981] hover:scale-[1.01] transition-all shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10b981] to-[#047857] flex items-center justify-center text-white shrink-0 shadow">
+                  <MessageCircle size={22} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#0f172a] text-base font-extrabold truncate">
+                    {groupName}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="inline-flex items-center gap-1 text-xs text-[#64748b]">
+                      <Users size={11} />
+                      {memberCount > 0
+                        ? `${memberCount} ta oʻquvchi`
+                        : 'Guruh chati'}
+                    </span>
+                    {profile?.branch?.name && (
+                      <span className="text-xs text-[#94a3b8]">
+                        · {profile.branch.name}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[#10b981] font-bold uppercase tracking-wider mt-1">
+                    Chatga oʻtish →
+                  </p>
+                </div>
+                <ChevronRight size={18} className="text-[#94a3b8] shrink-0" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[#0f172a] text-base font-bold truncate">{groupName}</p>
-                <p className="text-xs text-[#94a3b8] mt-0.5">
-                  {memberCount > 0 ? `${memberCount} ta oʻquvchi` : 'Guruh chati'}
-                  {profile?.branch?.name ? ` · ${profile.branch.name}` : ''}
+            </Link>
+
+            {/* Avatar strip */}
+            {members.length > 0 && (
+              <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4">
+                <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-3">
+                  Guruh aʼzolari
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {members.slice(0, 12).map((m) => (
+                    <div
+                      key={m.id}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-2 border-white shadow flex items-center justify-center text-white font-extrabold text-sm"
+                      title={m.name ?? ''}
+                    >
+                      {(m.name ?? '?').charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                  {members.length > 12 && (
+                    <div className="w-10 h-10 rounded-full bg-[#fffaf0] border-2 border-[#ede9e1] flex items-center justify-center text-[#64748b] font-extrabold text-xs">
+                      +{members.length - 12}
+                    </div>
+                  )}
+                </div>
               </div>
-              <ChevronRight size={18} className="text-[#94a3b8] shrink-0" />
-            </div>
-          </Link>
+            )}
+          </>
         )}
       </div>
     </div>

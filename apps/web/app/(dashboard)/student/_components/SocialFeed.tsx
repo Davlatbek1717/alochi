@@ -1,7 +1,18 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import {
+  BookOpen,
+  Swords,
+  Flame,
+  HeartCrack,
+  Award,
+  Building2,
+  Trophy,
+  Sparkles,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Mascot, Skeleton } from '@/components/ui';
 
 type FeedItem = {
   id: string;
@@ -14,7 +25,7 @@ type FeedItem = {
   myReaction?: string;
 };
 
-const FEED_EMOJIS = ['👍', '🎉', '💪', '🔥', '❤️'];
+const FEED_EMOJIS = ['❤️', '👍', '🎉', '💪', '🔥'];
 
 function relativeTime(isoDate: string): string {
   const d = new Date(isoDate);
@@ -34,10 +45,10 @@ function eventLabel(item: FeedItem): string {
   switch (item.eventType) {
     case 'lesson_done': {
       const title = typeof item.meta.lessonTitle === 'string' ? item.meta.lessonTitle : '';
-      return `${item.actorName} "${title}" darsini tugatdi! 📚`;
+      return `"${title}" darsini tugatdi`;
     }
     case 'duel_won':
-      return `${item.actorName} duelda g'olib bo'ldi! ⚔️`;
+      return `duelda gʻolib boʻldi`;
     case 'streak_milestone': {
       const days =
         typeof item.meta.days === 'number'
@@ -45,22 +56,43 @@ function eventLabel(item: FeedItem): string {
           : typeof item.meta.streak === 'number'
             ? item.meta.streak
             : '?';
-      return `${item.actorName} ${days} kunlik streak! 🔥`;
+      return `${days} kunlik streak`;
     }
     case 'streak_broken':
-      return `${item.actorName} streakni yo'qotdi 💔`;
+      return `streakni yoʻqotdi`;
     case 'cert_earned': {
       const lvl = typeof item.meta.level === 'string' ? item.meta.level : '';
-      return `${item.actorName} sertifikatga erishdi (${lvl}) 🏅`;
+      return `sertifikatga erishdi (${lvl})`;
     }
     case 'city_upgraded': {
       const name = typeof item.meta.name === 'string' ? item.meta.name : '';
-      return `${item.actorName} shahrini yangiladi: ${name} 🏙️`;
+      return `shahrini yangiladi: ${name}`;
     }
     case 'challenge_won':
-      return `${item.actorName}'s guruh challenge'da g'olib bo'ldi! 🏆`;
+      return `guruh challenge'da gʻolib boʻldi`;
     default:
-      return `${item.actorName} faol bo'ldi`;
+      return `faol boʻldi`;
+  }
+}
+
+function eventIcon(eventType: string) {
+  switch (eventType) {
+    case 'lesson_done':
+      return <BookOpen size={16} className="text-[#1cb0f6]" />;
+    case 'duel_won':
+      return <Swords size={16} className="text-[#ce82ff]" />;
+    case 'streak_milestone':
+      return <Flame size={16} className="text-[#ef4444]" />;
+    case 'streak_broken':
+      return <HeartCrack size={16} className="text-[#94a3b8]" />;
+    case 'cert_earned':
+      return <Award size={16} className="text-[#fbbf24]" />;
+    case 'city_upgraded':
+      return <Building2 size={16} className="text-[#10b981]" />;
+    case 'challenge_won':
+      return <Trophy size={16} className="text-[#f59e0b]" />;
+    default:
+      return <Sparkles size={16} className="text-[#94a3b8]" />;
   }
 }
 
@@ -94,19 +126,30 @@ export function SocialFeed() {
 
     const socket = io(`${apiUrl}/social`, { auth: { token } });
 
-    socket.on('feed:event', (event: { type: string; data: { actorId: string; actorName: string; meta: Record<string, unknown>; createdAt: string } }) => {
-      setFeed((prev) => [
-        {
-          id: `live-${Date.now()}`,
-          actorId: event.data.actorId,
-          actorName: event.data.actorName,
-          eventType: event.type,
-          meta: event.data.meta,
-          createdAt: event.data.createdAt,
-        },
-        ...prev.slice(0, 19),
-      ]);
-    });
+    socket.on(
+      'feed:event',
+      (event: {
+        type: string;
+        data: {
+          actorId: string;
+          actorName: string;
+          meta: Record<string, unknown>;
+          createdAt: string;
+        };
+      }) => {
+        setFeed((prev) => [
+          {
+            id: `live-${Date.now()}`,
+            actorId: event.data.actorId,
+            actorName: event.data.actorName,
+            eventType: event.type,
+            meta: event.data.meta,
+            createdAt: event.data.createdAt,
+          },
+          ...prev.slice(0, 19),
+        ]);
+      },
+    );
 
     return () => {
       socket.disconnect();
@@ -115,39 +158,58 @@ export function SocialFeed() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-sm text-gray-400 text-center">Yuklanmoqda...</p>
+      <div className="space-y-2">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} theme="light" className="h-16 rounded-2xl" />
+        ))}
+      </div>
+    );
+  }
+
+  if (feed.length === 0) {
+    return (
+      <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-8 text-center">
+        <Mascot expression="sleeping" size={120} className="mx-auto" />
+        <p className="text-[#0f172a] font-bold mt-3">Hozircha hech narsa yoʻq</p>
+        <p className="text-[#64748b] text-sm mt-1">
+          Doʻstlaringiz faol boʻlganda lentada koʻrinadi.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      <h2 className="font-semibold text-gray-700 mb-3 text-sm">Do&apos;stlar lentasi</h2>
-
-      {feed.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-4">
-          Do&apos;stlaringiz hali faol emas
-        </p>
-      ) : (
-        <ul className="space-y-3">
-          {feed.map((item) => (
-            <li key={`${item.actorId}:${item.id}`} className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs shrink-0">
-                {item.actorName.charAt(0).toUpperCase()}
+    <ul className="space-y-2">
+      {feed.map((item) => (
+        <li
+          key={`${item.actorId}:${item.id}`}
+          className="bg-white rounded-[16px] border-[1.5px] border-[#ede9e1] p-3 motion-safe:[animation:count-up-fade_400ms_ease-out]"
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-2 border-white flex items-center justify-center text-white font-extrabold text-sm shrink-0 shadow">
+              {item.actorName.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 leading-snug">
+                <span className="font-extrabold text-[#0f172a] text-sm">
+                  {item.actorName}
+                </span>
+                <span>{eventIcon(item.eventType)}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 leading-snug">{eventLabel(item)}</p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-xs text-gray-400">{relativeTime(item.createdAt)}</p>
-                  <FeedReactionBar item={item} />
-                </div>
+              <p className="text-sm text-[#0f172a] leading-snug">
+                {eventLabel(item)}
+              </p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] text-[#94a3b8] uppercase tracking-wider font-bold">
+                  {relativeTime(item.createdAt)}
+                </p>
+                <FeedReactionBar item={item} />
               </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+            </div>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -161,10 +223,14 @@ function FeedReactionBar({ item }: { item: FeedItem }) {
     if (item.id.startsWith('live-')) return;
     const token = localStorage.getItem('accessToken') ?? '';
     try {
-      await apiRequest(`/social/feed/${item.id}/react`, {
-        method: 'POST',
-        body: JSON.stringify({ emoji }),
-      }, token);
+      await apiRequest(
+        `/social/feed/${item.id}/react`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ emoji }),
+        },
+        token,
+      );
       if (!chosen) setCount((c) => c + 1);
       setChosen(emoji);
     } catch {
@@ -176,13 +242,15 @@ function FeedReactionBar({ item }: { item: FeedItem }) {
     <div className="relative">
       <button
         type="button"
-        className="text-xs px-2 py-0.5 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-500"
+        className="text-xs px-2 py-0.5 rounded-full bg-[#fffaf0] border border-[#ede9e1] hover:bg-[#fef3c7] text-[#64748b] transition-colors"
         onClick={() => setOpen((v) => !v)}
+        aria-label="Reaktsiya qoʻshish"
       >
-        {chosen ?? '🙂'} {count > 0 ? count : ''}
+        {chosen ?? '❤️'}{' '}
+        {count > 0 ? <span className="font-bold text-[#0f172a]">{count}</span> : ''}
       </button>
       {open && (
-        <div className="absolute right-0 top-7 z-10 flex gap-1 bg-white rounded-full px-2 py-1 shadow border border-gray-100">
+        <div className="absolute right-0 top-7 z-10 flex gap-1 bg-white rounded-full px-2 py-1 shadow-lg border border-[#ede9e1]">
           {FEED_EMOJIS.map((e) => (
             <button
               key={e}

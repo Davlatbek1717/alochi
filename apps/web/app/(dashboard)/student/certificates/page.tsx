@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Award } from 'lucide-react';
+import { Award, Sparkles } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { EmptyState, Skeleton } from '@/components/ui';
+import { Mascot, Skeleton } from '@/components/ui';
 import CertificateShare from '@/components/CertificateShare';
 import { formatDateLong } from '@/lib/date-uz';
 
@@ -21,11 +21,11 @@ const LEVEL_LABEL: Record<string, string> = {
   diamond: 'Olmos',
 };
 
-const LEVEL_COLOR: Record<string, string> = {
-  bronze: 'from-amber-700 to-amber-500',
-  silver: 'from-slate-400 to-slate-200',
-  gold: 'from-yellow-400 to-amber-300',
-  diamond: 'from-cyan-400 to-blue-300',
+const LEVEL_GRADIENT: Record<string, string> = {
+  bronze: 'from-[#a16207] via-[#d97706] to-[#78350f]',
+  silver: 'from-[#cbd5e1] via-[#94a3b8] to-[#475569]',
+  gold: 'from-[#fde68a] via-[#fbbf24] to-[#d97706]',
+  diamond: 'from-[#67e8f9] via-[#22d3ee] to-[#155e75]',
 };
 
 export default function StudentCertificatesPage() {
@@ -37,31 +37,26 @@ export default function StudentCertificatesPage() {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<Certificate[]>('/gamification/certificates', {}, token)
       .then((r) => setCerts(r.data ?? []))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Yuklab boʻlmadi'))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : 'Yuklab boʻlmadi'),
+      )
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/15 border border-[#f59e0b]/30 flex items-center justify-center">
-            <Award size={20} className="text-[#f59e0b]" />
-          </div>
-          <div>
-            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Oʻquvchi</p>
-            <p className="text-white text-lg font-bold">Sertifikatlar</p>
-          </div>
+    <div className="min-h-full bg-[#fffaf0] pb-8">
+      <header className="sticky top-0 z-10 bg-[#fffaf0]/90 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center gap-3">
+          <Award size={20} className="text-[#fbbf24]" />
+          <h1 className="text-[#0f172a] text-lg font-extrabold">Sertifikatlar</h1>
         </div>
-      </div>
+      </header>
 
       <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
         {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">{error}</div>
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
+            {error}
+          </div>
         )}
 
         {loading ? (
@@ -71,43 +66,59 @@ export default function StudentCertificatesPage() {
             ))}
           </div>
         ) : certs.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
-            <EmptyState
-              icon={<Award size={28} />}
-              title="Hali sertifikat yoʻq"
-              description="Darslarni tugatib sertifikat oling"
-              theme="light"
-            />
+          <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-3">
+            <Mascot expression="idle" size={120} className="mx-auto" />
+            <div>
+              <p className="text-[#0f172a] font-bold text-lg">
+                Birinchi sertifikatingizni yutib oling!
+              </p>
+              <p className="text-[#64748b] text-sm mt-1">
+                Darslarni tugatib bronza, kumush, oltin yoki olmos sertifikatga
+                erishing.
+              </p>
+            </div>
           </div>
         ) : (
           certs.map((cert) => (
-            <div
+            <article
               key={cert.id}
-              className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden"
+              className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] overflow-hidden hover:scale-[1.02] transition-transform shadow-sm"
             >
-              <div className={`bg-gradient-to-br ${LEVEL_COLOR[cert.level] ?? 'from-violet-500 to-violet-400'} p-5 text-white`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Award size={28} />
+              <div
+                className={`relative bg-gradient-to-br ${
+                  LEVEL_GRADIENT[cert.level] ?? 'from-[#ce82ff] to-[#7c3aed]'
+                } p-5 text-white overflow-hidden`}
+              >
+                {/* Sparkle accent */}
+                <Sparkles
+                  size={18}
+                  className="absolute top-3 right-3 text-white/70"
+                />
+                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
+                <div className="relative z-10 flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center">
+                    <Award size={26} />
+                  </div>
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-wider opacity-80">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest opacity-90">
                       Sertifikat
                     </p>
-                    <p className="text-2xl font-black">
+                    <p className="text-2xl font-extrabold leading-tight">
                       {LEVEL_LABEL[cert.level] ?? cert.level}
                     </p>
                   </div>
                 </div>
-                <p className="text-sm opacity-90">
+                <p className="relative z-10 text-sm font-semibold opacity-95">
                   {cert.lessonsCompleted} ta dars tugatildi
                 </p>
-                <p className="text-xs opacity-70 mt-1">
+                <p className="relative z-10 text-xs opacity-80 mt-1">
                   {formatDateLong(cert.issuedAt)}
                 </p>
               </div>
               <div className="p-3">
                 <CertificateShare cert={cert} />
               </div>
-            </div>
+            </article>
           ))
         )}
       </div>
