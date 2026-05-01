@@ -26,9 +26,13 @@ type NodeStatus = 'completed' | 'current' | 'locked';
  * forward rather than parked.
  *
  * Status rules (matching /lessons/page.tsx):
- *   - completed  : academyCompleted = true  (gold border + check)
+ *   - completed  : homeCompleted OR academyCompleted (gold border + check)
  *   - current    : first non-completed published lesson (green pulse ring)
  *   - locked     : everything after the current one (grey)
+ *
+ * Home completion is the student-driven unlock signal — academyCompleted
+ * is mentor-side and must not gate the preview, otherwise the strip parks
+ * on the same lesson forever.
  */
 export const LessonPathPreview: FC = () => {
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -77,9 +81,10 @@ export const LessonPathPreview: FC = () => {
     return null;
   }
 
-  // Find current (first non-completed) lesson index
+  // Find current (first non-completed) lesson index. A lesson counts as
+  // completed when home OR academy is done — see component comment above.
   const completedCount = lessons.filter(
-    (l) => progress[l.id]?.academyCompleted,
+    (l) => progress[l.id]?.homeCompleted || progress[l.id]?.academyCompleted,
   ).length;
   const currentIndex = Math.min(completedCount, lessons.length - 1);
 
@@ -129,7 +134,11 @@ function pickStatus(
   list: Lesson[],
 ): NodeStatus {
   const idx = list.findIndex((l) => l.id === lesson.id);
-  if (progress[lesson.id]?.academyCompleted) return 'completed';
+  if (
+    progress[lesson.id]?.homeCompleted ||
+    progress[lesson.id]?.academyCompleted
+  )
+    return 'completed';
   if (idx === currentIndex) return 'current';
   return 'locked';
 }

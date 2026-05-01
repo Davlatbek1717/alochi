@@ -118,13 +118,21 @@ export default function LessonsPathPage() {
   }, []);
 
   // Compute per-lesson state + the index of the "current" lesson.
+  //
+  // A lesson is "completed" — and therefore unlocks the next node — when
+  // EITHER the student finished the home portion (sessionCount >=
+  // nRepetitions, set by ProgressService.completeSession) OR the mentor has
+  // marked the academy portion complete. Previously we only respected
+  // `academyCompleted`, which is a mentor-side flag — meaning the student
+  // could never advance their own path even after grinding all sessions.
+  // Home completion is the student-driven unlock signal.
   const { lessonStates, currentIndex } = useMemo(() => {
     const states: NodeState[] = [];
     let current = -1;
     for (let i = 0; i < lessons.length; i++) {
       const l = lessons[i];
       const p = progress[l.id];
-      if (p?.academyCompleted) {
+      if (p?.homeCompleted || p?.academyCompleted) {
         states.push('completed');
       } else if (current === -1) {
         states.push('current');

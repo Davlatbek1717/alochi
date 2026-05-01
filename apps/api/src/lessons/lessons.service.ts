@@ -128,8 +128,19 @@ export class LessonsService {
   }
 
   async getNextLesson(studentId: string, tenantId: string) {
+    // A lesson counts as "done" for the path/unlock purposes when EITHER the
+    // student has finished the home portion (sessionCount >= nRepetitions, set
+    // by ProgressService.completeSession) OR a mentor has marked the academy
+    // portion complete. Previously this only checked academyCompleted, which
+    // meant the student could never unlock the next lesson on their own —
+    // /lessons/next kept returning the same lesson forever even after they
+    // finished home_completed. Home completion is the student-driven signal
+    // and must advance the path.
     const completed = await this.prisma.studentProgress.findMany({
-      where: { studentId, academyCompleted: true },
+      where: {
+        studentId,
+        OR: [{ homeCompleted: true }, { academyCompleted: true }],
+      },
       select: { lessonId: true },
     });
     const completedIds = completed.map((p) => p.lessonId);
