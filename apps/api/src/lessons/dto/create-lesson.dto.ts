@@ -63,6 +63,10 @@ export class CreateLessonDto {
 
   @IsBoolean()
   @IsOptional()
+  aiTutorEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   cameraEnabled?: boolean;
 
   @IsString()

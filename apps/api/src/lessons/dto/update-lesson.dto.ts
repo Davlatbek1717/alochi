@@ -66,6 +66,10 @@ export class UpdateLessonDto {
 
   @IsBoolean()
   @IsOptional()
+  aiTutorEnabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
   cameraEnabled?: boolean;
 
   @IsString()

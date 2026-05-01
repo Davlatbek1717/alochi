@@ -78,6 +78,16 @@ describe('LessonsService', () => {
       expect(callArg.data.components.word_order).toBe(true);
       expect(callArg.data.components.ai_tutor).toBe(false);
     });
+
+    it('enables ai_tutor component when aiTutorEnabled is true', async () => {
+      mockPrisma.lesson.findFirst.mockResolvedValue(null);
+      mockPrisma.lesson.create.mockResolvedValue({ id: 'lesson-3' });
+
+      await service.create({ ...baseDto, aiTutorEnabled: true });
+
+      const callArg = mockPrisma.lesson.create.mock.calls[0][0];
+      expect(callArg.data.components.ai_tutor).toBe(true);
+    });
   });
 
   describe('findByTenant', () => {

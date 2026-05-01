@@ -27,6 +27,7 @@ export default function NewLessonPage() {
     mcqEnabled: false,
     wordOrderEnabled: false,
     vocabularyEnabled: false,
+    aiTutorEnabled: false,
     hasExam: false,
   });
 
@@ -51,6 +52,7 @@ export default function NewLessonPage() {
       mcqEnabled: form.mcqEnabled,
       wordOrderEnabled: form.wordOrderEnabled,
       vocabularyEnabled: form.vocabularyEnabled,
+      aiTutorEnabled: form.aiTutorEnabled,
       hasExam: form.hasExam,
     };
 
@@ -208,6 +210,7 @@ export default function NewLessonPage() {
                 { field: 'mcqEnabled', label: "MCQ — Ko'p tanlovli test" },
                 { field: 'wordOrderEnabled', label: "So'z tartibi testi" },
                 { field: 'vocabularyEnabled', label: "Lug'at (so'zlar)" },
+                { field: 'aiTutorEnabled', label: 'AI Tutor — Claude bilan savol-javob' },
                 { field: 'hasExam', label: "Akademiyada imtihon (tester tomonidan ochiladi)" },
               ].map(({ field, label }) => (
                 <label key={field} className="flex items-center gap-3 cursor-pointer p-3 rounded-xl hover:bg-[#f7f4ef] transition-colors">
@@ -228,9 +231,6 @@ export default function NewLessonPage() {
                 </label>
               ))}
             </div>
-            <p className="text-xs text-[#94a3b8]">
-              AI Tutor — Faza 2 da qo&apos;shiladi
-            </p>
           </div>
 
           <div className="flex gap-3">

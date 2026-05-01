@@ -24,6 +24,7 @@ export class LessonsService {
       mcqEnabled,
       wordOrderEnabled,
       vocabularyEnabled,
+      aiTutorEnabled,
       hasExam,
       type,
       ...data
@@ -37,7 +38,7 @@ export class LessonsService {
           mcq: mcqEnabled ?? false,
           word_order: wordOrderEnabled ?? false,
           vocabulary: vocabularyEnabled ?? false,
-          ai_tutor: false,
+          ai_tutor: aiTutorEnabled ?? false,
         },
       },
     });
@@ -73,8 +74,14 @@ export class LessonsService {
    */
   async update(id: string, tenantId: string, dto: UpdateLessonDto) {
     await this.findById(id, tenantId);
-    const { mcqEnabled, wordOrderEnabled, vocabularyEnabled, type, ...rest } =
-      dto;
+    const {
+      mcqEnabled,
+      wordOrderEnabled,
+      vocabularyEnabled,
+      aiTutorEnabled,
+      type,
+      ...rest
+    } = dto;
 
     const data: Record<string, unknown> = { ...rest };
     if (type) data.type = type as any;
@@ -85,6 +92,8 @@ export class LessonsService {
       componentsPatch.word_order = wordOrderEnabled;
     if (vocabularyEnabled !== undefined)
       componentsPatch.vocabulary = vocabularyEnabled;
+    if (aiTutorEnabled !== undefined)
+      componentsPatch.ai_tutor = aiTutorEnabled;
 
     if (Object.keys(componentsPatch).length > 0) {
       const current = await this.prisma.lesson.findUnique({
