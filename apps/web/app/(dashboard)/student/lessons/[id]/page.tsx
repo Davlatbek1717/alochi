@@ -8,11 +8,17 @@ import { WordOrderTest } from './_components/WordOrderTest';
 import { TranslateInput } from './_components/TranslateInput';
 import { FillBlank } from './_components/FillBlank';
 import { OrderSentences } from './_components/OrderSentences';
+import { ListenPick } from './_components/ListenPick';
+import { ListenType } from './_components/ListenType';
+import { SpellingDrill } from './_components/SpellingDrill';
 import { AiTutor } from './_components/AiTutor';
 import type {
   TranslateConfig,
   FillBlankConfig,
   OrderSentencesConfig,
+  ListenPickConfig,
+  ListenTypeConfig,
+  SpellingConfig,
 } from './_components/exercise-types';
 import { FeedbackWidget } from './_components/FeedbackWidget';
 import { Hearts } from './_components/Hearts';
@@ -38,7 +44,10 @@ type LessonComponent = {
     | 'vocabulary'
     | 'translate'
     | 'fill_blank'
-    | 'order_sentences';
+    | 'order_sentences'
+    | 'listen_pick'
+    | 'listen_type'
+    | 'spelling';
   config: Record<string, unknown>;
 };
 
@@ -96,6 +105,9 @@ type Step =
   | 'mcq'
   | 'word_order'
   | 'translate'
+  | 'listen_pick'
+  | 'listen_type'
+  | 'spelling'
   | 'fill_blank'
   | 'order_sentences'
   | 'ai_tutor'
@@ -107,6 +119,9 @@ const EXERCISE_STEPS: Step[] = [
   'mcq',
   'word_order',
   'translate',
+  'listen_pick',
+  'listen_type',
+  'spelling',
   'fill_blank',
   'order_sentences',
   'ai_tutor',
@@ -134,6 +149,9 @@ function buildSteps(lesson: Lesson): Step[] {
   if (components.mcq) steps.push('mcq');
   if (components.word_order) steps.push('word_order');
   if (hasComponentOfType(components_data, 'translate')) steps.push('translate');
+  if (hasComponentOfType(components_data, 'listen_pick')) steps.push('listen_pick');
+  if (hasComponentOfType(components_data, 'listen_type')) steps.push('listen_type');
+  if (hasComponentOfType(components_data, 'spelling')) steps.push('spelling');
   if (hasComponentOfType(components_data, 'fill_blank')) steps.push('fill_blank');
   if (hasComponentOfType(components_data, 'order_sentences')) steps.push('order_sentences');
   if (components.ai_tutor) steps.push('ai_tutor');
@@ -283,6 +301,50 @@ export default function LessonPage() {
       .filter((cfg) => cfg && Array.isArray(cfg.sentences) && cfg.sentences.length >= 2);
   }
 
+  /** Pass 3 — Listen & Pick configs (B). Drops malformed entries (no text,
+   * fewer than 2 options, or correctOptionId not in options). */
+  function getListenPickConfigs(): ListenPickConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'listen_pick')
+      .map((c) => c.config as unknown as ListenPickConfig)
+      .filter(
+        (cfg) =>
+          cfg &&
+          typeof cfg.text === 'string' &&
+          cfg.text.trim().length > 0 &&
+          Array.isArray(cfg.options) &&
+          cfg.options.length >= 2 &&
+          cfg.options.some((o) => o?.id === cfg.correctOptionId),
+      );
+  }
+
+  /** Pass 3 — Listen & Type configs (C). */
+  function getListenTypeConfigs(): ListenTypeConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'listen_type')
+      .map((c) => c.config as unknown as ListenTypeConfig)
+      .filter(
+        (cfg) => cfg && typeof cfg.text === 'string' && cfg.text.trim().length > 0,
+      );
+  }
+
+  /** Pass 3 — Spelling configs (G). */
+  function getSpellingConfigs(): SpellingConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'spelling')
+      .map((c) => c.config as unknown as SpellingConfig)
+      .filter(
+        (cfg) =>
+          cfg &&
+          typeof cfg.word === 'string' &&
+          cfg.word.trim().length > 0 &&
+          cfg.word.trim().length <= 30,
+      );
+  }
+
   function goToNextStep() {
     if (!lesson) return;
     const steps = buildSteps(lesson);
@@ -357,6 +419,9 @@ export default function LessonPage() {
     return EXERCISE_STEPS.filter((s) => {
       if (s === 'video') return true;
       if (s === 'translate') return hasComponentOfType(lesson.components_data, 'translate');
+      if (s === 'listen_pick') return hasComponentOfType(lesson.components_data, 'listen_pick');
+      if (s === 'listen_type') return hasComponentOfType(lesson.components_data, 'listen_type');
+      if (s === 'spelling') return hasComponentOfType(lesson.components_data, 'spelling');
       if (s === 'fill_blank') return hasComponentOfType(lesson.components_data, 'fill_blank');
       if (s === 'order_sentences')
         return hasComponentOfType(lesson.components_data, 'order_sentences');
@@ -423,6 +488,9 @@ export default function LessonPage() {
   const translateConfigs = getTranslateConfigs();
   const fillBlankConfigs = getFillBlankConfigs();
   const orderSentenceConfigs = getOrderSentenceConfigs();
+  const listenPickConfigs = getListenPickConfigs();
+  const listenTypeConfigs = getListenTypeConfigs();
+  const spellingConfigs = getSpellingConfigs();
 
   // Compute level-up + accuracy + xp delta for the completion screen.
   const xpEarned =
@@ -648,6 +716,42 @@ export default function LessonPage() {
 
         {step === 'translate' && !translateConfigs[0] && (
           <SkipPanel label="Tarjima topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'listen_pick' && listenPickConfigs[0] && (
+          <ListenPick
+            config={listenPickConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'listen_pick' && !listenPickConfigs[0] && (
+          <SkipPanel label="Eshitish topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'listen_type' && listenTypeConfigs[0] && (
+          <ListenType
+            config={listenTypeConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'listen_type' && !listenTypeConfigs[0] && (
+          <SkipPanel label="Eshitib yozish topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'spelling' && spellingConfigs[0] && (
+          <SpellingDrill
+            config={spellingConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'spelling' && !spellingConfigs[0] && (
+          <SkipPanel label="Imlo topshiriqlari topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'fill_blank' && fillBlankConfigs[0] && (
