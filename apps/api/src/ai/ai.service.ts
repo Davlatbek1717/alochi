@@ -293,14 +293,22 @@ export class AiService {
   }
 
   /**
-   * 25.H.3: Text-to-speech for vocabulary words. When AZURE_SPEECH_KEY is
-   * configured, defers to Azure Speech REST. Otherwise returns an empty
-   * placeholder buffer so the frontend can still play (silently) without
-   * a hard error in dev. Returns base64-encoded audio.
+   * 25.H.3 / Pass 1: Text-to-speech.
+   *
+   * Originally English-only; Pass 1 adds the optional `language` argument so
+   * the same endpoint serves listening / spelling exercises (en-US-Jenny)
+   * AND Uzbek vocabulary playback (uz-UZ-Madina). When the language is
+   * omitted we keep the legacy English default so older callers
+   * (vocabulary cards) keep working unchanged.
+   *
+   * Defers to Azure Speech REST when `AZURE_SPEECH_KEY` is set; otherwise
+   * returns an empty placeholder buffer so the frontend stays usable in dev.
+   * Returns base64-encoded audio.
    */
   async tts(
     text: string,
-    voice = 'en-US-JennyNeural',
+    voiceOrLanguage: string = 'en-US-JennyNeural',
+    language?: 'en' | 'uz',
   ): Promise<{
     audioBase64: string;
     mimeType: string;
@@ -310,8 +318,22 @@ export class AiService {
     if (!azureKey || !azureRegion || !text) {
       return { audioBase64: '', mimeType: 'audio/mpeg' };
     }
+
+    const lang = language ?? 'en';
+    // Caller can override the voice explicitly; otherwise pick a sensible
+    // default per language. Voices we use today:
+    //   en-US-JennyNeural  — friendly American English (kid-friendly)
+    //   uz-UZ-MadinaNeural — Uzbek female
+    const defaultVoice =
+      lang === 'uz' ? 'uz-UZ-MadinaNeural' : 'en-US-JennyNeural';
+    const voice =
+      voiceOrLanguage && voiceOrLanguage !== 'en-US-JennyNeural'
+        ? voiceOrLanguage
+        : defaultVoice;
+    const xmlLang = lang === 'uz' ? 'uz-UZ' : 'en-US';
+
     const ssml =
-      `<speak version='1.0' xml:lang='en-US'>` +
+      `<speak version='1.0' xml:lang='${xmlLang}'>` +
       `<voice name='${voice}'>${escapeXml(text)}</voice></speak>`;
     try {
       const res = await fetch(
@@ -331,6 +353,244 @@ export class AiService {
       return { audioBase64: buf.toString('base64'), mimeType: 'audio/mpeg' };
     } catch {
       return { audioBase64: '', mimeType: 'audio/mpeg' };
+    }
+  }
+
+  /**
+   * Pass 1: Fuzzy translation grader for the `translate` exercise type.
+   *
+   * Forgives typos (1-2 chars), synonyms, capitalisation, and minor
+   * punctuation differences. Falls back to strict case-insensitive string
+   * match if Claude is unavailable or returns malformed JSON, so the UI
+   * stays responsive even when the AI call fails.
+   *
+   * @returns `{ correct, score 0-100, feedback (Uzbek), accepted_answers? }`
+   */
+  async gradeTranslation(input: {
+    sourceText: string;
+    targetLanguage: 'en' | 'uz';
+    studentAnswer: string;
+    context?: string;
+  }): Promise<{
+    correct: boolean;
+    score: number;
+    feedback: string;
+    accepted_answers?: string[];
+  }> {
+    const prompt =
+      `You are a strict but fair English-Uzbek translation grader for grade 3-7 students.\n\n` +
+      `SOURCE: "${input.sourceText}"\n` +
+      `TARGET LANGUAGE: ${input.targetLanguage}\n` +
+      `STUDENT ANSWER: "${input.studentAnswer}"\n` +
+      `CONTEXT: ${input.context ?? 'none'}\n\n` +
+      `Rules:\n` +
+      `- Forgive minor typos (1-2 character differences) — score >= 70 still\n` +
+      `- Forgive synonyms and natural variations\n` +
+      `- Capitalization doesn't matter\n` +
+      `- Punctuation differences <= 1 don't matter\n` +
+      `- Major meaning errors → score 0-40\n` +
+      `- Acceptable but awkward → score 60-80\n` +
+      `- Perfect → score 100\n\n` +
+      `Respond with EXACTLY this JSON:\n` +
+      `{ "correct": boolean, "score": 0-100, "feedback": "1-2 sentence Uzbek explanation", "accepted_answers": ["alt1", "alt2"] }\n\n` +
+      `- correct: true if score >= 70\n` +
+      `- feedback: in Uzbek, gentle for 3rd-7th graders\n` +
+      `- accepted_answers: 2-3 alternative valid translations of source`;
+
+    try {
+      const message = await withRetry(() =>
+        this.anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 200,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      );
+      const text =
+        message.content[0]?.type === 'text' ? message.content[0].text : '{}';
+      const parsed = AiService.parseGraderJson(text);
+      if (parsed) return parsed;
+    } catch (err) {
+      this.logger.warn(
+        `gradeTranslation fell back to strict match: ${(err as Error).message}`,
+      );
+    }
+    return AiService.strictTranslationFallback(
+      input.sourceText,
+      input.studentAnswer,
+    );
+  }
+
+  /**
+   * Pass 1: Strict-match fallback used by {@link gradeTranslation} when the
+   * AI call fails. Case-insensitive trimmed equality; anything else is
+   * graded zero. Exposed for unit testing.
+   */
+  static strictTranslationFallback(
+    sourceText: string,
+    studentAnswer: string,
+  ): {
+    correct: boolean;
+    score: number;
+    feedback: string;
+  } {
+    const a = sourceText.trim().toLowerCase();
+    const b = studentAnswer.trim().toLowerCase();
+    if (a && b && a === b) {
+      return {
+        correct: true,
+        score: 100,
+        feedback: "To'g'ri javob.",
+      };
+    }
+    return {
+      correct: false,
+      score: 0,
+      feedback:
+        "Javob to'g'ri kelmadi. AI baholash hozir ishlamayapti — yana urinib ko'ring.",
+    };
+  }
+
+  /**
+   * Pass 1: Tolerant JSON parser for grader responses. Strips Markdown
+   * fences and surrounding prose, then validates the required keys. Returns
+   * `null` when the response is unusable so the caller can fall back.
+   */
+  static parseGraderJson(raw: string): {
+    correct: boolean;
+    score: number;
+    feedback: string;
+    accepted_answers?: string[];
+  } | null {
+    if (!raw) return null;
+    // Common Claude wrapping: ```json ... ``` fences.
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const slice = fenced ? fenced[1] : raw;
+    // Snip to the first balanced { ... } block to tolerate stray text.
+    const first = slice.indexOf('{');
+    const last = slice.lastIndexOf('}');
+    if (first < 0 || last < 0 || last <= first) return null;
+    try {
+      const parsed = JSON.parse(slice.slice(first, last + 1)) as {
+        correct?: unknown;
+        score?: unknown;
+        feedback?: unknown;
+        accepted_answers?: unknown;
+      };
+      if (
+        typeof parsed.correct !== 'boolean' ||
+        typeof parsed.score !== 'number' ||
+        typeof parsed.feedback !== 'string'
+      ) {
+        return null;
+      }
+      const score = Math.max(0, Math.min(100, Math.round(parsed.score)));
+      const accepted = Array.isArray(parsed.accepted_answers)
+        ? (parsed.accepted_answers.filter(
+            (s) => typeof s === 'string',
+          ) as string[])
+        : undefined;
+      return {
+        correct: parsed.correct,
+        score,
+        feedback: parsed.feedback,
+        accepted_answers: accepted,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Pass 1: Kid-friendly Uzbek explanation for a wrong answer. Triggered by
+   * the "Tushuntirish" button (feature M) post-exercise, regardless of
+   * which exercise type the student got wrong.
+   *
+   * Falls back to a generic Uzbek hint if Claude is unavailable so the UI
+   * never shows a hard error.
+   */
+  async explainAnswer(input: {
+    exerciseType: string;
+    question: string;
+    studentAnswer: string;
+    correctAnswer: string;
+    context?: string;
+  }): Promise<{
+    explanation: string;
+    hint: string;
+    examples?: string[];
+  }> {
+    const prompt =
+      `You are a friendly English tutor for 3-7 grade students. Explain in Uzbek (the student's first language) why the answer was wrong.\n\n` +
+      `EXERCISE: ${input.exerciseType}\n` +
+      `QUESTION: "${input.question}"\n` +
+      `STUDENT WROTE: "${input.studentAnswer}"\n` +
+      `CORRECT ANSWER: "${input.correctAnswer}"\n` +
+      (input.context ? `CONTEXT: ${input.context}\n` : '') +
+      `\nRespond in JSON:\n` +
+      `{\n` +
+      `  "explanation": "2-3 sentence Uzbek explanation focusing on the rule",\n` +
+      `  "hint": "1 sentence tip for next time, in Uzbek",\n` +
+      `  "examples": ["1-2 similar correct examples in English"]\n` +
+      `}\n\n` +
+      `Tone: encouraging, kid-friendly. NEVER scold or use complex linguistics.`;
+
+    try {
+      const message = await withRetry(() =>
+        this.anthropic.messages.create({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 250,
+          messages: [{ role: 'user', content: prompt }],
+        }),
+      );
+      const text =
+        message.content[0]?.type === 'text' ? message.content[0].text : '{}';
+      const parsed = AiService.parseExplainJson(text);
+      if (parsed) return parsed;
+    } catch (err) {
+      this.logger.warn(
+        `explainAnswer fell back to generic hint: ${(err as Error).message}`,
+      );
+    }
+    return {
+      explanation: `To'g'ri javob: "${input.correctAnswer}". Keyingi safar yaxshiroq urinib ko'ring.`,
+      hint: "Savolni diqqat bilan o'qing va kalit so'zlarga e'tibor bering.",
+    };
+  }
+
+  /** Pass 1: tolerant parser for {@link explainAnswer} responses. */
+  static parseExplainJson(raw: string): {
+    explanation: string;
+    hint: string;
+    examples?: string[];
+  } | null {
+    if (!raw) return null;
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const slice = fenced ? fenced[1] : raw;
+    const first = slice.indexOf('{');
+    const last = slice.lastIndexOf('}');
+    if (first < 0 || last < 0 || last <= first) return null;
+    try {
+      const parsed = JSON.parse(slice.slice(first, last + 1)) as {
+        explanation?: unknown;
+        hint?: unknown;
+        examples?: unknown;
+      };
+      if (
+        typeof parsed.explanation !== 'string' ||
+        typeof parsed.hint !== 'string'
+      ) {
+        return null;
+      }
+      const examples = Array.isArray(parsed.examples)
+        ? (parsed.examples.filter((s) => typeof s === 'string') as string[])
+        : undefined;
+      return {
+        explanation: parsed.explanation,
+        hint: parsed.hint,
+        examples,
+      };
+    } catch {
+      return null;
     }
   }
 }

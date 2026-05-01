@@ -14,6 +14,9 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { GradeTranslationDto } from './dto/grade-translation.dto';
+import { ExplainAnswerDto } from './dto/explain-answer.dto';
+import { TtsDto } from './dto/tts.dto';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,17 +28,47 @@ export class AiController {
   ) {}
 
   /**
-   * 25.H.3: POST /ai/tts — text-to-speech for vocabulary playback.
-   * Returns a base64-encoded audio buffer plus mime type. The current
-   * implementation defers to AiService.tts which falls back to a silent
-   * placeholder if no TTS provider is configured (so the UI always works
-   * in dev). Frontend usually calls this once per word and caches the
-   * result.
+   * 25.H.3 / Pass 1: POST /ai/tts — text-to-speech.
+   *
+   * Pass 1 added the optional `language: 'en' | 'uz'` field so the same
+   * endpoint serves listening / spelling exercises (en-US-JennyNeural) and
+   * Uzbek vocabulary playback (uz-UZ-MadinaNeural). Older callers that
+   * only send `{ text, voice? }` keep working — language defaults to 'en'.
+   *
+   * Returns a base64-encoded audio buffer plus mime type. Falls back to
+   * a silent empty buffer when AZURE_SPEECH_KEY/REGION are not configured.
+   * Frontend usually calls this once per word and caches the result.
    */
   @Post('tts')
   @Roles(UserRole.student, UserRole.tester, UserRole.mentor)
-  async tts(@Body() body: { text: string; voice?: string }) {
-    return this.ai.tts(body.text, body.voice);
+  async tts(@Body() body: TtsDto) {
+    return this.ai.tts(
+      body.text,
+      body.voice ?? 'en-US-JennyNeural',
+      body.language,
+    );
+  }
+
+  /**
+   * Pass 1: POST /ai/grade-translation — fuzzy grade for the `translate`
+   * exercise type. Returns `{ correct, score 0-100, feedback (Uzbek),
+   * accepted_answers? }`. See {@link AiService.gradeTranslation}.
+   */
+  @Post('grade-translation')
+  @Roles(UserRole.student, UserRole.tester, UserRole.mentor)
+  gradeTranslation(@Body() body: GradeTranslationDto) {
+    return this.ai.gradeTranslation(body);
+  }
+
+  /**
+   * Pass 1: POST /ai/explain-answer — kid-friendly Uzbek explanation for
+   * a wrong answer (feature M, "Tushuntirish" button). Works for any
+   * exercise type. See {@link AiService.explainAnswer}.
+   */
+  @Post('explain-answer')
+  @Roles(UserRole.student, UserRole.tester, UserRole.mentor)
+  explainAnswer(@Body() body: ExplainAnswerDto) {
+    return this.ai.explainAnswer(body);
   }
 
   /**

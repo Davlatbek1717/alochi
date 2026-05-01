@@ -433,6 +433,25 @@ export default function EditLessonPage() {
             )}
           </div>
         )}
+
+        {/*
+          Pass 1 placeholder: confirms the foundation for the 10 new
+          Duolingo-style exercise types is wired through. Pass 5 will
+          replace this with the actual configurator (per-type forms,
+          add/remove rows, drag-to-reorder, etc.).
+        */}
+        {activeTab === 'info' && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-dashed border-[#ede9e1] p-5 mt-3 opacity-70">
+            <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-widest mb-2">
+              Yangi topshiriq turlari
+            </p>
+            <p className="text-sm text-[#64748b]">
+              Yangi turdagi topshiriqlar (tarjima, tinglash, juftlash, rasm
+              tanlash, bo&apos;sh joy, imlo, jumla tartibi, gapni o&apos;qish)
+              Pass 2-da qo&apos;shiladi.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -92,8 +92,7 @@ export class LessonsService {
       componentsPatch.word_order = wordOrderEnabled;
     if (vocabularyEnabled !== undefined)
       componentsPatch.vocabulary = vocabularyEnabled;
-    if (aiTutorEnabled !== undefined)
-      componentsPatch.ai_tutor = aiTutorEnabled;
+    if (aiTutorEnabled !== undefined) componentsPatch.ai_tutor = aiTutorEnabled;
 
     if (Object.keys(componentsPatch).length > 0) {
       const current = await this.prisma.lesson.findUnique({
