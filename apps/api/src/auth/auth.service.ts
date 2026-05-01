@@ -51,7 +51,7 @@ export class AuthService {
       branchId: user.branchId,
     };
 
-    const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwt.sign(payload, {
       secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
@@ -104,7 +104,7 @@ export class AuthService {
       branchId: stored.user.branchId,
     };
 
-    const newAccess = this.jwt.sign(payload, { expiresIn: '15m' });
+    const newAccess = this.jwt.sign(payload, { expiresIn: '1h' });
     const newRefresh = this.jwt.sign(payload, {
       secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: '7d',
