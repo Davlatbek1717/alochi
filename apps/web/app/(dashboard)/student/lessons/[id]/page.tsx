@@ -133,8 +133,9 @@ export default function LessonPage() {
       .filter((c) => c.type === 'mcq')
       .map((c) => {
         const cfg = c.config as McqConfig;
-        return { text: cfg.question, options: cfg.options, correct: cfg.correctIndex };
-      });
+        return { text: cfg?.question ?? '', options: cfg?.options ?? [], correct: cfg?.correctIndex ?? 0 };
+      })
+      .filter((q) => q.text && q.options.length > 0);
   }
 
   function getWordOrderSentences() {
@@ -143,8 +144,9 @@ export default function LessonPage() {
       .filter((c) => c.type === 'word_order')
       .map((c) => {
         const cfg = c.config as WordOrderConfig;
-        return { words: cfg.words, correct: cfg.correct };
-      });
+        return { words: cfg?.words ?? [], correct: cfg?.correct ?? '' };
+      })
+      .filter((s) => s.words.length > 0 && s.correct);
   }
 
   function goToNextStep() {

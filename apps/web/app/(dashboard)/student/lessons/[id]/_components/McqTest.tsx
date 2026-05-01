@@ -20,7 +20,30 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
   const [showResult, setShowResult] = useState(false);
   const [wrongs, setWrongs] = useState(0);
 
-  const q = questions[current];
+  // Filter out malformed questions (missing options/text). Server data may be
+  // partial during early lesson editing — fall back gracefully instead of crashing.
+  const validQuestions = questions.filter(
+    (qq) => qq && Array.isArray(qq.options) && qq.options.length > 0 && qq.text,
+  );
+
+  const q = validQuestions[current];
+
+  if (!q) {
+    return (
+      <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center space-y-3">
+        <p className="text-[#0f172a] font-semibold">Test savollari topilmadi</p>
+        <p className="text-[#64748b] text-sm">
+          Bu darsda hali MCQ savollari sozlanmagan. Superadminga xabar bering.
+        </p>
+        <button
+          onClick={onPassed}
+          className="px-4 py-2 bg-[#0f172a] text-white rounded-xl text-sm font-bold"
+        >
+          Keyingi qadamga o&apos;tish
+        </button>
+      </div>
+    );
+  }
 
   function handleAnswer(idx: number) {
     setSelected(idx);
@@ -32,7 +55,7 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
     }
 
     setTimeout(() => {
-      if (current + 1 < questions.length) {
+      if (current + 1 < validQuestions.length) {
         setCurrent((c) => c + 1);
         setSelected(null);
         setShowResult(false);
@@ -51,7 +74,7 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center text-sm">
         <span className="text-[#94a3b8] font-medium">
-          Savol {current + 1} / {questions.length}
+          Savol {current + 1} / {validQuestions.length}
         </span>
         {wrongs > 0 && (
           <span className="flex items-center gap-1 text-rose-500 font-semibold text-xs bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-full">
@@ -92,7 +115,7 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
 
       {/* Progress dots */}
       <div className="flex gap-1.5 justify-center">
-        {questions.map((_, i) => (
+        {validQuestions.map((_, i) => (
           <div
             key={i}
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
