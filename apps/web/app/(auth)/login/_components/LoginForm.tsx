@@ -72,7 +72,7 @@ export function LoginForm() {
           />
         </div>
         <p className="text-[11px] text-[#94a3b8] mt-1.5">
-          Superadmin uchun bo&apos;sh qoldiring. Boshqa rollar uchun markaz nomini kiriting.
+          Superadmin uchun bo&apos;sh qoldiring. Markaz slug&apos;ini bilmasangiz Superadmindan so&apos;rang.
         </p>
       </div>
 
