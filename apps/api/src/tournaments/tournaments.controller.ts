@@ -59,4 +59,19 @@ export class TournamentsController {
   registrations(@Param('id') id: string) {
     return this.tournaments.getRegistrations(id);
   }
+
+  /**
+   * 25.C.4: Single-elimination bracket derived from registrations.
+   */
+  @Get(':id/bracket')
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.filadmin,
+    UserRole.superadmin,
+  )
+  bracket(@Param('id') id: string) {
+    return this.tournaments.getBracket(id);
+  }
 }

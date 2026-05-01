@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -98,5 +99,19 @@ export class AttendanceController {
     @Param('date') date: string,
   ) {
     return this.staffService.getDailyStaff(branchId, date);
+  }
+
+  /**
+   * 25.D.2: Staff attendance history range query.
+   *   GET /attendance/staff?branchId=&from=YYYY-MM-DD&to=YYYY-MM-DD
+   */
+  @Get('staff')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  getStaffHistory(
+    @Query('branchId') branchId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.staffService.getHistory(branchId, from, to);
   }
 }

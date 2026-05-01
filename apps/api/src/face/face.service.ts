@@ -180,4 +180,39 @@ export class FaceService {
       take: 50,
     });
   }
+
+  /**
+   * 25.L.3: Face SLA — recognition success rate, mean confidence, and total
+   * attempts in the last 7 days. Used by the superadmin dashboard.
+   */
+  async getSla(): Promise<{
+    totalAttempts: number;
+    successRate: number;
+    avgConfidence: number;
+    days: number;
+  }> {
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+
+    const [total, success, agg] = await Promise.all([
+      this.prisma.faceRecognitionLog.count({
+        where: { attemptedAt: { gte: since } },
+      }),
+      this.prisma.faceRecognitionLog.count({
+        where: { attemptedAt: { gte: since }, result: 'matched' },
+      }),
+      this.prisma.faceRecognitionLog.aggregate({
+        where: { attemptedAt: { gte: since } },
+        _avg: { confidence: true },
+      }),
+    ]);
+
+    return {
+      totalAttempts: total,
+      successRate: total === 0 ? 0 : Math.round((success / total) * 100),
+      avgConfidence:
+        Math.round(((agg._avg?.confidence ?? 0) as number) * 100) / 100,
+      days: 7,
+    };
+  }
 }

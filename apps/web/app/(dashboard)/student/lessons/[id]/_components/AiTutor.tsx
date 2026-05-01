@@ -131,9 +131,11 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
           </button>
         </div>
         {readyError && <p className="text-red-500 text-xs">{readyError}</p>}
+        {/* 25.J.2: enforce min 1 question before "Tayyor" enables */}
         <button
           onClick={handleReady}
-          className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium"
+          disabled={questionCount < 1}
+          className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ✅ Tayyor — Keyingi bosqich
         </button>

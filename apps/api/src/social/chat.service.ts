@@ -48,6 +48,64 @@ export class ChatService implements OnModuleInit {
     await this.reloadKeywords();
   }
 
+  /**
+   * 25.M.1: Per-user daily message count, backed by Redis when REDIS_URL is
+   * configured (TTL 24h). Falls back to DB row count when Redis is absent.
+   * Lazy-imports `ioredis` so the build doesn't require it as a hard dep.
+   */
+  private redis: {
+    get: (k: string) => Promise<string | null>;
+    incr: (k: string) => Promise<number>;
+    expire: (k: string, s: number) => Promise<unknown>;
+  } | null = null;
+  private redisInitialized = false;
+
+  private async getRedis() {
+    if (this.redisInitialized) return this.redis;
+    this.redisInitialized = true;
+    if (!process.env.REDIS_URL) return null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const IORedis: any = require('ioredis');
+      this.redis = new IORedis(process.env.REDIS_URL);
+    } catch {
+      this.redis = null;
+    }
+    return this.redis;
+  }
+
+  private async getDailyCount(
+    userId: string,
+    groupId: string,
+  ): Promise<number> {
+    const redis = await this.getRedis();
+    if (redis) {
+      const key = `chat:user:${userId}:daily_count`;
+      const v = await redis.get(key).catch(() => null);
+      return v ? Number.parseInt(v, 10) || 0 : 0;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return this.prisma.groupMessage.count({
+      where: {
+        senderId: userId,
+        groupId,
+        isDeleted: false,
+        createdAt: { gte: today },
+      },
+    });
+  }
+
+  private async bumpDailyCount(userId: string) {
+    const redis = await this.getRedis();
+    if (!redis) return; // DB-fallback already counts existing rows
+    const key = `chat:user:${userId}:daily_count`;
+    const next = await redis.incr(key).catch(() => 0);
+    if (next === 1) {
+      await redis.expire(key, 24 * 60 * 60).catch(() => undefined);
+    }
+  }
+
   async reloadKeywords() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const keywords = await (this.prisma as any).chatKeyword.findMany({
@@ -148,23 +206,14 @@ export class ChatService implements OnModuleInit {
       throw new ForbiddenException('Siz chat dan ban olindingiz');
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dailyCount = await this.prisma.groupMessage.count({
-      where: {
-        senderId: dto.senderId,
-        groupId: dto.groupId,
-        isDeleted: false,
-        createdAt: { gte: today },
-      },
-    });
-
+    // 25.M.1: Redis-based daily counter when configured; falls back to DB.
+    const dailyCount = await this.getDailyCount(dto.senderId, dto.groupId);
     if (dailyCount >= MAX_DAILY_MESSAGES) {
       throw new BadRequestException(
         `Kunlik ${MAX_DAILY_MESSAGES} ta xabar limiti to'ldi`,
       );
     }
+    await this.bumpDailyCount(dto.senderId);
 
     const message = await this.prisma.groupMessage.create({
       data: {
@@ -253,7 +302,28 @@ export class ChatService implements OnModuleInit {
     });
   }
 
-  async getGroupMessages(groupId: string, limit = 50) {
+  /**
+   * 25.M.2: Filadmins can read any group in their own branch regardless of
+   * membership. Other roles still rely on the route-level guard.
+   */
+  async getGroupMessages(
+    groupId: string,
+    opts?: { actor?: { role?: string; branchId?: string | null } },
+    limit = 50,
+  ) {
+    if (opts?.actor?.role === 'filadmin' && opts.actor.branchId) {
+      // No `Group` model — derive group's branch from any member's branchId.
+      const member = await this.prisma.user.findFirst({
+        where: { groupId },
+        select: { branchId: true },
+      });
+      if (!member || member.branchId !== opts.actor.branchId) {
+        throw new ForbiddenException(
+          'Bu guruh sizning filialingizga tegishli emas',
+        );
+      }
+    }
+
     return this.prisma.groupMessage.findMany({
       where: { groupId, isDeleted: false },
       include: {

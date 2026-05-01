@@ -17,11 +17,15 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
+import {
+  DelegationPermissionGuard,
+  RequiresDelegationPermission,
+} from '../delegations/guards/delegation-permission.guard';
 
 @ApiTags('users')
 @ApiBearerAuth()
 @Controller('users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, DelegationPermissionGuard)
 export class UsersController {
   constructor(private users: UsersService) {}
 
@@ -32,6 +36,7 @@ export class UsersController {
 
   @Post()
   @Roles(UserRole.superadmin, UserRole.filadmin)
+  @RequiresDelegationPermission('staff_manage')
   create(
     @Body() dto: CreateUserDto,
     @Request() req: any,
@@ -41,6 +46,34 @@ export class UsersController {
       userId: req.user.userId,
       delegationId,
     });
+  }
+
+  @Get('blocked')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  findBlocked(
+    @Query('reason') reason: 'warning' | 'payment' | undefined,
+    @Query('branchId') branchId: string | undefined,
+    @Request() req: any,
+  ) {
+    const effectiveBranch =
+      req.user.role === UserRole.filadmin
+        ? (req.user.branchId ?? branchId)
+        : branchId;
+    return this.users.findBlocked(req.user.tenantId, {
+      reason,
+      branchId: effectiveBranch,
+    });
+  }
+
+  @Get('group/:groupId/avg-pass-rate')
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
+  getGroupAvgPassRate(@Param('groupId') groupId: string, @Request() req: any) {
+    return this.users.getGroupAvgPassRate(groupId, req.user.tenantId);
   }
 
   @Get()

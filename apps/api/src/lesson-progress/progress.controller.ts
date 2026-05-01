@@ -23,7 +23,18 @@ export class ProgressController {
 
   @Post(':lessonId/complete-session')
   @Roles(UserRole.student, UserRole.tester)
-  completeSession(@Param('lessonId') lessonId: string, @Request() req: any) {
+  completeSession(
+    @Param('lessonId') lessonId: string,
+    @Body() body: { videoWatched?: number; videoDuration?: number },
+    @Request() req: any,
+  ) {
+    // 25.J.1: enforce 90% watch when caller reports the metric.
+    if (
+      typeof body?.videoWatched === 'number' &&
+      typeof body?.videoDuration === 'number'
+    ) {
+      this.progress.assertVideoWatched(body.videoWatched, body.videoDuration);
+    }
     return this.progress.completeSession(
       req.user.userId,
       lessonId,

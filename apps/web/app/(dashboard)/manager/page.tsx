@@ -86,6 +86,8 @@ export default function ManagerDashboard() {
     { href: '/manager/payments',    icon: <CreditCard size={20} />,   title: "To'lovlar",   desc: 'Qarzdorlar hisobi', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
     { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: 'Topshiriqlar',      color: 'hover:border-orange-300 hover:bg-orange-50' },
     { href: '/manager/delegations', icon: <Send size={20} />,         title: 'Delegatsiya', desc: 'Buyruq jo\'natish', color: 'hover:border-blue-300 hover:bg-blue-50' },
+    { href: '/manager/rewards',     icon: <Trophy size={20} />,       title: "Sovg'a/Kitob", desc: 'Ragʼbatlantirish',   color: 'hover:border-amber-300 hover:bg-amber-50' },
+    { href: '/manager/sessions',    icon: <ClipboardList size={20} />,title: 'Sertifikat',  desc: 'Sertifikat berish',  color: 'hover:border-cyan-300 hover:bg-cyan-50' },
   ];
 
   const alertCount = redStudents.length + yellowStudents.length;

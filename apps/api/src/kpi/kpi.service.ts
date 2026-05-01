@@ -90,6 +90,34 @@ export class KpiService {
   }
 
   /**
+   * 25.F.3: Daily KPI for a mentor based on session activity.
+   * Caps the rewardable student count at 20 to prevent gaming with stuffed
+   * lessons. Rewards 5 points per student up to the cap.
+   */
+  computeMentorDaily(input: {
+    studentsTaught: number;
+    durationMinutes: number;
+    scoresGiven: number;
+    redNotified: number;
+  }): { totalScore: number; cappedStudents: number } {
+    const STUDENT_CAP = 20;
+    const cappedStudents = Math.min(
+      STUDENT_CAP,
+      Math.max(0, input.studentsTaught),
+    );
+    const studentScore = cappedStudents * KPI_POINTS.MENTOR_LESSON_STUDENTS;
+    const durationScore =
+      input.durationMinutes >= 15 ? KPI_POINTS.MENTOR_LESSON_DURATION : 0;
+    const scoresScore =
+      input.scoresGiven > 0 ? KPI_POINTS.MENTOR_SCORES_GIVEN : 0;
+    const redScore = input.redNotified * KPI_POINTS.MENTOR_RED_NOTIFIED;
+    return {
+      totalScore: studentScore + durationScore + scoresScore + redScore,
+      cappedStudents,
+    };
+  }
+
+  /**
    * Idempotency check for auto-calc cron jobs: returns true if a KPI
    * award already exists for the (userId, reason) pair within the given
    * date range. Cron handlers use this to avoid double-awarding when

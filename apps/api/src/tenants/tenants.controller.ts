@@ -3,8 +3,10 @@ import {
   Get,
   Post,
   Patch,
+  Put,
   Body,
   Param,
+  Request,
   UseGuards,
 } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
@@ -38,6 +40,23 @@ export class TenantsController {
   @Roles(UserRole.superadmin)
   findAll() {
     return this.tenants.listAllWithCounts();
+  }
+
+  /** 25.C.3: Read certificate template for the calling tenant. */
+  @Get('me/cert-template')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getCertTemplate(@Request() req: any) {
+    return this.tenants.getCertTemplate(req.user.tenantId);
+  }
+
+  /** 25.C.3: Update certificate template for the calling tenant. */
+  @Put('me/cert-template')
+  @Roles(UserRole.superadmin)
+  setCertTemplate(
+    @Request() req: any,
+    @Body('certTemplate') certTemplate: unknown,
+  ) {
+    return this.tenants.setCertTemplate(req.user.tenantId, certTemplate);
   }
 
   @Get(':id')

@@ -15,11 +15,15 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
+import {
+  DelegationPermissionGuard,
+  RequiresDelegationPermission,
+} from '../delegations/guards/delegation-permission.guard';
 
 @ApiTags('warnings')
 @ApiBearerAuth()
 @Controller('warnings')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, DelegationPermissionGuard)
 export class WarningsController {
   constructor(private warnings: WarningsService) {}
 
@@ -36,6 +40,7 @@ export class WarningsController {
    */
   @Post(':studentId')
   @Roles(UserRole.filadmin, UserRole.superadmin)
+  @RequiresDelegationPermission('warnings')
   give(
     @Param('studentId') studentId: string,
     @Body() body: any,

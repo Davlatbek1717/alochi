@@ -119,6 +119,66 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * 25.C.2: Blocked students list. `reason` is one of `warning|payment` (or
+   * undefined for both). `branchId` filter is required for non-superadmin.
+   */
+  async findBlocked(
+    tenantId: string,
+    opts?: { reason?: 'warning' | 'payment'; branchId?: string },
+  ) {
+    const statuses: ('blocked_warning' | 'blocked_payment')[] =
+      opts?.reason === 'warning'
+        ? ['blocked_warning']
+        : opts?.reason === 'payment'
+          ? ['blocked_payment']
+          : ['blocked_warning', 'blocked_payment'];
+
+    return this.prisma.user.findMany({
+      where: {
+        tenantId,
+        role: UserRole.student,
+        status: { in: statuses },
+        ...(opts?.branchId ? { branchId: opts.branchId } : {}),
+      },
+      select: {
+        id: true,
+        name: true,
+        login: true,
+        status: true,
+        branchId: true,
+        phone: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * 25.F.1: Average pass-rate of all students in a group across all attempts.
+   * Returns 0 when no progress recorded.
+   */
+  async getGroupAvgPassRate(groupId: string, tenantId: string) {
+    const students = await this.prisma.user.findMany({
+      where: { groupId, tenantId, role: UserRole.student },
+      select: { id: true },
+    });
+    if (students.length === 0) return { groupId, avgPassRate: 0, sample: 0 };
+
+    const studentIds = students.map((s) => s.id);
+    const progress = await this.prisma.studentProgress.findMany({
+      where: { studentId: { in: studentIds } },
+      select: { academyCompleted: true },
+    });
+    if (progress.length === 0) return { groupId, avgPassRate: 0, sample: 0 };
+
+    const passed = progress.filter((p) => p.academyCompleted).length;
+    return {
+      groupId,
+      avgPassRate: Math.round((passed / progress.length) * 100),
+      sample: progress.length,
+    };
+  }
+
   async findAll(
     tenantId: string,
     branchId?: string,

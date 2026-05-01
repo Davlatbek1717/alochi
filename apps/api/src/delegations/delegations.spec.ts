@@ -1,4 +1,3 @@
-import { Test } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
@@ -22,7 +21,12 @@ const mockPrisma = {
   delegationResponse: {
     create: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn(),
+  },
 };
+
+const mockEvents = { emit: jest.fn() };
 
 const baseDto = {
   tenantId: 'tenant-1',
@@ -40,13 +44,12 @@ describe('DelegationsService', () => {
   let service: DelegationsService;
 
   beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        DelegationsService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
-    }).compile();
-    service = module.get(DelegationsService);
+    // Direct construction so we can inject the mock EventEmitter2 without
+    // wiring up the full EventEmitterModule in tests.
+    service = new DelegationsService(
+      mockPrisma as unknown as PrismaService,
+      mockEvents as unknown as import('@nestjs/event-emitter').EventEmitter2,
+    );
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -133,6 +136,50 @@ describe('DelegationsService', () => {
       await expect(
         service.respond('missing', 'user-to', 'accepted'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException with code DELEGATION_EXPIRED when endsAt < now', async () => {
+      mockPrisma.delegation.findUnique.mockResolvedValue({
+        id: 'del-1',
+        toUserId: 'user-to',
+        status: 'pending',
+        endsAt: new Date('2020-01-01'),
+      });
+      await expect(
+        service.respond('del-1', 'user-to', 'accepted'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findForUser scope filter', () => {
+    it('returns tenant-wide delegations for superadmin', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'sa-1',
+        role: 'superadmin',
+        tenantId: 't-1',
+        branchId: null,
+      });
+      mockPrisma.delegation.findMany.mockResolvedValue([]);
+      await service.findForUser('sa-1');
+      expect(mockPrisma.delegation.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { tenantId: 't-1' } }),
+      );
+    });
+
+    it('returns participant-only delegations for mentor', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'm-1',
+        role: 'mentor',
+        tenantId: 't-1',
+        branchId: 'b-1',
+      });
+      mockPrisma.delegation.findMany.mockResolvedValue([]);
+      await service.findForUser('m-1');
+      expect(mockPrisma.delegation.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { OR: [{ fromUserId: 'm-1' }, { toUserId: 'm-1' }] },
+        }),
+      );
     });
   });
 

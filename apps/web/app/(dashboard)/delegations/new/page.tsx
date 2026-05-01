@@ -26,6 +26,11 @@ function NewDelegationForm() {
   const [reason, setReason] = useState(searchParams.get('reason') ?? '');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [permissions, setPermissions] = useState<{
+    warnings: boolean;
+    payments: boolean;
+    staff_manage: boolean;
+  }>({ warnings: true, payments: true, staff_manage: false });
 
   const [staffUsers, setStaffUsers] = useState<BranchUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -69,7 +74,9 @@ function NewDelegationForm() {
           fromUserId: user.id ?? '',
           toUserId: selectedRecipient,
           delegatedRole: 'manager',
-          permissions: ['warnings', 'payments'],
+          permissions: Object.entries(permissions)
+            .filter(([, v]) => v)
+            .map(([k]) => k),
           reason,
           startsAt,
           endsAt,
@@ -156,6 +163,30 @@ function NewDelegationForm() {
                   className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Permissions */}
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Ruxsatlar</p>
+            <div className="space-y-2">
+              {([
+                ['warnings', 'Ogohlantirishlar'],
+                ['payments', "To'lovlar"],
+                ['staff_manage', 'Xodim boshqaruvi'],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center gap-3 text-sm text-[#0f172a]">
+                  <input
+                    type="checkbox"
+                    checked={permissions[key]}
+                    onChange={(e) =>
+                      setPermissions((p) => ({ ...p, [key]: e.target.checked }))
+                    }
+                    className="w-4 h-4 rounded border-[#ede9e1]"
+                  />
+                  {label}
+                </label>
+              ))}
             </div>
           </div>
 

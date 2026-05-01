@@ -95,6 +95,12 @@ export class DelegationsService {
     if (delegation.toUserId !== responderId) {
       throw new ForbiddenException('Siz bu delegatsiyaga javob bera olmaysiz');
     }
+    if (delegation.endsAt < new Date()) {
+      throw new BadRequestException({
+        code: 'DELEGATION_EXPIRED',
+        message: 'Delegatsiya muddati tugagan',
+      });
+    }
 
     const newStatus = action === 'accepted' ? 'active' : 'rejected';
 
@@ -195,11 +201,40 @@ export class DelegationsService {
     return updated;
   }
 
+  /**
+   * Scope-filtered list:
+   * - superadmin → all delegations in their tenant
+   * - filadmin   → all delegations involving users in their branch
+   * - others     → only delegations where they are participant (from/to)
+   */
   async findForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, tenantId: true, branchId: true },
+    });
+
+    if (!user) {
+      return [];
+    }
+
+    let where: Record<string, unknown>;
+    if (user.role === 'superadmin') {
+      where = { tenantId: user.tenantId };
+    } else if (user.role === 'filadmin' && user.branchId) {
+      where = {
+        tenantId: user.tenantId,
+        OR: [
+          { branchId: user.branchId },
+          { fromUserId: userId },
+          { toUserId: userId },
+        ],
+      };
+    } else {
+      where = { OR: [{ fromUserId: userId }, { toUserId: userId }] };
+    }
+
     return this.prisma.delegation.findMany({
-      where: {
-        OR: [{ fromUserId: userId }, { toUserId: userId }],
-      },
+      where,
       include: {
         fromUser: { select: { name: true } },
         toUser: { select: { name: true } },

@@ -66,6 +66,20 @@ const NAV_CARDS = [
     description: 'Topshiriqlarni boshqarish',
     color: 'hover:border-orange-300 hover:bg-orange-50',
   },
+  {
+    href: '/filadmin/blocked-students',
+    icon: <AlertTriangle size={22} />,
+    title: 'Bloklanganlar',
+    description: 'Bloklangan oʻquvchilar roʻyxati',
+    color: 'hover:border-rose-300 hover:bg-rose-50',
+  },
+  {
+    href: '/filadmin/attendance/staff',
+    icon: <Clock size={22} />,
+    title: 'Xodim davomat tarixi',
+    description: 'Davomat tarixi (oxirgi 7 kun)',
+    color: 'hover:border-cyan-300 hover:bg-cyan-50',
+  },
 ];
 
 // TODO(phase-23.5): Wire to real endpoints once /attendance/staff/today/:branchId,

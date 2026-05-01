@@ -101,10 +101,23 @@ export class TasksService {
     if (status === TaskStatus.in_progress && !task.startedAt)
       data.startedAt = new Date();
 
-    return this.prisma.task.update({
+    const updated = await this.prisma.task.update({
       where: { id: taskId },
       data,
     });
+
+    // 25.K.2: emit task.completed when caller transitions to `done`.
+    if (status === TaskStatus.done) {
+      this.events.emit('task.completed', {
+        taskId,
+        title: task.title,
+        creatorId: task.createdBy,
+        completedBy: userId,
+        tenantId: task.tenantId,
+      });
+    }
+
+    return updated;
   }
 
   async confirm(taskId: string, userId: string) {

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -30,6 +35,22 @@ export class ProgressService {
     if (override)
       return Math.min(override.nRepetitionsOverride, lesson.maxNOverride);
     return lesson.nRepetitions;
+  }
+
+  /**
+   * 25.J.1: Reject completion when video watched <90% of duration.
+   * Throws BadRequestException with code VIDEO_WATCH_INCOMPLETE.
+   */
+  assertVideoWatched(watched: number, duration: number) {
+    if (!duration || duration <= 0) return;
+    const ratio = watched / duration;
+    if (ratio < 0.9) {
+      throw new BadRequestException({
+        code: 'VIDEO_WATCH_INCOMPLETE',
+        message: 'Videoning kamida 90% qismini tomosha qilish kerak',
+        details: { watched, duration, ratio: Math.round(ratio * 100) / 100 },
+      });
+    }
   }
 
   async completeSession(studentId: string, lessonId: string, tenantId: string) {
@@ -92,6 +113,33 @@ export class ProgressService {
         lastActivityAt: new Date(),
       },
     });
+  }
+
+  /**
+   * 25.F.2: Compute lesson duration on end. KPI flag is `true` when the
+   * mentor lesson lasted < 15 minutes — caller may use it to dock KPI.
+   */
+  async endLesson(
+    studentId: string,
+    lessonId: string,
+    startedAt: Date | string,
+    endedAt: Date | string = new Date(),
+  ): Promise<{ durationMinutes: number; minimumMet: boolean }> {
+    const start =
+      typeof startedAt === 'string' ? new Date(startedAt) : startedAt;
+    const end = typeof endedAt === 'string' ? new Date(endedAt) : endedAt;
+    const ms = Math.max(0, end.getTime() - start.getTime());
+    const durationMinutes = Math.round(ms / 60000);
+    const minimumMet = durationMinutes >= 15;
+
+    await this.prisma.studentProgress
+      .updateMany({
+        where: { studentId, lessonId },
+        data: { lastActivityAt: end },
+      })
+      .catch(() => undefined);
+
+    return { durationMinutes, minimumMet };
   }
 
   async markAcademyCompleted(studentId: string, lessonId: string) {

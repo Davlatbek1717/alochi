@@ -38,4 +38,46 @@ export class BranchesService {
       data: { filadminId },
     });
   }
+
+  /**
+   * 25.C.1: Branch statistics — student counts, staff counts, blocked counts.
+   */
+  async getStats(branchId: string, tenantId: string) {
+    await this.findById(branchId, tenantId);
+
+    const [
+      totalStudents,
+      activeStudents,
+      blockedWarning,
+      blockedPayment,
+      mentors,
+      managers,
+    ] = await Promise.all([
+      this.prisma.user.count({
+        where: { branchId, role: 'student' },
+      }),
+      this.prisma.user.count({
+        where: { branchId, role: 'student', status: 'active' },
+      }),
+      this.prisma.user.count({
+        where: { branchId, role: 'student', status: 'blocked_warning' },
+      }),
+      this.prisma.user.count({
+        where: { branchId, role: 'student', status: 'blocked_payment' },
+      }),
+      this.prisma.user.count({ where: { branchId, role: 'mentor' } }),
+      this.prisma.user.count({ where: { branchId, role: 'manager' } }),
+    ]);
+
+    return {
+      branchId,
+      students: {
+        total: totalStudents,
+        active: activeStudents,
+        blockedWarning,
+        blockedPayment,
+      },
+      staff: { mentors, managers },
+    };
+  }
 }

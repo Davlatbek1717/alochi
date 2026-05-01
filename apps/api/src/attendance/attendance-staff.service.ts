@@ -94,4 +94,20 @@ export class AttendanceStaffService {
       orderBy: { user: { name: 'asc' } },
     });
   }
+
+  /**
+   * 25.D.2: Staff attendance history for a branch in [from, to] inclusive.
+   * Dates are ISO YYYY-MM-DD; returns chronological order.
+   */
+  async getHistory(branchId: string, from: string, to: string) {
+    if (!branchId || !from || !to) return [];
+    return this.prisma.attendanceStaff.findMany({
+      where: {
+        branchId,
+        date: { gte: new Date(from), lte: new Date(to) },
+      },
+      include: { user: { select: { id: true, name: true } } },
+      orderBy: [{ date: 'asc' }, { user: { name: 'asc' } }],
+    });
+  }
 }

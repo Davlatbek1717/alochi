@@ -505,7 +505,33 @@ export class CronService {
       );
       this.logger.log(`ML training success: ${JSON.stringify(response.data)}`);
     } catch (e) {
-      this.logger.warn(`ML training failed: ${(e as Error).message}`);
+      const message = (e as Error).message;
+      // 25.N.1: structured log + Telegram alert to superadmins on failure
+      this.logger.error(
+        { event: 'ml_churn_training_failed', error: message },
+        `ML training failed: ${message}`,
+      );
+      try {
+        const superadmins = await this.prisma.user.findMany({
+          where: {
+            role: 'superadmin',
+            status: 'active',
+            telegramId: { not: null },
+          },
+          select: { telegramId: true, tenantId: true },
+        });
+        for (const sa of superadmins) {
+          if (!sa.telegramId) continue;
+          await this.telegram
+            .sendMessage(
+              sa.telegramId,
+              `[ML] Churn training muvaffaqiyatsiz: ${message}`,
+            )
+            .catch(() => undefined);
+        }
+      } catch {
+        /* swallow — alert is best-effort */
+      }
     }
   }
 
@@ -1138,6 +1164,71 @@ export class CronService {
     } catch (err) {
       this.logger.error(
         `group_challenge_complete.failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 25.K.3: Weekly Monday 09:00 — alert superadmins about lessons whose
+   * student academy-completion rate fell below 50% over the last 7 days.
+   */
+  @Cron('0 9 * * 1', { name: 'low_pass_rate_weekly' })
+  async runLowPassRateAlert() {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const lessons = await this.prisma.lesson.findMany({
+        where: { isPublished: true },
+        select: { id: true, title: true, tenantId: true },
+      });
+
+      const lowOnes: Array<{ title: string; rate: number; tenantId: string }> =
+        [];
+      for (const l of lessons) {
+        const total = await this.prisma.studentProgress.count({
+          where: { lessonId: l.id, lastActivityAt: { gte: sevenDaysAgo } },
+        });
+        if (total < 5) continue; // ignore tiny samples
+        const passed = await this.prisma.studentProgress.count({
+          where: {
+            lessonId: l.id,
+            lastActivityAt: { gte: sevenDaysAgo },
+            academyCompleted: true,
+          },
+        });
+        const rate = Math.round((passed / total) * 100);
+        if (rate < 50) {
+          lowOnes.push({ title: l.title, rate, tenantId: l.tenantId });
+        }
+      }
+
+      if (lowOnes.length === 0) return;
+
+      const superadmins = await this.prisma.user.findMany({
+        where: {
+          role: 'superadmin',
+          status: 'active',
+          telegramId: { not: null },
+        },
+        select: { telegramId: true, tenantId: true },
+      });
+      for (const sa of superadmins) {
+        if (!sa.telegramId) continue;
+        const tenantLow = lowOnes
+          .filter((x) => x.tenantId === sa.tenantId)
+          .slice(0, 5);
+        if (tenantLow.length === 0) continue;
+        const list = tenantLow
+          .map((x) => `• ${x.title}: ${x.rate}%`)
+          .join('\n');
+        await this.telegram
+          .sendMessage(sa.telegramId, `[Haftalik] Pass-rate <50%:\n${list}`)
+          .catch(() => undefined);
+      }
+    } catch (err) {
+      this.logger.error(
+        `low_pass_rate_weekly.failed: ${(err as Error).message}`,
       );
     }
   }

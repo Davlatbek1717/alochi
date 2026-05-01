@@ -78,8 +78,10 @@ export class SocialController {
   }
 
   @Get('groups/:groupId/messages')
-  getGroupMessages(@Param('groupId') groupId: string) {
-    return this.chat.getGroupMessages(groupId);
+  getGroupMessages(@Param('groupId') groupId: string, @Request() req: any) {
+    return this.chat.getGroupMessages(groupId, {
+      actor: { role: req?.user?.role, branchId: req?.user?.branchId ?? null },
+    });
   }
 
   /**

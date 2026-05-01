@@ -145,4 +145,28 @@ describe('KpiService', () => {
       expect(call.where.date.lte).toBe(end);
     });
   });
+
+  describe('computeMentorDaily (25.F)', () => {
+    it('caps studentsTaught at 20', () => {
+      const r = service.computeMentorDaily({
+        studentsTaught: 25,
+        durationMinutes: 30,
+        scoresGiven: 1,
+        redNotified: 0,
+      });
+      expect(r.cappedStudents).toBe(20);
+      // 20 students * 5 = 100, duration 5, scores 5 = 110
+      expect(r.totalScore).toBe(110);
+    });
+
+    it('zeros duration bonus when lesson under 15 minutes', () => {
+      const r = service.computeMentorDaily({
+        studentsTaught: 5,
+        durationMinutes: 14,
+        scoresGiven: 0,
+        redNotified: 0,
+      });
+      expect(r.totalScore).toBe(25); // 5 students * 5 only
+    });
+  });
 });

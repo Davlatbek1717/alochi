@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
 
 @Injectable()
 export class LessonsService {
@@ -64,6 +65,40 @@ export class LessonsService {
       where: { id },
       data: { isPublished: true },
     });
+  }
+
+  /**
+   * 25.B: Patch lesson with cameraEnabled / aiTutorContext / validation-bound
+   * fields. Component flags continue to live under `components` JSON.
+   */
+  async update(id: string, tenantId: string, dto: UpdateLessonDto) {
+    await this.findById(id, tenantId);
+    const { mcqEnabled, wordOrderEnabled, vocabularyEnabled, type, ...rest } =
+      dto;
+
+    const data: Record<string, unknown> = { ...rest };
+    if (type) data.type = type as any;
+
+    const componentsPatch: Record<string, boolean> = {};
+    if (mcqEnabled !== undefined) componentsPatch.mcq = mcqEnabled;
+    if (wordOrderEnabled !== undefined)
+      componentsPatch.word_order = wordOrderEnabled;
+    if (vocabularyEnabled !== undefined)
+      componentsPatch.vocabulary = vocabularyEnabled;
+
+    if (Object.keys(componentsPatch).length > 0) {
+      const current = await this.prisma.lesson.findUnique({
+        where: { id },
+        select: { components: true },
+      });
+      const merged = {
+        ...(current?.components as Record<string, unknown> | null | undefined),
+        ...componentsPatch,
+      };
+      data.components = merged;
+    }
+
+    return this.prisma.lesson.update({ where: { id }, data });
   }
 
   async getNextLesson(studentId: string, tenantId: string) {

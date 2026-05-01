@@ -42,6 +42,9 @@ import { LetterCollectionModule } from './letter-collection/letter-collection.mo
 import { StaffGuidesModule } from './staff-guides/staff-guides.module';
 import { PromotionReportModule } from './promotion-report/promotion-report.module';
 import { ManagerSessionsModule } from './manager-sessions/manager-sessions.module';
+import { ManagerRewardsModule } from './manager-rewards/manager-rewards.module';
+import { TechIssuesModule } from './tech-issues/tech-issues.module';
+import { ExamQueueModule } from './exams/exam-queue.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -92,6 +95,9 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     StaffGuidesModule,
     PromotionReportModule,
     ManagerSessionsModule,
+    ManagerRewardsModule,
+    TechIssuesModule,
+    ExamQueueModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

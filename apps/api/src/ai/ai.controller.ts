@@ -25,6 +25,20 @@ export class AiController {
   ) {}
 
   /**
+   * 25.H.3: POST /ai/tts — text-to-speech for vocabulary playback.
+   * Returns a base64-encoded audio buffer plus mime type. The current
+   * implementation defers to AiService.tts which falls back to a silent
+   * placeholder if no TTS provider is configured (so the UI always works
+   * in dev). Frontend usually calls this once per word and caches the
+   * result.
+   */
+  @Post('tts')
+  @Roles(UserRole.student, UserRole.tester, UserRole.mentor)
+  async tts(@Body() body: { text: string; voice?: string }) {
+    return this.ai.tts(body.text, body.voice);
+  }
+
+  /**
    * POST /ai/qa/start — start a tutor QA session.
    * Body: { lessonContext, question? }. Returns { sessionId, firstResponse }.
    * (No persistent session storage yet — sessionId is a UUID echoed back so

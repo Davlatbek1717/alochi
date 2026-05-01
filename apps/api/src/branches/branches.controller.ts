@@ -37,6 +37,12 @@ export class BranchesController {
     return this.branches.findByTenant(tenantId);
   }
 
+  @Get(':id/stats')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getStats(@Param('id') id: string, @Request() req: any) {
+    return this.branches.getStats(id, req.user.tenantId);
+  }
+
   @Patch(':id')
   @Roles(UserRole.superadmin)
   update(

@@ -15,6 +15,7 @@ type ApiDelegation = {
   reason: string;
   startsAt: string;
   endsAt: string;
+  permissions?: string[];
 };
 
 type Delegation = {
@@ -26,6 +27,7 @@ type Delegation = {
   startsAt: string;
   endsAt: string;
   reason: string;
+  permissions: string[];
 };
 
 const STATUS_CONFIG: Record<DelegationStatus, { icon: React.ReactNode; badge: string; label: string }> = {
@@ -60,6 +62,7 @@ export default function DelegationsPage() {
           role: d.delegatedRole,
           startsAt: formatDate(d.startsAt), endsAt: formatDate(d.endsAt),
           reason: d.reason,
+          permissions: d.permissions ?? [],
         })));
       } catch { /* keep empty */ }
       finally { setLoading(false); }
@@ -93,6 +96,16 @@ export default function DelegationsPage() {
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
+        {/* Summary card */}
+        {!loading && delegations.length > 0 && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
+            <p className="text-sm font-semibold text-[#0f172a]">
+              {delegations.length} ta delegatsiya,{' '}
+              {delegations.reduce((sum, d) => sum + d.permissions.length, 0)} ta amal
+            </p>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {tabs.map((tab) => (

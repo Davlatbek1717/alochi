@@ -41,6 +41,7 @@ export class CreateLessonDto {
 
   @IsInt()
   @IsOptional()
+  @Min(1)
   @Max(20)
   maxNOverride?: number;
 
@@ -59,4 +60,12 @@ export class CreateLessonDto {
   @IsBoolean()
   @IsOptional()
   hasExam?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  cameraEnabled?: boolean;
+
+  @IsString()
+  @IsOptional()
+  aiTutorContext?: string;
 }

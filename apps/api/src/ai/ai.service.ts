@@ -291,4 +291,55 @@ export class AiService {
       };
     }
   }
+
+  /**
+   * 25.H.3: Text-to-speech for vocabulary words. When AZURE_SPEECH_KEY is
+   * configured, defers to Azure Speech REST. Otherwise returns an empty
+   * placeholder buffer so the frontend can still play (silently) without
+   * a hard error in dev. Returns base64-encoded audio.
+   */
+  async tts(
+    text: string,
+    voice = 'en-US-JennyNeural',
+  ): Promise<{
+    audioBase64: string;
+    mimeType: string;
+  }> {
+    const azureKey = process.env.AZURE_SPEECH_KEY;
+    const azureRegion = process.env.AZURE_SPEECH_REGION;
+    if (!azureKey || !azureRegion || !text) {
+      return { audioBase64: '', mimeType: 'audio/mpeg' };
+    }
+    const ssml =
+      `<speak version='1.0' xml:lang='en-US'>` +
+      `<voice name='${voice}'>${escapeXml(text)}</voice></speak>`;
+    try {
+      const res = await fetch(
+        `https://${azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+        {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+          },
+          body: ssml,
+        },
+      );
+      if (!res.ok) return { audioBase64: '', mimeType: 'audio/mpeg' };
+      const buf = Buffer.from(await res.arrayBuffer());
+      return { audioBase64: buf.toString('base64'), mimeType: 'audio/mpeg' };
+    } catch {
+      return { audioBase64: '', mimeType: 'audio/mpeg' };
+    }
+  }
+}
+
+function escapeXml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }

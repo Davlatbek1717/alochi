@@ -32,6 +32,7 @@ model Tenant {
   status            String   @default("active")
   isActive          Boolean  @default(true) @map("is_active")
   warningBlockLimit Int      @default(3) @map("warning_block_limit")
+  certTemplate      Json?    @map("cert_template")
   createdAt         DateTime @default(now()) @map("created_at")
 
   branches                 Branch[]
@@ -166,6 +167,8 @@ model Lesson {
   maxNOverride       Int        @default(10) @map("max_n_override")
   components         Json       @default("{}")
   hasExam            Boolean    @default(false) @map("has_exam")
+  cameraEnabled      Boolean    @default(true) @map("camera_enabled")
+  aiTutorContext     String?    @map("ai_tutor_context")
   isPublished        Boolean    @default(false) @map("is_published")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
@@ -1114,4 +1117,57 @@ model KpiOverrideLog {
   @@index([studentId, lessonId])
   @@index([changedAt])
   @@map("kpi_override_log")
+}
+
+// 25.G.1 Persistent exam queue
+model ExamQueueEntry {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  studentId String   @map("student_id") @db.Uuid
+  lessonId  String   @map("lesson_id") @db.Uuid
+  status    String   @default("waiting")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  startedAt DateTime? @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  @@index([tenantId, branchId, status])
+  @@index([studentId])
+  @@map("exam_queue_entries")
+}
+
+// 25.G.2 Tech issue reports
+model TechIssue {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  branchId    String?  @map("branch_id") @db.Uuid
+  reportedBy  String   @map("reported_by") @db.Uuid
+  category    String
+  description String
+  severity    String   @default("medium")
+  status      String   @default("open")
+  resolution  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  @@index([tenantId, status])
+  @@index([branchId])
+  @@map("tech_issues")
+}
+
+// 25.E.3 Manager rewards (gifts, books)
+model ManagerReward {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  branchId   String   @map("branch_id") @db.Uuid
+  managerId  String   @map("manager_id") @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  type       String
+  title      String
+  description String?
+  givenAt    DateTime @default(now()) @map("given_at")
+
+  @@index([tenantId, branchId])
+  @@index([studentId])
+  @@map("manager_rewards")
 }

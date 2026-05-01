@@ -299,7 +299,10 @@ export default function StudentDashboard() {
 
       <SocialFeed />
 
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto">
+      {/* 25.H.1: tiny chip that shows current lesson session/N */}
+
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto space-y-2">
+        <CurrentLessonChip />
         <Button
           variant="primary"
           size="lg"
@@ -310,6 +313,38 @@ export default function StudentDashboard() {
           ▶️ Bugungi Darsni Boshlash
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 25.H.1: "Sessiya {sessionCount}/{N}" chip rendered just above the
+ * "Bugungi darsni boshlash" CTA. Reads from /lessons/next + /progress/my.
+ */
+function CurrentLessonChip() {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    if (!token) return;
+    type LessonInfo = { id: string; nRepetitions: number };
+    type ProgressRow = { lessonId: string; sessionCount: number };
+    Promise.all([
+      apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => null),
+      apiRequest<ProgressRow[]>('/progress/my', {}, token).catch(() => null),
+    ]).then(([lesson, progress]) => {
+      const data = lesson?.data ?? null;
+      if (!data) return;
+      const row = progress?.data?.find((p) => p.lessonId === data.id);
+      const count = row?.sessionCount ?? 0;
+      setText(`Sessiya ${count}/${data.nRepetitions}`);
+    });
+  }, []);
+
+  if (!text) return null;
+  return (
+    <div className="bg-white border-[1.5px] border-[#ede9e1] rounded-full px-3 py-1 text-xs font-semibold text-[#0f172a] inline-block shadow-sm">
+      {text}
     </div>
   );
 }

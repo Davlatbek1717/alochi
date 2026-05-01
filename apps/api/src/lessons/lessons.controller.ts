@@ -11,6 +11,7 @@ import {
 import { LessonsService } from './lessons.service';
 import { ComponentsService } from './components.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -53,6 +54,16 @@ export class LessonsController {
   @Roles(UserRole.superadmin)
   publish(@Param('id') id: string, @Request() req: any) {
     return this.lessons.publish(id, req.user.tenantId);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.superadmin)
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateLessonDto,
+    @Request() req: any,
+  ) {
+    return this.lessons.update(id, req.user.tenantId, dto);
   }
 
   @Post(':id/mcq')

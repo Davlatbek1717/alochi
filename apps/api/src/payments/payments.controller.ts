@@ -16,11 +16,15 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentDelegation } from '../common/decorators/current-delegation.decorator';
+import {
+  DelegationPermissionGuard,
+  RequiresDelegationPermission,
+} from '../delegations/guards/delegation-permission.guard';
 
 @ApiTags('payments')
 @ApiBearerAuth()
 @Controller('payments')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, DelegationPermissionGuard)
 export class PaymentsController {
   constructor(private payments: PaymentsService) {}
 
@@ -71,6 +75,7 @@ export class PaymentsController {
    */
   @Post(':studentId')
   @Roles(UserRole.filadmin)
+  @RequiresDelegationPermission('payments')
   markPaid(
     @Param('studentId') studentId: string,
     @Body()

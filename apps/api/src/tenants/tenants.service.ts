@@ -79,6 +79,30 @@ export class TenantsService {
     });
   }
 
+  /** 25.C.3: Read certTemplate JSON for a tenant. */
+  async getCertTemplate(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { certTemplate: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant topilmadi');
+    return { certTemplate: tenant.certTemplate };
+  }
+
+  /** 25.C.3: Update certTemplate JSON for a tenant. */
+  async setCertTemplate(tenantId: string, certTemplate: unknown) {
+    const exists = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { certTemplate: certTemplate as Prisma.InputJsonValue },
+      select: { id: true, certTemplate: true },
+    });
+  }
+
   /**
    * Phase 17 — superadmin renames a tenant. Returns the updated tenant.
    */

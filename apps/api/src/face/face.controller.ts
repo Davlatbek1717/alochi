@@ -122,6 +122,16 @@ export class FaceController {
   }
 
   /**
+   * 25.L.3: Face recognition SLA snapshot for the last 7 days.
+   */
+  @Get('sla')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.superadmin)
+  async getSla() {
+    return this.faceService.getSla();
+  }
+
+  /**
    * PDPL §533: recognition takes the precomputed vector from the kiosk.
    * Server-side cosine search uses the pgvector index.
    */
