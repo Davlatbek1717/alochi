@@ -1,14 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Building2, Plus, Check, X, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, Plus, Check, X, Pencil, Trash2, ChevronRight, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
   EmptyState,
   Skeleton,
   useToast,
+  Modal,
 } from '@/components/ui';
 
-interface Branch { id: string; name: string; }
+interface Branch {
+  id: string;
+  name: string;
+  userCount?: number;
+}
 
 export default function SuperadminBranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -17,6 +23,8 @@ export default function SuperadminBranchesPage() {
   const [creating, setCreating] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Branch | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
@@ -34,12 +42,16 @@ export default function SuperadminBranchesPage() {
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function createBranch() {
-    if (!newName.trim()) return;
+    const name = newName.trim();
+    if (!name) {
+      toast.error('Filial nomi kiritilishi shart');
+      return;
+    }
     setCreating(true);
     try {
       await apiRequest('/branches', {
         method: 'POST',
-        body: JSON.stringify({ name: newName.trim() }),
+        body: JSON.stringify({ name }),
       }, token());
       setNewName('');
       await load();
@@ -64,6 +76,23 @@ export default function SuperadminBranchesPage() {
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiRequest(`/branches/${deleteTarget.id}`, {
+        method: 'DELETE',
+      }, token());
+      setBranches((prev) => prev.filter((b) => b.id !== deleteTarget.id));
+      toast.success('Filial o’chirildi');
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally { setDeleting(false); }
+  }
+
+  const inputEmpty = !newName.trim();
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
@@ -87,26 +116,38 @@ export default function SuperadminBranchesPage() {
 
       <div className="px-4 pt-5 pb-6 space-y-4">
         {/* Add form */}
-        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex gap-3">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && createBranch()}
-            placeholder="Yangi filial nomi..."
-            aria-label="Yangi filial nomi"
-            className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-          />
-          <button
-            onClick={createBranch}
-            disabled={creating || !newName.trim()}
-            className="bg-[#0f172a] text-white px-4 py-3 rounded-xl text-sm font-bold disabled:opacity-40 flex items-center gap-1.5"
-          >
-            {creating
-              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <Plus size={16} />}
-            Qo&apos;sh
-          </button>
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && createBranch()}
+              placeholder="Yangi filial nomi..."
+              aria-label="Yangi filial nomi"
+              className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
+            />
+            <button
+              onClick={createBranch}
+              disabled={creating}
+              aria-label="Filial qo'shish"
+              className={`px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors ${
+                creating
+                  ? 'bg-[#0f172a] text-white opacity-70 cursor-wait'
+                  : inputEmpty
+                  ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                  : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
+              }`}
+            >
+              {creating
+                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <Plus size={16} />}
+              Qo&apos;sh
+            </button>
+          </div>
+          {inputEmpty && (
+            <p className="text-xs text-[#94a3b8] pl-1">Filial nomini kiritib, Enter bosing yoki tugmani bosing</p>
+          )}
         </div>
 
         {loading ? (
@@ -138,35 +179,61 @@ export default function SuperadminBranchesPage() {
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && saveName(b.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveName(b.id);
+                        if (e.key === 'Escape') setEditId(null);
+                      }}
                       aria-label="Filial nomini tahrirlash"
                       className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
                     />
                     <button
                       onClick={() => saveName(b.id)}
                       aria-label="Saqlash"
-                      className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center"
+                      className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center hover:bg-emerald-200"
                     >
                       <Check size={15} />
                     </button>
                     <button
                       onClick={() => setEditId(null)}
                       aria-label="Bekor qilish"
-                      className="w-8 h-8 bg-[#f7f4ef] text-[#94a3b8] rounded-xl flex items-center justify-center"
+                      className="w-8 h-8 bg-[#f7f4ef] text-[#94a3b8] rounded-xl flex items-center justify-center hover:bg-[#ede9e1]"
                     >
                       <X size={15} />
                     </button>
                   </>
                 ) : (
                   <>
-                    <p className="flex-1 font-semibold text-[#0f172a] text-sm">{b.name}</p>
+                    <Link
+                      href={`/superadmin/branches/${b.id}`}
+                      className="flex-1 min-w-0 group"
+                    >
+                      <p className="font-semibold text-[#0f172a] text-sm truncate group-hover:underline">{b.name}</p>
+                      <p className="text-xs text-[#94a3b8] flex items-center gap-1">
+                        <Users size={10} />
+                        {b.userCount ?? 0} foydalanuvchi
+                      </p>
+                    </Link>
                     <button
                       onClick={() => { setEditId(b.id); setEditName(b.name); }}
                       aria-label={`${b.name} nomini tahrirlash`}
-                      className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] rounded-xl flex items-center justify-center"
+                      className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
                     >
                       <Pencil size={14} />
                     </button>
+                    <button
+                      onClick={() => setDeleteTarget(b)}
+                      aria-label={`${b.name} filialini o'chirish`}
+                      className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <Link
+                      href={`/superadmin/branches/${b.id}`}
+                      aria-label={`${b.name} batafsil`}
+                      className="w-8 h-8 bg-[#f7f4ef] text-[#94a3b8] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
+                    >
+                      <ChevronRight size={14} />
+                    </Link>
                   </>
                 )}
               </div>
@@ -174,6 +241,42 @@ export default function SuperadminBranchesPage() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title="Filialni o'chirish"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {deleting && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              O&apos;chirish
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{deleteTarget?.name}</span> filialini o&apos;chirmoqchimisiz?
+        </p>
+        {deleteTarget && (deleteTarget.userCount ?? 0) > 0 && (
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-3">
+            Bu filialda <strong>{deleteTarget.userCount}</strong> foydalanuvchi bor. O&apos;chirish uchun ularni avval boshqa filialga ko&apos;chiring.
+          </p>
+        )}
+      </Modal>
     </div>
   );
 }

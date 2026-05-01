@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -51,6 +52,12 @@ export class BranchesController {
     @Request() req: any,
   ) {
     return this.branches.update(id, req.user.tenantId, { name: body.name });
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.superadmin)
+  delete(@Param('id') id: string, @Request() req: any) {
+    return this.branches.delete(id, req.user.tenantId);
   }
 
   @Patch(':id/filadmin')

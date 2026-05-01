@@ -2,12 +2,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, Plus, CheckCircle, Globe, Pencil } from 'lucide-react';
+import { BookOpen, Plus, CheckCircle, Globe, Pencil, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
   EmptyState,
   Skeleton,
   useToast,
+  Modal,
 } from '@/components/ui';
 
 interface Lesson {
@@ -52,6 +53,8 @@ export default function SuperadminLessonsPage() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -61,6 +64,22 @@ export default function SuperadminLessonsPage() {
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(`/lessons/${deleteTarget.id}`, { method: 'DELETE' }, token);
+      setLessons((prev) => prev.filter((l) => l.id !== deleteTarget.id));
+      toast.success('Dars o’chirildi');
+      setDeleteTarget(null);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function publishLesson(id: string) {
     setPublishing(id);
@@ -207,6 +226,13 @@ export default function SuperadminLessonsPage() {
                       >
                         <Pencil size={11} /> Tahrir
                       </Link>
+                      <button
+                        onClick={() => setDeleteTarget(lesson)}
+                        aria-label={`${lesson.title} darsini o'chirish`}
+                        className="flex items-center gap-1 text-xs text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg font-semibold hover:bg-rose-100 transition-colors"
+                      >
+                        <Trash2 size={11} />
+                      </button>
                       {!lesson.isPublished && (
                         <button
                           onClick={() => publishLesson(lesson.id)}
@@ -230,6 +256,37 @@ export default function SuperadminLessonsPage() {
         );
         })()}
       </div>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title="Darsni o'chirish"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {deleting && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              O&apos;chirish
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">{deleteTarget?.title}</span> darsini o&apos;chirmoqchimisiz? O&apos;quvchilar progressi mavjud bo&apos;lsa, o&apos;chirib bo&apos;lmaydi.
+        </p>
+      </Modal>
     </div>
   );
 }

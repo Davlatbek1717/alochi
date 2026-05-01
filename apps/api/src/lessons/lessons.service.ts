@@ -101,6 +101,24 @@ export class LessonsService {
     return this.prisma.lesson.update({ where: { id }, data });
   }
 
+  /**
+   * Delete a lesson. Refused when any student progress rows exist for the
+   * lesson — frontends should surface the resulting 409 to the user. Cascading
+   * `LessonComponent` rows are removed by the schema-level `onDelete: Cascade`.
+   */
+  async delete(id: string, tenantId: string) {
+    await this.findById(id, tenantId);
+    const progressCount = await this.prisma.studentProgress.count({
+      where: { lessonId: id },
+    });
+    if (progressCount > 0) {
+      throw new ConflictException(
+        `Darsda ${progressCount} o'quvchi progressi bor. O'chirib bo'lmaydi.`,
+      );
+    }
+    return this.prisma.lesson.delete({ where: { id } });
+  }
+
   async getNextLesson(studentId: string, tenantId: string) {
     const completed = await this.prisma.studentProgress.findMany({
       where: { studentId, academyCompleted: true },

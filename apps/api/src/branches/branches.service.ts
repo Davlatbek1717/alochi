@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -12,10 +16,21 @@ export class BranchesService {
   }
 
   async findByTenant(tenantId: string) {
-    return this.prisma.branch.findMany({
+    const branches = await this.prisma.branch.findMany({
       where: { tenantId },
       orderBy: { name: 'asc' },
+      include: { _count: { select: { users: true } } },
     });
+    return branches.map((b) => ({
+      id: b.id,
+      tenantId: b.tenantId,
+      name: b.name,
+      filadminId: b.filadminId,
+      workStartTime: b.workStartTime,
+      lateGraceMinutes: b.lateGraceMinutes,
+      chatLocked: b.chatLocked,
+      userCount: b._count.users,
+    }));
   }
 
   async findById(id: string, tenantId: string) {
@@ -29,6 +44,22 @@ export class BranchesService {
   async update(id: string, tenantId: string, data: { name?: string }) {
     await this.findById(id, tenantId);
     return this.prisma.branch.update({ where: { id }, data });
+  }
+
+  /**
+   * Delete a branch. Only allowed when no users are attached. Throws
+   * `ConflictException` otherwise so the frontend can surface a meaningful
+   * error.
+   */
+  async delete(id: string, tenantId: string) {
+    await this.findById(id, tenantId);
+    const userCount = await this.prisma.user.count({ where: { branchId: id } });
+    if (userCount > 0) {
+      throw new ConflictException(
+        `Filialda ${userCount} foydalanuvchi mavjud. Avval ularni boshqa filialga ko'chiring.`,
+      );
+    }
+    return this.prisma.branch.delete({ where: { id } });
   }
 
   async assignFiladmin(branchId: string, filadminId: string, tenantId: string) {

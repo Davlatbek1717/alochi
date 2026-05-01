@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Patch,
+  Delete,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -64,6 +65,12 @@ export class LessonsController {
     @Request() req: any,
   ) {
     return this.lessons.update(id, req.user.tenantId, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.superadmin)
+  delete(@Param('id') id: string, @Request() req: any) {
+    return this.lessons.delete(id, req.user.tenantId);
   }
 
   @Post(':id/mcq')
