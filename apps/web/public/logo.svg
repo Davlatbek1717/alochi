@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none">
+  <!-- A'lochi logo: violet "A" + orange path swoosh (success path metaphor) -->
+  <!-- Violet "A" -->
+  <path d="M 540 200 L 240 880 L 380 880 L 450 720 L 630 720 L 700 880 L 840 880 L 540 200 Z M 510 580 L 570 580 L 540 470 Z" fill="#6d28d9"/>
+  <!-- Orange path swoosh sweeping through right side of A -->
+  <path d="M 460 880 Q 660 600 880 320 L 800 280 Q 600 540 380 880 Z" fill="#f97316"/>
+  <path d="M 540 880 Q 720 620 920 360 L 850 330 Q 660 580 470 880 Z" fill="#fb923c" opacity="0.9"/>
+</svg>
