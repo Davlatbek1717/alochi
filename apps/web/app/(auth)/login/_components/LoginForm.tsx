@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Building2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
 
@@ -23,6 +23,7 @@ const ROLE_ROUTES: Record<string, string> = {
 export function LoginForm() {
   const router = useRouter();
   const toast = useToast();
+  const [tenantSlug, setTenantSlug] = useState('');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -32,13 +33,19 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
+      const headers: Record<string, string> = {};
+      const slug = tenantSlug.trim().toLowerCase();
+      if (slug) headers['x-tenant-slug'] = slug;
+
       const res = await apiRequest<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ login, password }),
+        headers,
       });
       localStorage.setItem('accessToken', res.data.accessToken);
       localStorage.setItem('refreshToken', res.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(res.data.user));
+      if (slug) localStorage.setItem('tenantSlug', slug);
       router.push(ROLE_ROUTES[res.data.user.role] ?? '/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login yoki parol noto'g'ri");
@@ -51,6 +58,26 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
+          Markaz (ixtiyoriy)
+        </label>
+        <div className="relative">
+          <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
+          <input
+            type="text"
+            value={tenantSlug}
+            onChange={(e) => setTenantSlug(e.target.value)}
+            placeholder="masalan: demo"
+            autoComplete="organization"
+            className="w-full border-[1.5px] border-[#ede9e1] rounded-xl pl-10 pr-4 py-3 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
+          />
+        </div>
+        <p className="text-[11px] text-[#94a3b8] mt-1.5">
+          Superadmin uchun bo&apos;sh qoldiring. Boshqa rollar uchun markaz nomini kiriting.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
           Login
         </label>
         <input
@@ -59,6 +86,7 @@ export function LoginForm() {
           onChange={(e) => setLogin(e.target.value)}
           placeholder="loginni kiriting"
           required
+          autoComplete="username"
           className="w-full border-[1.5px] border-[#ede9e1] rounded-xl px-4 py-3 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
         />
       </div>
@@ -73,6 +101,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
             className="w-full border-[1.5px] border-[#ede9e1] rounded-xl px-4 py-3 pr-11 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
           />
           <button
