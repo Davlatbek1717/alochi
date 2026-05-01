@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton } from '@/components/ui';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 type Certificate = {
   id: string;
@@ -96,7 +97,7 @@ export default function ManagerCertificatesPage() {
                   {LEVEL_LABEL[c.level] ?? c.level} · {c.lessonsCompleted} dars
                 </p>
                 <p className="text-[10px] text-[#94a3b8] mt-0.5">
-                  {new Date(c.issuedAt).toLocaleDateString('uz-UZ')}
+                  {formatDateNumeric(c.issuedAt)}
                 </p>
               </div>
             </li>

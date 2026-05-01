@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { History } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 type Entry = {
   id: string;
@@ -47,7 +48,7 @@ export default function StudentStatusHistoryPage() {
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-[#0f172a] capitalize">{e.category}</p>
                 <p className="text-xs text-[#64748b]">
-                  {new Date(e.computedAt).toLocaleDateString('uz-UZ')}
+                  {formatDateNumeric(e.computedAt)}
                 </p>
               </div>
               <div className="mt-2 flex gap-4 text-xs text-[#64748b]">

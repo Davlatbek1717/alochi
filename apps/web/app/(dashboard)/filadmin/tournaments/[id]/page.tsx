@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Trophy, Users, Calendar } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateShort, formatTime } from '@/lib/date-uz';
 
 type Registration = {
   id: string;
@@ -40,11 +41,8 @@ export default function TournamentDetailPage() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [tournamentId]);
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' });
-
-  const formatTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+  const formatDate = formatDateShort;
+  const formatHour = formatTime;
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
@@ -72,7 +70,7 @@ export default function TournamentDetailPage() {
               </span>
               <span className="flex items-center gap-1 text-[11px] text-[#94a3b8]">
                 <Calendar size={10} />
-                {formatDate(tournament.startsAt)} {formatTime(tournament.startsAt)} – {formatDate(tournament.endsAt)}
+                {formatDate(tournament.startsAt)} {formatHour(tournament.startsAt)} – {formatDate(tournament.endsAt)}
               </span>
             </div>
           )}

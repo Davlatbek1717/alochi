@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ScanFace, CheckCircle, Clock, Key } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatTime } from '@/lib/date-uz';
 
 type AttendanceRecord = {
   userId: string;
@@ -81,7 +82,7 @@ export default function FaceAttendancePage() {
 
   function formatTime(iso: string) {
     try {
-      return new Date(iso).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' });
+      return formatTime(iso);
     } catch {
       return iso;
     }

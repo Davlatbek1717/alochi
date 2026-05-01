@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Building2, Plus, Pencil, ShieldOff, Users as UsersIcon } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, useToast } from '@/components/ui';
+import { formatDateShort } from '@/lib/date-uz';
 
 interface TenantRow {
   id: string;
@@ -15,11 +16,7 @@ interface TenantRow {
 
 function formatDate(iso: string) {
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    return formatDateShort(iso);
   } catch {
     return iso;
   }

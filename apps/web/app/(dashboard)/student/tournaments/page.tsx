@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Trophy, Calendar, Users, CheckCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, Skeleton, EmptyState } from '@/components/ui';
+import { formatDateShort } from '@/lib/date-uz';
 
 type Tournament = {
   id: string;
@@ -43,7 +44,7 @@ export default function StudentTournamentsPage() {
   }
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' });
+    formatDateShort(iso);
 
   const isActive = (t: Tournament) => {
     const now = Date.now();

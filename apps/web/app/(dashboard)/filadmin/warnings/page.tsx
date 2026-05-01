@@ -19,6 +19,7 @@ import {
   Skeleton,
   useToast,
 } from '@/components/ui';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 const REASON_TYPES = [
   { value: 'not_prepared', label: 'Darsga tayyorlanmagan', icon: <BookX size={18} /> },
@@ -338,7 +339,7 @@ export default function WarningsPage() {
                     </p>
                   </div>
                   <span className="text-xs text-[#94a3b8] shrink-0">
-                    {new Date(w.createdAt).toLocaleDateString('uz-UZ')}
+                    {formatDateNumeric(w.createdAt)}
                   </span>
                 </div>
                 <p className="text-xs text-[#64748b] italic">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { CalendarRange, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateNumeric, formatTime } from '@/lib/date-uz';
 
 type Row = {
   id: string;
@@ -76,11 +77,11 @@ export default function StaffAttendanceHistoryPage() {
             >
               <div>
                 <p className="font-semibold text-[#0f172a] text-sm">{r.user.name}</p>
-                <p className="text-xs text-[#64748b]">{new Date(r.date).toLocaleDateString('uz-UZ')}</p>
+                <p className="text-xs text-[#64748b]">{formatDateNumeric(r.date)}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-[#0f172a] flex items-center gap-1 justify-end">
-                  <Clock size={12} /> {new Date(r.loginTime).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}
+                  <Clock size={12} /> {formatTime(r.loginTime)}
                 </p>
                 {r.isLate && (
                   <p className="text-xs text-rose-600">+{r.lateMinutes} daq.</p>

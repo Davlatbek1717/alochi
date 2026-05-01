@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { formatNumber } from '@/lib/date-uz';
 
 export interface BranchStudent {
   id: string;
@@ -124,7 +125,7 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
                     }`}
                   >
                     {s.hasPaid
-                      ? `✅ ${s.payment!.amount.toLocaleString()} so'm · ${s.payment!.paidAt.slice(0, 10)}`
+                      ? `✅ ${formatNumber(s.payment!.amount)} so'm · ${s.payment!.paidAt.slice(0, 10)}`
                       : s.status === 'blocked_payment'
                       ? '🔒 Bloklangan'
                       : "⏳ Hali to'lamagan"}

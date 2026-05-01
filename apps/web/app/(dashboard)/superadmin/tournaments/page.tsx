@@ -22,6 +22,7 @@ import {
   Skeleton,
   useToast,
 } from '@/components/ui';
+import { formatDateShort } from '@/lib/date-uz';
 
 type Tournament = {
   id: string;
@@ -172,11 +173,7 @@ export default function SuperadminTournamentsPage() {
   }
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('uz-UZ', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+    formatDateShort(iso);
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">

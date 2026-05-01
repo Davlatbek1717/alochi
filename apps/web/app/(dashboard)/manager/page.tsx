@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, Stat } from '@/components/ui';
+import { formatDateWeekday } from '@/lib/date-uz';
 
 type StatusStudent = {
   studentId: string;
@@ -106,7 +107,7 @@ export default function ManagerDashboard() {
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Manager Panel</p>
             <p className="text-white text-xl font-bold">{managerName || 'Manager'}</p>
             <p className="text-[#475569] text-xs mt-1 font-mono">
-              {new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', weekday: 'long' })}
+              {formatDateWeekday(new Date())}
             </p>
           </div>
         </div>

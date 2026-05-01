@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateTimeLong } from '@/lib/date-uz';
 import {
   Card,
   CardHeader,
@@ -38,15 +39,7 @@ interface ModelMetrics {
 
 function formatTrainedAt(iso: string | undefined): string {
   if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('uz-UZ', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDateTimeLong(iso) || '—';
 }
 
 const SIGNAL_LABELS: Record<string, string> = {

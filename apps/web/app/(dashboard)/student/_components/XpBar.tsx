@@ -1,3 +1,5 @@
+import { formatNumber } from '@/lib/date-uz';
+
 interface XpBarProps {
   totalXp: number;
   level: string;
@@ -27,7 +29,7 @@ export function XpBar({ totalXp, level, nextLevelXp }: XpBarProps) {
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
         <span className="font-bold text-indigo-700">{level}</span>
-        <span className="text-gray-500">{totalXp.toLocaleString()} / {nextLevelXp === Infinity ? '∞' : nextLevelXp.toLocaleString()} XP</span>
+        <span className="text-gray-500">{formatNumber(totalXp)} / {nextLevelXp === Infinity ? '∞' : formatNumber(nextLevelXp)} XP</span>
       </div>
       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
         <div

@@ -4,6 +4,7 @@ import { AlertTriangle, WifiOff, RefreshCw, KeyRound, ScanFace, GraduationCap, A
 import { FaceScanner } from './_components/FaceScanner';
 import { AttendanceResult } from './_components/AttendanceResult';
 import { OfflineQueue, isNetworkError } from '@/lib/offline-queue';
+import { formatTime } from '@/lib/date-uz';
 
 type CheckinPayload = {
   userId: string;
@@ -181,7 +182,7 @@ export default function KioskPage() {
         }
         throw new Error(msg || "Belgilab bo'lmadi");
       }
-      const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+      const time = formatTime(new Date());
       setResult({ name, time, isLate, minutes });
       setKioskState('success');
     } catch (err: unknown) {
@@ -189,7 +190,7 @@ export default function KioskPage() {
       if (isNetworkError(err)) {
         try {
           await checkinQueue.enqueue(payload);
-          const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+          const time = formatTime(new Date());
           setResult({ name, time, isLate, minutes });
           setKioskState('success');
           return;
@@ -252,7 +253,7 @@ export default function KioskPage() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((json as { message?: string }).message ?? 'Xato');
       const r = json as { name: string; isLate: boolean };
-      const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+      const time = formatTime(new Date());
       setResult({ name: r.name, time, isLate: r.isLate, minutes: 0 });
       setKioskState('success');
     } catch (err: unknown) {

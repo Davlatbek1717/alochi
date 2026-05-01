@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Eye, Key, Shield, Clock, CheckCircle, Download, ClipboardList } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { formatTime } from '@/lib/date-uz';
 
 type StaffRecord = {
   id: string;
@@ -26,13 +27,9 @@ function getBranchIdFromToken(): string | null {
   }
 }
 
-function formatTime(iso: string | null): string {
+function formatTimeOrDash(iso: string | null): string {
   if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-  } catch {
-    return '—';
-  }
+  return formatTime(iso) || '—';
 }
 
 function lateMinutes(loginTime: string | null): number {
@@ -266,7 +263,7 @@ export default function FiladminAttendancePage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[#64748b] text-xs font-mono">{formatTime(r.loginTime)}</span>
+                      <span className="text-[#64748b] text-xs font-mono">{formatTimeOrDash(r.loginTime)}</span>
                       <MethodBadge method={r.recognitionMethod} />
                     </div>
                   </div>
@@ -275,7 +272,7 @@ export default function FiladminAttendancePage() {
                     {!r.loginTime ? (
                       <span className="text-[#94a3b8] text-xs">Kelmagan</span>
                     ) : r.confirmedAt ? (
-                      <span className="text-[#94a3b8] text-xs font-mono">{formatTime(r.confirmedAt)}</span>
+                      <span className="text-[#94a3b8] text-xs font-mono">{formatTimeOrDash(r.confirmedAt)}</span>
                     ) : (
                       <Button
                         variant="secondary"

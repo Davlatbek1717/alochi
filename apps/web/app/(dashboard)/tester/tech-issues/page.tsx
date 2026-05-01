@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Wrench } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateTimeLong } from '@/lib/date-uz';
 
 type Issue = {
   id: string;
@@ -97,7 +98,7 @@ export default function TesterTechIssuesPage() {
                 </span>
               </div>
               <p className="text-xs text-[#64748b] mt-1">{i.description}</p>
-              <p className="text-xs text-[#94a3b8] mt-1">{new Date(i.createdAt).toLocaleString('uz-UZ')}</p>
+              <p className="text-xs text-[#94a3b8] mt-1">{formatDateTimeLong(i.createdAt)}</p>
             </div>
           ))
         )}

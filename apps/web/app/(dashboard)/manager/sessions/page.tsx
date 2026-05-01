@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Calendar, Plus, Check, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
+import { formatDateTimeLong } from '@/lib/date-uz';
 
 interface Session {
   id: string;
@@ -204,7 +205,7 @@ export default function ManagerSessionsPage() {
                       {s.student?.name ?? s.studentId}
                     </p>
                     <p className="text-xs text-[#64748b]">
-                      {new Date(s.scheduledAt).toLocaleString('uz-UZ')}
+                      {formatDateTimeLong(s.scheduledAt)}
                     </p>
                     {s.notes && (
                       <p className="text-xs text-[#64748b] mt-1 italic">

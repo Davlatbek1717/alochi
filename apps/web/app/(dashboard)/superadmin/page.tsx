@@ -8,6 +8,7 @@ import {
   UserX, Camera, Award, Video, MessageSquare,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateLong } from '@/lib/date-uz';
 
 const NAV_CARDS = [
   { href: '/superadmin/tenants',     icon: <Building2 size={22} />, title: 'Markazlar',          desc: "A'lochi markazlari ro'yxati va boshqaruv", color: 'hover:border-violet-300 hover:bg-violet-50' },
@@ -68,7 +69,7 @@ export default function SuperadminDashboard() {
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-0.5">Tizim boshqaruvi</p>
             <p className="text-white text-xl font-bold">Superadmin Paneli</p>
             <p className="text-[#475569] text-xs mt-0.5 font-mono">
-              {new Date().toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {formatDateLong(new Date())}
             </p>
           </div>
         </div>

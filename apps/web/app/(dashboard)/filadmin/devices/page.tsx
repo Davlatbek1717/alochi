@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Tablet, Plus, Trash2, AlertTriangle, Wifi } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateTime } from '@/lib/date-uz';
 
 type Device = {
   id: string;
@@ -25,10 +26,7 @@ function getBranchIdFromToken(): string | null {
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Hech qachon';
-  return new Date(iso).toLocaleString('uz-UZ', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
+  return formatDateTime(iso);
 }
 
 export default function FiladminDevicesPage() {

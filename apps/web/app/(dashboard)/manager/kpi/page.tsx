@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateShort } from '@/lib/date-uz';
 
 type BranchUser = {
   id: string;
@@ -35,7 +36,7 @@ function formatRelativeTime(iso: string): string {
   if (hours < 24) return `${hours} soat oldin`;
   const days = Math.round(hours / 24);
   if (days < 7) return `${days} kun oldin`;
-  return new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' });
+  return formatDateShort(iso);
 }
 
 export default function ManagerKpiPage() {

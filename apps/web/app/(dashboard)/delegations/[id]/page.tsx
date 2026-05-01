@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, GitBranch, Calendar, Shield, FileText, CheckCircle, XCircle, AlertTriangle, CreditCard, Users, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatDateShort, formatDateTime } from '@/lib/date-uz';
 
 type Delegation = {
   id: string;
@@ -48,13 +49,13 @@ function getActionIcon(action: string): React.ReactNode {
 
 function formatDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatDateShort(iso);
   } catch { return iso; }
 }
 
 function formatTime(iso: string): string {
   try {
-    return new Date(iso).toLocaleString('uz-UZ', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return formatDateTime(iso);
   } catch { return iso; }
 }
 

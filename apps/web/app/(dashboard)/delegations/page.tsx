@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal, useToast } from '@/components/ui';
+import { formatDateShort } from '@/lib/date-uz';
 
 type DelegationStatus =
   | 'active'
@@ -78,10 +79,7 @@ const STATUS_CONFIG: Record<
 
 function formatDate(isoDate: string): string {
   try {
-    return new Date(isoDate).toLocaleDateString('uz-UZ', {
-      day: 'numeric',
-      month: 'short',
-    });
+    return formatDateShort(isoDate);
   } catch {
     return isoDate;
   }

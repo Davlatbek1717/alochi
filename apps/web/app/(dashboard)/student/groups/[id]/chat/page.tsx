@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { Send, Smile, MoreVertical, Trash2, Ban, Swords } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { formatTime } from '@/lib/date-uz';
 
 type Reaction = { emoji: string; count: number };
 type Message = {
@@ -134,7 +135,7 @@ export default function GroupChatPage() {
   }
 
   function formatTime(iso: string) {
-    try { return new Date(iso).toLocaleTimeString('uz', { hour: '2-digit', minute: '2-digit' }); }
+    try { return formatTime(iso); }
     catch { return ''; }
   }
 

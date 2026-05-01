@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trophy, Users, Calendar, ChevronRight, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, Card, CardHeader, CardTitle, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { formatDateShort } from '@/lib/date-uz';
 
 type Tournament = {
   id: string;
@@ -50,7 +51,7 @@ export default function FiladminTournamentsPage() {
   }
 
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short', year: 'numeric' });
+    formatDateShort(iso);
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">

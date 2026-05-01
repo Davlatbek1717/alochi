@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal } from '@/components/ui';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 interface Lesson {
   id: string;
@@ -430,7 +431,7 @@ export default function StudentProfilePage() {
                 {history.map((h) => (
                   <div key={h.id} className="px-5 py-3 flex flex-wrap gap-x-4 gap-y-1 items-start">
                     <span className="text-xs text-[#94a3b8] w-24 shrink-0">
-                      {new Date(h.date).toLocaleDateString('uz-UZ')}
+                      {formatDateNumeric(h.date)}
                     </span>
                     <div className="flex gap-2 flex-wrap">
                       {[

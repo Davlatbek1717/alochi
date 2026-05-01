@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ClipboardList, Plus, Pencil, Trash2, Save, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, useToast } from '@/components/ui';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 interface Report {
   id: string;
@@ -285,7 +286,7 @@ export default function PromotionReportPage() {
                     {r.schoolName}
                   </p>
                   <span className="text-xs text-gray-500 shrink-0">
-                    {new Date(r.visitDate).toLocaleDateString('uz-UZ')}
+                    {formatDateNumeric(r.visitDate)}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">

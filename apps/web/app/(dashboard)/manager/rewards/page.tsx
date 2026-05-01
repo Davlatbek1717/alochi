@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Gift, Pencil, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
+import { formatDateNumeric } from '@/lib/date-uz';
 
 type Reward = {
   id: string;
@@ -254,7 +255,7 @@ export default function ManagerRewardsPage() {
                 </p>
                 <p className="text-xs text-[#64748b]">
                   {r.type} •{' '}
-                  {new Date(r.givenAt).toLocaleDateString('uz-UZ')}
+                  {formatDateNumeric(r.givenAt)}
                 </p>
                 {r.description && (
                   <p className="text-xs text-[#64748b] mt-1">

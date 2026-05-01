@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { formatDateWeekday } from '@/lib/date-uz';
 import { Stat, Skeleton } from '@/components/ui';
 
 type Task = { id: string; status: string };
@@ -66,9 +67,7 @@ export default function MentorDashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const dateStr = new Date().toLocaleDateString('uz-UZ', {
-    day: 'numeric', month: 'long', weekday: 'long',
-  });
+  const dateStr = formatDateWeekday(new Date());
 
   const kpiTarget = 50;
   const kpiPercent = Math.min(100, Math.round((kpiToday / kpiTarget) * 100));

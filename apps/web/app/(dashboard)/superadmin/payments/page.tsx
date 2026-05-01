@@ -5,6 +5,7 @@ import { CreditCard, Settings, ChevronRight, Users, CheckCircle, XCircle, Lock }
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
 import { Skeleton, EmptyState, useToast } from '@/components/ui';
+import { formatNumber } from '@/lib/date-uz';
 
 interface BranchPaymentSummary {
   branchId: string;
@@ -171,7 +172,7 @@ function BranchCard({ summary, month }: { summary: BranchPaymentSummary; month: 
           </div>
           <div className="bg-[#0d9488]/10 border border-[#0d9488]/20 rounded-xl px-3 py-2">
             <p className="text-xs font-bold text-[#0d9488]">
-              Yig&apos;ilgan: {summary.totalCollected.toLocaleString()} so&apos;m
+              Yig&apos;ilgan: {formatNumber(summary.totalCollected)} so&apos;m
             </p>
           </div>
         </>

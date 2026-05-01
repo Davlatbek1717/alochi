@@ -12,6 +12,7 @@ import {
   Skeleton,
   useToast,
 } from '@/components/ui';
+import { formatDateTimeLong } from '@/lib/date-uz';
 
 interface AdaptiveConfig {
   minN: number;
@@ -122,7 +123,7 @@ export default function AdaptivePage() {
             <CardTitle>Oxirgi adaptatsiya</CardTitle>
             <CardDescription>
               {lastRun.lastRunAt
-                ? `${new Date(lastRun.lastRunAt).toLocaleString('uz-UZ')} (${formatRelative(lastRun.lastRunAt)})`
+                ? `${formatDateTimeLong(lastRun.lastRunAt)} (${formatRelative(lastRun.lastRunAt)})`
                 : 'Hech qachon ishlamagan'}
             </CardDescription>
           </CardHeader>
