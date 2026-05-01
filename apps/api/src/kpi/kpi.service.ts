@@ -90,6 +90,31 @@ export class KpiService {
   }
 
   /**
+   * Branch-wide KPI award history. Joins on user.branchId so awards
+   * follow the recipient's current branch (cheap, indexed lookup).
+   */
+  async getBranchHistory(
+    branchId: string,
+    opts: { from?: Date; to?: Date; limit?: number } = {},
+  ) {
+    const where: {
+      user: { branchId: string };
+      date?: { gte?: Date; lte?: Date };
+    } = { user: { branchId } };
+    if (opts.from || opts.to) {
+      where.date = {};
+      if (opts.from) where.date.gte = opts.from;
+      if (opts.to) where.date.lte = opts.to;
+    }
+    return this.prisma.kpiScore.findMany({
+      where,
+      orderBy: { date: 'desc' },
+      take: opts.limit ?? 100,
+      include: { user: { select: { id: true, name: true, role: true } } },
+    });
+  }
+
+  /**
    * 25.F.3: Daily KPI for a mentor based on session activity.
    * Caps the rewardable student count at 20 to prevent gaming with stuffed
    * lessons. Rewards 5 points per student up to the cap.

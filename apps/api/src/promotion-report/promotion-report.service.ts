@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface CreateDto {
@@ -41,5 +45,47 @@ export class PromotionReportService {
         notes: dto.notes,
       },
     });
+  }
+
+  async update(
+    id: string,
+    callerId: string,
+    patch: {
+      schoolName?: string;
+      studentsReached?: number;
+      visitDate?: string;
+      notes?: string | null;
+    },
+  ) {
+    const existing = await this.prisma.promotionReport.findUnique({
+      where: { id },
+    });
+    if (!existing) throw new NotFoundException('Hisobot topilmadi');
+    if (existing.filadminId !== callerId)
+      throw new ForbiddenException('Faqat yaratuvchi tahrirlay oladi');
+    const data: {
+      schoolName?: string;
+      studentsReached?: number;
+      visitDate?: Date;
+      notes?: string | null;
+    } = {};
+    if (patch.schoolName !== undefined) data.schoolName = patch.schoolName;
+    if (patch.studentsReached !== undefined)
+      data.studentsReached = patch.studentsReached;
+    if (patch.visitDate !== undefined)
+      data.visitDate = new Date(patch.visitDate);
+    if (patch.notes !== undefined) data.notes = patch.notes;
+    return this.prisma.promotionReport.update({ where: { id }, data });
+  }
+
+  async remove(id: string, callerId: string) {
+    const existing = await this.prisma.promotionReport.findUnique({
+      where: { id },
+    });
+    if (!existing) throw new NotFoundException('Hisobot topilmadi');
+    if (existing.filadminId !== callerId)
+      throw new ForbiddenException('Faqat yaratuvchi o‘chira oladi');
+    await this.prisma.promotionReport.delete({ where: { id } });
+    return { ok: true };
   }
 }

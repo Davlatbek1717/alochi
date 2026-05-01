@@ -6,6 +6,7 @@ import {
   UseGuards,
   Request,
   Query,
+  Param,
 } from '@nestjs/common';
 import { KpiService } from './kpi.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -64,6 +65,30 @@ export class KpiController {
   @Get('daily')
   async getDailyTotal(@Request() req: any) {
     return this.kpi.getDailyTotal(req.user.userId, new Date());
+  }
+
+  /**
+   * Branch KPI award history — paginated list of awards for any user in
+   * the given branch within the (optional) ?from=&to= window.
+   * Filadmins use this to review awards they have given this month.
+   */
+  @Get('by-branch/:branchId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  async getByBranch(
+    @Param('branchId') branchId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsed = limit ? parseInt(limit, 10) : NaN;
+    const safeLimit =
+      Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 200) : 100;
+    return this.kpi.getBranchHistory(branchId, {
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      limit: safeLimit,
+    });
   }
 
   @Get('monthly')

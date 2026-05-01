@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, CreditCard } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
@@ -10,6 +10,8 @@ import { Button, useToast } from '@/components/ui';
 function currentMonth() {
   return new Date().toISOString().slice(0, 7);
 }
+
+const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
 function getBranchAndToken(): { branchId: string; token: string } {
   const token = localStorage.getItem('accessToken') ?? '';
@@ -24,9 +26,23 @@ function getBranchAndToken(): { branchId: string; token: string } {
 }
 
 export default function FiladminPaymentsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f7f4ef]" />}>
+      <PaymentsInner />
+    </Suspense>
+  );
+}
+
+function PaymentsInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { error: toastError, success } = useToast();
-  const [month, setMonth] = useState(currentMonth());
+  const initialMonth = (() => {
+    const q = searchParams?.get('month');
+    if (q && MONTH_PATTERN.test(q)) return q;
+    return currentMonth();
+  })();
+  const [month, setMonth] = useState(initialMonth);
   const [students, setStudents] = useState<BranchStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +82,12 @@ export default function FiladminPaymentsPage() {
   function handleMonthChange(m: string) {
     setMonth(m);
     fetchStudents(m);
+    // Reflect month in URL so it's bookmarkable / shareable.
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('month', m);
+      router.replace(`${url.pathname}${url.search}`);
+    }
   }
 
   async function handleMarkPaid(studentId: string, amount: number) {

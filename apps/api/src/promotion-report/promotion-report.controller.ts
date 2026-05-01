@@ -2,8 +2,11 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
   BadRequestException,
@@ -31,6 +34,17 @@ export class PromotionReportController {
     return this.reports.listByBranch(branchId);
   }
 
+  /**
+   * Query-style alias used by the filadmin UI: `GET /promotion-reports?branchId=...`.
+   * Falls back to caller's own reports when no branchId is given.
+   */
+  @Get()
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  listFlexible(@Request() req: any, @Query('branchId') branchId?: string) {
+    if (branchId) return this.reports.listByBranch(branchId);
+    return this.reports.list(req.user.userId);
+  }
+
   @Post()
   @Roles(UserRole.filadmin)
   create(
@@ -56,5 +70,27 @@ export class PromotionReportController {
       visitDate: body.visitDate,
       notes: body.notes,
     });
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.filadmin)
+  update(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body()
+    body: {
+      schoolName?: string;
+      studentsReached?: number;
+      visitDate?: string;
+      notes?: string | null;
+    },
+  ) {
+    return this.reports.update(id, req.user.userId, body);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.filadmin)
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.reports.remove(id, req.user.userId);
   }
 }

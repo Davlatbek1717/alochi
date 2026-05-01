@@ -288,6 +288,8 @@ export class UsersService {
         login: true,
         role: true,
         tenantId: true,
+        branchId: true,
+        groupId: true,
         parentTelegramId: true,
         faceEmbeddings: { where: { isActive: true }, select: { id: true } },
       },
@@ -298,6 +300,8 @@ export class UsersService {
       login: user.login,
       role: user.role,
       tenantId: user.tenantId,
+      branchId: user.branchId,
+      groupId: user.groupId,
       faceEnrolled: user.faceEmbeddings.length > 0,
       parentTelegramLinked: user.parentTelegramId !== null,
     };

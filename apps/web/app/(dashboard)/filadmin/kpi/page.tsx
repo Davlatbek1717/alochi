@@ -22,6 +22,14 @@ type RecentAward = {
   recipientName?: string;
 };
 
+type BranchAward = {
+  id: string;
+  score: number;
+  reason: string;
+  date: string;
+  user?: { id: string; name: string; role: string };
+};
+
 const PRESETS = [5, 10, 15, 20, 25, 30, 50];
 
 function formatRelativeTime(iso: string): string {
@@ -56,6 +64,9 @@ export default function FiladminKpiPage() {
   const [statsError, setStatsError] = useState(false);
 
   const [recentAwards, setRecentAwards] = useState<RecentAward[]>([]);
+  const [branchHistory, setBranchHistory] = useState<BranchAward[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(20);
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,11 +86,24 @@ export default function FiladminKpiPage() {
       // malformed JSON — branchId stays empty
     }
 
+    // Month-bounded ?from=&to= for the branch-wide award history.
+    const now = new Date();
+    const fromIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const toIso = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+
     async function load() {
-      const [usersRes, todayRes, recentRes] = await Promise.allSettled([
+      setHistoryLoading(true);
+      const [usersRes, todayRes, recentRes, historyRes] = await Promise.allSettled([
         apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
         apiRequest<number>('/kpi/today', {}, token),
         apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
+        branchId
+          ? apiRequest<BranchAward[]>(
+              `/kpi/by-branch/${branchId}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&limit=200`,
+              {},
+              token,
+            )
+          : Promise.reject(new Error('no branch')),
       ]);
 
       if (usersRes.status === 'fulfilled') {
@@ -99,6 +123,11 @@ export default function FiladminKpiPage() {
       if (recentRes.status === 'fulfilled') {
         setRecentAwards(recentRes.value.data ?? []);
       }
+
+      if (historyRes.status === 'fulfilled') {
+        setBranchHistory(historyRes.value.data ?? []);
+      }
+      setHistoryLoading(false);
     }
 
     load();
@@ -287,6 +316,11 @@ export default function FiladminKpiPage() {
         >
           {submitting ? 'Yuborilmoqda...' : `${score} ball berish`}
         </button>
+        {(!selectedUserId || !reason.trim()) && (
+          <p className="text-xs text-[#94a3b8] text-center -mt-2">
+            {!selectedUserId ? 'Xodimni tanlang va sababni yozing' : 'Sababni yozing'}
+          </p>
+        )}
 
         {success && (
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm">
@@ -300,6 +334,55 @@ export default function FiladminKpiPage() {
             <span>{awardError}</span>
           </div>
         )}
+
+        {/* Branch monthly award history */}
+        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+          <div className="px-5 py-4 border-b border-[#ede9e1] flex items-center justify-between">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              Bu oy filialdagi mukofotlar
+            </p>
+            <span className="text-xs text-[#94a3b8]">{branchHistory.length}</span>
+          </div>
+          {historyLoading ? (
+            <p className="p-5 text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+          ) : branchHistory.length === 0 ? (
+            <p className="p-5 text-sm text-[#94a3b8]">Hali mukofot yo&apos;q</p>
+          ) : (
+            <>
+              <div className="divide-y divide-[#ede9e1] max-h-96 overflow-y-auto">
+                {branchHistory.slice(0, historyVisible).map((a) => (
+                  <div key={a.id} className="px-5 py-3 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0">
+                      +{a.score}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">
+                        {a.user?.name ?? 'Xodim'}
+                        <span className="text-xs text-[#94a3b8] font-normal ml-1 capitalize">
+                          ({a.user?.role ?? '—'})
+                        </span>
+                      </p>
+                      <p className="text-xs text-[#64748b] truncate">{a.reason}</p>
+                    </div>
+                    <span className="text-xs text-[#94a3b8] shrink-0">
+                      {new Date(a.date).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {historyVisible < branchHistory.length && (
+                <div className="border-t border-[#ede9e1] p-3">
+                  <button
+                    onClick={() => setHistoryVisible((n) => n + 20)}
+                    className="w-full text-xs font-bold text-[#0d9488] hover:bg-[#f7f4ef] py-2 rounded-lg transition-colors"
+                  >
+                    Yana ko&apos;rish
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

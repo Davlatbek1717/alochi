@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle } from 'lucide-react';
+import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Modal } from '@/components/ui';
 
 interface Lesson {
   id: string;
@@ -68,6 +69,17 @@ export default function StudentProfilePage() {
   const [history, setHistory] = useState<StatusRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Quick-action modal state
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusColorPick, setStatusColorPick] = useState<'yashil' | 'sariq' | 'qizil'>('yashil');
+  const [statusNote, setStatusNote] = useState('');
+  const [statusSaving, setStatusSaving] = useState(false);
+
+  const [kpiModalOpen, setKpiModalOpen] = useState(false);
+  const [kpiScore, setKpiScore] = useState(10);
+  const [kpiReason, setKpiReason] = useState('');
+  const [kpiSaving, setKpiSaving] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -148,6 +160,71 @@ export default function StudentProfilePage() {
     router.push(`/delegations/new?reason=${encoded}`);
   }
 
+  async function submitStatus() {
+    if (!studentId) return;
+    setStatusSaving(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(
+        '/status/critical',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            studentId,
+            color: statusColorPick,
+            note: statusNote || undefined,
+          }),
+        },
+        token,
+      );
+      // Reload current status
+      try {
+        const fresh = await apiRequest<StudentStatus>(`/status/${studentId}`, {}, token);
+        setStatus(fresh.data);
+      } catch { /* ignore */ }
+      // Invalidate history cache
+      setHistory([]);
+      setShowHistory(false);
+      setStatusModalOpen(false);
+      setStatusNote('');
+      showToast('Status saqlandi');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Saqlashda xatolik');
+    } finally {
+      setStatusSaving(false);
+    }
+  }
+
+  async function submitKpi() {
+    if (!studentId || !kpiReason.trim()) {
+      showToast("Sababni kiriting");
+      return;
+    }
+    setKpiSaving(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(
+        '/kpi/award',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            userId: studentId,
+            score: kpiScore,
+            reason: kpiReason.trim(),
+          }),
+        },
+        token,
+      );
+      setKpiModalOpen(false);
+      setKpiReason('');
+      showToast('KPI berildi');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Saqlashda xatolik');
+    } finally {
+      setKpiSaving(false);
+    }
+  }
+
   if (studentError) {
     return (
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
@@ -213,6 +290,34 @@ export default function StudentProfilePage() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-4">
+        {/* Quick actions */}
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => { setStatusModalOpen(true); setStatusColorPick('yashil'); setStatusNote(''); }}
+            disabled={!studentName}
+            className="bg-white rounded-xl border-[1.5px] border-[#ede9e1] p-3 flex flex-col items-center justify-center gap-1 hover:bg-[#f7f4ef] disabled:opacity-50 transition-colors"
+          >
+            <Flag size={18} className="text-rose-500" />
+            <span className="text-xs font-bold text-[#0f172a]">Status berish</span>
+          </button>
+          <button
+            onClick={handleStart11}
+            disabled={!studentName}
+            className="bg-white rounded-xl border-[1.5px] border-[#ede9e1] p-3 flex flex-col items-center justify-center gap-1 hover:bg-[#f7f4ef] disabled:opacity-50 transition-colors"
+          >
+            <Video size={18} className="text-violet-600" />
+            <span className="text-xs font-bold text-[#0f172a]">Delegatsiya</span>
+          </button>
+          <button
+            onClick={() => { setKpiModalOpen(true); setKpiScore(10); setKpiReason(''); }}
+            disabled={!studentName}
+            className="bg-white rounded-xl border-[1.5px] border-[#ede9e1] p-3 flex flex-col items-center justify-center gap-1 hover:bg-[#f7f4ef] disabled:opacity-50 transition-colors"
+          >
+            <Star size={18} className="text-amber-500" />
+            <span className="text-xs font-bold text-[#0f172a]">KPI qo&apos;shish</span>
+          </button>
+        </div>
+
         {/* Status card */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Holat</p>
@@ -353,6 +458,130 @@ export default function StudentProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Status modal */}
+      <Modal
+        open={statusModalOpen}
+        onClose={() => setStatusModalOpen(false)}
+        title="Tanqidiy status berish"
+        description="Bu o'quvchi uchun bugungi rangni tanlang"
+        footer={
+          <>
+            <button
+              onClick={() => setStatusModalOpen(false)}
+              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={submitStatus}
+              disabled={statusSaving}
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
+            >
+              {statusSaving ? '...' : 'Saqlash'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { v: 'yashil' as const, label: 'Yashil', dot: 'bg-emerald-500' },
+              { v: 'sariq' as const, label: 'Sariq', dot: 'bg-amber-500' },
+              { v: 'qizil' as const, label: 'Qizil', dot: 'bg-rose-500' },
+            ]).map((o) => (
+              <button
+                key={o.v}
+                onClick={() => setStatusColorPick(o.v)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border-[1.5px] text-sm font-bold transition-colors ${
+                  statusColorPick === o.v
+                    ? 'border-[#0f172a] bg-slate-50 text-[#0f172a]'
+                    : 'border-slate-200 text-slate-500 hover:border-slate-400'
+                }`}
+              >
+                <span className={`w-3 h-3 rounded-full ${o.dot}`} />
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              Izoh (ixtiyoriy)
+            </label>
+            <textarea
+              rows={3}
+              maxLength={500}
+              value={statusNote}
+              onChange={(e) => setStatusNote(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 resize-none"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* KPI modal */}
+      <Modal
+        open={kpiModalOpen}
+        onClose={() => setKpiModalOpen(false)}
+        title="KPI mukofot"
+        description={`${studentName || "O'quvchi"} uchun KPI ball bering`}
+        footer={
+          <>
+            <button
+              onClick={() => setKpiModalOpen(false)}
+              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={submitKpi}
+              disabled={kpiSaving || !kpiReason.trim()}
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
+            >
+              {kpiSaving ? '...' : `${kpiScore} ball berish`}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              Ball
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[5, 10, 15, 20, 30].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setKpiScore(p)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-[1.5px] transition-colors ${
+                    kpiScore === p
+                      ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-400'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+              Sabab
+            </label>
+            <textarea
+              rows={3}
+              maxLength={200}
+              value={kpiReason}
+              onChange={(e) => setKpiReason(e.target.value)}
+              placeholder="Nima uchun mukofot?"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 resize-none"
+            />
+            {!kpiReason.trim() && (
+              <p className="text-xs text-slate-400 mt-1">Sababni kiriting</p>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

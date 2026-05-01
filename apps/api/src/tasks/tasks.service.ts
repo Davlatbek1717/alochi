@@ -28,7 +28,31 @@ export class TasksService {
     private events: EventEmitter2,
   ) {}
 
-  async create(dto: CreateTaskDto) {
+  async create(dto: CreateTaskDto, callerRole?: string) {
+    // Mentor scope guard — mentors may only assign tasks to students in
+    // their own group. Bypass for staff roles already gated by RolesGuard.
+    if (callerRole === 'mentor') {
+      const [me, target] = await Promise.all([
+        this.prisma.user.findUnique({
+          where: { id: dto.createdBy },
+          select: { groupId: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: dto.assignedTo },
+          select: { groupId: true, role: true },
+        }),
+      ]);
+      if (!me?.groupId) {
+        throw new ForbiddenException('Mentor guruhga biriktirilmagan');
+      }
+      if (!target || target.role !== 'student') {
+        throw new ForbiddenException('Vazifa faqat o‘quvchiga beriladi');
+      }
+      if (target.groupId !== me.groupId) {
+        throw new ForbiddenException('O‘quvchi sizning guruhingizda emas');
+      }
+    }
+
     const task = await this.prisma.task.create({
       data: {
         tenantId: dto.tenantId,

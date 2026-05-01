@@ -25,7 +25,12 @@ export class TasksController {
   constructor(private tasks: TasksService) {}
 
   @Post()
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   create(
     @Body()
     body: {
@@ -38,12 +43,15 @@ export class TasksController {
     },
     @Request() req: any,
   ) {
-    return this.tasks.create({
-      tenantId: req.user.tenantId,
-      branchId: req.user.branchId,
-      createdBy: req.user.userId,
-      ...body,
-    });
+    return this.tasks.create(
+      {
+        tenantId: req.user.tenantId,
+        branchId: req.user.branchId,
+        createdBy: req.user.userId,
+        ...body,
+      },
+      req.user.role,
+    );
   }
 
   @Get('my')
@@ -52,7 +60,12 @@ export class TasksController {
   }
 
   @Get('sent')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   getSentTasks(@Request() req: any) {
     return this.tasks.getSentTasks(req.user.userId);
   }
@@ -62,7 +75,12 @@ export class TasksController {
    * filtered by status, e.g. ?status=pending).
    */
   @Get('by-branch/:branchId')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   getByBranch(
     @Param('branchId') branchId: string,
     @Query('status') status?: string,
@@ -80,7 +98,12 @@ export class TasksController {
   }
 
   @Patch(':id/confirm')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   confirm(@Param('id') id: string, @Request() req: any) {
     return this.tasks.confirm(id, req.user.userId);
   }
@@ -89,7 +112,12 @@ export class TasksController {
    * Edit a task. Only the creator may edit it. Returns the updated row.
    */
   @Patch(':id')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   update(
     @Param('id') id: string,
     @Body()
@@ -110,7 +138,12 @@ export class TasksController {
    * service for the rationale.
    */
   @Delete(':id')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   remove(@Param('id') id: string, @Request() req: any) {
     return this.tasks.remove(id, req.user.userId);
   }
