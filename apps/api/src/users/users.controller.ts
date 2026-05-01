@@ -135,6 +135,21 @@ export class UsersController {
   }
 
   /**
+   * POST /users/:id/reset-password — admin-driven password reset.
+   * The new password is provided in the body so the caller can communicate
+   * it offline (no email infrastructure assumed).
+   */
+  @Post(':id/reset-password')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  resetPassword(
+    @Param('id') id: string,
+    @Body('newPassword') newPassword: string,
+    @Request() req: any,
+  ) {
+    return this.users.resetPassword(id, req.user.tenantId, newPassword);
+  }
+
+  /**
    * GET /users/:id/block-status — derived block info from user.status
    * + warnings + payment.unblockAt.
    */

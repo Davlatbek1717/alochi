@@ -34,6 +34,16 @@ export class WarningsController {
   }
 
   /**
+   * List active warnings for the caller's branch (filadmin) or any branch
+   * the caller has access to. Used by the filadmin warnings history view.
+   */
+  @Get('by-branch/:branchId')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  getByBranch(@Param('branchId') branchId: string, @Request() req: any) {
+    return this.warnings.findByBranch(branchId, req.user.tenantId);
+  }
+
+  /**
    * Issue a warning to :studentId.
    * Path-based per spec (POST /warnings/:studentId).
    * Per spec §3.1.4 + §3.2.4: only filadmin and superadmin can give warnings.

@@ -1,15 +1,18 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Plus, ClipboardList, CheckCircle, X, PlayCircle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Plus, ClipboardList, CheckCircle, X, PlayCircle, Trash2, Pencil,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
   Button, Card, CardHeader, CardTitle,
-  EmptyState, Skeleton, useToast,
+  EmptyState, Modal, Skeleton, useToast,
 } from '@/components/ui';
 
+type Assignee = { id: string; name: string; role: string; groupId?: string | null };
 type Task = {
   id: string; title: string; description?: string; status: string;
-  kpiBall: number; deadline?: string; createdAt: string;
+  kpiBall: number; deadline?: string; createdAt: string; assignedTo?: string;
   assignee?: { name: string }; creator?: { name: string };
 };
 
@@ -24,15 +27,40 @@ const STATUS_BADGE: Record<string, string> = {
   confirmed:   'bg-[#0d9488]/10 text-[#0d9488] border border-[#0d9488]/20',
 };
 
+function getMe() {
+  try {
+    const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
+      branchId?: string;
+    };
+    return { branchId: u.branchId ?? '' };
+  } catch {
+    return { branchId: '' };
+  }
+}
+
+function emptyForm() {
+  return { assignedTo: '', title: '', description: '', kpiBall: 0, deadline: '' };
+}
+
 export default function ManagerTasksPage() {
   const { success, error: toastError } = useToast();
+  const me = useMemo(() => getMe(), []);
   const [tab, setTab] = useState<'sent' | 'my'>('sent');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
+
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ assignedTo: '', title: '', description: '', kpiBall: 0, deadline: '' });
+  const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+
+  const [editing, setEditing] = useState<Task | null>(null);
+  const [editForm, setEditForm] = useState(emptyForm());
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function token() { return localStorage.getItem('accessToken') ?? ''; }
 
@@ -47,8 +75,19 @@ export default function ManagerTasksPage() {
 
   useEffect(() => { fetchTasks(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    // Manager scope: own branch students for assigning
+    if (!me.branchId) return;
+    apiRequest<Assignee[]>(`/users/by-branch/${me.branchId}`, {}, token())
+      .then((r) => setAssignees(r.data.filter((u) => u.role === 'student')))
+      .catch(() => setAssignees([]));
+  }, [me.branchId]);
+
   async function createTask() {
-    if (!form.title.trim() || !form.assignedTo.trim()) { setFormError('Sarlavha va bajaruvchi kerak'); return; }
+    if (!form.title.trim() || !form.assignedTo.trim()) {
+      setFormError('Sarlavha va o‘quvchi kerak');
+      return;
+    }
     setSaving(true); setFormError('');
     try {
       const res = await apiRequest<Task>('/tasks', {
@@ -57,7 +96,7 @@ export default function ManagerTasksPage() {
       }, token());
       setTasks((prev) => [res.data, ...prev]);
       setShowForm(false);
-      setForm({ assignedTo: '', title: '', description: '', kpiBall: 0, deadline: '' });
+      setForm(emptyForm());
       success('Vazifa yaratildi');
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Xato');
@@ -83,9 +122,58 @@ export default function ManagerTasksPage() {
     } catch (err) { toastError(err instanceof Error ? err.message : 'Xato'); }
   }
 
+  function startEdit(t: Task) {
+    setEditing(t);
+    setEditForm({
+      assignedTo: t.assignedTo ?? '',
+      title: t.title,
+      description: t.description ?? '',
+      kpiBall: t.kpiBall ?? 0,
+      deadline: t.deadline ? t.deadline.slice(0, 10) : '',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (!editForm.title.trim()) { toastError('Sarlavha kerak'); return; }
+    setEditSaving(true);
+    try {
+      const res = await apiRequest<Task>(`/tasks/${editing.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description,
+          kpiBall: Number(editForm.kpiBall),
+          deadline: editForm.deadline || null,
+        }),
+      }, token());
+      setTasks((prev) => prev.map((t) => t.id === editing.id ? { ...t, ...res.data } : t));
+      success('Saqlandi');
+      setEditing(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Xato');
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function doDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiRequest(`/tasks/${deleteTarget.id}`, { method: 'DELETE' }, token());
+      setTasks((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+      success('O‘chirildi');
+      setDeleteTarget(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Xato');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
@@ -108,7 +196,6 @@ export default function ManagerTasksPage() {
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
-        {/* Create form */}
         {showForm && (
           <Card>
             <CardHeader>
@@ -123,13 +210,17 @@ export default function ManagerTasksPage() {
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               />
-              <input
-                placeholder="Bajaruvchi ID *"
-                aria-label="Bajaruvchi ID"
+              <select
+                aria-label="O‘quvchi"
                 value={form.assignedTo}
                 onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-              />
+              >
+                <option value="">O‘quvchini tanlang...</option>
+                {assignees.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
               <textarea
                 placeholder="Tavsif (ixtiyoriy)"
                 value={form.description}
@@ -166,7 +257,6 @@ export default function ManagerTasksPage() {
           </Card>
         )}
 
-        {/* Tabs */}
         <div className="grid grid-cols-2 gap-2">
           {(['sent', 'my'] as const).map((t) => (
             <button
@@ -225,6 +315,22 @@ export default function ManagerTasksPage() {
                     Tasdiqlash
                   </Button>
                 )}
+                {tab === 'sent' && t.status === 'sent' && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startEdit(t)}
+                      className="flex-1 text-xs font-semibold bg-[#f7f4ef] text-[#64748b] hover:bg-[#ede9e1] hover:text-[#0f172a] px-3 py-2 rounded-lg border border-[#ede9e1] inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Pencil size={12} /> Tahrirlash
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(t)}
+                      className="flex-1 text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-2 rounded-lg border border-rose-200 inline-flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={12} /> O‘chirish
+                    </button>
+                  </div>
+                )}
                 {tab === 'my' && t.status === 'sent' && (
                   <Button
                     variant="secondary"
@@ -252,6 +358,90 @@ export default function ManagerTasksPage() {
           </div>
         )}
       </div>
+
+      {/* Edit modal */}
+      <Modal
+        open={editing !== null}
+        onClose={() => !editSaving && setEditing(null)}
+        title="Vazifani tahrirlash"
+        theme="light"
+      >
+        <div className="space-y-3">
+          <input
+            value={editForm.title}
+            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            placeholder="Sarlavha *"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+          />
+          <textarea
+            value={editForm.description}
+            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+            rows={3}
+            placeholder="Tavsif"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="number"
+              value={editForm.kpiBall}
+              onChange={(e) => setEditForm({ ...editForm, kpiBall: Number(e.target.value) })}
+              placeholder="KPI ball"
+              className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+            />
+            <input
+              type="date"
+              value={editForm.deadline}
+              onChange={(e) => setEditForm({ ...editForm, deadline: e.target.value })}
+              className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+            />
+          </div>
+          <div className="flex gap-2 mt-4 justify-end">
+            <button
+              onClick={() => setEditing(null)}
+              disabled={editSaving}
+              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={editSaving}
+              className="text-sm px-4 py-2 rounded-xl bg-[#0f172a] text-white font-semibold disabled:opacity-50"
+            >
+              {editSaving ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title="Vazifa o‘chirilsinmi?"
+        size="sm"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b]">
+          <span className="font-semibold text-[#0f172a]">{deleteTarget?.title}</span> o‘chirilsin? Bu amal qaytarib bo‘lmaydi.
+        </p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setDeleteTarget(null)}
+            disabled={deleting}
+            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+          >
+            Yo‘q
+          </button>
+          <button
+            onClick={doDelete}
+            disabled={deleting}
+            className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50"
+          >
+            {deleting ? 'O‘chirilmoqda...' : 'Ha, o‘chir'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

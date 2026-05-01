@@ -360,6 +360,26 @@ export class UsersService {
   }
 
   /**
+   * Reset a user's password (superadmin/filadmin).
+   * Returns nothing — the caller should communicate the new password via
+   * a separate channel.
+   */
+  async resetPassword(id: string, tenantId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new ConflictException(
+        'Parol kamida 6 ta belgidan iborat bo‘lishi kerak',
+      );
+    }
+    await this.findById(id, tenantId);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash },
+    });
+    return { ok: true };
+  }
+
+  /**
    * Manually unblock a student (superadmin/filadmin).
    * Sets status back to 'active' and emits `student.unblocked`.
    */

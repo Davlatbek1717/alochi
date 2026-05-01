@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -82,5 +83,35 @@ export class TasksController {
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   confirm(@Param('id') id: string, @Request() req: any) {
     return this.tasks.confirm(id, req.user.userId);
+  }
+
+  /**
+   * Edit a task. Only the creator may edit it. Returns the updated row.
+   */
+  @Patch(':id')
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  update(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      title?: string;
+      description?: string;
+      kpiBall?: number;
+      deadline?: string | null;
+      assignedTo?: string;
+    },
+    @Request() req: any,
+  ) {
+    return this.tasks.update(id, req.user.userId, body);
+  }
+
+  /**
+   * Delete a task. Only the creator while still in `sent` state — see
+   * service for the rationale.
+   */
+  @Delete(':id')
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.tasks.remove(id, req.user.userId);
   }
 }

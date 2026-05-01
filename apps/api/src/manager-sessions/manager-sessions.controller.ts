@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -65,5 +66,11 @@ export class ManagerSessionsController {
     @Body('notes') notes?: string,
   ) {
     return this.sessions.markComplete(id, req.user.userId, notes);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.manager)
+  remove(@Request() req: any, @Param('id') id: string) {
+    return this.sessions.remove(id, req.user.userId);
   }
 }

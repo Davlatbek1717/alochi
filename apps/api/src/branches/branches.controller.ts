@@ -45,13 +45,19 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   update(
     @Param('id') id: string,
-    @Body() body: { name: string },
+    @Body()
+    body: {
+      name?: string;
+      workStartTime?: string;
+      lateGraceMinutes?: number;
+      chatLocked?: boolean;
+    },
     @Request() req: any,
   ) {
-    return this.branches.update(id, req.user.tenantId, { name: body.name });
+    return this.branches.update(id, req.user.tenantId, body);
   }
 
   @Delete(':id')

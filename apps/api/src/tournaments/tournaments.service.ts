@@ -35,6 +35,47 @@ export class TournamentsService {
     });
   }
 
+  async update(
+    id: string,
+    tenantId: string,
+    body: {
+      title?: string;
+      type?: string;
+      startsAt?: string;
+      endsAt?: string;
+      status?: 'upcoming' | 'active' | 'completed' | 'cancelled';
+    },
+  ) {
+    const t = await this.prisma.tournament.findFirst({
+      where: { id, tenantId },
+    });
+    if (!t) throw new NotFoundException('Turnir topilmadi');
+    const data: {
+      title?: string;
+      type?: string;
+      startsAt?: Date;
+      endsAt?: Date;
+      status?: 'upcoming' | 'active' | 'completed' | 'cancelled';
+    } = {};
+    if (body.title !== undefined) data.title = body.title;
+    if (body.type !== undefined) data.type = body.type;
+    if (body.startsAt !== undefined) data.startsAt = new Date(body.startsAt);
+    if (body.endsAt !== undefined) data.endsAt = new Date(body.endsAt);
+    if (body.status !== undefined) data.status = body.status;
+    return this.prisma.tournament.update({ where: { id }, data });
+  }
+
+  async remove(id: string, tenantId: string) {
+    const t = await this.prisma.tournament.findFirst({
+      where: { id, tenantId },
+    });
+    if (!t) throw new NotFoundException('Turnir topilmadi');
+    // Hard-delete the tournament; registrations cascade-delete via the
+    // Prisma schema (TournamentRegistration.tournamentId onDelete: Cascade).
+    await this.prisma.tournament.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async register(tournamentId: string, studentId: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id: tournamentId },

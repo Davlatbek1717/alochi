@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -65,5 +67,29 @@ export class ManagerRewardsController {
   )
   listForStudent(@Param('studentId') studentId: string) {
     return this.rewards.listForStudent(studentId);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.manager)
+  update(
+    @Param('id') id: string,
+    @Body()
+    body: { type?: string; title?: string; description?: string | null },
+    @Request() req: any,
+  ) {
+    return this.rewards.update(
+      id,
+      { userId: req.user.userId, tenantId: req.user.tenantId },
+      body,
+    );
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.manager)
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.rewards.remove(id, {
+      userId: req.user.userId,
+      tenantId: req.user.tenantId,
+    });
   }
 }

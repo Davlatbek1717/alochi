@@ -1,14 +1,23 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Users, Plus, X, ChevronDown, UserCheck, UserX, Filter } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  EmptyState,
-  Skeleton,
-  useToast,
-} from '@/components/ui';
+  Users,
+  Plus,
+  X,
+  ChevronDown,
+  UserCheck,
+  UserX,
+  Filter,
+  Pencil,
+  KeyRound,
+} from 'lucide-react';
+import { apiRequest } from '@/lib/api';
+import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 
-interface Branch { id: string; name: string; }
+interface Branch {
+  id: string;
+  name: string;
+}
 interface User {
   id: string;
   name: string;
@@ -21,8 +30,11 @@ interface User {
 
 const ROLES = ['student', 'mentor', 'manager', 'filadmin', 'superadmin'];
 const ROLE_LABELS: Record<string, string> = {
-  student: "O'quvchi", mentor: 'Mentor', manager: 'Menejer',
-  filadmin: 'Filadmin', superadmin: 'Superadmin',
+  student: "O'quvchi",
+  mentor: 'Mentor',
+  manager: 'Menejer',
+  filadmin: 'Filadmin',
+  superadmin: 'Superadmin',
 };
 const ROLE_COLORS: Record<string, string> = {
   student: 'bg-blue-50 text-blue-700 border-blue-100',
@@ -33,11 +45,23 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 function getInitials(name: string) {
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 }
 
 function emptyForm() {
-  return { name: '', login: '', password: '', role: 'student', branchId: '', phone: '' };
+  return {
+    name: '',
+    login: '',
+    password: '',
+    role: 'student',
+    branchId: '',
+    phone: '',
+  };
 }
 
 export default function SuperadminUsersPage() {
@@ -49,10 +73,35 @@ export default function SuperadminUsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
+
+  // Edit modal
+  const [editing, setEditing] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    role: 'student',
+    branchId: '',
+    phone: '',
+  });
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Password reset
+  const [resetting, setResetting] = useState<User | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetSaving, setResetSaving] = useState(false);
+
   const toast = useToast();
 
-  const token = () => localStorage.getItem('accessToken') ?? '';
-  const user = () => JSON.parse(localStorage.getItem('user') ?? '{}') as { tenantId?: string };
+  const token = () =>
+    typeof window === 'undefined' ? '' : localStorage.getItem('accessToken') ?? '';
+  const me = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') ?? '{}') as {
+        tenantId?: string;
+      };
+    } catch {
+      return {};
+    }
+  }, []);
 
   async function loadBranches() {
     const res = await apiRequest<Branch[]>('/branches', {}, token());
@@ -88,11 +137,17 @@ export default function SuperadminUsersPage() {
   async function toggleStatus(u: User) {
     const next = u.status === 'active' ? 'inactive' : 'active';
     try {
-      await apiRequest(`/users/${u.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: next }),
-      }, token());
-      setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, status: next } : x)));
+      await apiRequest(
+        `/users/${u.id}/status`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: next }),
+        },
+        token(),
+      );
+      setUsers((prev) =>
+        prev.map((x) => (x.id === u.id ? { ...x, status: next } : x)),
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     }
@@ -102,16 +157,19 @@ export default function SuperadminUsersPage() {
     if (!form.name.trim() || !form.login.trim() || !form.password) return;
     setSaving(true);
     try {
-      const { tenantId } = user();
-      await apiRequest('/users', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...form,
-          tenantId,
-          branchId: form.branchId || undefined,
-          phone: form.phone || undefined,
-        }),
-      }, token());
+      await apiRequest(
+        '/users',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            ...form,
+            tenantId: me.tenantId,
+            branchId: form.branchId || undefined,
+            phone: form.phone || undefined,
+          }),
+        },
+        token(),
+      );
       setShowCreate(false);
       setForm(emptyForm());
       await loadUsers();
@@ -123,13 +181,84 @@ export default function SuperadminUsersPage() {
     }
   }
 
+  function startEdit(u: User) {
+    setEditing(u);
+    setEditForm({
+      name: u.name,
+      role: u.role,
+      branchId: u.branchId ?? '',
+      phone: u.phone ?? '',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    if (!editForm.name.trim()) {
+      toast.error('Ism kerak');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await apiRequest(
+        `/users/${editing.id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: editForm.name.trim(),
+            role: editForm.role,
+            branchId: editForm.branchId || null,
+            phone: editForm.phone || null,
+          }),
+        },
+        token(),
+      );
+      toast.success('Saqlandi');
+      setEditing(null);
+      loadUsers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function doReset() {
+    if (!resetting) return;
+    if (newPassword.length < 6) {
+      toast.error('Parol kamida 6 ta belgi');
+      return;
+    }
+    setResetSaving(true);
+    try {
+      await apiRequest(
+        `/users/${resetting.id}/reset-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ newPassword }),
+        },
+        token(),
+      );
+      toast.success('Parol yangilandi');
+      setResetting(null);
+      setNewPassword('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setResetSaving(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+          style={{
+            background:
+              'radial-gradient(circle, #7c3aed 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
         />
         <div className="relative z-10">
           <div className="flex items-center justify-between">
@@ -150,12 +279,12 @@ export default function SuperadminUsersPage() {
         </div>
       </div>
 
-      {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-4">
-        {/* Create form */}
         {showCreate && (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-4">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi foydalanuvchi</p>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              Yangi foydalanuvchi
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { key: 'name', label: 'Ism', type: 'text' },
@@ -164,43 +293,78 @@ export default function SuperadminUsersPage() {
                 { key: 'phone', label: 'Telefon (ixtiyoriy)', type: 'text' },
               ].map(({ key, label, type }) => (
                 <div key={key}>
-                  <label htmlFor={`user-${key}`} className="block text-xs text-[#94a3b8] mb-1">{label}</label>
+                  <label
+                    htmlFor={`user-${key}`}
+                    className="block text-xs text-[#94a3b8] mb-1"
+                  >
+                    {label}
+                  </label>
                   <input
                     id={`user-${key}`}
                     type={type}
                     value={form[key as keyof typeof form]}
-                    onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, [key]: e.target.value }))
+                    }
                     className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
                   />
                 </div>
               ))}
               <div>
-                <label htmlFor="user-role" className="block text-xs text-[#94a3b8] mb-1">Rol</label>
+                <label
+                  htmlFor="user-role"
+                  className="block text-xs text-[#94a3b8] mb-1"
+                >
+                  Rol
+                </label>
                 <div className="relative">
                   <select
                     id="user-role"
                     value={form.role}
-                    onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, role: e.target.value }))
+                    }
                     className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-8"
                   >
-                    {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </option>
+                    ))}
                   </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+                  <ChevronDown
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
                 </div>
               </div>
               <div>
-                <label htmlFor="user-branch" className="block text-xs text-[#94a3b8] mb-1">Filial (ixtiyoriy)</label>
+                <label
+                  htmlFor="user-branch"
+                  className="block text-xs text-[#94a3b8] mb-1"
+                >
+                  Filial (ixtiyoriy)
+                </label>
                 <div className="relative">
                   <select
                     id="user-branch"
                     value={form.branchId}
-                    onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, branchId: e.target.value }))
+                    }
                     className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-8"
                   >
                     <option value="">— tanlanmagan —</option>
-                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {branches.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
                   </select>
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+                  <ChevronDown
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
                 </div>
               </div>
             </div>
@@ -212,14 +376,16 @@ export default function SuperadminUsersPage() {
               >
                 {saving ? 'Saqlanmoqda...' : 'Saqlash'}
               </button>
-              <button onClick={() => setShowCreate(false)} className="text-sm text-[#64748b] px-3 py-2 rounded-xl border border-[#ede9e1] font-semibold">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="text-sm text-[#64748b] px-3 py-2 rounded-xl border border-[#ede9e1] font-semibold"
+              >
                 Bekor
               </button>
             </div>
           </div>
         )}
 
-        {/* Filters */}
         <div className="flex gap-2 flex-wrap items-center">
           <Filter size={14} className="text-[#94a3b8]" />
           <div className="relative">
@@ -230,9 +396,16 @@ export default function SuperadminUsersPage() {
               className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
             >
               <option value="">Barcha rollar</option>
-              {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+              {ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
             </select>
-            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+            <ChevronDown
+              size={12}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+            />
           </div>
           <div className="relative">
             <select
@@ -242,15 +415,28 @@ export default function SuperadminUsersPage() {
               className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
             >
               <option value="">Barcha filiallar</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
             </select>
-            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+            <ChevronDown
+              size={12}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+            />
           </div>
         </div>
 
         {loading ? (
           <div className="space-y-2">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-[18px]" theme="light" />)}
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton
+                key={i}
+                className="h-16 rounded-[18px]"
+                theme="light"
+              />
+            ))}
           </div>
         ) : users.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
@@ -263,19 +449,45 @@ export default function SuperadminUsersPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{users.length} ta foydalanuvchi</p>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              {users.length} ta foydalanuvchi
+            </p>
             {users.map((u) => (
-              <div key={u.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3">
+              <div
+                key={u.id}
+                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3"
+              >
                 <div className="w-9 h-9 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {getInitials(u.name)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-[#0f172a] text-sm truncate">{u.name}</p>
+                  <p className="font-semibold text-[#0f172a] text-sm truncate">
+                    {u.name}
+                  </p>
                   <p className="text-xs text-[#94a3b8]">{u.login}</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${ROLE_COLORS[u.role] ?? 'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'}`}>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                    ROLE_COLORS[u.role] ??
+                    'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'
+                  }`}
+                >
                   {ROLE_LABELS[u.role] ?? u.role}
                 </span>
+                <button
+                  onClick={() => startEdit(u)}
+                  aria-label="Tahrirlash"
+                  className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => setResetting(u)}
+                  aria-label="Parolni tiklash"
+                  className="w-8 h-8 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl flex items-center justify-center transition-colors"
+                >
+                  <KeyRound size={14} />
+                </button>
                 {(u.status === 'active' || u.status === 'inactive') && (
                   <button
                     onClick={() => toggleStatus(u)}
@@ -284,9 +496,15 @@ export default function SuperadminUsersPage() {
                         ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                         : 'text-[#94a3b8] bg-[#f7f4ef] hover:bg-[#ede9e1]'
                     }`}
-                    title={u.status === 'active' ? "O'chirish" : 'Faollashtirish'}
+                    title={
+                      u.status === 'active' ? "O'chirish" : 'Faollashtirish'
+                    }
                   >
-                    {u.status === 'active' ? <UserCheck size={16} /> : <UserX size={16} />}
+                    {u.status === 'active' ? (
+                      <UserCheck size={16} />
+                    ) : (
+                      <UserX size={16} />
+                    )}
                   </button>
                 )}
               </div>
@@ -294,6 +512,152 @@ export default function SuperadminUsersPage() {
           </div>
         )}
       </div>
+
+      {/* Edit modal */}
+      <Modal
+        open={editing !== null}
+        onClose={() => !editSaving && setEditing(null)}
+        title="Foydalanuvchini tahrirlash"
+        theme="light"
+      >
+        <div className="space-y-3">
+          <div>
+            <label
+              htmlFor="edit-uname"
+              className="block text-xs text-[#94a3b8] mb-1"
+            >
+              Ism *
+            </label>
+            <input
+              id="edit-uname"
+              value={editForm.name}
+              onChange={(e) =>
+                setEditForm({ ...editForm, name: e.target.value })
+              }
+              autoFocus
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="edit-urole"
+                className="block text-xs text-[#94a3b8] mb-1"
+              >
+                Rol
+              </label>
+              <select
+                id="edit-urole"
+                value={editForm.role}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, role: e.target.value })
+                }
+                className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="edit-ubranch"
+                className="block text-xs text-[#94a3b8] mb-1"
+              >
+                Filial
+              </label>
+              <select
+                id="edit-ubranch"
+                value={editForm.branchId}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, branchId: e.target.value })
+                }
+                className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+              >
+                <option value="">— yo‘q —</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label
+              htmlFor="edit-uphone"
+              className="block text-xs text-[#94a3b8] mb-1"
+            >
+              Telefon
+            </label>
+            <input
+              id="edit-uphone"
+              value={editForm.phone}
+              onChange={(e) =>
+                setEditForm({ ...editForm, phone: e.target.value })
+              }
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+            />
+          </div>
+          <div className="flex gap-2 mt-4 justify-end">
+            <button
+              onClick={() => setEditing(null)}
+              disabled={editSaving}
+              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={saveEdit}
+              disabled={editSaving}
+              className="text-sm px-4 py-2 rounded-xl bg-[#0f172a] text-white font-semibold disabled:opacity-50"
+            >
+              {editSaving ? 'Saqlanmoqda...' : 'Saqlash'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Password reset modal */}
+      <Modal
+        open={resetting !== null}
+        onClose={() => !resetSaving && setResetting(null)}
+        title="Parolni tiklash"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b] mb-3">
+          <span className="font-semibold text-[#0f172a]">
+            {resetting?.name}
+          </span>{' '}
+          uchun yangi parolni kiriting va foydalanuvchiga aytib qo‘ying.
+        </p>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="Yangi parol (6+ belgi)"
+          autoFocus
+          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+        />
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setResetting(null)}
+            disabled={resetSaving}
+            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={doReset}
+            disabled={resetSaving || newPassword.length < 6}
+            className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold disabled:opacity-50"
+          >
+            {resetSaving ? 'Saqlanmoqda...' : 'Tiklash'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Clock,
   Video,
   Megaphone,
+  UserCog,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 
@@ -96,6 +97,13 @@ const NAV_CARDS = [
     title: 'Reklama hisoboti',
     description: 'Promotion natijalari',
     color: 'hover:border-fuchsia-300 hover:bg-fuchsia-50',
+  },
+  {
+    href: '/filadmin/staff',
+    icon: <UserCog size={22} />,
+    title: 'Xodimlar',
+    description: 'Mentor / menejer / tester boshqaruvi',
+    color: 'hover:border-indigo-300 hover:bg-indigo-50',
   },
 ];
 

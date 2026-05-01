@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -41,6 +43,29 @@ export class TournamentsController {
     @Request() req: any,
   ) {
     return this.tournaments.create(req.user.tenantId, body);
+  }
+
+  @Patch(':id')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  update(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      title?: string;
+      type?: string;
+      startsAt?: string;
+      endsAt?: string;
+      status?: 'upcoming' | 'active' | 'completed' | 'cancelled';
+    },
+    @Request() req: any,
+  ) {
+    return this.tournaments.update(id, req.user.tenantId, body);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.tournaments.remove(id, req.user.tenantId);
   }
 
   @Post(':id/register')

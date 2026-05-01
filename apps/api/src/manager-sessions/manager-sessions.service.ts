@@ -74,4 +74,13 @@ export class ManagerSessionsService {
       notes,
     });
   }
+
+  async remove(id: string, managerId: string) {
+    const existing = await this.prisma.managerSession.findFirst({
+      where: { id, managerId },
+    });
+    if (!existing) throw new NotFoundException('Sessiya topilmadi');
+    await this.prisma.managerSession.delete({ where: { id } });
+    return { ok: true };
+  }
 }

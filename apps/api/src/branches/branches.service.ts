@@ -41,9 +41,30 @@ export class BranchesService {
     return branch;
   }
 
-  async update(id: string, tenantId: string, data: { name?: string }) {
+  async update(
+    id: string,
+    tenantId: string,
+    data: {
+      name?: string;
+      workStartTime?: string;
+      lateGraceMinutes?: number;
+      chatLocked?: boolean;
+    },
+  ) {
     await this.findById(id, tenantId);
-    return this.prisma.branch.update({ where: { id }, data });
+    const patch: {
+      name?: string;
+      workStartTime?: string;
+      lateGraceMinutes?: number;
+      chatLocked?: boolean;
+    } = {};
+    if (data.name !== undefined) patch.name = data.name;
+    if (data.workStartTime !== undefined)
+      patch.workStartTime = data.workStartTime;
+    if (data.lateGraceMinutes !== undefined)
+      patch.lateGraceMinutes = data.lateGraceMinutes;
+    if (data.chatLocked !== undefined) patch.chatLocked = data.chatLocked;
+    return this.prisma.branch.update({ where: { id }, data: patch });
   }
 
   /**

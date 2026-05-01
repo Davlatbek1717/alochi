@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Calendar, Plus, Check } from 'lucide-react';
+import { Calendar, Plus, Check, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Skeleton, useToast } from '@/components/ui';
+import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 
 interface Session {
   id: string;
@@ -16,6 +16,7 @@ interface Session {
 interface Student {
   id: string;
   name: string;
+  role?: string;
 }
 
 export default function ManagerSessionsPage() {
@@ -26,6 +27,8 @@ export default function ManagerSessionsPage() {
   const [scheduledAt, setScheduledAt] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Session | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const toast = useToast();
 
   function token() {
@@ -92,9 +95,27 @@ export default function ManagerSessionsPage() {
     }
   }
 
+  async function doDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiRequest(
+        `/manager-sessions/${deleteTarget.id}`,
+        { method: 'DELETE' },
+        token(),
+      );
+      setSessions((prev) => prev.filter((s) => s.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      toast.success('O‘chirildi');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Xato yuz berdi');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Navy header band — matches /manager/page.tsx */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
@@ -157,8 +178,13 @@ export default function ManagerSessionsPage() {
             ))}
           </div>
         ) : sessions.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
-            <p className="text-[#94a3b8] text-sm">Hali sessiya yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              icon={<Calendar size={28} />}
+              title="Hali sessiya yo‘q"
+              description="Birinchi 1:1 sessiyani rejalashtiring"
+              theme="light"
+            />
           </div>
         ) : (
           <div className="space-y-2">
@@ -199,12 +225,52 @@ export default function ManagerSessionsPage() {
                       <Check size={12} /> Bajardim
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(s)}
+                    aria-label="O‘chirish"
+                    className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        title="Sessiya o‘chirilsinmi?"
+        size="sm"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b]">
+          <span className="font-semibold text-[#0f172a]">
+            {deleteTarget?.student?.name ?? deleteTarget?.studentId}
+          </span>{' '}
+          uchun rejalashtirilgan sessiya o‘chirilsin? Bu amal qaytarib
+          bo‘lmaydi.
+        </p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setDeleteTarget(null)}
+            disabled={deleting}
+            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+          >
+            Yo‘q
+          </button>
+          <button
+            onClick={doDelete}
+            disabled={deleting}
+            className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50"
+          >
+            {deleting ? 'O‘chirilmoqda...' : 'Ha, o‘chir'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
