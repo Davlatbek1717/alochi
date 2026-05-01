@@ -1,5 +1,8 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { Send } from 'lucide-react';
+import { Button, Mascot } from '@/components/ui';
+import { playSound } from '@/lib/sound';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -11,6 +14,22 @@ interface AiTutorProps {
   onCompleted: () => void;
 }
 
+const SUGGESTIONS = [
+  "Bu so'zning ma'nosi nima?",
+  'Yana misol bera olasizmi?',
+  "Tushunmadim, qayta tushuntiring",
+];
+
+const MAX_QUESTIONS = 3;
+
+/**
+ * Pass 5 — Duolingo-grade AI tutor:
+ *   - Aloqush mascot in header (idle expression) + "1/3 savol" counter chip
+ *   - Cream bot bubbles with green left-border, primary-green user bubbles
+ *   - 3 suggestion chips above input (tap → fills input)
+ *   - Circular green Send button; "Tayyor" disabled until first question asked
+ *   - On Tayyor: xp chime + onCompleted
+ */
 export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -32,6 +51,7 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
     setInput('');
     setLoading(true);
     setQuestionCount((c) => c + 1);
+    setReadyError('');
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/qa/answer`, {
@@ -52,7 +72,7 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: "⚠️ AI hozir band, keyinroq urinib ko'ring" },
+        { role: 'assistant', content: "AI hozir band, keyinroq urinib ko'ring" },
       ]);
     } finally {
       setLoading(false);
@@ -61,28 +81,50 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
 
   function handleReady() {
     if (questionCount === 0) {
-      setReadyError('Kamida 1 ta savol bering');
+      setReadyError("Kamida 1 ta savol bering");
       return;
     }
+    playSound('xp');
     onCompleted();
   }
 
+  const counter = `${Math.min(questionCount, MAX_QUESTIONS)}/${MAX_QUESTIONS} savol`;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm flex flex-col h-96">
-      <div className="px-4 py-3 border-b flex items-center gap-2">
-        <span className="text-xl">🤖</span>
-        <div>
-          <p className="font-semibold text-sm">AI Tutor</p>
-          <p className="text-xs text-gray-400">{questionCount} ta savol berildi</p>
+    <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] flex flex-col h-[28rem] overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-[#f3eedf] flex items-center gap-3 bg-[#fffaf0]">
+        <div className="shrink-0">
+          <Mascot expression="idle" size={56} animated />
         </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="font-extrabold text-sm text-[#3c3c3c] truncate"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            Aloqush sizga yordam beradi
+          </p>
+          <p className="text-xs font-bold text-[#777]">Dars bo&apos;yicha savol bering</p>
+        </div>
+        <span
+          className="text-[10px] font-extrabold text-[#7a5e2c] bg-[#fef3c7] border border-[#fde68a] px-2 py-1 rounded-full shrink-0"
+          style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+        >
+          {counter}
+        </span>
       </div>
 
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 text-sm pt-8">
-            <p className="text-3xl mb-2">💬</p>
-            <p>Dars bo&apos;yicha savolingizni bering!</p>
-            <p className="text-xs mt-1">Masalan: &quot;do va does farqi nima?&quot;</p>
+          <div className="text-center text-[#777] text-sm pt-6 space-y-2">
+            <p
+              className="font-extrabold text-[#3c3c3c]"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              Dars bo&apos;yicha savolingizni bering!
+            </p>
+            <p className="text-xs font-bold">Pastdagi tavsiyalardan birini tanlang yoki o&apos;zingiznikini yozing.</p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -91,10 +133,10 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] px-3 py-2 rounded-xl text-sm ${
+              className={`max-w-[80%] px-4 py-2.5 text-sm font-semibold leading-snug ${
                 msg.role === 'user'
-                  ? 'bg-indigo-600 text-white rounded-br-none'
-                  : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                  ? 'bg-[#58cc02] text-white rounded-2xl rounded-tr-md'
+                  : 'bg-[#fffaf0] text-[#3c3c3c] border-l-4 border-[#58cc02] rounded-2xl rounded-tl-md'
               }`}
             >
               {msg.content}
@@ -103,42 +145,78 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 px-3 py-2 rounded-xl text-sm text-gray-500">
-              AI yozmoqda...
+            <div className="bg-[#fffaf0] border-l-4 border-[#58cc02] px-4 py-2.5 rounded-2xl rounded-tl-md text-sm font-semibold text-[#777] flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#58cc02] motion-safe:[animation:pop_0.9s_ease-in-out_infinite]" />
+              <span
+                className="w-2 h-2 rounded-full bg-[#58cc02] motion-safe:[animation:pop_0.9s_ease-in-out_infinite]"
+                style={{ animationDelay: '120ms' }}
+              />
+              <span
+                className="w-2 h-2 rounded-full bg-[#58cc02] motion-safe:[animation:pop_0.9s_ease-in-out_infinite]"
+                style={{ animationDelay: '240ms' }}
+              />
             </div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t p-3 space-y-2">
-        <div className="flex gap-2">
+      {/* Suggestion chips */}
+      {messages.length === 0 && (
+        <div className="px-3 pt-2 pb-1 flex flex-wrap gap-1.5 border-t border-[#f3eedf]">
+          {SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setInput(s)}
+              className="text-xs font-extrabold text-[#7a5e2c] bg-[#fef3c7] hover:bg-[#fde68a] border border-[#fde68a] px-2.5 py-1.5 rounded-full transition-colors"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input + send */}
+      <div className="border-t border-[#f3eedf] p-3 space-y-2 bg-white">
+        <div className="flex gap-2 items-center">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendQuestion(input)}
             placeholder="Savolingizni yozing..."
             aria-label="AI tutorga savol yozing"
-            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+            className="flex-1 border-[1.5px] border-[#e8e0d0] rounded-2xl px-4 py-2.5 text-sm font-semibold text-[#3c3c3c] focus:outline-none focus:border-[#58cc02]"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           />
           <button
+            type="button"
             onClick={() => sendQuestion(input)}
             disabled={loading || !input.trim()}
             aria-label="Savol yuborish"
-            className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-sm disabled:opacity-50"
+            className="w-11 h-11 rounded-full flex items-center justify-center bg-[#58cc02] text-white border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] disabled:bg-[#e8e0d0] disabled:border-[#cbbf9c] disabled:text-[#a0a0a0] transition-all duration-150"
           >
-            ↑
+            <Send size={18} />
           </button>
         </div>
-        {readyError && <p className="text-red-500 text-xs">{readyError}</p>}
-        {/* 25.J.2: enforce min 1 question before "Tayyor" enables */}
-        <button
-          onClick={handleReady}
+        {readyError && (
+          <p
+            className="text-[#ef4444] text-xs font-extrabold"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            {readyError}
+          </p>
+        )}
+        <Button
+          variant="duo"
+          size="md"
+          fullWidth
           disabled={questionCount < 1}
-          className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleReady}
         >
-          ✅ Tayyor — Keyingi bosqich
-        </button>
+          Tayyor — Keyingi bosqich
+        </Button>
       </div>
     </div>
   );

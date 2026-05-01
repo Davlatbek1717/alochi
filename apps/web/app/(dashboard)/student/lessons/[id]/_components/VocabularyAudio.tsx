@@ -1,20 +1,40 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Mic, Square } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { playSound } from '@/lib/sound';
+import { Waveform } from './Waveform';
 
 type VocabularyAudioProps = {
   word: string;
   lessonId: string;
+  /** Optional callbacks so the lesson runner can advance / decrement hearts. */
+  onPassed?: () => void;
+  onFailed?: () => void;
 };
 
 type ScoreResult = {
   score: number;
 };
 
-export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps) {
+/**
+ * Pass 5 — Duolingo-grade pronunciation panel:
+ *   - Word displayed text-5xl extrabold centered
+ *   - 96×96 circular record button with pulse ring while recording
+ *   - 5-bar live waveform driven by AnalyserNode RMS
+ *   - Score reveal as 0-100 SVG dial with red/yellow/green zones
+ *   - On pass (≥75): correct chime + auto-advance
+ *   - On fail: wrong buzz + retry banner
+ *
+ * Falls back to a text-input flow after 3 consecutive Azure speech failures so
+ * the user can still progress when the speech service is unreachable.
+ */
+export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: VocabularyAudioProps) {
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [permError, setPermError] = useState('');
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   // Phase 21.2: after 3 consecutive Azure speech failures we fall back to a
   // text-input flow so the user can still progress.
@@ -25,12 +45,25 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  // Whenever a score is set, route it to onPassed/onFailed once.
+  useEffect(() => {
+    if (score === null) return;
+    if (score >= 75) {
+      playSound('correct');
+      const t = setTimeout(() => onPassed?.(), 900);
+      return () => clearTimeout(t);
+    } else {
+      playSound('wrong');
+    }
+  }, [score, onPassed]);
+
   async function startRecording() {
     setPermError('');
     setScore(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setStream(ms);
+      const mediaRecorder = new MediaRecorder(ms);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -39,7 +72,8 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
       };
 
       mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
+        ms.getTracks().forEach((t) => t.stop());
+        setStream(null);
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
         await submitAudio(audioBlob);
       };
@@ -48,7 +82,7 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
       setRecording(true);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'NotAllowedError') {
-        setPermError('Mikrofon ruxsati berilmadi. Brauzer sozlamalarida ruxsat bering.');
+        setPermError("Mikrofon ruxsati berilmadi. Brauzer sozlamalarida ruxsat bering.");
       } else {
         setPermError('Mikrofonga ulanishda xato yuz berdi.');
       }
@@ -79,10 +113,12 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
         body: formData,
       });
 
-      const json = await res.json() as ScoreResult & { error?: string };
+      const json = (await res.json()) as ScoreResult & { error?: string };
       if (!res.ok) throw new Error(json.error ?? 'Xato yuz berdi');
-      setScore(json.score ?? 0);
+      const finalScore = json.score ?? 0;
+      setScore(finalScore);
       setAzureFails(0); // success → reset counter
+      if (finalScore < 75) onFailed?.();
     } catch (err) {
       setPermError(err instanceof Error ? err.message : 'Yuborishda xato yuz berdi');
       setAzureFails((c) => {
@@ -100,118 +136,183 @@ export default function VocabularyAudio({ word, lessonId }: VocabularyAudioProps
     const trimmed = textAnswer.trim();
     if (!trimmed) return;
     // Simple local match: case-insensitive equality with the target word.
-    // Server-side validation can be added later; this unblocks the user when
-    // the speech pipeline is unreachable.
     const ok = trimmed.toLowerCase() === word.toLowerCase();
-    setScore(ok ? 100 : 50);
+    const finalScore = ok ? 100 : 50;
+    setScore(finalScore);
     setPermError('');
+    if (!ok) onFailed?.();
   }
 
-  function getScoreDisplay() {
-    if (score === null) return null;
-    if (score >= 80) {
+  function getScoreZone(s: number) {
+    if (s >= 80) {
       return {
-        label: `Ajoyib! ${score}/100`,
-        color: 'text-green-600',
-        bg: 'bg-green-50 border-green-200',
+        stroke: '#10b981',
+        bg: 'bg-[#dcfce7] border-[#bbf7d0]',
+        text: 'text-[#065f46]',
+        label: 'Ajoyib!',
       };
     }
-    if (score >= 60) {
+    if (s >= 60) {
       return {
-        label: `Yaxshi ${score}/100`,
-        color: 'text-yellow-600',
-        bg: 'bg-yellow-50 border-yellow-200',
+        stroke: '#fbbf24',
+        bg: 'bg-[#fef3c7] border-[#fde68a]',
+        text: 'text-[#a16207]',
+        label: 'Yaxshi',
       };
     }
     return {
-      label: `Qayta urinib ko'ring ${score}/100`,
-      color: 'text-red-600',
-      bg: 'bg-red-50 border-red-200',
+      stroke: '#ef4444',
+      bg: 'bg-[#fee2e2] border-[#fecaca]',
+      text: 'text-[#991b1b]',
+      label: "Yana urinib ko'ring",
     };
   }
 
-  const scoreDisplay = getScoreDisplay();
+  // Pre-compute dial geometry — circumference of an r=44 circle.
+  const DIAL_R = 44;
+  const DIAL_C = 2 * Math.PI * DIAL_R;
+  const dialOffset =
+    score === null ? DIAL_C : DIAL_C * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const zone = score === null ? null : getScoreZone(score);
 
   return (
-    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-4">
-      <div className="text-center">
-        <p className="text-xs text-gray-500 mb-1">Talaffuz qiling:</p>
-        <p className="text-2xl font-bold text-indigo-600">{word}</p>
+    <div className="bg-white rounded-3xl p-6 border-[1.5px] border-[#e8e0d0] space-y-5">
+      {/* Word display */}
+      <div className="text-center space-y-1">
+        <p
+          className="text-xs font-extrabold uppercase tracking-wider text-[#777]"
+          style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+        >
+          Bu so&apos;zni o&apos;qing
+        </p>
+        <p
+          className="text-5xl font-extrabold text-[#3c3c3c] leading-tight"
+          style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+        >
+          {word}
+        </p>
       </div>
 
       {permError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-          <p className="text-red-600 text-sm">{permError}</p>
+        <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl p-3">
+          <p className="text-[#991b1b] text-sm font-bold">{permError}</p>
         </div>
       )}
 
       {!audioMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-          <p className="text-amber-700 text-sm">
+        <div className="bg-[#fef3c7] border-[1.5px] border-[#fde68a] rounded-2xl p-3">
+          <p className="text-[#a16207] text-sm font-bold">
             Ovoz aniqlanmadi. Iltimos, javobni yozing.
           </p>
         </div>
       )}
 
-      {scoreDisplay && (
-        <div className={`rounded-xl p-3 border text-center ${scoreDisplay.bg}`}>
-          <p className={`font-semibold ${scoreDisplay.color}`}>{scoreDisplay.label}</p>
+      {/* Score dial reveal */}
+      {score !== null && zone && (
+        <div className={`rounded-2xl border-[1.5px] p-4 flex items-center gap-4 ${zone.bg}`}>
+          <svg width="96" height="96" viewBox="0 0 100 100" className="shrink-0">
+            <circle cx="50" cy="50" r={DIAL_R} stroke="#e8e0d0" strokeWidth="8" fill="none" />
+            <circle
+              cx="50"
+              cy="50"
+              r={DIAL_R}
+              stroke={zone.stroke}
+              strokeWidth="8"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={DIAL_C}
+              strokeDashoffset={dialOffset}
+              transform="rotate(-90 50 50)"
+              style={{ transition: 'stroke-dashoffset 600ms ease-out' }}
+            />
+            <text
+              x="50"
+              y="56"
+              textAnchor="middle"
+              fontSize="22"
+              fontWeight="900"
+              fill="#3c3c3c"
+              fontFamily="var(--font-display, var(--font-nunito))"
+            >
+              {score}
+            </text>
+          </svg>
+          <div className="flex-1">
+            <p
+              className={`font-extrabold text-lg ${zone.text}`}
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              {zone.label}
+            </p>
+            <p className="text-[#777] text-xs font-bold">{score} / 100</p>
+          </div>
         </div>
       )}
 
       {audioMode ? (
-        <div className="flex flex-col items-center gap-3">
-          {recording && (
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-sm text-red-500 font-medium">Yozib olinmoqda...</span>
+        <div className="flex flex-col items-center gap-4">
+          {/* Big circular record button */}
+          {!loading && (
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              {recording && (
+                <span
+                  className="absolute inset-0 rounded-full bg-[#58cc02]/40 motion-safe:[animation:pulse-ring_1.2s_ease-out_infinite]"
+                  aria-hidden="true"
+                />
+              )}
+              <button
+                type="button"
+                onClick={recording ? stopRecording : startRecording}
+                aria-label={recording ? "Yozishni to'xtatish" : 'Yozib olish'}
+                className={`relative w-24 h-24 rounded-full flex items-center justify-center text-white border-b-[6px] active:translate-y-[2px] active:border-b-[3px] transition-all duration-150 ${
+                  recording
+                    ? 'bg-[#ef4444] border-[#b91c1c]'
+                    : 'bg-[#58cc02] border-[#46a302]'
+                }`}
+              >
+                {recording ? <Square size={36} fill="currentColor" /> : <Mic size={36} />}
+              </button>
             </div>
           )}
 
           {loading && (
-            <p className="text-sm text-gray-500">Tekshirilmoqda...</p>
+            <div className="flex flex-col items-center gap-2 py-6">
+              <span className="w-8 h-8 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
+              <p className="text-[#777] text-sm font-bold">Tekshirilmoqda...</p>
+            </div>
           )}
 
-          {!recording && !loading && (
-            <button
-              onClick={startRecording}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
-            >
-              🎤 Yozib olish
-            </button>
-          )}
+          {/* Live waveform */}
+          {!loading && <Waveform stream={stream} active={recording} />}
 
-          {recording && (
-            <button
-              onClick={stopRecording}
-              className="bg-red-500 text-white px-6 py-3 rounded-xl font-medium text-sm hover:bg-red-600 transition-colors"
-            >
-              ⏹️ To&apos;xtatish
-            </button>
+          {!loading && !recording && (
+            <p className="text-[#777] text-xs font-bold text-center">
+              Mikrofon tugmasini bosing va so&apos;zni baland ovozda o&apos;qing
+            </p>
           )}
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <input
             type="text"
             value={textAnswer}
             onChange={(e) => setTextAnswer(e.target.value)}
             placeholder="So'zni yozing"
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-400"
+            className="border-[1.5px] border-[#e8e0d0] rounded-2xl px-4 py-3 text-base font-bold text-[#3c3c3c] focus:outline-none focus:border-[#58cc02]"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           />
-          <button
-            onClick={submitTextAnswer}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
-          >
+          <Button variant="duo" size="lg" fullWidth onClick={submitTextAnswer}>
             Yuborish
-          </button>
+          </Button>
           <button
+            type="button"
             onClick={() => {
               setAudioMode(true);
               setAzureFails(0);
               setPermError('');
             }}
-            className="text-indigo-600 text-xs underline self-start"
+            className="text-[#58cc02] text-xs font-extrabold underline self-center"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
             Ovoz bilan qayta urinish
           </button>

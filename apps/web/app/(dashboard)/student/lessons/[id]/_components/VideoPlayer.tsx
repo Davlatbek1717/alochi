@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   youtubeUrl: string;
@@ -75,6 +76,15 @@ declare global {
   }
 }
 
+/**
+ * Pass 5 — VideoPlayer light polish:
+ *   - Cream-themed surface (was raw black) with rounded video frame
+ *   - Warm-yellow lock badge (Tezlashtirish bloklangan) — pill style
+ *   - Live progress bar below the video showing % watched in primary green
+ *
+ * All existing behaviour kept: 1× speed enforcement, restore-on-mount,
+ * progress save every 5s, prune stale entries, ≥90% triggers onCompleted.
+ */
 export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerProps) {
   const playerRef = useRef<YTPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +94,9 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
   // Phase 21.3: separate 5s save loop, restore-on-mount, prune old entries.
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const restoredRef = useRef(false);
+
+  // Pass 5: surface % watched so the progress bar updates live.
+  const [percentWatched, setPercentWatched] = useState(0);
 
   const videoId = extractVideoId(youtubeUrl);
   const storageKey = lessonId ? `${VIDEO_PROGRESS_PREFIX}${lessonId}` : null;
@@ -124,6 +137,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
                     playerRef.current.seekTo(data.position, true);
                     if (typeof data.percent === 'number') {
                       watchedRef.current = data.percent;
+                      setPercentWatched(data.percent);
                     }
                   }
                 }
@@ -141,7 +155,10 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
 
               if (duration > 0) {
                 const percent = (current / duration) * 100;
-                if (percent > watchedRef.current) watchedRef.current = percent;
+                if (percent > watchedRef.current) {
+                  watchedRef.current = percent;
+                  setPercentWatched(percent);
+                }
 
                 if (watchedRef.current >= 90 && !completedRef.current) {
                   completedRef.current = true;
@@ -196,17 +213,60 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
       if (saveIntervalRef.current) clearInterval(saveIntervalRef.current);
       if (playerRef.current) playerRef.current.destroy();
     };
-  }, [videoId, storageKey]);
+  }, [videoId, storageKey, onCompleted]);
 
   if (!videoId) {
-    return <div className="bg-red-100 p-4 rounded-lg text-red-700">Video URL noto&apos;g&apos;ri</div>;
+    return (
+      <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] p-4 rounded-2xl text-[#991b1b] font-bold text-sm">
+        Video URL noto&apos;g&apos;ri
+      </div>
+    );
   }
 
+  const clampedPercent = Math.max(0, Math.min(100, percentWatched));
+  const reachedThreshold = clampedPercent >= 90;
+
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
-      <div ref={containerRef} className="w-full h-full" />
-      <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-        🔒 Tezlashtirish bloklangan
+    <div className="space-y-3">
+      <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] p-2 relative">
+        <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden">
+          <div ref={containerRef} className="w-full h-full" />
+          <div
+            className="absolute top-2 right-2 bg-[#fef3c7] text-[#a16207] border border-[#fbbf24] text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            <Lock size={11} strokeWidth={3} />
+            Tezlashtirish bloklangan
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span
+            className="text-[#777] font-extrabold uppercase tracking-wider"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            Ko&apos;rilgan
+          </span>
+          <span
+            className={`font-extrabold ${reachedThreshold ? 'text-[#10b981]' : 'text-[#7a5e2c]'}`}
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            {Math.round(clampedPercent)}%
+          </span>
+        </div>
+        <div className="h-2.5 w-full rounded-full bg-[#f3eedf] overflow-hidden">
+          <div
+            className="h-full bg-[#58cc02] rounded-full transition-[width] duration-300 ease-out"
+            style={{ width: `${clampedPercent}%` }}
+            role="progressbar"
+            aria-valuenow={Math.round(clampedPercent)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          />
+        </div>
       </div>
     </div>
   );
