@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { X, Check, ArrowRight } from 'lucide-react';
+import { apiRequest, ApiError } from '@/lib/api';
 
 type Size = 'small' | 'mid' | 'large';
 
@@ -9,9 +10,16 @@ interface Props {
   onClose: () => void;
 }
 
+const SIZE_TO_ENUM: Record<Size, 'small' | 'medium' | 'large'> = {
+  small: 'small',
+  mid: 'medium',
+  large: 'large',
+};
+
 export function DemoForm({ open, onClose }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [center, setCenter] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('+998 ');
@@ -41,14 +49,37 @@ export function DemoForm({ open, onClose }: Props) {
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    // Placeholder: simulate network. Real backend at /api/contact later.
-    setTimeout(() => {
-      setSubmitting(false);
+    setErrorMsg(null);
+    try {
+      await apiRequest('/contact-requests', {
+        method: 'POST',
+        body: JSON.stringify({
+          centerName: center.trim(),
+          contactName: name.trim(),
+          phone: phone.trim(),
+          ...(email.trim() ? { email: email.trim() } : {}),
+          centerSize: SIZE_TO_ENUM[size],
+          ...(message.trim() ? { message: message.trim() } : {}),
+        }),
+      });
       setSuccess(true);
-    }, 700);
+    } catch (err) {
+      const fallback = "Yuborib bo'lmadi. Keyinroq qayta urinib ko'ring.";
+      if (err instanceof ApiError) {
+        if (err.status === 429) {
+          setErrorMsg('Juda ko’p urinish. Bir daqiqadan so’ng qayta urinib ko’ring.');
+        } else {
+          setErrorMsg(err.message || fallback);
+        }
+      } else {
+        setErrorMsg(fallback);
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -57,6 +88,7 @@ export function DemoForm({ open, onClose }: Props) {
     setTimeout(() => {
       setSuccess(false);
       setSubmitting(false);
+      setErrorMsg(null);
     }, 200);
   };
 
@@ -215,6 +247,15 @@ export function DemoForm({ open, onClose }: Props) {
                 />
               </Field>
             </div>
+
+            {errorMsg && (
+              <div
+                role="alert"
+                className="mt-5 rounded-xl border-2 border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm font-bold text-[#b91c1c]"
+              >
+                {errorMsg}
+              </div>
+            )}
 
             <button
               type="submit"

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Building2 } from 'lucide-react';
 import { OnboardForm } from './_components/OnboardForm';
 import { PageHeader } from '@/components/ui';
@@ -16,7 +17,9 @@ export default function NewTenantPage() {
         description="Yangi tenant, admin va birinchi filialni bir vaqtda yarating"
         iconColor="text-emerald-400"
       />
-      <OnboardForm />
+      <Suspense fallback={null}>
+        <OnboardForm />
+      </Suspense>
     </div>
     </div>
   );

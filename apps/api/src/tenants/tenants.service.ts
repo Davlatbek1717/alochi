@@ -2,8 +2,9 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
-import { Prisma, UserRole } from '@prisma/client';
+import { ContactRequestStatus, Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -14,6 +15,8 @@ const SLUG_TAKEN_MESSAGE = 'Bu slug band, boshqasini tanlang';
 
 @Injectable()
 export class TenantsService {
+  private readonly logger = new Logger(TenantsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateTenantDto) {
@@ -138,7 +141,7 @@ export class TenantsService {
     ]);
   }
 
-  async onboardTenant(dto: OnboardTenantDto) {
+  async onboardTenant(dto: OnboardTenantDto, actorUserId?: string) {
     const existing = await this.prisma.tenant.findUnique({
       where: { slug: dto.tenant.slug },
     });
@@ -148,8 +151,13 @@ export class TenantsService {
 
     const passwordHash = await bcrypt.hash(dto.admin.password, 12);
 
+    let result: {
+      tenant: { id: string; name: string; slug: string };
+      admin: { id: string; name: string; login: string };
+      branch: { id: string; name: string } | null;
+    };
     try {
-      return await this.prisma.$transaction(async (tx) => {
+      result = await this.prisma.$transaction(async (tx) => {
         const tenant = await tx.tenant.create({
           data: {
             name: dto.tenant.name,
@@ -194,5 +202,27 @@ export class TenantsService {
       }
       throw e;
     }
+
+    // Phase 26 — finalise demo-request funnel. Failure here must NOT roll
+    // back the freshly-created tenant: we just log and return.
+    if (dto.contactRequestId) {
+      try {
+        await this.prisma.contactRequest.update({
+          where: { id: dto.contactRequestId },
+          data: {
+            status: ContactRequestStatus.converted,
+            convertedTenantId: result.tenant.id,
+            handledBy: actorUserId ?? null,
+            handledAt: new Date(),
+          },
+        });
+      } catch (err) {
+        this.logger.warn(
+          `onboardTenant: contact request ${dto.contactRequestId} convert failed: ${err}`,
+        );
+      }
+    }
+
+    return result;
   }
 }

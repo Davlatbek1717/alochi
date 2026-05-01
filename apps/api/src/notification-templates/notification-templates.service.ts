@@ -71,6 +71,10 @@ export const DEFAULT_TEMPLATES: Record<string, string> = {
   // Payment unblock monitoring (§15.3)
   'unblock.failed_monitoring':
     "🚨 {count} ta o'quvchining unblock_at vaqti o'tdi, ammo ular hali bloklanganlikda qolmoqda: {userIds}. Tekshirib ko'ring.",
+
+  // Phase 26 — public demo / contact request funnel
+  'contact_request.new':
+    "📨 Yangi demo so'rov\n\n🏫 Markaz: {centerName}\n👤 Kim: {contactName}\n📞 Telefon: {phone}\n👥 Hajm: {size}\n\n💬 Xabar:\n{message}\n\n→ /superadmin/contact-requests da ko'ring",
 };
 
 @Injectable()

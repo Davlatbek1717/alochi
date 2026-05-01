@@ -45,6 +45,7 @@ import { ManagerSessionsModule } from './manager-sessions/manager-sessions.modul
 import { ManagerRewardsModule } from './manager-rewards/manager-rewards.module';
 import { TechIssuesModule } from './tech-issues/tech-issues.module';
 import { ExamQueueModule } from './exams/exam-queue.module';
+import { ContactRequestsModule } from './contact-requests/contact-requests.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -98,6 +99,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ManagerRewardsModule,
     TechIssuesModule,
     ExamQueueModule,
+    ContactRequestsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

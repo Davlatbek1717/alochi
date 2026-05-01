@@ -5,13 +5,14 @@ import {
   BookMarked, CreditCard, Users, Building2,
   ShieldOff, Trophy, ChevronRight, Shield,
   Settings, BarChart2, AlertTriangle, TrendingUp,
-  UserX, Camera, Award, Video, MessageSquare,
+  UserX, Camera, Award, Video, MessageSquare, Inbox,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateLong } from '@/lib/date-uz';
 import { Skeleton } from '@/components/ui';
 
 const NAV_CARDS = [
+  { href: '/superadmin/contact-requests', icon: <Inbox size={22} />, title: "Demo so'rovlar", desc: "Mijozlardan yangi so'rovlar", color: 'hover:border-violet-300 hover:bg-violet-50' },
   { href: '/superadmin/tenants',     icon: <Building2 size={22} />, title: 'Markazlar',          desc: "A'lochi markazlari ro'yxati va boshqaruv", color: 'hover:border-violet-300 hover:bg-violet-50' },
   { href: '/superadmin/tenants/new', icon: <Building2 size={22} />, title: "Yangi Markaz", desc: 'Markaz + admin yaratish', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
   { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr',  color: 'hover:border-indigo-300 hover:bg-indigo-50' },
@@ -33,10 +34,12 @@ const NAV_CARDS = [
 ];
 
 type Stats = { branches: number; lessons: number; users: number };
+type ContactCounts = { new: number; total: number };
 
 export default function SuperadminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats>({ branches: 0, lessons: 0, users: 0 });
+  const [newRequests, setNewRequests] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -45,12 +48,19 @@ export default function SuperadminDashboard() {
       apiRequest<Array<unknown>>('/branches', {}, token).catch(() => ({ data: [] as unknown[] })),
       apiRequest<Array<unknown>>('/lessons', {}, token).catch(() => ({ data: [] as unknown[] })),
       apiRequest<Array<unknown>>('/users', {}, token).catch(() => ({ data: [] as unknown[] })),
-    ]).then(([b, l, u]) => {
+      apiRequest<{ items: unknown[]; counts: ContactCounts }>(
+        '/contact-requests?status=new',
+        {},
+        token,
+      ).catch(() => ({ data: { items: [], counts: { new: 0, total: 0 } } })),
+    ]).then(([b, l, u, c]) => {
       setStats({
         branches: Array.isArray(b.data) ? b.data.length : 0,
         lessons: Array.isArray(l.data) ? l.data.length : 0,
         users: Array.isArray(u.data) ? u.data.length : 0,
       });
+      const counts = (c as { data: { counts?: ContactCounts } }).data?.counts;
+      setNewRequests(counts?.new ?? 0);
     }).finally(() => setLoaded(true));
   }, []);
 
@@ -97,22 +107,34 @@ export default function SuperadminDashboard() {
       <div className="px-4 pt-8 pb-6">
         <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Navigatsiya</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {NAV_CARDS.map((card) => (
-            <button
-              key={card.href}
-              onClick={() => router.push(card.href)}
-              className={`bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
-            >
-              <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
-                {card.icon}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
-                <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.desc}</p>
-              </div>
-              <ChevronRight size={15} className="text-[#94a3b8] shrink-0" />
-            </button>
-          ))}
+          {NAV_CARDS.map((card) => {
+            const showBadge =
+              card.href === '/superadmin/contact-requests' && newRequests > 0;
+            return (
+              <button
+                key={card.href}
+                onClick={() => router.push(card.href)}
+                className={`relative bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
+              >
+                <div className="relative w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
+                  {card.icon}
+                  {showBadge && (
+                    <span
+                      aria-label={`${newRequests} ta yangi so'rov`}
+                      className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow"
+                    >
+                      {newRequests > 99 ? '99+' : newRequests}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
+                  <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.desc}</p>
+                </div>
+                <ChevronRight size={15} className="text-[#94a3b8] shrink-0" />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
