@@ -374,6 +374,41 @@ export class StatusService {
     });
   }
 
+  /**
+   * Aggregate counts of latest critical-status colours for active students.
+   * Used by filadmin & manager dashboards.
+   */
+  async getStatusSummary(
+    tenantId: string,
+    branchId?: string,
+  ): Promise<{ yashil: number; sariq: number; qizil: number }> {
+    const students = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        role: 'student',
+        status: 'active',
+        ...(branchId ? { branchId } : {}),
+      },
+      select: {
+        studentStatuses: {
+          orderBy: { date: 'desc' },
+          take: 1,
+          select: { criticalStatus: true },
+        },
+      },
+    });
+    let yashil = 0;
+    let sariq = 0;
+    let qizil = 0;
+    for (const s of students) {
+      const c = s.studentStatuses[0]?.criticalStatus;
+      if (c === 'yashil') yashil++;
+      else if (c === 'sariq') sariq++;
+      else if (c === 'qizil') qizil++;
+    }
+    return { yashil, sariq, qizil };
+  }
+
   async getRedStudents(tenantId: string) {
     return this.getStudentsByColor(tenantId, 'qizil');
   }

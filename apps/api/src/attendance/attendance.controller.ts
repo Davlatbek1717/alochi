@@ -92,6 +92,12 @@ export class AttendanceController {
     return this.staffService.confirm(userId, confirmedBy, targetDate);
   }
 
+  @Get('staff/today/:branchId')
+  @Roles(UserRole.filadmin, UserRole.manager, UserRole.superadmin)
+  getStaffTodayCount(@Param('branchId') branchId: string) {
+    return this.staffService.getTodayCount(branchId);
+  }
+
   @Get('staff/:branchId/:date')
   @Roles(UserRole.filadmin, UserRole.manager)
   getDailyStaff(

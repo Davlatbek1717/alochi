@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -93,6 +94,24 @@ export class StatusController {
       req.user.tenantId,
       req.user.branchId,
     );
+  }
+
+  /**
+   * Filadmin dashboard helper — returns aggregate counts for today's
+   * critical status colours scoped to the caller's branch (or to a
+   * branch passed via query when caller is superadmin).
+   */
+  @Get('summary')
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  getStatusSummary(
+    @Request() req: AuthRequest,
+    @Query('branchId') branchIdQuery?: string,
+  ) {
+    const branchId =
+      req.user.role === UserRole.superadmin
+        ? branchIdQuery
+        : (req.user.branchId ?? undefined);
+    return this.statusService.getStatusSummary(req.user.tenantId, branchId);
   }
 
   @Get('history/:studentId')

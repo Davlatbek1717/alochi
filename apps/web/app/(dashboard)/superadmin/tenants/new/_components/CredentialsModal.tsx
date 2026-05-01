@@ -32,6 +32,7 @@ export function CredentialsModal({ data, onClose }: Props) {
       closeOnOverlay={false}
       title="Markaz muvaffaqiyatli yaratildi"
       size="md"
+      theme="dark"
       footer={
         <>
           <Button

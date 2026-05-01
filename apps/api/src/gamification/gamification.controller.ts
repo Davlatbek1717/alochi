@@ -10,6 +10,9 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '@prisma/client';
 import { XpService } from './xp.service';
 import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
@@ -21,7 +24,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiTags('gamification')
 @ApiBearerAuth()
 @Controller('gamification')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class GamificationController {
   constructor(
     private xp: XpService,
@@ -45,6 +48,12 @@ export class GamificationController {
   @Get('certificates')
   getMyCertificates(@Request() req: any) {
     return this.certificates.getStudentCertificates(req.user.userId);
+  }
+
+  @Get('certificates/by-branch/:branchId')
+  @Roles(UserRole.manager, UserRole.filadmin, UserRole.superadmin)
+  getCertificatesByBranch(@Param('branchId') branchId: string) {
+    return this.certificates.getCertificatesForBranch(branchId);
   }
 
   @Get('certificates/:id/pdf')

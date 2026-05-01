@@ -235,6 +235,7 @@ export default function LessonPage() {
         title="Darsdan chiqish"
         description="Joriy jarayoningiz saqlanmaydi. Haqiqatan ham chiqmoqchimisiz?"
         size="sm"
+        theme="dark"
         footer={
           <>
             <Button variant="ghost" size="md" onClick={() => setExitModalOpen(false)}>

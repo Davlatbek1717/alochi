@@ -38,17 +38,23 @@ Example mappings:
 | 📚         | `<BookOpen />`   |
 | ⚠️         | `<AlertTriangle />` |
 
-## Filadmin dashboard — 7-card grid
+## Filadmin dashboard — 11-card grid
 
-The filadmin landing page extends the 4-card spec to **7 cards**:
+The filadmin landing page extends the spec's 4 cards to **11 cards** (the
+operational reality of running a branch is heavier than the spec's
+minimal target):
 
 1. Davomat (BarChart2)
 2. To'lovlar (CreditCard)
 3. Ogohlantirishlar (AlertTriangle)
-4. KPI Mukofot (Star)        ← extension
-5. Planshetlar (Tablet)      ← extension
-6. Turnirlar (Trophy)        ← extension
+4. KPI Mukofot (Star)               ← extension
+5. Planshetlar (Tablet)             ← extension
+6. Turnirlar (Trophy)               ← extension
 7. Vazifalar (ClipboardList)
+8. Bloklanganlar (AlertTriangle)    ← extension
+9. Xodim davomat tarixi (Clock)     ← extension
+10. Video qo'llanmalar (Video)      ← extension
+11. Reklama hisoboti (Megaphone)    ← extension
 
 Cards apply `hover:scale-[1.02]` and a per-card hover-tint class
 (`hover:border-…-300 hover:bg-…-50`).

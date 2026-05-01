@@ -39,7 +39,7 @@ export default function SuperadminBlockedStudentsPage() {
               reason === r ? 'bg-[#0f172a] text-white' : 'bg-white text-[#64748b] border border-[#ede9e1]'
             }`}
           >
-            {r === 'all' ? 'Hammasi' : r === 'warning' ? 'Ogohlantirish' : "To&apos;lov"}
+            {r === 'all' ? 'Hammasi' : r === 'warning' ? 'Ogohlantirish' : "To'lov"}
           </button>
         ))}
       </div>

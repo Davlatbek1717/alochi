@@ -96,6 +96,24 @@ export class AttendanceStaffService {
   }
 
   /**
+   * Filadmin dashboard helper — returns the count of staff who checked
+   * in today (loginTime IS NOT NULL) for a given branch.
+   */
+  async getTodayCount(branchId: string): Promise<{ count: number }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today.getTime() + 86_400_000);
+    const count = await this.prisma.attendanceStaff.count({
+      where: {
+        branchId,
+        date: { gte: today, lt: tomorrow },
+        loginTime: { not: null },
+      },
+    });
+    return { count };
+  }
+
+  /**
    * 25.D.2: Staff attendance history for a branch in [from, to] inclusive.
    * Dates are ISO YYYY-MM-DD; returns chronological order.
    */

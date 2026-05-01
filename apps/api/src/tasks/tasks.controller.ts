@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -53,6 +54,19 @@ export class TasksController {
   @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
   getSentTasks(@Request() req: any) {
     return this.tasks.getSentTasks(req.user.userId);
+  }
+
+  /**
+   * Filadmin dashboard helper — list tasks for a branch (optionally
+   * filtered by status, e.g. ?status=pending).
+   */
+  @Get('by-branch/:branchId')
+  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  getByBranch(
+    @Param('branchId') branchId: string,
+    @Query('status') status?: string,
+  ) {
+    return this.tasks.getByBranch(branchId, status);
   }
 
   @Patch(':id/status')

@@ -75,6 +75,37 @@ export class TasksService {
     });
   }
 
+  /**
+   * Filadmin dashboard helper — returns all tasks for a branch optionally
+   * filtered by status. "pending" is a synthetic alias that maps to
+   * tasks whose status is in {sent, seen, in_progress}.
+   */
+  getByBranch(branchId: string, status?: string) {
+    const where: {
+      branchId: string;
+      status?: TaskStatus | { in: TaskStatus[] };
+    } = { branchId };
+    const KNOWN_STATUSES: TaskStatus[] = [
+      TaskStatus.sent,
+      TaskStatus.seen,
+      TaskStatus.in_progress,
+      TaskStatus.done,
+      TaskStatus.confirmed,
+    ];
+    if (status === 'pending') {
+      where.status = {
+        in: [TaskStatus.sent, TaskStatus.seen, TaskStatus.in_progress],
+      };
+    } else if (status && KNOWN_STATUSES.includes(status as TaskStatus)) {
+      where.status = status as TaskStatus;
+    }
+    return this.prisma.task.findMany({
+      where,
+      include: { assignee: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async updateStatus(taskId: string, userId: string, status: TaskStatus) {
     const task = await this.prisma.task.findUnique({ where: { id: taskId } });
     if (!task) throw new NotFoundException('Vazifa topilmadi');

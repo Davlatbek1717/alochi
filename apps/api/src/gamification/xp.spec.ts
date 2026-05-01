@@ -102,7 +102,12 @@ describe('XpService', () => {
 
       const result = await service.getStudentXp('student-1');
 
-      expect(result).toEqual({ totalXp: 0, level: 'Novice', currentStreak: 0 });
+      expect(result).toEqual({
+        totalXp: 0,
+        level: 'Novice',
+        currentStreak: 0,
+        nextLevelXp: 200,
+      });
     });
 
     it('returns xp with computed level and nextLevelXp', async () => {

@@ -14,7 +14,10 @@ import {
   Users,
   CheckCircle,
   Clock,
+  Video,
+  Megaphone,
 } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
 
 const NAV_CARDS = [
   {
@@ -80,12 +83,22 @@ const NAV_CARDS = [
     description: 'Davomat tarixi (oxirgi 7 kun)',
     color: 'hover:border-cyan-300 hover:bg-cyan-50',
   },
+  {
+    href: '/filadmin/video-guides',
+    icon: <Video size={22} />,
+    title: "Video qo'llanmalar",
+    description: 'Foydalanuvchilar uchun videolar',
+    color: 'hover:border-blue-300 hover:bg-blue-50',
+  },
+  {
+    href: '/filadmin/promotion-report',
+    icon: <Megaphone size={22} />,
+    title: 'Reklama hisoboti',
+    description: 'Promotion natijalari',
+    color: 'hover:border-fuchsia-300 hover:bg-fuchsia-50',
+  },
 ];
 
-// TODO(phase-23.5): Wire to real endpoints once /attendance/staff/today/:branchId,
-// /students/status-summary, and /tasks?status=pending&assignedToBranch= are
-// implemented. Live updates should subscribe to WebSocket attendance:marked
-// and status:updated events from Phase 3.
 type DashboardStats = {
   attendanceCount: number;
   statusYashil: number;
@@ -94,7 +107,7 @@ type DashboardStats = {
   pendingTasks: number;
 };
 
-const MOCK_STATS: DashboardStats = {
+const INITIAL_STATS: DashboardStats = {
   attendanceCount: 0,
   statusYashil: 0,
   statusSariq: 0,
@@ -103,14 +116,49 @@ const MOCK_STATS: DashboardStats = {
 };
 
 export default function FiladminDashboard() {
-  const [stats] = useState<DashboardStats>(MOCK_STATS);
+  const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
 
-  // TODO(phase-23.5): replace with real fetch + WebSocket subscription.
   useEffect(() => {
-    // Placeholder. Real implementation:
-    //   const token = localStorage.getItem('accessToken') ?? '';
-    //   apiRequest<{...}>('/students/status-summary', {}, token)
-    //   socket.on('attendance:marked', () => refetch());
+    const token = localStorage.getItem('accessToken') ?? '';
+    let branchId = '';
+    try {
+      const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
+        branchId?: string;
+      };
+      branchId = u.branchId ?? '';
+    } catch {
+      /* ignore */
+    }
+
+    Promise.all([
+      apiRequest<{ yashil: number; sariq: number; qizil: number }>(
+        '/status/summary',
+        {},
+        token,
+      ).catch(() => ({ data: { yashil: 0, sariq: 0, qizil: 0 } })),
+      branchId
+        ? apiRequest<{ count: number }>(
+            `/attendance/staff/today/${branchId}`,
+            {},
+            token,
+          ).catch(() => ({ data: { count: 0 } }))
+        : Promise.resolve({ data: { count: 0 } }),
+      branchId
+        ? apiRequest<unknown[]>(
+            `/tasks/by-branch/${branchId}?status=pending`,
+            {},
+            token,
+          ).catch(() => ({ data: [] as unknown[] }))
+        : Promise.resolve({ data: [] as unknown[] }),
+    ]).then(([statusRes, attendanceRes, tasksRes]) => {
+      setStats({
+        attendanceCount: attendanceRes.data?.count ?? 0,
+        statusYashil: statusRes.data?.yashil ?? 0,
+        statusSariq: statusRes.data?.sariq ?? 0,
+        statusQizil: statusRes.data?.qizil ?? 0,
+        pendingTasks: Array.isArray(tasksRes.data) ? tasksRes.data.length : 0,
+      });
+    });
   }, []);
 
   const totalStatus = stats.statusYashil + stats.statusSariq + stats.statusQizil;
@@ -143,7 +191,7 @@ export default function FiladminDashboard() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-5">
-        {/* Realtime stat cards (mock data — see TODO above) */}
+        {/* Realtime stat cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Bugungi holat</p>
           <div className="grid grid-cols-2 gap-3">

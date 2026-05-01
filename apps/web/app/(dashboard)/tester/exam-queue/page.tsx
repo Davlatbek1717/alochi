@@ -303,6 +303,7 @@ export default function TesterExamQueuePage() {
         onClose={() => setGrantModal(null)}
         title="Imtihon ruxsati"
         size="sm"
+        theme="dark"
         footer={
           <>
             <Button variant="ghost" onClick={() => setGrantModal(null)}>Bekor qilish</Button>

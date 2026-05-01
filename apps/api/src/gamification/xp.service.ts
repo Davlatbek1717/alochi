@@ -61,7 +61,13 @@ export class XpService {
 
   async getStudentXp(studentId: string) {
     const xp = await this.prisma.studentXp.findUnique({ where: { studentId } });
-    if (!xp) return { totalXp: 0, level: 'Novice', currentStreak: 0 };
+    if (!xp)
+      return {
+        totalXp: 0,
+        level: 'Novice',
+        currentStreak: 0,
+        nextLevelXp: this.getNextLevelXp(0),
+      };
 
     return {
       ...xp,

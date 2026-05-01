@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle } from 'lucide-react';
+import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, Stat } from '@/components/ui';
 
@@ -87,7 +87,8 @@ export default function ManagerDashboard() {
     { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: 'Topshiriqlar',      color: 'hover:border-orange-300 hover:bg-orange-50' },
     { href: '/manager/delegations', icon: <Send size={20} />,         title: 'Delegatsiya', desc: 'Buyruq jo\'natish', color: 'hover:border-blue-300 hover:bg-blue-50' },
     { href: '/manager/rewards',     icon: <Trophy size={20} />,       title: "Sovg'a/Kitob", desc: 'Ragʼbatlantirish',   color: 'hover:border-amber-300 hover:bg-amber-50' },
-    { href: '/manager/sessions',    icon: <ClipboardList size={20} />,title: 'Sertifikat',  desc: 'Sertifikat berish',  color: 'hover:border-cyan-300 hover:bg-cyan-50' },
+    { href: '/manager/sessions',    icon: <Calendar size={20} />,     title: '1:1 Sessiyalar', desc: 'Individual sessiyalarni rejalashtirish va kuzatish', color: 'hover:border-cyan-300 hover:bg-cyan-50' },
+    { href: '/manager/certificates',icon: <Award size={20} />,        title: 'Sertifikat',   desc: "O'quvchilar sertifikatlari", color: 'hover:border-amber-300 hover:bg-amber-50' },
   ];
 
   const alertCount = redStudents.length + yellowStudents.length;

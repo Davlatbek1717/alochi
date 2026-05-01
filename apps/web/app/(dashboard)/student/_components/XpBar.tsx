@@ -12,8 +12,9 @@ const LEVEL_COLORS: Record<string, string> = {
   Master: 'bg-yellow-500',
 };
 
+// Server is the source of truth — see apps/api/src/gamification/xp.service.ts
 const LEVEL_MINIMUMS: Record<string, number> = {
-  Novice: 0, Learner: 500, Scholar: 2000, Expert: 5000, Master: 10000,
+  Novice: 0, Learner: 200, Scholar: 2000, Expert: 5000, Master: 10000,
 };
 
 export function XpBar({ totalXp, level, nextLevelXp }: XpBarProps) {

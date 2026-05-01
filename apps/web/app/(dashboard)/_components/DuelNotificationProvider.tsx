@@ -78,6 +78,7 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
         onClose={rejectDuel}
         size="sm"
         closeOnOverlay={false}
+        theme="dark"
         title="Duel taklifi!"
         description={challenge ? `${challenge.challengerName} sizni duelga chaqirdi` : undefined}
         footer={

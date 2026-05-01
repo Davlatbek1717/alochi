@@ -1,12 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { RefreshCw, BarChart2, Trophy, GraduationCap, FlaskConical } from 'lucide-react';
+import { RefreshCw, BarChart2, Trophy, GraduationCap, Award, FlaskConical } from 'lucide-react';
 import { XpBar } from '../student/_components/XpBar';
 import { StreakBadge } from '../student/_components/StreakBadge';
 import { DailyQuests } from '../student/_components/DailyQuests';
 import { SocialFeed } from '../student/_components/SocialFeed';
 import VirtualCity from '../student/_components/VirtualCity';
+import PathMap500 from '@/components/PathMap500';
+import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
 import { Button, Skeleton, SkeletonCard } from '@/components/ui';
 
@@ -53,6 +55,14 @@ type Warning = {
   createdAt: string;
 };
 
+type Certificate = {
+  id: string;
+  level: string;
+  lessonsCompleted: number;
+  qrCode?: string;
+  issuedAt: string;
+};
+
 const STATUS_COLOR: Record<string, string> = {
   yashil: '🟢',
   sariq: '🟡',
@@ -71,13 +81,14 @@ export default function TesterDashboard() {
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function fetchData() {
       try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes] = await Promise.all([
+        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes, certsRes] = await Promise.all([
           apiRequest<XpData>('/gamification/xp', {}, token),
           apiRequest<Quest[]>('/gamification/quests', {}, token),
           apiRequest<CityData>('/gamification/city', {}, token),
@@ -86,6 +97,7 @@ export default function TesterDashboard() {
           apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
           apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
           apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
+          apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
         ]);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -96,6 +108,7 @@ export default function TesterDashboard() {
         setStatusData(statusRes.data);
         setWarnings(warningsRes.data ?? []);
         setReviewItems(reviewRes.data ?? []);
+        setCertificates(certsRes.data ?? []);
       } catch {
         // keep defaults on error
       } finally {
@@ -169,6 +182,44 @@ export default function TesterDashboard() {
       </div>
 
       <DailyQuests quests={quests} />
+
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Yo&apos;l xaritasi
+        </p>
+        <PathMap500 currentStep={lessonProgress} />
+        <p className="text-xs text-gray-500 mt-2 text-right">
+          {lessonProgress} / 500 dars
+        </p>
+      </div>
+
+      {certificates.length > 0 && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Award size={16} className="text-amber-500" />
+            <h2 className="font-bold text-gray-800 text-sm">Sertifikatlar</h2>
+            <span className="text-xs text-gray-500">{certificates.length} ta</span>
+          </div>
+          <div className="space-y-3">
+            {certificates.slice(0, 3).map((cert) => (
+              <div
+                key={cert.id}
+                className="border border-amber-100 bg-amber-50/40 rounded-xl p-3"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-amber-700 text-sm capitalize">
+                    {cert.level} sertifikati
+                  </p>
+                  <span className="text-xs text-gray-500">
+                    {cert.lessonsCompleted} dars
+                  </span>
+                </div>
+                <CertificateShare cert={cert} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {cityData && (
         <VirtualCity
@@ -262,7 +313,10 @@ export default function TesterDashboard() {
 
       <SocialFeed />
 
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto">
+      {/* 25.H.1: tiny chip that shows current lesson session/N */}
+
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto space-y-2">
+        <CurrentLessonChip />
         <Button
           variant="primary"
           size="lg"
@@ -273,6 +327,38 @@ export default function TesterDashboard() {
           ▶️ Sinov darsi
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 25.H.1: "Sessiya {sessionCount}/{N}" chip rendered just above the
+ * "Sinov darsi" CTA. Reads from /lessons/next + /progress/my.
+ */
+function CurrentLessonChip() {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    if (!token) return;
+    type LessonInfo = { id: string; nRepetitions: number };
+    type ProgressRow = { lessonId: string; sessionCount: number };
+    Promise.all([
+      apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => null),
+      apiRequest<ProgressRow[]>('/progress/my', {}, token).catch(() => null),
+    ]).then(([lesson, progress]) => {
+      const data = lesson?.data ?? null;
+      if (!data) return;
+      const row = progress?.data?.find((p) => p.lessonId === data.id);
+      const count = row?.sessionCount ?? 0;
+      setText(`Sessiya ${count}/${data.nRepetitions}`);
+    });
+  }, []);
+
+  if (!text) return null;
+  return (
+    <div className="bg-white border-[1.5px] border-[#ede9e1] rounded-full px-3 py-1 text-xs font-semibold text-[#0f172a] inline-block shadow-sm">
+      {text}
     </div>
   );
 }

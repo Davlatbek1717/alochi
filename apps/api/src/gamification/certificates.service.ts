@@ -82,6 +82,19 @@ export class CertificatesService {
     });
   }
 
+  /**
+   * Manager / filadmin helper — returns all certificates for students in
+   * the given branch. Includes the student's name and id so the UI can
+   * link to the student detail page.
+   */
+  async getCertificatesForBranch(branchId: string) {
+    return this.prisma.certificate.findMany({
+      where: { student: { branchId } },
+      orderBy: { issuedAt: 'desc' },
+      include: { student: { select: { id: true, name: true } } },
+    });
+  }
+
   async generatePdf(certificateId: string): Promise<Buffer> {
     const cert = await this.prisma.certificate.findUniqueOrThrow({
       where: { id: certificateId },

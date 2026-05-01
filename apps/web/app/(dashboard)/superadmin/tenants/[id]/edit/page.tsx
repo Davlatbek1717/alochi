@@ -193,6 +193,7 @@ export default function EditTenantPage() {
         title="Markazni bloklash"
         description={`"${tenant?.name ?? ''}" markazi va uning barcha foydalanuvchilari nofaol bo'ladi.`}
         size="sm"
+        theme="dark"
         footer={
           <>
             <button

@@ -93,104 +93,118 @@ export default function ManagerSessionsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
-      <div className="flex items-center gap-3">
-        <Calendar className="text-violet-500" size={20} />
-        <h1 className="text-lg font-bold text-gray-800">1:1 sessiyalar</h1>
+    <div className="min-h-screen bg-[#f7f4ef]">
+      {/* Navy header band — matches /manager/page.tsx */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center">
+            <Calendar size={20} className="text-[#0d9488]" />
+          </div>
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Manager</p>
+            <p className="text-white text-lg font-bold">1:1 Sessiyalar</p>
+          </div>
+        </div>
       </div>
 
-      <form
-        onSubmit={create}
-        className="bg-white border border-gray-100 rounded-xl p-4 space-y-3"
-      >
-        <select
-          value={studentId}
-          onChange={(e) => setStudentId(e.target.value)}
-          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800"
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        <form
+          onSubmit={create}
+          className="bg-white border-[1.5px] border-[#ede9e1] rounded-[18px] p-4 space-y-3"
         >
-          <option value="">Talaba tanlang...</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <input
-          type="datetime-local"
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800"
-        />
-        <textarea
-          placeholder="Izoh (ixtiyoriy)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 placeholder-gray-400"
-        />
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex items-center gap-2 bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
-        >
-          <Plus size={14} /> {saving ? '...' : 'Rejalashtirish'}
-        </button>
-      </form>
+          <select
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a]"
+          >
+            <option value="">Talaba tanlang...</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a]"
+          />
+          <textarea
+            placeholder="Izoh (ixtiyoriy)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] placeholder-[#94a3b8]"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-[#0d9488] hover:bg-[#0f766e] text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
+          >
+            <Plus size={14} /> {saving ? '...' : 'Rejalashtirish'}
+          </button>
+        </form>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} theme="light" className="h-16 w-full" />
-          ))}
-        </div>
-      ) : sessions.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-6">
-          Hali sessiya yo&apos;q
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {sessions.map((s) => {
-            const isDone = Boolean(s.completedAt);
-            return (
-              <div
-                key={s.id}
-                className={`border rounded-xl p-3 flex items-center justify-between gap-3 ${
-                  isDone
-                    ? 'bg-emerald-50/40 border-emerald-100'
-                    : 'bg-white border-gray-100'
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 text-sm">
-                    {s.student?.name ?? s.studentId}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(s.scheduledAt).toLocaleString('uz-UZ')}
-                  </p>
-                  {s.notes && (
-                    <p className="text-xs text-gray-600 mt-1 italic">
-                      {s.notes}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} theme="light" className="h-16 w-full rounded-[18px]" />
+            ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
+            <p className="text-[#94a3b8] text-sm">Hali sessiya yo&apos;q</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((s) => {
+              const isDone = Boolean(s.completedAt);
+              return (
+                <div
+                  key={s.id}
+                  className={`border-[1.5px] rounded-[18px] p-3 flex items-center justify-between gap-3 ${
+                    isDone
+                      ? 'bg-emerald-50/40 border-emerald-200'
+                      : 'bg-white border-[#ede9e1]'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[#0f172a] text-sm">
+                      {s.student?.name ?? s.studentId}
                     </p>
+                    <p className="text-xs text-[#64748b]">
+                      {new Date(s.scheduledAt).toLocaleString('uz-UZ')}
+                    </p>
+                    {s.notes && (
+                      <p className="text-xs text-[#64748b] mt-1 italic">
+                        {s.notes}
+                      </p>
+                    )}
+                  </div>
+                  {isDone ? (
+                    <span className="text-xs text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded">
+                      Bajarildi
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => complete(s.id)}
+                      className="inline-flex items-center gap-1 bg-[#f59e0b] hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                    >
+                      <Check size={12} /> Bajardim
+                    </button>
                   )}
                 </div>
-                {isDone ? (
-                  <span className="text-xs text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded">
-                    Bajarildi
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => complete(s.id)}
-                    className="inline-flex items-center gap-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold"
-                  >
-                    <Check size={12} /> Bajardim
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

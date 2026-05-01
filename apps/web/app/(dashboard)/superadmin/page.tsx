@@ -1,10 +1,13 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BookMarked, CreditCard, Users, Building2,
   ShieldOff, Trophy, ChevronRight, Shield,
   Settings, BarChart2, AlertTriangle, TrendingUp,
+  UserX, Camera, Award, Video, MessageSquare,
 } from 'lucide-react';
+import { apiRequest } from '@/lib/api';
 
 const NAV_CARDS = [
   { href: '/superadmin/tenants',     icon: <Building2 size={22} />, title: 'Markazlar',          desc: "A'lochi markazlari ro'yxati va boshqaruv", color: 'hover:border-violet-300 hover:bg-violet-50' },
@@ -19,11 +22,36 @@ const NAV_CARDS = [
   { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate',           color: 'hover:border-purple-300 hover:bg-purple-50' },
   { href: '/superadmin/churn',           icon: <AlertTriangle size={22} />, title: 'Churn Monitor',        desc: 'Xavfli o\'quvchilar',           color: 'hover:border-red-300 hover:bg-red-50' },
   { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika',     color: 'hover:border-green-300 hover:bg-green-50' },
+  { href: '/superadmin/blocked-students',icon: <UserX size={22} />,         title: "Bloklangan o'quvchilar", desc: "To'lov va ogohlantirish bloklari", color: 'hover:border-rose-300 hover:bg-rose-50' },
+  { href: '/superadmin/face-sla',        icon: <Camera size={22} />,        title: 'Face ID monitoring',   desc: "Face ID natijalari va SLA",     color: 'hover:border-cyan-300 hover:bg-cyan-50' },
+  { href: '/superadmin/certificate-design', icon: <Award size={22} />,      title: 'Sertifikat dizayni',   desc: 'Shablon va brending',           color: 'hover:border-amber-300 hover:bg-amber-50' },
+  { href: '/superadmin/video-guides',    icon: <Video size={22} />,         title: "Video qo'llanmalar",    desc: "Foydalanuvchilar uchun video",  color: 'hover:border-blue-300 hover:bg-blue-50' },
+  { href: '/superadmin/templates',       icon: <MessageSquare size={22} />, title: 'Bildirishnoma shablonlari', desc: 'Telegram/inapp/SMS shablonlar', color: 'hover:border-violet-300 hover:bg-violet-50' },
   { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi, tenant',    color: 'hover:border-slate-300 hover:bg-slate-50' },
 ];
 
+type Stats = { branches: number; lessons: number; users: number };
+
 export default function SuperadminDashboard() {
   const router = useRouter();
+  const [stats, setStats] = useState<Stats>({ branches: 0, lessons: 0, users: 0 });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    Promise.all([
+      apiRequest<Array<unknown>>('/branches', {}, token).catch(() => ({ data: [] as unknown[] })),
+      apiRequest<Array<unknown>>('/lessons', {}, token).catch(() => ({ data: [] as unknown[] })),
+      apiRequest<Array<unknown>>('/users', {}, token).catch(() => ({ data: [] as unknown[] })),
+    ]).then(([b, l, u]) => {
+      setStats({
+        branches: Array.isArray(b.data) ? b.data.length : 0,
+        lessons: Array.isArray(l.data) ? l.data.length : 0,
+        users: Array.isArray(u.data) ? u.data.length : 0,
+      });
+    }).finally(() => setLoaded(true));
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
@@ -48,9 +76,9 @@ export default function SuperadminDashboard() {
         {/* Stat bar */}
         <div className="grid grid-cols-3 gap-2 relative z-10">
           {[
-            { label: 'Filiallar', value: '—', color: 'text-[#0d9488]' },
-            { label: 'Darslar',   value: '—', color: 'text-violet-400' },
-            { label: 'Foydalanuvchilar', value: '—', color: 'text-[#f59e0b]' },
+            { label: 'Filiallar', value: loaded ? String(stats.branches) : '—', color: 'text-[#0d9488]' },
+            { label: 'Darslar',   value: loaded ? String(stats.lessons)  : '—', color: 'text-violet-400' },
+            { label: 'Foydalanuvchilar', value: loaded ? String(stats.users) : '—', color: 'text-[#f59e0b]' },
           ].map((s) => (
             <div key={s.label} className="bg-[#162032] rounded-[14px] p-3">
               <p className={`text-xl font-black font-mono ${s.color}`}>{s.value}</p>

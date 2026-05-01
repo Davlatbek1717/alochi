@@ -48,10 +48,12 @@ export class ManagerRewardsController {
   @Get()
   @Roles(UserRole.manager, UserRole.filadmin, UserRole.superadmin)
   list(@Query('branchId') branchId: string, @Request() req: any) {
-    return this.rewards.listForBranch(
-      req.user.tenantId,
-      branchId ?? req.user.branchId,
-    );
+    // Superadmin without a branch should see all rewards; otherwise
+    // scope to the caller's branch (or the explicit query param).
+    const effectiveBranch =
+      branchId ??
+      (req.user.role === UserRole.superadmin ? null : req.user.branchId);
+    return this.rewards.listForBranch(req.user.tenantId, effectiveBranch);
   }
 
   @Get('student/:studentId')

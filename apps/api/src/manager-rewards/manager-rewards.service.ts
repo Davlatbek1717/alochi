@@ -19,9 +19,14 @@ export class ManagerRewardsService {
     return this.prisma.managerReward.create({ data });
   }
 
-  async listForBranch(tenantId: string, branchId: string) {
+  /**
+   * List rewards for a tenant. When `branchId` is provided we scope to it;
+   * otherwise (e.g. superadmin caller without a branch) we return all
+   * rewards for the tenant.
+   */
+  async listForBranch(tenantId: string, branchId?: string | null) {
     return this.prisma.managerReward.findMany({
-      where: { tenantId, branchId },
+      where: branchId ? { tenantId, branchId } : { tenantId },
       orderBy: { givenAt: 'desc' },
     });
   }
