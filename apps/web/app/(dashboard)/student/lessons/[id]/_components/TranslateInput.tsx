@@ -1,14 +1,11 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, XCircle, Lightbulb, Sparkles, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Lightbulb } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
-import {
-  gradeTranslation,
-  explainAnswer,
-  type ExplainAnswerResponse,
-} from '@/lib/exercises';
+import { gradeTranslation } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { TranslateConfig } from './exercise-types';
 
 interface TranslateInputProps {
@@ -44,12 +41,6 @@ export function TranslateInput({ config, onPassed, onFailed }: TranslateInputPro
   const [showFloater, setShowFloater] = useState(false);
   const [floaterKey, setFloaterKey] = useState(0);
   const [shake, setShake] = useState(false);
-
-  // Tushuntirish (explain) — feature M preview. Loaded lazily on demand;
-  // a single inline card shows the explanation, hint and examples.
-  const [explainLoading, setExplainLoading] = useState(false);
-  const [explainData, setExplainData] = useState<ExplainAnswerResponse | null>(null);
-  const [explainError, setExplainError] = useState('');
 
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -149,32 +140,6 @@ export function TranslateInput({ config, onPassed, onFailed }: TranslateInputPro
       } catch {
         /* ignore */
       }
-    }
-  }
-
-  async function handleExplain() {
-    if (explainLoading || explainData) return;
-    setExplainLoading(true);
-    setExplainError('');
-    const token =
-      typeof window !== 'undefined'
-        ? (window.localStorage.getItem('accessToken') ?? '')
-        : '';
-    try {
-      const data = await explainAnswer(
-        {
-          exerciseType: 'translate',
-          question: sourceText,
-          studentAnswer: trimmed,
-          correctAnswer,
-        },
-        token,
-      );
-      setExplainData(data);
-    } catch {
-      setExplainError("Tushuntirishni olishda xato. Keyinroq urinib ko'ring.");
-    } finally {
-      setExplainLoading(false);
     }
   }
 
@@ -336,62 +301,24 @@ export function TranslateInput({ config, onPassed, onFailed }: TranslateInputPro
             </div>
           </div>
 
-          {/* Tushuntirish (M preview) — opens an inline expandable card. */}
-          <div className="space-y-2">
-            {!explainData && (
-              <button
-                type="button"
-                onClick={handleExplain}
-                disabled={explainLoading}
-                className="text-xs font-extrabold text-white bg-[#1cb0f6] border-b-[3px] border-[#0e8cc4] rounded-2xl px-4 py-2 inline-flex items-center gap-1.5 active:translate-y-[1px] active:border-b-[1px] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-              >
-                {explainLoading ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Sparkles size={14} />
-                )}
-                {explainLoading ? 'Tushuntirilmoqda...' : 'Tushuntirish'}
-              </button>
-            )}
-            {explainError && (
-              <p className="text-[11px] font-bold text-[#991b1b]">{explainError}</p>
-            )}
-            {explainData && (
-              <div className="bg-[#eff6ff] border-[1.5px] border-[#bfdbfe] rounded-2xl px-4 py-3 space-y-2">
-                <p
-                  className="text-sm font-extrabold text-[#1e3a8a] leading-snug"
-                  style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-                >
-                  {explainData.explanation}
-                </p>
-                {explainData.hint && (
-                  <p className="text-xs font-semibold text-[#1e40af] leading-snug">
-                    💡 {explainData.hint}
-                  </p>
-                )}
-                {explainData.examples && explainData.examples.length > 0 && (
-                  <ul className="text-xs font-semibold text-[#1e40af] space-y-1 pl-1">
-                    {explainData.examples.slice(0, 3).map((ex, i) => (
-                      <li key={i} className="leading-snug">
-                        • {ex}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+          {/* Universal Tushuntirib bering (Pass 5 / Feature M). */}
+          <ExplainPanel
+            exerciseType="translate"
+            question={sourceText}
+            studentAnswer={trimmed}
+            correctAnswer={correctAnswer}
+            context={config.hint}
+          />
 
-            <Button
-              variant="duo"
-              size="lg"
-              fullWidth
-              className="!bg-[#ef4444] !border-[#b91c1c]"
-              onClick={onFailed}
-            >
-              Davom etish
-            </Button>
-          </div>
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            className="!bg-[#ef4444] !border-[#b91c1c]"
+            onClick={onFailed}
+          >
+            Davom etish
+          </Button>
         </div>
       )}
 

@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 
 interface McqQuestion {
   text: string;
@@ -97,10 +98,22 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
       playSound('correct');
       setShowFloater(true);
       setFloaterKey((k) => k + 1);
+      // Auto-advance only on correct so the celebration plays without delay.
+      setTimeout(() => {
+        if (current + 1 < validQuestions.length) {
+          setCurrent((c) => c + 1);
+          setSelected(null);
+          setShowResult(false);
+          setShowFloater(false);
+        } else if (wrongs === 0) {
+          onPassed();
+        } else {
+          onFailed();
+        }
+      }, 700);
     } else {
       playSound('wrong');
       setWrongs((w) => w + 1);
-      // Optional haptic buzz for supporting devices — silent no-op otherwise.
       try {
         if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
           navigator.vibrate?.(120);
@@ -108,24 +121,20 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
       } catch {
         /* ignore */
       }
+      // No auto-advance on wrong — Pass 5 wires ExplainPanel into the wrong
+      // banner, so the student now drives the next step via the red CTA.
     }
+  }
 
-    const delay = correct ? 700 : 1500;
-    setTimeout(() => {
-      if (current + 1 < validQuestions.length) {
-        setCurrent((c) => c + 1);
-        setSelected(null);
-        setShowResult(false);
-        setShowFloater(false);
-      } else {
-        const totalWrongs = wrongs + (correct ? 0 : 1);
-        if (totalWrongs === 0) {
-          onPassed();
-        } else {
-          onFailed();
-        }
-      }
-    }, delay);
+  function advanceFromWrong() {
+    if (current + 1 < validQuestions.length) {
+      setCurrent((c) => c + 1);
+      setSelected(null);
+      setShowResult(false);
+      setShowFloater(false);
+    } else {
+      onFailed();
+    }
   }
 
   return (
@@ -227,16 +236,24 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
         )}
       </div>
 
-      {/* Wrong-answer banner */}
+      {/* Wrong-answer banner + ExplainPanel + red Davom etish */}
       {isWrong && (
-        <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
-          <XCircle size={18} className="text-[#ef4444] shrink-0 mt-0.5" />
-          <p
-            className="text-sm font-extrabold text-[#991b1b] leading-snug"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
-            To&apos;g&apos;ri javob: {q.options[q.correct]}
-          </p>
+        <div className="space-y-3">
+          <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
+            <XCircle size={18} className="text-[#ef4444] shrink-0 mt-0.5" />
+            <p
+              className="text-sm font-extrabold text-[#991b1b] leading-snug"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              To&apos;g&apos;ri javob: {q.options[q.correct]}
+            </p>
+          </div>
+          <ExplainPanel
+            exerciseType="mcq"
+            question={q.text}
+            studentAnswer={selected !== null ? q.options[selected] : '(no selection)'}
+            correctAnswer={q.options[q.correct]}
+          />
         </div>
       )}
 
@@ -253,16 +270,28 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
         </div>
       )}
 
-      {/* Sticky check CTA */}
-      <Button
-        variant="duo"
-        size="lg"
-        fullWidth
-        disabled={selected === null || showResult}
-        onClick={handleCheck}
-      >
-        TEKSHIRISH
-      </Button>
+      {/* CTA — TEKSHIRISH (idle), Davom etish (wrong, red) */}
+      {isWrong ? (
+        <Button
+          variant="duo"
+          size="lg"
+          fullWidth
+          className="!bg-[#ef4444] !border-[#b91c1c]"
+          onClick={advanceFromWrong}
+        >
+          Davom etish
+        </Button>
+      ) : (
+        <Button
+          variant="duo"
+          size="lg"
+          fullWidth
+          disabled={selected === null || showResult}
+          onClick={handleCheck}
+        >
+          TEKSHIRISH
+        </Button>
+      )}
 
       {/* Progress dots — active dot pulses */}
       <div className="flex gap-1.5 justify-center pt-1">

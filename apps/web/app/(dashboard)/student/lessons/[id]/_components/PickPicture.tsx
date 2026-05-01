@@ -14,6 +14,7 @@ import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { PickPictureConfig } from './exercise-types';
 
 interface PickPictureProps {
@@ -368,7 +369,7 @@ export function PickPicture({ config, onPassed, onFailed }: PickPictureProps) {
         </div>
       )}
 
-      {/* Wrong banner + red Davom etish */}
+      {/* Wrong banner + ExplainPanel + red Davom etish */}
       {isWrong && (
         <div className="space-y-3">
           <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -380,6 +381,14 @@ export function PickPicture({ config, onPassed, onFailed }: PickPictureProps) {
               To&apos;g&apos;ri rasm yashil ramka bilan belgilangan.
             </p>
           </div>
+          <ExplainPanel
+            exerciseType="pick_picture"
+            question={`Bu so'z qaysi rasm: ${word}`}
+            studentAnswer={
+              selectedId ? `Variant ${selectedId}` : '(no selection)'
+            }
+            correctAnswer={`Variant ${correctOptionId} (${word})`}
+          />
           <Button
             variant="duo"
             size="lg"

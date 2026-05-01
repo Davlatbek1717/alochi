@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { FillBlankConfig } from './exercise-types';
 
 interface FillBlankProps {
@@ -309,7 +310,7 @@ export function FillBlank({ config, onPassed, onFailed }: FillBlankProps) {
         </div>
       )}
 
-      {/* Wrong banner + secondary "Davom etish" red button */}
+      {/* Wrong banner + ExplainPanel + secondary "Davom etish" red button */}
       {isWrong && (
         <div className="space-y-3">
           <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -321,6 +322,12 @@ export function FillBlank({ config, onPassed, onFailed }: FillBlankProps) {
               To&apos;g&apos;ri javob: {blank}
             </p>
           </div>
+          <ExplainPanel
+            exerciseType="fill_blank"
+            question={sentence}
+            studentAnswer={currentAnswer ?? ''}
+            correctAnswer={blank}
+          />
           <Button
             variant="duo"
             size="lg"

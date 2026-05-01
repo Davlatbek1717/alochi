@@ -6,6 +6,7 @@ import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { ListenPickConfig } from './exercise-types';
 
 interface ListenPickProps {
@@ -373,7 +374,7 @@ export function ListenPick({ config, onPassed, onFailed }: ListenPickProps) {
         </div>
       )}
 
-      {/* Wrong banner + red Davom etish */}
+      {/* Wrong banner + ExplainPanel + red Davom etish */}
       {isWrong && (
         <div className="space-y-3">
           <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -385,6 +386,14 @@ export function ListenPick({ config, onPassed, onFailed }: ListenPickProps) {
               To&apos;g&apos;ri javob: {options[correctIndex]?.label}
             </p>
           </div>
+          <ExplainPanel
+            exerciseType="listen_pick"
+            question={text}
+            studentAnswer={
+              options.find((o) => o.id === selectedId)?.label ?? '(no selection)'
+            }
+            correctAnswer={options[correctIndex]?.label ?? ''}
+          />
           <Button
             variant="duo"
             size="lg"

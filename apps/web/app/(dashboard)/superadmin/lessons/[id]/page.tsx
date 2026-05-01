@@ -3,7 +3,17 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Globe, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, EmptyState, useToast } from '@/components/ui';
+import { Button, Skeleton, EmptyState, useToast, Modal } from '@/components/ui';
+import {
+  ComponentsList,
+  COMPONENT_LABELS,
+  type ConfigComponent,
+} from './_components/ComponentsList';
+import {
+  ComponentConfigurator,
+  ALL_TYPES,
+  type ComponentTypeKey,
+} from './_components/ComponentConfigurator';
 
 interface Lesson {
   id: string;
@@ -27,22 +37,27 @@ interface WordOrderSentence {
   correct: string;
 }
 
-interface LessonComponent {
-  type: string;
-  config: {
-    questions?: McqQuestion[];
-    sentences?: WordOrderSentence[];
-  };
-}
-
+/**
+ * Pass 5 — Lesson edit page with full Components Configurator.
+ *
+ * Adds a third "Topshiriqlar" tab that lists every component (the 12
+ * supported types) for the lesson, with Add / Edit / Delete wired to
+ * `POST/PATCH/DELETE /lessons/:lessonId/components`. The legacy MCQ /
+ * Word-order tabs stay as-is for backward-compatible aggregate edits, but
+ * the Topshiriqlar tab is now the canonical authoring surface for the new
+ * exercise types from Passes 2-4.
+ */
 export default function EditLessonPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [components, setComponents] = useState<ConfigComponent[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'mcq' | 'word_order'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'mcq' | 'word_order' | 'components'>(
+    'components',
+  );
 
   const [mcqQuestions, setMcqQuestions] = useState<McqQuestion[]>([]);
   const [savingMcq, setSavingMcq] = useState(false);
@@ -50,20 +65,48 @@ export default function EditLessonPage() {
   const [wordSentences, setWordSentences] = useState<WordOrderSentence[]>([]);
   const [savingWord, setSavingWord] = useState(false);
 
+  // Configurator modal state — open with `null` editingComponent for "add",
+  // or with a row for "edit". Type picker is its own modal.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [configType, setConfigType] = useState<ComponentTypeKey | null>(null);
+  const [editingComponent, setEditingComponent] = useState<ConfigComponent | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function refreshComponents() {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const compRes = await apiRequest<ConfigComponent[]>(
+      `/lessons/${id}/components`,
+      {},
+      token,
+    );
+    setComponents(compRes.data);
+    const mcqComp = compRes.data.find((c) => c.type === 'mcq');
+    const wordComp = compRes.data.find((c) => c.type === 'word_order');
+    const mcqCfg = mcqComp?.config as { questions?: McqQuestion[] } | undefined;
+    const wordCfg = wordComp?.config as { sentences?: WordOrderSentence[] } | undefined;
+    if (mcqCfg?.questions) setMcqQuestions(mcqCfg.questions);
+    if (wordCfg?.sentences) setWordSentences(wordCfg.sentences);
+  }
+
   useEffect(() => {
+    if (!id) return;
     const token = localStorage.getItem('accessToken') ?? '';
     Promise.all([
       apiRequest<Lesson>(`/lessons/${id}`, {}, token),
-      apiRequest<LessonComponent[]>(`/lessons/${id}/components`, {}, token),
+      apiRequest<ConfigComponent[]>(`/lessons/${id}/components`, {}, token),
     ])
       .then(([lessonRes, compRes]) => {
         setLesson(lessonRes.data);
+        setComponents(compRes.data);
         const mcqComp = compRes.data.find((c) => c.type === 'mcq');
         const wordComp = compRes.data.find((c) => c.type === 'word_order');
-        if (mcqComp?.config.questions) setMcqQuestions(mcqComp.config.questions);
-        if (wordComp?.config.sentences) setWordSentences(wordComp.config.sentences);
+        const mcqCfg = mcqComp?.config as { questions?: McqQuestion[] } | undefined;
+        const wordCfg = wordComp?.config as { sentences?: WordOrderSentence[] } | undefined;
+        if (mcqCfg?.questions) setMcqQuestions(mcqCfg.questions);
+        if (wordCfg?.sentences) setWordSentences(wordCfg.sentences);
       })
-      .catch((e) => toast.error(e.message))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'))
       .finally(() => setLoading(false));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -72,7 +115,7 @@ export default function EditLessonPage() {
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       await apiRequest(`/lessons/${id}/publish`, { method: 'PATCH' }, token);
-      setLesson((prev) => prev ? { ...prev, isPublished: true } : prev);
+      setLesson((prev) => (prev ? { ...prev, isPublished: true } : prev));
       toast.success('Dars nashr qilindi');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Xatolik');
@@ -85,11 +128,13 @@ export default function EditLessonPage() {
     setSavingMcq(true);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
-      await apiRequest(`/lessons/${id}/mcq`, {
-        method: 'POST',
-        body: JSON.stringify({ questions: mcqQuestions }),
-      }, token);
+      await apiRequest(
+        `/lessons/${id}/mcq`,
+        { method: 'POST', body: JSON.stringify({ questions: mcqQuestions }) },
+        token,
+      );
       toast.success('MCQ savollar saqlandi');
+      await refreshComponents();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
@@ -101,11 +146,13 @@ export default function EditLessonPage() {
     setSavingWord(true);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
-      await apiRequest(`/lessons/${id}/word-order`, {
-        method: 'POST',
-        body: JSON.stringify({ sentences: wordSentences }),
-      }, token);
+      await apiRequest(
+        `/lessons/${id}/word-order`,
+        { method: 'POST', body: JSON.stringify({ sentences: wordSentences }) },
+        token,
+      );
       toast.success("So'z tartibi saqlandi");
+      await refreshComponents();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Xatolik');
     } finally {
@@ -114,46 +161,107 @@ export default function EditLessonPage() {
   }
 
   function addMcqQuestion() {
-    setMcqQuestions((prev) => [
-      ...prev,
-      { text: '', options: ['', '', '', ''], correct: 0 },
-    ]);
+    setMcqQuestions((prev) => [...prev, { text: '', options: ['', '', '', ''], correct: 0 }]);
   }
-
   function updateMcqQuestion(idx: number, field: string, value: string | number) {
-    setMcqQuestions((prev) =>
-      prev.map((q, i) => i === idx ? { ...q, [field]: value } : q)
-    );
+    setMcqQuestions((prev) => prev.map((q, i) => (i === idx ? { ...q, [field]: value } : q)));
   }
-
   function updateMcqOption(qIdx: number, optIdx: number, value: string) {
     setMcqQuestions((prev) =>
       prev.map((q, i) =>
-        i === qIdx
-          ? { ...q, options: q.options.map((o, j) => j === optIdx ? value : o) }
-          : q
-      )
+        i === qIdx ? { ...q, options: q.options.map((o, j) => (j === optIdx ? value : o)) } : q,
+      ),
     );
   }
-
   function removeMcqQuestion(idx: number) {
     setMcqQuestions((prev) => prev.filter((_, i) => i !== idx));
   }
-
   function addWordSentence() {
     setWordSentences((prev) => [...prev, { words: [], correct: '' }]);
   }
-
   function updateWordSentence(idx: number, correct: string) {
     const words = correct.trim().split(/\s+/).filter(Boolean);
     const shuffled = [...words].sort(() => Math.random() - 0.5);
     setWordSentences((prev) =>
-      prev.map((s, i) => i === idx ? { words: shuffled, correct } : s)
+      prev.map((s, i) => (i === idx ? { words: shuffled, correct } : s)),
     );
   }
-
   function removeWordSentence(idx: number) {
     setWordSentences((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  // ─── Configurator handlers ────────────────────────────────────────────────
+
+  function openTypePicker() {
+    setEditingComponent(null);
+    setConfigType(null);
+    setPickerOpen(true);
+  }
+
+  function pickType(type: ComponentTypeKey) {
+    setPickerOpen(false);
+    setEditingComponent(null);
+    setConfigType(type);
+  }
+
+  function openEdit(comp: ConfigComponent) {
+    setEditingComponent(comp);
+    setConfigType(comp.type as ComponentTypeKey);
+  }
+
+  function closeConfigurator() {
+    setConfigType(null);
+    setEditingComponent(null);
+  }
+
+  async function handleConfigSubmit(config: Record<string, unknown>) {
+    if (!configType) return;
+    setSavingConfig(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      if (editingComponent) {
+        await apiRequest(
+          `/lessons/${id}/components/${editingComponent.id}`,
+          { method: 'PATCH', body: JSON.stringify({ config }) },
+          token,
+        );
+        toast.success('Topshiriq yangilandi');
+      } else {
+        await apiRequest(
+          `/lessons/${id}/components`,
+          { method: 'POST', body: JSON.stringify({ type: configType, config }) },
+          token,
+        );
+        toast.success("Topshiriq qo'shildi");
+      }
+      await refreshComponents();
+      closeConfigurator();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setSavingConfig(false);
+    }
+  }
+
+  async function handleDelete(comp: ConfigComponent) {
+    if (!window.confirm(`"${COMPONENT_LABELS[comp.type] ?? comp.type}" topshirig'ini o'chirmoqchimisiz?`)) {
+      return;
+    }
+    setDeletingId(comp.id);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(
+        `/lessons/${id}/components/${comp.id}`,
+        { method: 'DELETE' },
+        token,
+      );
+      toast.success("Topshiriq o'chirildi");
+      await refreshComponents();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   if (loading) {
@@ -180,16 +288,24 @@ export default function EditLessonPage() {
     );
   }
 
+  const componentsTotal = components.length;
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+          style={{
+            background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
         />
         <div className="relative z-10">
-          <button onClick={() => router.push('/superadmin/lessons')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+          <button
+            onClick={() => router.push('/superadmin/lessons')}
+            className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm"
+          >
             <ArrowLeft size={16} /> Darslar
           </button>
           <div className="flex items-start justify-between gap-3">
@@ -236,26 +352,32 @@ export default function EditLessonPage() {
           </div>
           <div>
             <p className="text-[#64748b] text-xs">YouTube</p>
-            <a href={lesson.youtubeUrl} target="_blank" rel="noreferrer" className="text-[#0d9488] font-bold text-sm hover:underline">
+            <a
+              href={lesson.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[#0d9488] font-bold text-sm hover:underline"
+            >
               Ko&apos;rish
             </a>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-1">
-          {([
-            { key: 'info', label: 'Umumiy' },
-            { key: 'mcq', label: `MCQ (${mcqQuestions.length})` },
-            { key: 'word_order', label: `So'z (${wordSentences.length})` },
-          ] as { key: typeof activeTab; label: string }[]).map((tab) => (
+        <div className="flex gap-1 bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-1 overflow-x-auto">
+          {(
+            [
+              { key: 'info', label: 'Umumiy' },
+              { key: 'components', label: `Topshiriqlar (${componentsTotal})` },
+              { key: 'mcq', label: `MCQ (${mcqQuestions.length})` },
+              { key: 'word_order', label: `So'z (${wordSentences.length})` },
+            ] as { key: typeof activeTab; label: string }[]
+          ).map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
-                activeTab === tab.key
-                  ? 'bg-[#0f172a] text-white'
-                  : 'text-[#64748b] hover:text-[#0f172a]'
+              className={`flex-1 min-w-fit py-2.5 px-3 rounded-xl text-sm font-bold transition-colors ${
+                activeTab === tab.key ? 'bg-[#0f172a] text-white' : 'text-[#64748b] hover:text-[#0f172a]'
               }`}
             >
               {tab.label}
@@ -268,41 +390,49 @@ export default function EditLessonPage() {
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
             <p className="text-[#64748b] text-sm">
               Dars ma&apos;lumotlarini tahrirlash uchun yangi dars yarating yoki administrator
-              bilan bog&apos;laning. MCQ va So&apos;z tartibi tablarida komponentlarni boshqaring.
+              bilan bog&apos;laning. Topshiriqlar tabidan barcha 12 turdagi komponentni boshqaring.
             </p>
             <div className="mt-4 space-y-2">
-              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yoqilgan komponentlar</p>
+              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                Yoqilgan komponentlar
+              </p>
               <div className="flex gap-2 flex-wrap">
-                {lesson.components.mcq && (
-                  <span className="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-3 py-1 rounded-full font-semibold">
-                    MCQ — {mcqQuestions.length} ta savol
-                  </span>
-                )}
-                {lesson.components.word_order && (
-                  <span className="bg-violet-50 text-violet-700 border border-violet-100 text-xs px-3 py-1 rounded-full font-semibold">
-                    So&apos;z tartibi — {wordSentences.length} ta jumla
-                  </span>
-                )}
-                {lesson.components.vocabulary && (
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs px-3 py-1 rounded-full font-semibold">
-                    Lug&apos;at
-                  </span>
-                )}
-                {!lesson.components.mcq && !lesson.components.word_order && !lesson.components.vocabulary && (
+                {componentsTotal === 0 && (
                   <span className="text-[#94a3b8] text-sm">Komponent yo&apos;q</span>
+                )}
+                {componentsTotal > 0 && (
+                  <span className="bg-blue-50 text-blue-700 border border-blue-100 text-xs px-3 py-1 rounded-full font-semibold">
+                    Jami: {componentsTotal} ta
+                  </span>
                 )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Tab: MCQ */}
+        {/* Tab: Components configurator (Pass 5) */}
+        {activeTab === 'components' && (
+          <ComponentsList
+            components={components}
+            onAdd={openTypePicker}
+            onEdit={openEdit}
+            onDelete={handleDelete}
+            isDeleting={deletingId}
+          />
+        )}
+
+        {/* Tab: MCQ (legacy aggregate editor) */}
         {activeTab === 'mcq' && (
           <div className="space-y-3">
             {mcqQuestions.map((q, qIdx) => (
-              <div key={qIdx} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3">
+              <div
+                key={qIdx}
+                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3"
+              >
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Savol {qIdx + 1}</span>
+                  <span className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                    Savol {qIdx + 1}
+                  </span>
                   <button
                     onClick={() => removeMcqQuestion(qIdx)}
                     aria-label="Savolni o'chirish"
@@ -345,9 +475,7 @@ export default function EditLessonPage() {
                         }`}
                         placeholder={`Javob ${optIdx + 1}`}
                       />
-                      {q.correct === optIdx && (
-                        <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-                      )}
+                      {q.correct === optIdx && <CheckCircle size={14} className="text-emerald-500 shrink-0" />}
                     </div>
                   ))}
                 </div>
@@ -362,20 +490,14 @@ export default function EditLessonPage() {
             </button>
 
             {mcqQuestions.length > 0 && (
-              <Button
-                variant="primary"
-                loading={savingMcq}
-                fullWidth
-                size="lg"
-                onClick={saveMcq}
-              >
+              <Button variant="primary" loading={savingMcq} fullWidth size="lg" onClick={saveMcq}>
                 {savingMcq ? 'Saqlanmoqda...' : `MCQ savollarni saqlash (${mcqQuestions.length} ta)`}
               </Button>
             )}
           </div>
         )}
 
-        {/* Tab: Word Order */}
+        {/* Tab: Word Order (legacy aggregate editor) */}
         {activeTab === 'word_order' && (
           <div className="space-y-3">
             <p className="text-sm text-[#64748b]">
@@ -385,7 +507,9 @@ export default function EditLessonPage() {
             {wordSentences.map((s, idx) => (
               <div key={idx} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Jumla {idx + 1}</span>
+                  <span className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                    Jumla {idx + 1}
+                  </span>
                   <button
                     onClick={() => removeWordSentence(idx)}
                     className="text-[#e11d48] hover:bg-[#e11d48]/10 p-1.5 rounded-lg transition-colors"
@@ -404,7 +528,10 @@ export default function EditLessonPage() {
                   <div className="flex flex-wrap gap-1">
                     <span className="text-xs text-[#94a3b8] w-full">Aralashtirilgan:</span>
                     {s.words.map((w, wi) => (
-                      <span key={wi} className="bg-[#f7f4ef] text-[#64748b] text-xs px-2 py-0.5 rounded-lg border border-[#ede9e1]">
+                      <span
+                        key={wi}
+                        className="bg-[#f7f4ef] text-[#64748b] text-xs px-2 py-0.5 rounded-lg border border-[#ede9e1]"
+                      >
                         {w}
                       </span>
                     ))}
@@ -421,38 +548,60 @@ export default function EditLessonPage() {
             </button>
 
             {wordSentences.length > 0 && (
-              <Button
-                variant="primary"
-                loading={savingWord}
-                fullWidth
-                size="lg"
-                onClick={saveWordOrder}
-              >
+              <Button variant="primary" loading={savingWord} fullWidth size="lg" onClick={saveWordOrder}>
                 {savingWord ? 'Saqlanmoqda...' : `So'z tartibi saqlash (${wordSentences.length} ta)`}
               </Button>
             )}
           </div>
         )}
-
-        {/*
-          Pass 1 placeholder: confirms the foundation for the 10 new
-          Duolingo-style exercise types is wired through. Pass 5 will
-          replace this with the actual configurator (per-type forms,
-          add/remove rows, drag-to-reorder, etc.).
-        */}
-        {activeTab === 'info' && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-dashed border-[#ede9e1] p-5 mt-3 opacity-70">
-            <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-widest mb-2">
-              Yangi topshiriq turlari
-            </p>
-            <p className="text-sm text-[#64748b]">
-              Yangi turdagi topshiriqlar (tarjima, tinglash, juftlash, rasm
-              tanlash, bo&apos;sh joy, imlo, jumla tartibi, gapni o&apos;qish)
-              Pass 2-da qo&apos;shiladi.
-            </p>
-          </div>
-        )}
       </div>
+
+      {/* Type-picker modal */}
+      <Modal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Topshiriq turini tanlang"
+        size="md"
+        theme="light"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {ALL_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => pickType(t)}
+              className="text-left px-3 py-2 rounded-xl border-[1.5px] border-[#ede9e1] hover:border-[#0d9488] hover:bg-[#f7f4ef] transition-colors text-sm font-semibold text-[#0f172a]"
+            >
+              {COMPONENT_LABELS[t]}
+            </button>
+          ))}
+        </div>
+      </Modal>
+
+      {/* Configurator modal */}
+      <Modal
+        open={configType !== null}
+        onClose={closeConfigurator}
+        title={
+          editingComponent
+            ? `${COMPONENT_LABELS[editingComponent.type] ?? editingComponent.type} — tahrir`
+            : configType
+              ? `${COMPONENT_LABELS[configType] ?? configType} — yangi`
+              : ''
+        }
+        size="lg"
+        theme="light"
+      >
+        {configType && (
+          <ComponentConfigurator
+            type={configType}
+            initialConfig={editingComponent?.config}
+            onSubmit={handleConfigSubmit}
+            onCancel={closeConfigurator}
+            saving={savingConfig}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

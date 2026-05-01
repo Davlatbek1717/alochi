@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 
 interface WordOrderTestProps {
   sentences: { words: string[]; correct: string }[];
@@ -111,17 +112,17 @@ export function WordOrderTest({ sentences, onPassed, onFailed }: WordOrderTestPr
       }
     }
 
-    setTimeout(() => {
-      if (!correct) {
-        onFailed();
-        return;
-      }
-      if (current + 1 < sentences.length) {
-        resetForSentence(current + 1);
-      } else {
-        onPassed();
-      }
-    }, correct ? 900 : 1500);
+    if (correct) {
+      // Only auto-advance on success. Wrong path waits for the student to
+      // click the red "Davom etish" CTA so they can read ExplainPanel first.
+      setTimeout(() => {
+        if (current + 1 < sentences.length) {
+          resetForSentence(current + 1);
+        } else {
+          onPassed();
+        }
+      }, 900);
+    }
   }
 
   return (
@@ -255,20 +256,40 @@ export function WordOrderTest({ sentences, onPassed, onFailed }: WordOrderTestPr
           ) : (
             <XCircle size={20} className="text-[#ef4444] shrink-0" />
           )}
-          {isCorrect ? "Ajoyib — to'g'ri tartib! +10 XP" : "Xato — qaytadan boshlanadi"}
+          {isCorrect ? "Ajoyib — to'g'ri tartib! +10 XP" : "Xato tartib — to'g'risi quyida"}
         </div>
       )}
 
-      {/* TEKSHIRISH CTA */}
-      <Button
-        variant="duo"
-        size="lg"
-        fullWidth
-        disabled={!allFilled || showResult}
-        onClick={checkAnswer}
-      >
-        TEKSHIRISH
-      </Button>
+      {/* CTA: TEKSHIRISH (idle) / Davom etish (wrong) */}
+      {showResult && !isCorrect ? (
+        <div className="space-y-3">
+          <ExplainPanel
+            exerciseType="word_order"
+            question="So'zlarni to'g'ri tartibda joylashtiring"
+            studentAnswer={slots.map((p) => p?.word ?? '___').join(' ')}
+            correctAnswer={sentence.correct}
+          />
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            className="!bg-[#ef4444] !border-[#b91c1c]"
+            onClick={onFailed}
+          >
+            Davom etish
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="duo"
+          size="lg"
+          fullWidth
+          disabled={!allFilled || showResult}
+          onClick={checkAnswer}
+        >
+          TEKSHIRISH
+        </Button>
+      )}
 
       {/* Progress dots */}
       <div className="flex gap-1.5 justify-center pt-1">

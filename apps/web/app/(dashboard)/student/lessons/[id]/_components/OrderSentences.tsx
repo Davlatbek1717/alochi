@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { OrderSentencesConfig } from './exercise-types';
 
 interface OrderSentencesProps {
@@ -299,15 +300,23 @@ export function OrderSentences({ config, onPassed, onFailed }: OrderSentencesPro
 
       {/* CTA: TEKSHIRISH idle, "Davom etish" wrong */}
       {isWrong ? (
-        <Button
-          variant="duo"
-          size="lg"
-          fullWidth
-          className="!bg-[#ef4444] !border-[#b91c1c]"
-          onClick={onFailed}
-        >
-          Davom etish
-        </Button>
+        <div className="space-y-3">
+          <ExplainPanel
+            exerciseType="order_sentences"
+            question="Jumlalarni to'g'ri tartibda joylashtiring"
+            studentAnswer={slots.map((c) => c?.text ?? '___').join(' || ')}
+            correctAnswer={correctOrder.join(' || ')}
+          />
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            className="!bg-[#ef4444] !border-[#b91c1c]"
+            onClick={onFailed}
+          >
+            Davom etish
+          </Button>
+        </div>
       ) : (
         !isCorrect && (
           <Button

@@ -4,20 +4,15 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
-  Sparkles,
   Volume2,
   VolumeX,
   XCircle,
 } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
-import {
-  explainAnswer,
-  getTtsAudio,
-  gradeTranslation,
-  type ExplainAnswerResponse,
-} from '@/lib/exercises';
+import { getTtsAudio, gradeTranslation } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { ListenTypeConfig } from './exercise-types';
 
 interface ListenTypeProps {
@@ -63,10 +58,6 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
   const [shake, setShake] = useState(false);
   const [showFloater, setShowFloater] = useState(false);
   const [floaterKey, setFloaterKey] = useState(0);
-
-  const [explainLoading, setExplainLoading] = useState(false);
-  const [explainData, setExplainData] = useState<ExplainAnswerResponse | null>(null);
-  const [explainError, setExplainError] = useState('');
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -251,33 +242,6 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
     }
   }
 
-  async function handleExplain() {
-    if (explainLoading || explainData) return;
-    setExplainLoading(true);
-    setExplainError('');
-    const token =
-      typeof window !== 'undefined'
-        ? (window.localStorage.getItem('accessToken') ?? '')
-        : '';
-    try {
-      const data = await explainAnswer(
-        {
-          exerciseType: 'listen_type',
-          question: text,
-          studentAnswer: trimmed,
-          correctAnswer: text,
-          context,
-        },
-        token,
-      );
-      setExplainData(data);
-    } catch {
-      setExplainError("Tushuntirishni olishda xato. Keyinroq urinib ko'ring.");
-    } finally {
-      setExplainLoading(false);
-    }
-  }
-
   const isCorrect = phase === 'correct';
   const isWrong = phase === 'wrong';
   const isChecking = phase === 'checking';
@@ -445,61 +409,23 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            {!explainData && (
-              <button
-                type="button"
-                onClick={handleExplain}
-                disabled={explainLoading}
-                className="text-xs font-extrabold text-white bg-[#1cb0f6] border-b-[3px] border-[#0e8cc4] rounded-2xl px-4 py-2 inline-flex items-center gap-1.5 active:translate-y-[1px] active:border-b-[1px] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-              >
-                {explainLoading ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Sparkles size={14} />
-                )}
-                {explainLoading ? 'Tushuntirilmoqda...' : 'Tushuntirish'}
-              </button>
-            )}
-            {explainError && (
-              <p className="text-[11px] font-bold text-[#991b1b]">{explainError}</p>
-            )}
-            {explainData && (
-              <div className="bg-[#eff6ff] border-[1.5px] border-[#bfdbfe] rounded-2xl px-4 py-3 space-y-2">
-                <p
-                  className="text-sm font-extrabold text-[#1e3a8a] leading-snug"
-                  style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-                >
-                  {explainData.explanation}
-                </p>
-                {explainData.hint && (
-                  <p className="text-xs font-semibold text-[#1e40af] leading-snug">
-                    💡 {explainData.hint}
-                  </p>
-                )}
-                {explainData.examples && explainData.examples.length > 0 && (
-                  <ul className="text-xs font-semibold text-[#1e40af] space-y-1 pl-1">
-                    {explainData.examples.slice(0, 3).map((ex, i) => (
-                      <li key={i} className="leading-snug">
-                        • {ex}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+          <ExplainPanel
+            exerciseType="listen_type"
+            question={text}
+            studentAnswer={trimmed}
+            correctAnswer={text}
+            context={context}
+          />
 
-            <Button
-              variant="duo"
-              size="lg"
-              fullWidth
-              className="!bg-[#ef4444] !border-[#b91c1c]"
-              onClick={onFailed}
-            >
-              Davom etish
-            </Button>
-          </div>
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            className="!bg-[#ef4444] !border-[#b91c1c]"
+            onClick={onFailed}
+          >
+            Davom etish
+          </Button>
         </div>
       )}
 

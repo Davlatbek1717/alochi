@@ -15,6 +15,7 @@ import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
 import { Waveform } from './Waveform';
+import { ExplainPanel } from './ExplainPanel';
 import type { SpeakSentenceConfig } from './exercise-types';
 
 interface SpeakSentenceProps {
@@ -584,7 +585,7 @@ export function SpeakSentence({ config, onPassed, onFailed }: SpeakSentenceProps
         </div>
       )}
 
-      {/* Fail banner with retry + skip */}
+      {/* Fail banner with retry + skip + ExplainPanel (pronunciation tips) */}
       {isFailed && (
         <div className="space-y-3">
           <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-3 flex items-start gap-2">
@@ -596,6 +597,12 @@ export function SpeakSentence({ config, onPassed, onFailed }: SpeakSentenceProps
               Talaffuz {minScore} balldan past — qayta urinib ko&apos;ring.
             </p>
           </div>
+          <ExplainPanel
+            exerciseType="speak_sentence"
+            question="Speaking pronunciation"
+            studentAnswer={`audio recording (score ${score ?? 0}/100)`}
+            correctAnswer={sentence}
+          />
           <div className="flex gap-2">
             <Button variant="duo" size="lg" fullWidth onClick={handleRetry}>
               Qayta yozish

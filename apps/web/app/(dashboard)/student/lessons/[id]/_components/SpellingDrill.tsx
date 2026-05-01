@@ -13,6 +13,7 @@ import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
 import { XpFloater } from './XpFloater';
+import { ExplainPanel } from './ExplainPanel';
 import type { SpellingConfig } from './exercise-types';
 
 interface SpellingProps {
@@ -478,15 +479,23 @@ export function SpellingDrill({ config, onPassed, onFailed }: SpellingProps) {
 
       {/* CTAs */}
       {isWrong ? (
-        <Button
-          variant="duo"
-          size="lg"
-          fullWidth
-          className="!bg-[#ef4444] !border-[#b91c1c]"
-          onClick={onFailed}
-        >
-          Davom etish
-        </Button>
+        <div className="space-y-3">
+          <ExplainPanel
+            exerciseType="spelling"
+            question={`Imlo: ${word}`}
+            studentAnswer={letters.join('')}
+            correctAnswer={word}
+          />
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            className="!bg-[#ef4444] !border-[#b91c1c]"
+            onClick={onFailed}
+          >
+            Davom etish
+          </Button>
+        </div>
       ) : !isCorrect ? (
         <Button
           variant="duo"
