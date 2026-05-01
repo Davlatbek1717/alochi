@@ -85,7 +85,7 @@ export default function ManagerDashboard() {
   const navCards = [
     { href: '/manager/students',    icon: <Users size={20} />,        title: "O'quvchilar", desc: 'Status boshqaruv',  color: 'hover:border-violet-300 hover:bg-violet-50' },
     { href: '/manager/payments',    icon: <CreditCard size={20} />,   title: "To'lovlar",   desc: 'Qarzdorlar hisobi', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
-    { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: 'Topshiriqlar',      color: 'hover:border-orange-300 hover:bg-orange-50' },
+    { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: "Mening topshiriqlarim", color: 'hover:border-orange-300 hover:bg-orange-50' },
     { href: '/manager/delegations', icon: <Send size={20} />,         title: 'Delegatsiya', desc: 'Buyruq jo\'natish', color: 'hover:border-blue-300 hover:bg-blue-50' },
     { href: '/manager/rewards',     icon: <Trophy size={20} />,       title: "Sovg'a/Kitob", desc: 'Ragʼbatlantirish',   color: 'hover:border-amber-300 hover:bg-amber-50' },
     { href: '/manager/sessions',    icon: <Calendar size={20} />,     title: '1:1 Sessiyalar', desc: 'Individual sessiyalarni rejalashtirish va kuzatish', color: 'hover:border-cyan-300 hover:bg-cyan-50' },
@@ -95,7 +95,7 @@ export default function ManagerDashboard() {
   const alertCount = redStudents.length + yellowStudents.length;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
@@ -167,7 +167,7 @@ export default function ManagerDashboard() {
               <Link
                 key={card.href}
                 href={card.href}
-                className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all text-left ${card.color}`}
+                className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
               >
                 <div className="w-10 h-10 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
                   {card.icon}

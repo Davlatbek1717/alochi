@@ -173,7 +173,7 @@ export default function FiladminDashboard() {
   const pct = (n: number) => (totalStatus > 0 ? Math.round((n / totalStatus) * 100) : 0);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-8 relative overflow-hidden">
         <div

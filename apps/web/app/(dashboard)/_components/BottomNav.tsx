@@ -15,8 +15,8 @@ const NAV_TABS: Record<string, Tab[]> = {
   student: [
     { href: '/student',         icon: <Home size={20} />,           label: 'Bosh'       },
     { href: '/student/lessons', icon: <BookOpen size={20} />,       label: 'Darslar'    },
-    { href: '/student/friends', icon: <Swords size={20} />,         label: 'Duel'       },
-    { href: '/student/profile', icon: <User size={20} />,           label: 'Profil', action: 'logout' },
+    { href: '/student/duels',   icon: <Swords size={20} />,         label: 'Duel'       },
+    { href: '/student/profile', icon: <User size={20} />,           label: 'Profil'     },
   ],
   mentor: [
     { href: '/mentor',            icon: <Home size={20} />,         label: 'Bosh'      },
@@ -99,17 +99,17 @@ export default function BottomNav() {
               aria-current={isActive ? 'page' : undefined}
               className={`relative flex flex-col items-center gap-0.5 min-w-[44px] min-h-[44px] justify-center px-2 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? 'text-indigo-600 scale-105'
+                  ? 'text-[#f59e0b] scale-105'
                   : 'text-gray-400 hover:text-gray-600 active:scale-95'
               }`}
             >
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-indigo-600 rounded-full" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-[#f59e0b] rounded-full" />
               )}
               <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                 {tab.icon}
               </span>
-              <span className={`text-[10px] font-medium leading-none mt-0.5 transition-colors ${isActive ? 'text-indigo-600' : ''}`}>
+              <span className={`text-[10px] font-medium leading-none mt-0.5 transition-colors ${isActive ? 'text-[#f59e0b]' : ''}`}>
                 {tab.label}
               </span>
             </button>

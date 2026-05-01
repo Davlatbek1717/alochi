@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateLong } from '@/lib/date-uz';
+import { Skeleton } from '@/components/ui';
 
 const NAV_CARDS = [
   { href: '/superadmin/tenants',     icon: <Building2 size={22} />, title: 'Markazlar',          desc: "A'lochi markazlari ro'yxati va boshqaruv", color: 'hover:border-violet-300 hover:bg-violet-50' },
@@ -54,7 +55,7 @@ export default function SuperadminDashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
@@ -77,12 +78,16 @@ export default function SuperadminDashboard() {
         {/* Stat bar */}
         <div className="grid grid-cols-3 gap-2 relative z-10">
           {[
-            { label: 'Filiallar', value: loaded ? String(stats.branches) : '—', color: 'text-[#0d9488]' },
-            { label: 'Darslar',   value: loaded ? String(stats.lessons)  : '—', color: 'text-violet-400' },
-            { label: 'Foydalanuvchilar', value: loaded ? String(stats.users) : '—', color: 'text-[#f59e0b]' },
+            { label: 'Filiallar', value: stats.branches, color: 'text-[#0d9488]' },
+            { label: 'Darslar',   value: stats.lessons,  color: 'text-violet-400' },
+            { label: 'Foydalanuvchilar', value: stats.users, color: 'text-[#f59e0b]' },
           ].map((s) => (
             <div key={s.label} className="bg-[#162032] rounded-[14px] p-3">
-              <p className={`text-xl font-black font-mono ${s.color}`}>{s.value}</p>
+              {loaded ? (
+                <p className={`text-xl font-black font-mono ${s.color}`}>{s.value}</p>
+              ) : (
+                <Skeleton className="h-7 w-12 mb-1" />
+              )}
               <p className="text-[#94a3b8] text-[10px] mt-0.5 leading-tight">{s.label}</p>
             </div>
           ))}
@@ -91,12 +96,12 @@ export default function SuperadminDashboard() {
 
       <div className="px-4 pt-8 pb-6">
         <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Navigatsiya</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {NAV_CARDS.map((card) => (
             <button
               key={card.href}
               onClick={() => router.push(card.href)}
-              className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all text-left ${card.color}`}
+              className={`bg-white rounded-[18px] p-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
             >
               <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
                 {card.icon}

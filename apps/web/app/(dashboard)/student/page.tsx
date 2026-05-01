@@ -138,15 +138,19 @@ export default function StudentDashboard() {
 
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-20">
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl p-4 text-white">
-        <div className="flex justify-between items-start">
+      <div className="bg-[#0f172a] rounded-2xl p-4 text-white relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-15 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="flex justify-between items-start relative z-10">
           <div>
-            <p className="text-white/70 text-sm">🏙️ Shaharcha</p>
-            <p className="text-2xl font-bold mt-1">Dars #{lessonProgress} / 500</p>
+            <p className="text-[#94a3b8] text-sm">🏙️ Shaharcha</p>
+            <p className="text-2xl font-bold mt-1">Dars #{lessonProgress}</p>
           </div>
           <StreakBadge streak={streak} hasShield={hasShield} />
         </div>
-        <div className="mt-3">
+        <div className="mt-3 relative z-10">
           <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
         </div>
       </div>
@@ -255,7 +259,7 @@ export default function StudentDashboard() {
           </div>
           <Link
             href="/student/review"
-            className="block text-center text-sm bg-indigo-600 text-white py-2.5 rounded-xl font-semibold"
+            className="block text-center text-sm bg-[#0f172a] hover:bg-[#1e293b] text-white py-2.5 rounded-xl font-semibold transition-colors"
           >
             Takrorlashni boshlash →
           </Link>
@@ -293,7 +297,7 @@ export default function StudentDashboard() {
         >
           <GraduationCap size={22} className="text-[#7c3aed]" />
           <p className="font-bold text-sm text-gray-800">Imtihonlar</p>
-          <p className="text-xs text-gray-500">Akademiyada</p>
+          <p className="text-xs text-gray-500">Imtihon topshirish</p>
         </Link>
       </div>
 
@@ -307,7 +311,7 @@ export default function StudentDashboard() {
           variant="primary"
           size="lg"
           fullWidth
-          className="!rounded-2xl !py-4 !bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 shadow-lg"
+          className="!rounded-2xl !py-4 !bg-[#f59e0b] hover:!bg-[#d97706] !border-[#f59e0b] shadow-lg"
           onClick={() => { window.location.href = '/student/lessons/current'; }}
         >
           ▶️ Bugungi Darsni Boshlash

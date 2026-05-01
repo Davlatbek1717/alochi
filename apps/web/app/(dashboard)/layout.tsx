@@ -35,6 +35,8 @@ const SIDEBAR_NAV: Record<string, NavItem[]> = {
     { href: '/tester',                 icon: <Home size={17} />,           label: 'Bosh sahifa'      },
     { href: '/tester/lessons/current', icon: <FlaskConical size={17} />,   label: 'Sinov darsi'      },
     { href: '/tester/exam-queue',      icon: <ClipboardList size={17} />,  label: 'Imtihon navbati'  },
+    { href: '/tester/tasks',           icon: <ClipboardList size={17} />,  label: 'Vazifalar'        },
+    { href: '/tester/tech-issues',     icon: <AlertTriangle size={17} />,  label: 'Texnik muammo'    },
   ],
   manager: [
     { href: '/manager',             icon: <Home size={17} />,          label: 'Bosh sahifa'  },
@@ -57,7 +59,7 @@ const SIDEBAR_NAV: Record<string, NavItem[]> = {
     { href: '/superadmin/users',    icon: <Users size={17} />,      label: 'Foydalanuvchilar' },
     { href: '/superadmin/lessons',  icon: <BookMarked size={17} />, label: 'Darslar'          },
     { href: '/superadmin/keywords', icon: <ShieldOff size={17} />,  label: "Taqiqlangan so'z" },
-    { href: '/filadmin/tournaments',icon: <Trophy size={17} />,     label: 'Turnirlar'        },
+    { href: '/superadmin/tournaments',icon: <Trophy size={17} />,   label: 'Turnirlar'        },
   ],
 };
 
