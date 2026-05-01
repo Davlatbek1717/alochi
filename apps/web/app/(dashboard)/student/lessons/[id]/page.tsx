@@ -11,6 +11,9 @@ import { OrderSentences } from './_components/OrderSentences';
 import { ListenPick } from './_components/ListenPick';
 import { ListenType } from './_components/ListenType';
 import { SpellingDrill } from './_components/SpellingDrill';
+import { MatchPairs } from './_components/MatchPairs';
+import { PickPicture } from './_components/PickPicture';
+import { SpeakSentence } from './_components/SpeakSentence';
 import { AiTutor } from './_components/AiTutor';
 import type {
   TranslateConfig,
@@ -19,6 +22,9 @@ import type {
   ListenPickConfig,
   ListenTypeConfig,
   SpellingConfig,
+  MatchPairsConfig,
+  PickPictureConfig,
+  SpeakSentenceConfig,
 } from './_components/exercise-types';
 import { FeedbackWidget } from './_components/FeedbackWidget';
 import { Hearts } from './_components/Hearts';
@@ -47,7 +53,10 @@ type LessonComponent = {
     | 'order_sentences'
     | 'listen_pick'
     | 'listen_type'
-    | 'spelling';
+    | 'spelling'
+    | 'match_pairs'
+    | 'pick_picture'
+    | 'speak_sentence';
   config: Record<string, unknown>;
 };
 
@@ -110,6 +119,9 @@ type Step =
   | 'spelling'
   | 'fill_blank'
   | 'order_sentences'
+  | 'match_pairs'
+  | 'pick_picture'
+  | 'speak_sentence'
   | 'ai_tutor'
   | 'done';
 
@@ -124,6 +136,9 @@ const EXERCISE_STEPS: Step[] = [
   'spelling',
   'fill_blank',
   'order_sentences',
+  'match_pairs',
+  'pick_picture',
+  'speak_sentence',
   'ai_tutor',
 ];
 
@@ -154,6 +169,9 @@ function buildSteps(lesson: Lesson): Step[] {
   if (hasComponentOfType(components_data, 'spelling')) steps.push('spelling');
   if (hasComponentOfType(components_data, 'fill_blank')) steps.push('fill_blank');
   if (hasComponentOfType(components_data, 'order_sentences')) steps.push('order_sentences');
+  if (hasComponentOfType(components_data, 'match_pairs')) steps.push('match_pairs');
+  if (hasComponentOfType(components_data, 'pick_picture')) steps.push('pick_picture');
+  if (hasComponentOfType(components_data, 'speak_sentence')) steps.push('speak_sentence');
   if (components.ai_tutor) steps.push('ai_tutor');
   steps.push('done');
   return steps;
@@ -345,6 +363,59 @@ export default function LessonPage() {
       );
   }
 
+  /** Pass 4 — Match Pairs configs (D). Drops malformed entries (<2 pairs OR
+   * any pair missing left/right). */
+  function getMatchPairsConfigs(): MatchPairsConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'match_pairs')
+      .map((c) => c.config as unknown as MatchPairsConfig)
+      .filter(
+        (cfg) =>
+          cfg &&
+          Array.isArray(cfg.pairs) &&
+          cfg.pairs.length >= 2 &&
+          cfg.pairs.every(
+            (p) =>
+              p &&
+              typeof p.left === 'string' &&
+              typeof p.right === 'string' &&
+              p.left.trim().length > 0 &&
+              p.right.trim().length > 0,
+          ),
+      );
+  }
+
+  /** Pass 4 — Pick Picture configs (E). */
+  function getPickPictureConfigs(): PickPictureConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'pick_picture')
+      .map((c) => c.config as unknown as PickPictureConfig)
+      .filter(
+        (cfg) =>
+          cfg &&
+          typeof cfg.word === 'string' &&
+          cfg.word.trim().length > 0 &&
+          Array.isArray(cfg.options) &&
+          cfg.options.length >= 2 &&
+          cfg.options.every((o) => o && typeof o.imageUrl === 'string' && o.imageUrl.length > 0) &&
+          cfg.options.some((o) => o.id === cfg.correctOptionId),
+      );
+  }
+
+  /** Pass 4 — Speak Sentence configs (I). */
+  function getSpeakSentenceConfigs(): SpeakSentenceConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'speak_sentence')
+      .map((c) => c.config as unknown as SpeakSentenceConfig)
+      .filter(
+        (cfg) =>
+          cfg && typeof cfg.sentence === 'string' && cfg.sentence.trim().length > 0,
+      );
+  }
+
   function goToNextStep() {
     if (!lesson) return;
     const steps = buildSteps(lesson);
@@ -425,6 +496,10 @@ export default function LessonPage() {
       if (s === 'fill_blank') return hasComponentOfType(lesson.components_data, 'fill_blank');
       if (s === 'order_sentences')
         return hasComponentOfType(lesson.components_data, 'order_sentences');
+      if (s === 'match_pairs') return hasComponentOfType(lesson.components_data, 'match_pairs');
+      if (s === 'pick_picture') return hasComponentOfType(lesson.components_data, 'pick_picture');
+      if (s === 'speak_sentence')
+        return hasComponentOfType(lesson.components_data, 'speak_sentence');
       return Boolean(lesson.components[s as keyof ComponentFlags]);
     });
   }, [lesson]);
@@ -491,6 +566,9 @@ export default function LessonPage() {
   const listenPickConfigs = getListenPickConfigs();
   const listenTypeConfigs = getListenTypeConfigs();
   const spellingConfigs = getSpellingConfigs();
+  const matchPairsConfigs = getMatchPairsConfigs();
+  const pickPictureConfigs = getPickPictureConfigs();
+  const speakSentenceConfigs = getSpeakSentenceConfigs();
 
   // Compute level-up + accuracy + xp delta for the completion screen.
   const xpEarned =
@@ -776,6 +854,42 @@ export default function LessonPage() {
 
         {step === 'order_sentences' && !orderSentenceConfigs[0] && (
           <SkipPanel label="Tartiblash topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'match_pairs' && matchPairsConfigs[0] && (
+          <MatchPairs
+            config={matchPairsConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'match_pairs' && !matchPairsConfigs[0] && (
+          <SkipPanel label="Juftlik topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'pick_picture' && pickPictureConfigs[0] && (
+          <PickPicture
+            config={pickPictureConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'pick_picture' && !pickPictureConfigs[0] && (
+          <SkipPanel label="Rasm topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'speak_sentence' && speakSentenceConfigs[0] && (
+          <SpeakSentence
+            config={speakSentenceConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'speak_sentence' && !speakSentenceConfigs[0] && (
+          <SkipPanel label="Ovozli o'qish topshiriqlari topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'ai_tutor' && (
