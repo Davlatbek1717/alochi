@@ -11,3 +11,4 @@ __pycache__/
 *.pyc
 coverage/
 apps/coverage/
+apps/web/test-results/
