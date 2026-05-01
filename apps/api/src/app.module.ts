@@ -56,7 +56,11 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     LoggerModule.forRoot(loggerConfig),
     ThrottlerModule.forRoot([
       { name: 'auth', ttl: 60000, limit: 5 },
-      { name: 'default', ttl: 60000, limit: 100 },
+      {
+        name: 'default',
+        ttl: 60000,
+        limit: process.env.NODE_ENV === 'production' ? 300 : 2000,
+      },
     ]),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
