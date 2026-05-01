@@ -52,6 +52,10 @@ describe('ProgressService', () => {
         nRepetitions: 3,
         maxNOverride: 10,
       });
+      mockPrisma.lesson.findUnique.mockResolvedValue({
+        title: 'Test',
+        tenantId: 't-1',
+      });
       mockPrisma.studentLessonConfig.findUnique.mockResolvedValue(null);
       mockPrisma.studentProgress.findUnique.mockResolvedValue({
         sessionCount: 2,
@@ -72,6 +76,10 @@ describe('ProgressService', () => {
         id: 'l1',
         nRepetitions: 5,
         maxNOverride: 10,
+      });
+      mockPrisma.lesson.findUnique.mockResolvedValue({
+        title: 'Test',
+        tenantId: 't-1',
       });
       mockPrisma.studentLessonConfig.findUnique.mockResolvedValue({
         nRepetitionsOverride: 2,

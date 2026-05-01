@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 const mockPrisma = {
   xpEvent: {
     create: jest.fn(),
+    findMany: jest.fn().mockResolvedValue([]),
   },
   studentXp: {
     upsert: jest.fn(),
@@ -99,6 +100,7 @@ describe('XpService', () => {
   describe('getStudentXp', () => {
     it('returns default values when student has no xp record', async () => {
       mockPrisma.studentXp.findUnique.mockResolvedValue(null);
+      mockPrisma.xpEvent.findMany.mockResolvedValueOnce([]);
 
       const result = await service.getStudentXp('student-1');
 
@@ -107,6 +109,8 @@ describe('XpService', () => {
         level: 'Novice',
         currentStreak: 0,
         nextLevelXp: 200,
+        todayXp: 0,
+        dailyGoal: 30,
       });
     });
 
@@ -116,12 +120,18 @@ describe('XpService', () => {
         totalXp: 2500,
         currentStreak: 3,
       });
+      mockPrisma.xpEvent.findMany.mockResolvedValueOnce([
+        { amount: 100 },
+        { amount: 50 },
+      ]);
 
       const result = await service.getStudentXp('student-1');
 
       expect(result.level).toBe('Scholar');
       expect((result as any).nextLevelXp).toBe(5000);
       expect(result.totalXp).toBe(2500);
+      expect((result as any).todayXp).toBe(150);
+      expect((result as any).dailyGoal).toBe(30);
     });
   });
 });

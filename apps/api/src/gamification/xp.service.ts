@@ -59,20 +59,46 @@ export class XpService {
     });
   }
 
+  /** Default per-day XP target shown by the dashboard ring. Future work can
+   * promote this to a per-tenant or per-student setting. */
+  static readonly DEFAULT_DAILY_GOAL = 30;
+
+  /**
+   * Sum of XP awarded today (client-local 24h window starting at midnight UTC
+   * of the server). Returns 0 when the student has no events today. The
+   * reducer is small enough that we don't shard further by reason — if that
+   * becomes a hotspot we can add an `xp_events_daily` materialized view.
+   */
+  async getTodayXp(studentId: string): Promise<number> {
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
+    const events = await this.prisma.xpEvent.findMany({
+      where: { studentId, createdAt: { gte: start } },
+      select: { amount: true },
+    });
+    return events.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+  }
+
   async getStudentXp(studentId: string) {
     const xp = await this.prisma.studentXp.findUnique({ where: { studentId } });
+    const todayXp = await this.getTodayXp(studentId);
+
     if (!xp)
       return {
         totalXp: 0,
         level: 'Novice',
         currentStreak: 0,
         nextLevelXp: this.getNextLevelXp(0),
+        todayXp,
+        dailyGoal: XpService.DEFAULT_DAILY_GOAL,
       };
 
     return {
       ...xp,
       level: this.getLevel(xp.totalXp),
       nextLevelXp: this.getNextLevelXp(xp.totalXp),
+      todayXp,
+      dailyGoal: XpService.DEFAULT_DAILY_GOAL,
     };
   }
 }

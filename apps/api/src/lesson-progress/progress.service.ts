@@ -8,6 +8,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { CityService } from '../gamification/city.service';
+import { XpService } from '../gamification/xp.service';
+import { StreakService } from '../gamification/streak.service';
+import { QuestService } from '../gamification/quest.service';
 
 @Injectable()
 export class ProgressService {
@@ -16,6 +19,9 @@ export class ProgressService {
     private feedEvent: FeedEventService,
     private analytics: AnalyticsService,
     @Optional() private city?: CityService,
+    @Optional() private xp?: XpService,
+    @Optional() private streak?: StreakService,
+    @Optional() private quest?: QuestService,
   ) {}
 
   private async getEffectiveN(
@@ -89,6 +95,47 @@ export class ProgressService {
         data: { lessonId, sessionCount: newCount },
       })
       .catch(() => {});
+
+    // Reward the student for completing this session. All four side-effects
+    // are best-effort: a failure here must not roll back the progress row
+    // the user just earned.
+    if (this.xp) {
+      this.xp
+        .award(studentId, 'LESSON_COMPLETE', {
+          lessonId,
+          sessionCount: newCount,
+          homeCompleted,
+        })
+        .catch(() => {});
+    }
+    if (this.streak) {
+      this.streak.recordActivity(studentId).catch(() => {});
+    }
+    if (this.quest) {
+      this.quest.updateProgress(studentId, 'lesson_complete').catch(() => {});
+      // 25.A.4: any session completion implicitly proves the video was
+      // watched, so credit the daily "watch_video" quest too.
+      this.quest.updateProgress(studentId, 'watch_video').catch(() => {});
+    }
+
+    // When the student finishes the home portion (sessionCount === N) emit a
+    // social feed event so friends see the completion. Academy completion has
+    // its own emit in markAcademyCompleted().
+    if (homeCompleted) {
+      const lesson = await this.prisma.lesson.findUnique({
+        where: { id: lessonId },
+        select: { title: true, tenantId: true },
+      });
+      if (lesson) {
+        this.feedEvent
+          .emit(lesson.tenantId, studentId, 'lesson_done', {
+            lessonId,
+            lessonTitle: lesson.title,
+            stage: 'home',
+          })
+          .catch(() => {});
+      }
+    }
     return progress;
   }
 

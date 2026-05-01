@@ -74,10 +74,17 @@ export default function LessonsPathPage() {
     const token = localStorage.getItem('accessToken') ?? '';
     let cancelled = false;
     async function load() {
+      setError('');
       try {
-        const [lessonsRes, progressRes, streakRes, xpRes] = await Promise.all([
-          apiRequest<Lesson[]>('/lessons', {}, token),
-          apiRequest<Progress[]>('/progress/my', {}, token),
+        // Lessons is the only blocking call — progress / streak / xp are
+        // best-effort so a transient gamification failure doesn't blank the
+        // path. Previously a 5xx on any of those four would surface as
+        // "Xato yuz berdi" even though lessons themselves loaded fine.
+        const lessonsRes = await apiRequest<Lesson[]>('/lessons', {}, token);
+        const [progressRes, streakRes, xpRes] = await Promise.all([
+          apiRequest<Progress[]>('/progress/my', {}, token).catch(
+            () => ({ data: [] as Progress[] }),
+          ),
           apiRequest<StreakData>('/gamification/streak', {}, token).catch(
             () => ({ data: { streak: 0, hasShield: false } as StreakData }),
           ),

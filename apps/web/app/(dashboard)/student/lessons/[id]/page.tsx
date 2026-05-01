@@ -31,7 +31,7 @@ import { Hearts } from './_components/Hearts';
 import { ProgressBar } from './_components/ProgressBar';
 import { LessonIntro } from './_components/LessonIntro';
 import { CompletionScreen } from './_components/CompletionScreen';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, ApiError } from '@/lib/api';
 import { Button, Skeleton, Modal, Mascot } from '@/components/ui';
 
 type ComponentFlags = {
@@ -217,29 +217,51 @@ export default function LessonPage() {
   const [xpAfter, setXpAfter] = useState<XpData | null>(null);
   const [streakAfter, setStreakAfter] = useState<number | null>(null);
 
-  useEffect(() => {
+  // Refetcher for the initial-load flow. Pulled out of useEffect so the
+  // error screen's "Qayta urinish" button can call it without re-mounting.
+  async function loadLesson() {
     if (!id) return;
     const token = localStorage.getItem('accessToken') ?? '';
-
-    async function fetchData() {
-      try {
-        const [lessonRes, progressRes, xpRes] = await Promise.all([
-          apiRequest<Lesson>(`/lessons/${id}`, {}, token),
-          apiRequest<ProgressEntry[]>('/progress/my', {}, token),
-          apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
-        ]);
-        setLesson(lessonRes.data);
-        const myProgress = progressRes.data.find((p) => p.lessonId === id) ?? null;
+    setLoading(true);
+    setError('');
+    try {
+      // Lesson is required; progress/xp are best-effort so a temporary
+      // gamification outage doesn't block opening the lesson.
+      const lessonRes = await apiRequest<Lesson>(`/lessons/${id}`, {}, token);
+      const [progressRes, xpRes] = await Promise.all([
+        apiRequest<ProgressEntry[]>('/progress/my', {}, token).catch(() => null),
+        apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
+      ]);
+      setLesson(lessonRes.data);
+      if (progressRes) {
+        const myProgress =
+          progressRes.data.find((p) => p.lessonId === id) ?? null;
         setProgress(myProgress);
-        if (xpRes) setXpBefore(xpRes.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Dars topilmadi');
-      } finally {
-        setLoading(false);
       }
+      if (xpRes) setXpBefore(xpRes.data);
+    } catch (err) {
+      // Map common HTTP statuses to friendlier Uzbek copy. The fallback is
+      // the raw API message so backend-supplied detail still surfaces.
+      if (err instanceof ApiError) {
+        if (err.status === 404) {
+          setError("Bu dars o'chirilgan yoki sizga ochiq emas");
+        } else if (err.status === 401 || err.status === 403) {
+          setError('Kirish ruxsati yo‘q. Iltimos, qayta kiring.');
+        } else {
+          setError(err.message || "So'rov bajarilmadi");
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Dars topilmadi');
+      }
+    } finally {
+      setLoading(false);
     }
+  }
 
-    fetchData();
+  useEffect(() => {
+    if (!id) return;
+    loadLesson();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function completeSession() {
@@ -550,9 +572,24 @@ export default function LessonPage() {
           >
             {error || 'Dars topilmadi'}
           </p>
-          <Button variant="duo" size="lg" fullWidth onClick={() => router.back()}>
-            Orqaga
-          </Button>
+          <div className="space-y-2">
+            <Button
+              variant="duo"
+              size="lg"
+              fullWidth
+              onClick={() => loadLesson()}
+            >
+              Qayta urinish
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              fullWidth
+              onClick={() => router.push('/student/lessons')}
+            >
+              Darslar ro&apos;yxati
+            </Button>
+          </div>
         </div>
       </div>
     );

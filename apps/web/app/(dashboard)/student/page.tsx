@@ -131,8 +131,9 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    let cancelled = false;
 
-    async function fetchData() {
+    async function fetchData(initial = false) {
       try {
         const [
           profileRes,
@@ -161,6 +162,7 @@ export default function StudentDashboard() {
           apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
           apiRequest<LeagueData>('/gamification/league/my', {}, token).catch(() => ({ data: null as LeagueData | null })),
         ]);
+        if (cancelled) return;
         if (profileRes.data) setProfile(profileRes.data);
         setXpData(xpRes.data);
         setQuests(questsRes.data);
@@ -179,17 +181,41 @@ export default function StudentDashboard() {
           const row = (progressRes.data ?? []).find((p) => p.lessonId === nextL.id);
           if (nextL.nRepetitions && nextL.nRepetitions > 0) {
             setNextLessonSession({ count: row?.sessionCount ?? 0, total: nextL.nRepetitions });
+          } else {
+            setNextLessonSession(null);
           }
+        } else {
+          setNextLessonSession(null);
         }
         if (leagueRes.data) setLeague(leagueRes.data);
       } catch {
         // keep defaults on error
       } finally {
-        setLoading(false);
+        if (initial && !cancelled) setLoading(false);
       }
     }
 
-    fetchData();
+    fetchData(true);
+
+    // Refetch when the tab regains focus or visibility flips back to visible.
+    // This is the cheapest "did I just complete a lesson?" signal we have —
+    // when the student taps "Bosh sahifa" on the completion screen the
+    // dashboard remounts and gets fresh data; but if they navigate via the
+    // browser back button the existing component stays mounted and we'd
+    // otherwise show the pre-completion numbers until a manual refresh.
+    function onFocus() {
+      fetchData(false);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') fetchData(false);
+    }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   const todayXp = xpData.todayXp ?? 0;

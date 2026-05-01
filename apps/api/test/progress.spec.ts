@@ -10,6 +10,7 @@ describe('ProgressService', () => {
     },
     lesson: {
       findFirst: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     studentLessonConfig: {
       findUnique: jest.fn().mockResolvedValue(null),
