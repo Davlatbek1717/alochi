@@ -1,14 +1,18 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, CheckCircle2, RefreshCw, BookOpen, Lock, AlertTriangle } from 'lucide-react';
+import { X, ArrowRight, AlertTriangle } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
 import { McqTest } from './_components/McqTest';
 import { WordOrderTest } from './_components/WordOrderTest';
 import { AiTutor } from './_components/AiTutor';
 import { FeedbackWidget } from './_components/FeedbackWidget';
+import { Hearts } from './_components/Hearts';
+import { ProgressBar } from './_components/ProgressBar';
+import { LessonIntro } from './_components/LessonIntro';
+import { CompletionScreen } from './_components/CompletionScreen';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, Modal } from '@/components/ui';
+import { Button, Skeleton, Modal, Mascot } from '@/components/ui';
 
 type ComponentFlags = {
   mcq?: boolean;
@@ -43,6 +47,12 @@ type Lesson = {
   hasExam: boolean;
   components: ComponentFlags;
   components_data: LessonComponent[];
+  /** Optional metadata used by the intro/completion screens — may not be
+   * returned by the lessons API on every tenant. Treated as best-effort. */
+  orderNumber?: number;
+  description?: string;
+  estimatedMinutes?: number;
+  xpReward?: number;
 };
 
 type ProgressEntry = {
@@ -52,24 +62,35 @@ type ProgressEntry = {
   academyCompleted: boolean;
 };
 
-type Step = 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'done';
+type XpData = {
+  totalXp: number;
+  level: string;
+  todayXp?: number;
+  dailyGoal?: number;
+};
+
+type StreakData = {
+  streak: number;
+  hasShield: boolean;
+};
+
+/** Steps the runner walks through. `intro` is the welcome screen, `done`
+ * is the celebration. Everything between is a real exercise. */
+type Step = 'intro' | 'video' | 'mcq' | 'word_order' | 'ai_tutor' | 'done';
+
+/** The set of *exercise* steps shown in the progress bar (excludes intro/done). */
+const EXERCISE_STEPS: Step[] = ['video', 'mcq', 'word_order', 'ai_tutor'];
+
+const HEARTS_MAX = 3;
 
 function buildSteps(components: ComponentFlags): Step[] {
-  const steps: Step[] = ['video'];
+  const steps: Step[] = ['intro', 'video'];
   if (components.mcq) steps.push('mcq');
   if (components.word_order) steps.push('word_order');
   if (components.ai_tutor) steps.push('ai_tutor');
   steps.push('done');
   return steps;
 }
-
-const STEP_LABELS: Record<Step, string> = {
-  video: 'Video',
-  mcq: 'Test',
-  word_order: "So'z",
-  ai_tutor: 'AI',
-  done: 'Tayyor',
-};
 
 export default function LessonPage() {
   const params = useParams();
@@ -80,11 +101,25 @@ export default function LessonPage() {
   const [progress, setProgress] = useState<ProgressEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<Step>('video');
+  const [step, setStep] = useState<Step>('intro');
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [sessionError, setSessionError] = useState(false);
   const [exitModalOpen, setExitModalOpen] = useState(false);
+
+  // Hearts ("lives") — decremented on wrong answers from any exercise.
+  // When this hits 0, we show the "out of hearts" modal which routes the
+  // user back to the start of the cycle (same effect as restartCycle).
+  const [hearts, setHearts] = useState(HEARTS_MAX);
+  const [heartsModalOpen, setHeartsModalOpen] = useState(false);
+
+  // XP / streak / level — captured pre-completion so we can detect a level-up
+  // and play levelup.mp3 inside the celebration screen, plus show streak/xp
+  // values in the stat tiles. These are best-effort: a fetch failure simply
+  // hides the relevant tile rather than blocking the lesson.
+  const [xpBefore, setXpBefore] = useState<XpData | null>(null);
+  const [xpAfter, setXpAfter] = useState<XpData | null>(null);
+  const [streakAfter, setStreakAfter] = useState<number | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -92,13 +127,15 @@ export default function LessonPage() {
 
     async function fetchData() {
       try {
-        const [lessonRes, progressRes] = await Promise.all([
+        const [lessonRes, progressRes, xpRes] = await Promise.all([
           apiRequest<Lesson>(`/lessons/${id}`, {}, token),
           apiRequest<ProgressEntry[]>('/progress/my', {}, token),
+          apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
         ]);
         setLesson(lessonRes.data);
         const myProgress = progressRes.data.find((p) => p.lessonId === id) ?? null;
         setProgress(myProgress);
+        if (xpRes) setXpBefore(xpRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Dars topilmadi');
       } finally {
@@ -116,12 +153,22 @@ export default function LessonPage() {
     setSessionError(false);
     try {
       await apiRequest(`/progress/${lesson.id}/complete-session`, { method: 'POST' }, token);
-      const progressRes = await apiRequest<ProgressEntry[]>('/progress/my', {}, token);
+      // Refetch progress + XP + streak in parallel so the celebration screen
+      // shows fresh numbers. All three are best-effort — a failure on any one
+      // just hides that stat in the completion tiles.
+      const [progressRes, xpRes, streakRes] = await Promise.all([
+        apiRequest<ProgressEntry[]>('/progress/my', {}, token),
+        apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
+        apiRequest<StreakData>('/gamification/streak', {}, token).catch(() => null),
+      ]);
       const updated = progressRes.data.find((p) => p.lessonId === lesson.id);
       if (updated) setProgress(updated);
+      if (xpRes) setXpAfter(xpRes.data);
+      if (streakRes) setStreakAfter(streakRes.data.streak);
       setStep('done');
     } catch {
       setSessionError(true);
+      setStep('done'); // still show the screen, with an error banner + retry
     } finally {
       setCompleting(false);
     }
@@ -163,40 +210,89 @@ export default function LessonPage() {
     }
   }
 
+  function startLesson() {
+    // First *real* step after the intro. Buildable from the components flags;
+    // video is always present, so we know steps[1] === 'video' here.
+    if (!lesson) return;
+    const steps = buildSteps(lesson.components);
+    const next = steps[1];
+    if (next) setStep(next);
+  }
+
   function restartCycle() {
     setStep('video');
     setVideoCompleted(false);
+    setHearts(HEARTS_MAX);
+    setHeartsModalOpen(false);
+  }
+
+  /**
+   * Wire an exercise's `onFailed` event into the hearts system.
+   *
+   * Each call costs the user one heart. If that drains the last heart we
+   * surface the "Yuraklar tugadi" modal (which itself offers Restart or
+   * Home); otherwise we silently restart the cycle so the user can try
+   * again with one fewer heart.
+   */
+  function handleExerciseFailed() {
+    setHearts((prev) => {
+      const next = Math.max(0, prev - 1);
+      if (next === 0) {
+        // Defer modal so the heart's pop animation renders before the dialog.
+        setTimeout(() => setHeartsModalOpen(true), 220);
+      } else {
+        // Cycle restart with reduced hearts — drop them back to video step.
+        setStep('video');
+        setVideoCompleted(false);
+      }
+      return next;
+    });
   }
 
   function handleBackClick() {
-    const inProgress = step !== 'video' || videoCompleted;
-    if (inProgress) {
-      setExitModalOpen(true);
-    } else {
+    if (step === 'intro' || step === 'done') {
       router.back();
+      return;
     }
+    setExitModalOpen(true);
   }
+
+  // Total exercises in the lesson (denominator for the progress bar).
+  // We count only the exercise steps that are actually enabled.
+  const totalExercises = useMemo(() => {
+    if (!lesson) return 1;
+    return EXERCISE_STEPS.filter((s) => {
+      if (s === 'video') return true;
+      return Boolean(lesson.components[s as keyof ComponentFlags]);
+    }).length;
+  }, [lesson]);
+
+  // How many exercises we've already finished (used by the bar's filled width).
+  const completedExercises = useMemo(() => {
+    if (!lesson) return 0;
+    if (step === 'intro') return 0;
+    if (step === 'done') return totalExercises;
+    const enabled = EXERCISE_STEPS.filter((s) => {
+      if (s === 'video') return true;
+      return Boolean(lesson.components[s as keyof ComponentFlags]);
+    });
+    const idx = enabled.indexOf(step as Step);
+    return idx === -1 ? 0 : idx;
+  }, [lesson, step, totalExercises]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
-        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Skeleton className="w-16 h-4 rounded" />
-          </div>
+      <div className="min-h-screen bg-[#fffaf0]">
+        <div className="px-4 pt-5 pb-4 sticky top-0 bg-[#fffaf0] z-30 border-b border-[#f3eedf]">
           <div className="flex items-center gap-3">
-            <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
-            <Skeleton className="h-5 w-48 rounded" />
-          </div>
-          <div className="flex gap-1 mt-4">
-            <Skeleton className="flex-1 h-1.5 rounded-full" />
-            <Skeleton className="flex-1 h-1.5 rounded-full" />
-            <Skeleton className="flex-1 h-1.5 rounded-full" />
+            <Skeleton theme="light" className="w-10 h-10 rounded-full shrink-0" />
+            <Skeleton theme="light" className="flex-1 h-2 rounded-full" />
+            <Skeleton theme="light" className="w-20 h-6 rounded-full shrink-0" />
           </div>
         </div>
-        <div className="px-4 pt-5 space-y-4">
-          <Skeleton theme="light" className="w-full aspect-video rounded-xl" />
-          <Skeleton theme="light" className="h-12 w-full rounded-xl" />
+        <div className="px-4 pt-6 space-y-4 max-w-md mx-auto">
+          <Skeleton theme="light" className="w-full aspect-video rounded-2xl" />
+          <Skeleton theme="light" className="h-12 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -204,17 +300,18 @@ export default function LessonPage() {
 
   if (error || !lesson) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-4">
-        <div className="bg-white rounded-[18px] border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
-          <AlertTriangle size={36} className="text-rose-500 mx-auto" />
-          <p className="text-[#0f172a] font-semibold">{error || 'Dars topilmadi'}</p>
-          <Button
-            variant="secondary"
-            size="md"
-            fullWidth
-            className="!bg-[#0f172a] !border-[#0f172a] !rounded-xl"
-            onClick={() => router.back()}
+      <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
+          <div className="flex justify-center">
+            <Mascot expression="sad" size={120} animated />
+          </div>
+          <p
+            className="text-[#3c3c3c] font-extrabold text-lg"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
+            {error || 'Dars topilmadi'}
+          </p>
+          <Button variant="duo" size="lg" fullWidth onClick={() => router.back()}>
             Orqaga
           </Button>
         </div>
@@ -222,92 +319,174 @@ export default function LessonPage() {
     );
   }
 
-  const steps = buildSteps(lesson.components);
-  const currentStepIndex = steps.indexOf(step);
   const mcqQuestions = getMcqQuestions();
   const wordOrderSentences = getWordOrderSentences();
-  const visibleSteps = steps.filter((s) => s !== 'done');
 
+  // Compute level-up + accuracy + xp delta for the completion screen.
+  const xpEarned =
+    xpAfter && xpBefore ? Math.max(0, xpAfter.totalXp - xpBefore.totalXp) : (lesson.xpReward ?? 30);
+  const leveledUp = Boolean(
+    xpAfter && xpBefore && xpAfter.level !== xpBefore.level,
+  );
+  const accuracy = Math.round((hearts / HEARTS_MAX) * 100);
+
+  // ─── Intro screen ─────────────────────────────────────────────────────────
+  if (step === 'intro') {
+    return (
+      <LessonIntro
+        title={lesson.title}
+        orderNumber={lesson.orderNumber}
+        subtitle={lesson.description}
+        estimatedMinutes={lesson.estimatedMinutes}
+        xpReward={lesson.xpReward}
+        onStart={startLesson}
+        onClose={() => router.push('/student/lessons')}
+      />
+    );
+  }
+
+  // ─── Completion screen ────────────────────────────────────────────────────
+  if (step === 'done') {
+    return (
+      <>
+        <CompletionScreen
+          xpEarned={xpEarned}
+          streak={streakAfter ?? undefined}
+          accuracy={accuracy}
+          leveledUp={leveledUp}
+          notice={
+            lesson.hasExam
+              ? 'Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.'
+              : undefined
+          }
+          onPrimary={() => router.push('/student/lessons')}
+          primaryLabel="Keyingi dars"
+          onSecondary={() => router.push('/student')}
+          errorBanner={sessionError ? 'Sessiyani saqlashda xato yuz berdi.' : undefined}
+          onRetry={sessionError ? completeSession : undefined}
+        />
+        <FeedbackWidget lessonId={id} />
+      </>
+    );
+  }
+
+  // ─── Running lesson ───────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Exit confirmation modal */}
+    <div className="min-h-screen bg-[#fffaf0]">
+      {/* Exit confirmation modal — cream theme to match the page. */}
       <Modal
         open={exitModalOpen}
         onClose={() => setExitModalOpen(false)}
         title="Darsdan chiqish"
-        description="Joriy jarayoningiz saqlanmaydi. Haqiqatan ham chiqmoqchimisiz?"
         size="sm"
-        theme="dark"
+        theme="light"
         footer={
           <>
-            <Button variant="ghost" size="md" onClick={() => setExitModalOpen(false)}>
-              Davom etish
+            <Button
+              variant="ghost"
+              size="md"
+              className="!text-[#7a5e2c] hover:!bg-[#f3eedf]"
+              onClick={() => setExitModalOpen(false)}
+            >
+              Bekor qilish
             </Button>
             <Button
-              variant="danger"
+              variant="duo"
               size="md"
-              onClick={() => { setExitModalOpen(false); router.back(); }}
+              onClick={() => {
+                setExitModalOpen(false);
+                router.push('/student/lessons');
+              }}
             >
               Chiqish
             </Button>
           </>
         }
       >
-        <p className="text-slate-400 text-sm">
-          Video ko&apos;rish yoki test jarayonidan chiqib ketmoqchimisiz?
-        </p>
+        <div className="flex items-center gap-4">
+          <div className="shrink-0">
+            <Mascot expression="sad" size={88} animated />
+          </div>
+          <p
+            className="text-sm font-semibold text-[#3c3c3c] leading-snug"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            Joriy jarayoningiz saqlanmaydi. Haqiqatan ham chiqmoqchimisiz?
+          </p>
+        </div>
       </Modal>
 
-      {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="relative z-10">
-          <button onClick={handleBackClick} className="flex items-center gap-2 text-[#94a3b8] mb-3 text-sm hover:text-white transition-colors">
-            <ArrowLeft size={16} /> Orqaga
-          </button>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center shrink-0">
-                <BookOpen size={18} className="text-[#0d9488]" />
-              </div>
-              <p className="text-white font-bold text-base leading-tight">{lesson.title}</p>
-            </div>
-            {progress && (
-              <span className="text-xs text-[#64748b] bg-white/5 border border-white/10 px-2 py-1 rounded-lg shrink-0 font-mono">
-                {progress.sessionCount}/{lesson.nRepetitions}
-              </span>
-            )}
+      {/* Out-of-hearts modal */}
+      <Modal
+        open={heartsModalOpen}
+        onClose={() => setHeartsModalOpen(false)}
+        title="Yuraklar tugadi"
+        size="sm"
+        theme="light"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              size="md"
+              className="!text-[#7a5e2c] hover:!bg-[#f3eedf]"
+              onClick={() => router.push('/student/lessons')}
+            >
+              Bosh sahifaga
+            </Button>
+            <Button variant="duo" size="md" onClick={restartCycle}>
+              Qaytadan urinish
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-center gap-4">
+          <div className="shrink-0">
+            <Mascot expression="sad" size={88} animated />
           </div>
-
-          {/* Step progress */}
-          <div className="flex gap-1 mt-4">
-            {visibleSteps.map((s, i) => (
-              <div key={s} className="flex-1 relative">
-                <div className={`h-1.5 rounded-full transition-colors duration-300 ${
-                  i < currentStepIndex ? 'bg-[#0d9488]' :
-                  i === currentStepIndex ? 'bg-[#f59e0b]' :
-                  'bg-white/10'
-                }`} />
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-1">
-            {visibleSteps.map((s, i) => (
-              <p key={s} className={`text-[10px] font-medium transition-colors duration-300 ${
-                i === currentStepIndex ? 'text-[#f59e0b]' : i < currentStepIndex ? 'text-[#0d9488]' : 'text-white/20'
-              }`}>
-                {STEP_LABELS[s]}
-              </p>
-            ))}
-          </div>
+          <p
+            className="text-sm font-semibold text-[#3c3c3c] leading-snug"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            Hechqisi yo&apos;q — yana bir bor urinib ko&apos;ramiz!
+          </p>
         </div>
-      </div>
+      </Modal>
+
+      {/* Sticky cream header: ✕ + progress bar + hearts */}
+      <header className="sticky top-0 z-30 bg-[#fffaf0] border-b border-[#f3eedf]">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBackClick}
+            aria-label="Yopish"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-[#777] hover:text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors shrink-0"
+          >
+            <X size={22} strokeWidth={2.5} />
+          </button>
+          <ProgressBar
+            total={totalExercises}
+            completed={completedExercises}
+            className="flex-1"
+          />
+          <Hearts remaining={hearts} max={HEARTS_MAX} />
+        </div>
+        {progress ? (
+          <div className="max-w-md mx-auto px-4 pb-2 flex items-center justify-between">
+            <p
+              className="text-xs font-extrabold text-[#7a5e2c] uppercase tracking-wider truncate"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              {lesson.title}
+            </p>
+            <span className="text-[10px] font-bold text-[#777] bg-[#f3eedf] border border-[#e8e0d0] px-2 py-0.5 rounded-full shrink-0 ml-2">
+              {progress.sessionCount}/{lesson.nRepetitions}
+            </span>
+          </div>
+        ) : null}
+      </header>
 
       {/* Body */}
-      <div className="px-4 pt-5 pb-6 space-y-4">
+      <main className="px-4 pt-6 pb-10 space-y-4 max-w-md mx-auto">
         {step === 'video' && (
           <div className="space-y-4">
             <VideoPlayer
@@ -317,17 +496,16 @@ export default function LessonPage() {
             />
             {videoCompleted ? (
               <Button
-                variant="secondary"
+                variant="duo"
                 size="lg"
                 fullWidth
                 iconRight={<ArrowRight size={16} />}
-                className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
                 onClick={goToNextStep}
               >
                 Davom etish
               </Button>
             ) : (
-              <p className="text-center text-[#94a3b8] text-sm">
+              <p className="text-center text-[#777] text-sm font-semibold">
                 Davom etish uchun videoni ko&apos;ring
               </p>
             )}
@@ -338,99 +516,47 @@ export default function LessonPage() {
           <McqTest
             questions={mcqQuestions}
             onPassed={goToNextStep}
-            onFailed={restartCycle}
+            onFailed={handleExerciseFailed}
           />
         )}
 
         {step === 'mcq' && mcqQuestions.length === 0 && (
-          <div className="text-center py-6">
-            <p className="text-[#94a3b8] text-sm">MCQ savollar topilmadi</p>
-            <button onClick={goToNextStep} className="mt-2 text-[#0d9488] text-sm underline font-semibold">
-              Davom etish
-            </button>
-          </div>
+          <SkipPanel label="MCQ savollar topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'word_order' && wordOrderSentences.length > 0 && (
           <WordOrderTest
             sentences={wordOrderSentences}
             onPassed={goToNextStep}
-            onFailed={restartCycle}
+            onFailed={handleExerciseFailed}
           />
         )}
 
         {step === 'word_order' && wordOrderSentences.length === 0 && (
-          <div className="text-center py-6">
-            <p className="text-[#94a3b8] text-sm">So&apos;z tartibi topshiriqlari topilmadi</p>
-            <button onClick={goToNextStep} className="mt-2 text-[#0d9488] text-sm underline font-semibold">
-              Davom etish
-            </button>
-          </div>
+          <SkipPanel label="So'z tartibi topshiriqlari topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'ai_tutor' && (
-          <AiTutor
-            lessonContext={lesson.title}
-            onCompleted={goToNextStep}
-          />
+          <AiTutor lessonContext={lesson.title} onCompleted={goToNextStep} />
         )}
+      </main>
 
-        {step === 'done' && (
-          <>
-            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center mx-auto">
-                <CheckCircle2 size={32} className="text-emerald-500" />
-              </div>
-              <h2 className="text-xl font-bold text-[#0f172a]">Sessiya yakunlandi!</h2>
-              <p className="text-[#64748b] text-sm">
-                {progress
-                  ? `${progress.sessionCount}/${lesson.nRepetitions} sessiya bajarildi`
-                  : 'Jarayoningiz saqlandi'}
-              </p>
-              {sessionError && (
-                <p className="text-rose-600 text-sm bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-                  Sessiyani saqlashda xato yuz berdi. Qayta urining.
-                </p>
-              )}
-              {lesson.hasExam && (
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
-                  <Lock size={16} className="text-amber-500 shrink-0" />
-                  <p className="text-xs text-amber-700 font-medium">
-                    Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.
-                  </p>
-                </div>
-              )}
-              <div className="flex gap-3 justify-center">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  icon={<RefreshCw size={15} />}
-                  className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
-                  onClick={restartCycle}
-                >
-                  Yana bir bor
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  className="!text-[#0f172a] !border-[#ede9e1] hover:!bg-[#f7f4ef] !rounded-xl"
-                  onClick={() => router.push('/student/lessons')}
-                >
-                  Darslar
-                </Button>
-              </div>
-            </div>
-            <FeedbackWidget lessonId={id} />
-          </>
-        )}
-      </div>
-
-      {/* Void completeSession call fix */}
+      {/* Saving overlay — cream surface, Aloqush idle, friendly copy. */}
       {completing && (
-        <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-white rounded-2xl px-6 py-4 flex items-center gap-3 shadow-xl">
-            <span className="w-5 h-5 border-2 border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
-            <p className="text-[#0f172a] font-semibold text-sm">Saqlanmoqda...</p>
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-40 bg-[#fffaf0]/85 backdrop-blur-sm flex items-center justify-center p-6"
+        >
+          <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] shadow-xl px-6 py-6 flex flex-col items-center gap-3 max-w-xs">
+            <Mascot expression="idle" size={96} animated />
+            <p
+              className="text-[#3c3c3c] font-extrabold text-base text-center"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              XP qo&apos;shilmoqda...
+            </p>
+            <span className="w-5 h-5 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
           </div>
         </div>
       )}
@@ -438,3 +564,28 @@ export default function LessonPage() {
   );
 }
 
+// ─── Local helpers ──────────────────────────────────────────────────────────
+
+interface SkipPanelProps {
+  label: string;
+  onSkip: () => void;
+}
+
+/** Tiny inline empty-state for steps whose data wasn't authored yet — gives
+ * the user an explicit way to skip ahead instead of getting stuck. */
+function SkipPanel({ label, onSkip }: SkipPanelProps) {
+  return (
+    <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] p-6 text-center space-y-3">
+      <AlertTriangle size={28} className="text-[#fbbf24] mx-auto" />
+      <p
+        className="text-[#3c3c3c] font-extrabold text-sm"
+        style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+      >
+        {label}
+      </p>
+      <Button variant="duo" size="md" onClick={onSkip}>
+        Davom etish
+      </Button>
+    </div>
+  );
+}
