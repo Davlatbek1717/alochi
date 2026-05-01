@@ -1,7 +1,7 @@
 'use client';
 import { forwardRef, ButtonHTMLAttributes, ReactNode } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'duo';
 type Size = 'sm' | 'md' | 'lg';
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -19,6 +19,11 @@ const VARIANT_STYLES: Record<Variant, string> = {
   ghost: 'bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white border-transparent',
   danger: 'bg-red-600 hover:bg-red-500 text-white border-red-600',
   success: 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-600',
+  // Student-panel Duolingo-style 3D-press button. Lives alongside the
+  // existing variants so admin/teacher pages keep their slate styling
+  // untouched. Uses a thicker bottom border that "presses" on click via
+  // translateY + border shrink for the springy tactile feel.
+  duo: 'bg-[#58cc02] hover:brightness-105 text-white font-extrabold uppercase tracking-wide border-b-[4px] border-l-0 border-r-0 border-t-0 border-[#46a302] rounded-2xl active:translate-y-[2px] active:border-b-[2px] disabled:bg-[#e8e0d0] disabled:border-[#cbbf9c] disabled:text-[#a0a0a0]',
 };
 
 const SIZE_STYLES: Record<Size, string> = {

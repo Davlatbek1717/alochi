@@ -3,6 +3,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* A'lochi student panel palette (Duolingo-grade).
+   * Admin/teacher panels keep their existing #0f172a navy + #f59e0b amber. */
+  --alc-primary: #58cc02;
+  --alc-primary-dark: #46a302;
+  --alc-correct: #10b981;
+  --alc-wrong: #ef4444;
+  --alc-streak: #ff9500;
+  --alc-xp: #ce82ff;
+  --alc-gold: #fbbf24;
+  --alc-bg: #fffaf0;
+  --alc-surface: #ffffff;
+  --alc-line: #e8e0d0;
+  --alc-ink: #3c3c3c;
+  --alc-mute: #777777;
+
+  /* Display font (Nunito) — wired up by app/layout.tsx via next/font. */
+  --font-display: var(--font-nunito);
 }
 
 @theme inline {
@@ -70,4 +88,49 @@ select {
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Student panel keyframes — gate APPLICATION via Tailwind's `motion-safe:`
+ * variant or @media (prefers-reduced-motion: no-preference) at the call site.
+ * The block at line 54 already neutralises animation-duration globally when
+ * the user prefers reduced motion, so these are safe to define unconditionally. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+@keyframes bounce-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-60px); opacity: 0; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); }
+  50% { transform: scale(1.06) rotate(1deg); }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+@keyframes count-up-fade {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
