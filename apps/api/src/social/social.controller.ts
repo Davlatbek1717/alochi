@@ -172,8 +172,15 @@ export class SocialController {
   }
 
   @Post('friends/request')
-  sendFriendRequest(@Body() body: { friendId: string }, @Request() req: any) {
-    return this.friends.sendRequest(req.user.userId, body.friendId);
+  sendFriendRequest(
+    @Body() body: { friendId: string; scope?: 'group' | 'branch' },
+    @Request() req: any,
+  ) {
+    return this.friends.sendRequest(
+      req.user.userId,
+      body.friendId,
+      body.scope ?? 'branch',
+    );
   }
 
   @Post('friends/:id/respond')

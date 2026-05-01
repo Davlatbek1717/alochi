@@ -3,24 +3,45 @@ import {
   ConflictException,
   ForbiddenException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Friendship } from '@prisma/client';
+import { Friendship, FriendshipScope } from '@prisma/client';
 
 @Injectable()
 export class FriendsService {
+  private readonly logger = new Logger(FriendsService.name);
+
   constructor(private prisma: PrismaService) {}
 
-  async sendRequest(userId: string, friendId: string): Promise<Friendship> {
-    const sender = (await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { birthDate: true } as never,
-    })) as { birthDate?: Date | null } | null;
+  async sendRequest(
+    userId: string,
+    friendId: string,
+    scope: FriendshipScope = 'branch',
+  ): Promise<Friendship> {
+    // Spec §5.1: Branch-scope friend requests require 13+ years old (PDPL).
+    // Group-scope friendships (auto-created in same group) have no age gate.
+    if (scope === 'branch') {
+      const sender = (await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { birthDate: true } as never,
+      })) as { birthDate?: Date | null } | null;
 
-    if (sender?.birthDate) {
-      const ageDays = (Date.now() - sender.birthDate.getTime()) / 86_400_000;
-      if (ageDays < 13 * 365.25) {
-        throw new ForbiddenException("Do'stlik faqat 13+ yoshlilarga ruxsat");
+      if (sender?.birthDate) {
+        const ageMs = Date.now() - new Date(sender.birthDate).getTime();
+        const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
+        if (ageYears < 13) {
+          throw new ForbiddenException({
+            code: 'AGE_RESTRICTED_BRANCH_FRIENDSHIP',
+            message:
+              "13 yoshdan kichik foydalanuvchilar filial do'stligini so'rashlari taqiqlangan",
+          });
+        }
+      } else {
+        // birthDate unknown — allow request but log so operators can backfill.
+        this.logger.warn(
+          `Branch friendship requested by user ${userId} with unknown birthDate; allowing.`,
+        );
       }
     }
 
@@ -30,7 +51,7 @@ export class FriendsService {
     if (existing) throw new ConflictException('Friend request already exists');
 
     return this.prisma.friendship.create({
-      data: { userId, friendId, scope: 'branch', status: 'pending' },
+      data: { userId, friendId, scope, status: 'pending' },
     });
   }
 
