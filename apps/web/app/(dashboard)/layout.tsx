@@ -1,67 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import BottomNav from './_components/BottomNav';
+import TopNav from './_components/TopNav';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
 import { NotificationBell } from './_components/NotificationBell';
 import { InstallPrompt } from '@/components/InstallPrompt';
-import {
-  Home, BookOpen, Users, GraduationCap, BarChart2, ClipboardList,
-  CreditCard, AlertTriangle, Building2, BookMarked, Send,
-  ShieldOff, Trophy, User, FlaskConical,
-} from 'lucide-react';
 import { ToastProvider, Button } from '@/components/ui';
 
 interface UserInfo { id: string; name: string; role: string; tenantId: string; }
-
-type NavItem = { href: string; icon: React.ReactNode; label: string };
-
-const SIDEBAR_NAV: Record<string, NavItem[]> = {
-  student: [
-    { href: '/student',         icon: <Home size={17} />,          label: 'Bosh sahifa'  },
-    { href: '/student/lessons', icon: <BookOpen size={17} />,      label: 'Darslar'      },
-    { href: '/student/exams',   icon: <GraduationCap size={17} />, label: 'Imtihonlar'   },
-    { href: '/student/friends', icon: <Users size={17} />,         label: "Do'stlar"     },
-    { href: '/profile',         icon: <User size={17} />,          label: 'Profil'       },
-  ],
-  mentor: [
-    { href: '/mentor',            icon: <Home size={17} />,          label: 'Bosh sahifa' },
-    { href: '/mentor/group',      icon: <GraduationCap size={17} />, label: 'Guruh'       },
-    { href: '/mentor/attendance', icon: <BarChart2 size={17} />,     label: 'Davomat'     },
-    { href: '/mentor/tasks',      icon: <ClipboardList size={17} />, label: 'Vazifalar'   },
-  ],
-  tester: [
-    { href: '/tester',                 icon: <Home size={17} />,           label: 'Bosh sahifa'      },
-    { href: '/tester/lessons/current', icon: <FlaskConical size={17} />,   label: 'Sinov darsi'      },
-    { href: '/tester/exam-queue',      icon: <ClipboardList size={17} />,  label: 'Imtihon navbati'  },
-    { href: '/tester/tasks',           icon: <ClipboardList size={17} />,  label: 'Vazifalar'        },
-    { href: '/tester/tech-issues',     icon: <AlertTriangle size={17} />,  label: 'Texnik muammo'    },
-  ],
-  manager: [
-    { href: '/manager',             icon: <Home size={17} />,          label: 'Bosh sahifa'  },
-    { href: '/manager/students',    icon: <Users size={17} />,         label: "O'quvchilar"  },
-    { href: '/manager/payments',    icon: <CreditCard size={17} />,    label: "To'lovlar"    },
-    { href: '/manager/tasks',       icon: <ClipboardList size={17} />, label: 'Vazifalar'    },
-    { href: '/manager/delegations', icon: <Send size={17} />,          label: 'Delegatsiya'  },
-  ],
-  filadmin: [
-    { href: '/filadmin',            icon: <Home size={17} />,           label: 'Bosh sahifa'    },
-    { href: '/filadmin/attendance', icon: <BarChart2 size={17} />,      label: 'Davomat'        },
-    { href: '/filadmin/payments',   icon: <CreditCard size={17} />,     label: "To'lovlar"      },
-    { href: '/filadmin/warnings',   icon: <AlertTriangle size={17} />,  label: 'Ogohlantirish'  },
-    { href: '/filadmin/tasks',      icon: <ClipboardList size={17} />,  label: 'Vazifalar'      },
-  ],
-  superadmin: [
-    { href: '/superadmin',          icon: <Home size={17} />,       label: 'Bosh sahifa'      },
-    { href: '/superadmin/payments', icon: <CreditCard size={17} />, label: "To'lovlar"        },
-    { href: '/superadmin/branches', icon: <Building2 size={17} />,  label: 'Filiallar'        },
-    { href: '/superadmin/users',    icon: <Users size={17} />,      label: 'Foydalanuvchilar' },
-    { href: '/superadmin/lessons',  icon: <BookMarked size={17} />, label: 'Darslar'          },
-    { href: '/superadmin/keywords', icon: <ShieldOff size={17} />,  label: "Taqiqlangan so'z" },
-    { href: '/superadmin/tournaments',icon: <Trophy size={17} />,   label: 'Turnirlar'        },
-  ],
-};
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -69,7 +16,6 @@ function getInitials(name: string) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {
@@ -91,8 +37,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login');
   }
 
-  const sidebarItems = user ? (SIDEBAR_NAV[user.role] ?? []) : [];
-
   return (
     <ToastProvider>
     <DuelNotificationProvider>
@@ -104,7 +48,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           Asosiy kontentga o&apos;tish
         </a>
-        {/* Top header */}
+        {/* Top header — identity + bell + logout. Sits above the per-role
+            top nav so navigation chrome stays consistent across pages. */}
         <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-white/5 px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">
@@ -126,39 +71,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Body: sidebar (desktop) + content */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar — only md+ */}
-          {sidebarItems.length > 0 && (
-            <aside className="hidden md:flex flex-col w-52 shrink-0 bg-[#0f172a] border-r border-white/5">
-              <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                {sidebarItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    (item.href.length > 1 && pathname.startsWith(item.href + '/') &&
-                      !sidebarItems.some((t) => t !== item && t.href.startsWith(item.href + '/')));
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-white/10 text-white'
-                          : 'text-[#94a3b8] hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      {item.icon}
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </aside>
-          )}
+        {/* Per-role top nav — desktop only. Mobile users navigate via the
+            BottomNav at the bottom of the viewport. The desktop nav drops
+            into a horizontal strip with grouped dropdowns so reaching
+            any sub-section is a one-click hover, not a dashboard
+            round-trip through tile menus. */}
+        {user && <TopNav role={user.role} />}
 
-          {/* Main content */}
-          <main id="main-content" className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">{children}</main>
-        </div>
+        {/* Main content */}
+        <main
+          id="main-content"
+          className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0"
+        >
+          {children}
+        </main>
 
         {/* Bottom nav — mobile only */}
         <BottomNav />
