@@ -24,10 +24,17 @@ import { COMPONENT_LABELS, type ConfigComponent } from './ComponentsList';
  * so this configurator surfaces a hint instead of duplicating those.
  */
 
+/**
+ * NOTE: 'vocabulary' was historically a configurable type but never had a
+ * working schema, settings page, or runtime — only a dead-end "go to
+ * Sozlamalar → Lug'at" hint pointing at a page that doesn't exist. It's
+ * dropped from the configurator UI here so admins can't pick it. The
+ * literal still exists in the API DTO `COMPONENT_TYPES` so any rows
+ * already stored in the database keep deserializing.
+ */
 export type ComponentTypeKey =
   | 'mcq'
   | 'word_order'
-  | 'vocabulary'
   | 'translate'
   | 'listen_pick'
   | 'listen_type'
@@ -52,7 +59,6 @@ export const ALL_TYPES: ComponentTypeKey[] = [
   'order_sentences',
   'speak_sentence',
   'speak_words',
-  'vocabulary',
 ];
 
 interface Props {
@@ -122,8 +128,6 @@ function FormForType(props: FormProps) {
       return <SpeakSentenceForm {...props} />;
     case 'speak_words':
       return <SpeakWordsForm {...props} />;
-    case 'vocabulary':
-      return <VocabularyHint onCancel={props.onCancel} />;
     default:
       return null;
   }
@@ -884,26 +888,6 @@ function SpeakWordsForm({ initialConfig, onSubmit, onCancel, saving }: FormProps
         />
       </div>
     </FormShell>
-  );
-}
-
-// ─── Vocabulary hint (no inline form here) ──────────────────────────────────
-
-function VocabularyHint({ onCancel }: { onCancel: () => void }) {
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-[#64748b]">
-        Lug&apos;at so&apos;zlari alohida sahifada boshqariladi
-        (<span className="font-semibold">Sozlamalar → Lug&apos;at</span>).
-        Bu turdagi komponent darsda yoqilgan bo&apos;lsa, mavjud lug&apos;at
-        avtomatik ishlatiladi.
-      </p>
-      <div className="flex justify-end">
-        <Button variant="ghost" size="md" onClick={onCancel} className="!text-[#64748b] hover:!bg-[#f7f4ef]">
-          Yopish
-        </Button>
-      </div>
-    </div>
   );
 }
 
