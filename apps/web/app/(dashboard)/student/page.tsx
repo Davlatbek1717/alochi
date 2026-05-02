@@ -17,26 +17,17 @@ import {
   Swords,
   ChevronRight,
   Bell,
+  Flag,
+  Brain,
+  Lightbulb,
+  HelpCircle,
 } from 'lucide-react';
-import { XpBar } from './_components/XpBar';
-import { StudentDailyQuests } from './_components/StudentDailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
-import VirtualCity from './_components/VirtualCity';
-import { DailyGoalRing } from './_components/DailyGoalRing';
 import { StreakFlame } from './_components/StreakFlame';
 import { LessonPathPreview } from './_components/LessonPathPreview';
 import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton, SkeletonCard } from '@/components/ui';
-import { playSound } from '@/lib/sound';
-
-type Quest = {
-  questType: string;
-  targetValue: number;
-  progress: number;
-  completed: boolean;
-  xpReward: number;
-};
 
 type XpData = {
   totalXp: number;
@@ -49,25 +40,6 @@ type XpData = {
 type StreakData = {
   streak: number;
   hasShield: boolean;
-};
-
-type CityBuilding = {
-  id: string;
-  type: string;
-  tier: number;
-  index: number;
-  unlockedAt: string;
-  isNewest: boolean;
-};
-
-type CityData = {
-  buildings: CityBuilding[];
-  tier: { level: number; name: string };
-  lessonsCompleted: number;
-  nextTierAt: number | null;
-  level?: number;
-  name?: string;
-  nextLevelAt?: number | null;
 };
 
 type ReviewItem = { word: string; easeFactor: number; interval: number };
@@ -105,21 +77,46 @@ type LessonInfo = {
 
 type ProgressRow = { lessonId: string; sessionCount: number };
 
-type LeagueData = { tier?: string; rank?: number };
+type StatusColor = 'yashil' | 'sariq' | 'qizil' | '';
+type StatusData = {
+  englishStatus?: StatusColor;
+  personalStatus?: StatusColor;
+  criticalStatus?: StatusColor;
+};
 
-/**
- * Local XP-to-league mapping. Mirrors the same thresholds the profile
- * page uses, so the dashboard badge stays in sync without depending on
- * a `/gamification/league/my` endpoint that the API doesn't expose
- * (the previous fetch was 404'ing in the console on every page load).
- */
-function deriveLeagueFromXp(totalXp: number): LeagueData {
-  if (totalXp >= 5000) return { tier: 'almos' };
-  if (totalXp >= 2500) return { tier: 'platina' };
-  if (totalXp >= 1000) return { tier: 'oltin' };
-  if (totalXp >= 300) return { tier: 'kumush' };
-  return { tier: 'bronza' };
-}
+const STATUS_VISUAL: Record<
+  string,
+  { label: string; bg: string; text: string; ring: string; tone: string }
+> = {
+  yashil: {
+    label: 'Yaxshi',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    ring: 'ring-emerald-200',
+    tone: 'bg-emerald-500',
+  },
+  sariq: {
+    label: 'Diqqat',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    ring: 'ring-amber-200',
+    tone: 'bg-amber-500',
+  },
+  qizil: {
+    label: "E'tibor",
+    bg: 'bg-rose-50',
+    text: 'text-rose-700',
+    ring: 'ring-rose-200',
+    tone: 'bg-rose-500',
+  },
+  '': {
+    label: '—',
+    bg: 'bg-[#f3eedf]',
+    text: 'text-[#777]',
+    ring: 'ring-[#e8e0d0]',
+    tone: 'bg-[#cbbf9c]',
+  },
+};
 
 export default function StudentDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -127,11 +124,7 @@ export default function StudentDashboard() {
     totalXp: 0,
     level: 'Novice',
     nextLevelXp: 5000,
-    todayXp: 0,
-    dailyGoal: 30,
   });
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const [cityData, setCityData] = useState<CityData | null>(null);
   const [streak, setStreak] = useState(0);
   const [hasShield, setHasShield] = useState(false);
   const [lessonProgress, setLessonProgress] = useState(0);
@@ -141,7 +134,7 @@ export default function StudentDashboard() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [nextLesson, setNextLesson] = useState<LessonInfo | null>(null);
   const [nextLessonSession, setNextLessonSession] = useState<{ count: number; total: number } | null>(null);
-  const [league, setLeague] = useState<LeagueData | null>(null);
+  const [statusData, setStatusData] = useState<StatusData | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -149,45 +142,37 @@ export default function StudentDashboard() {
 
     async function fetchData(initial = false) {
       try {
-        // The dashboard fans out 11 parallel requests on load — every one
-        // is wrapped in .catch so a transient gamification 5xx never
-        // blanks the page. The lessons/next call is the one that drives
-        // the hero CTA, so a failure there falls back to a generic
-        // "keyingi dars sizni kutmoqda" copy.
         const [
           profileRes,
           xpRes,
-          questsRes,
-          cityRes,
           streakRes,
           progressRes,
           warningsRes,
           reviewRes,
           certsRes,
           nextLessonRes,
+          statusRes,
         ] = await Promise.all([
           apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
           apiRequest<XpData>('/gamification/xp', {}, token),
-          apiRequest<Quest[]>('/gamification/quests', {}, token),
-          apiRequest<CityData>('/gamification/city', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
           apiRequest<ProgressRow[]>('/progress/my', {}, token),
           apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
           apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
           apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
           apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
+          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
         ]);
         if (cancelled) return;
         if (profileRes.data) setProfile(profileRes.data);
         setXpData(xpRes.data);
-        setQuests(questsRes.data);
-        setCityData(cityRes.data);
         setStreak(streakRes.data.streak);
         setHasShield(streakRes.data.hasShield);
         setLessonProgress(progressRes.data.length);
         setWarnings(warningsRes.data ?? []);
         setReviewItems(reviewRes.data ?? []);
         setCertificates(certsRes.data ?? []);
+        setStatusData(statusRes.data);
 
         const nextL = nextLessonRes.data ?? null;
         setNextLesson(nextL);
@@ -201,9 +186,6 @@ export default function StudentDashboard() {
         } else {
           setNextLessonSession(null);
         }
-        // League tier is derived from totalXp client-side — no server
-        // round-trip, no 404 noise from a missing endpoint.
-        setLeague(deriveLeagueFromXp(xpRes.data?.totalXp ?? 0));
       } catch {
         // keep defaults on error
       } finally {
@@ -213,7 +195,6 @@ export default function StudentDashboard() {
 
     fetchData(true);
 
-    // Refetch when the tab regains focus or visibility flips back to visible.
     function onFocus() {
       fetchData(false);
     }
@@ -228,9 +209,6 @@ export default function StudentDashboard() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
-
-  const todayXp = xpData.todayXp ?? 0;
-  const dailyGoal = Math.max(1, xpData.dailyGoal ?? 30);
 
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();
@@ -254,16 +232,13 @@ export default function StudentDashboard() {
   return (
     <div className="bg-[#fffaf0] min-h-screen">
       <div className="max-w-lg mx-auto pb-28 pt-4 px-4 space-y-5">
-        {/* 1. Compact greeting hero — combines mascot + greeting + key stats
-            in a single card so the user gets identity + status at a glance
-            without scrolling through 3 separate widgets like before. */}
+        {/* 1. Compact greeting hero — mascot + name + streak/step */}
         <GreetingHero
           firstName={firstName}
           streak={streak}
           hasShield={hasShield}
-          todayXp={todayXp}
-          xpData={xpData}
-          league={league}
+          currentStep={lessonProgress + 1}
+          level={xpData.level}
         />
 
         {/* 2. Active warnings — only when present, never a perma-banner. */}
@@ -272,57 +247,32 @@ export default function StudentDashboard() {
         )}
 
         {/* 3. Primary CTA — promoted to second-from-top so opening the
-            app means seeing "Davom etish" within thumb's reach, not
-            below 3 status widgets. */}
+            app means seeing "Davom etish" within thumb's reach. */}
         <ContinueLessonCard
           nextLesson={nextLesson}
           session={nextLessonSession}
           lessonNumber={lessonProgress + 1}
         />
 
-        {/* 4. Daily-goal ring with mini stats — secondary status, decoupled
-            from the greeting so the ring's animation reads on its own. */}
-        <DailyGoalCard
-          todayXp={todayXp}
-          dailyGoal={dailyGoal}
-          totalXp={xpData.totalXp}
-          level={xpData.level}
-          nextLevelXp={xpData.nextLevelXp}
-        />
+        {/* 4. Three-discipline status block — the mentor-managed colour
+            indicator for English / Personal Development / Critical Thinking. */}
+        <StatusBlock data={statusData} />
 
-        {/* 5. Daily quests — gamification hook, only when present. */}
-        {quests.length > 0 && <StudentDailyQuests quests={quests} />}
+        {/* 5. Daily review — spaced-repetition list, only when items exist. */}
+        {reviewItems.length > 0 && <DailyReviewCard items={reviewItems} />}
 
-        {/* 6. Daily review — spaced-repetition list, only when items exist. */}
-        {reviewItems.length > 0 && (
-          <DailyReviewCard items={reviewItems} />
-        )}
-
-        {/* 7. Lesson path peek. */}
+        {/* 6. Lesson path peek. */}
         <LessonPathPreview />
 
-        {/* 8. Virtual city — long-term motivation. */}
-        {cityData && (
-          <VirtualCity
-            buildings={cityData.buildings ?? []}
-            tier={cityData.tier ?? { level: cityData.level ?? 1, name: cityData.name ?? 'Qishloq' }}
-            lessonsCompleted={cityData.lessonsCompleted ?? 0}
-            nextTierAt={cityData.nextTierAt ?? cityData.nextLevelAt ?? null}
-          />
-        )}
-
-        {/* 9. Certificates — surface only when earned, max 2 inline. */}
+        {/* 7. Certificates — surface only when earned, max 2 inline. */}
         {certificates.length > 0 && (
-          <CertificatesCard
-            certificates={certificates}
-          />
+          <CertificatesCard certificates={certificates} />
         )}
 
-        {/* 10. Browse more — destinations not in the bottom nav. Replaces
-            the loose "Quick Actions" tiles + dead PathMap500 widget. */}
+        {/* 8. Browse more — destinations not in the bottom nav. */}
         <BrowseMoreGrid />
 
-        {/* 11. Friends activity — kept compact, last few items. */}
+        {/* 9. Friends activity. */}
         <SocialFeed />
       </div>
     </div>
@@ -330,27 +280,25 @@ export default function StudentDashboard() {
 }
 
 /* ============================================================================
-   Subcomponents — kept in this file so the dashboard reads top-to-bottom.
+   Subcomponents
    ============================================================================ */
 
 function GreetingHero({
   firstName,
   streak,
   hasShield,
-  todayXp,
-  xpData,
-  league,
+  currentStep,
+  level,
 }: {
   firstName: string;
   streak: number;
   hasShield: boolean;
-  todayXp: number;
-  xpData: XpData;
-  league: LeagueData | null;
+  currentStep: number;
+  level: string;
 }) {
   const greeting = firstName ? `Salom, ${firstName}!` : 'Salom, do‘stim!';
-  const subtitle = pickGreetingSubtitle(streak, todayXp);
-  const mood = streak >= 3 || todayXp > 0 ? 'happy' : 'idle';
+  const subtitle = pickGreetingSubtitle(streak, currentStep);
+  const mood = streak >= 3 ? 'happy' : 'idle';
 
   return (
     <div
@@ -360,7 +308,6 @@ function GreetingHero({
           'linear-gradient(135deg, #fffaf0 0%, #fef3c7 60%, #fde68a 100%)',
       }}
     >
-      {/* Sun ray accent */}
       <div
         aria-hidden
         className="absolute -top-12 -right-12 w-44 h-44 rounded-full opacity-60 pointer-events-none"
@@ -370,7 +317,6 @@ function GreetingHero({
         }}
       />
       <div className="relative z-10 p-5 space-y-4">
-        {/* Top row: mascot + greeting + bell */}
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             <Mascot expression={mood} size={88} animated />
@@ -395,33 +341,32 @@ function GreetingHero({
           </Link>
         </div>
 
-        {/* Bottom row: streak | today XP | league — single horizontal strip
-            replaces what used to be a separate full-width white card */}
+        {/* Stat strip — Streak | Qadam | Daraja */}
         <div className="grid grid-cols-3 gap-2">
           <HeroStat
-            icon={<StreakFlame streak={streak} hasShield={hasShield} size={18} showLabel={false} />}
+            icon={
+              <StreakFlame
+                streak={streak}
+                hasShield={hasShield}
+                size={18}
+                showLabel={false}
+              />
+            }
             value={streak.toString()}
             label="Kun zanjir"
           />
           <HeroStat
-            icon={<Sparkles size={16} className="text-[#46a302]" />}
-            value={todayXp.toString()}
-            label="Bugun XP"
-            highlight={todayXp > 0}
+            icon={<Flag size={16} className="text-[#46a302]" />}
+            value={`#${currentStep}`}
+            label="Qadam"
+            highlight
           />
           <HeroStat
-            icon={<LeagueGlyph tier={league?.tier} />}
-            value={leagueLabel(league?.tier)}
-            label="Liga"
+            icon={<Star size={16} className="text-[#fbbf24]" />}
+            value={level}
+            label="Daraja"
           />
         </div>
-
-        {/* XP / level progress bar */}
-        <XpBar
-          totalXp={xpData.totalXp}
-          level={xpData.level}
-          nextLevelXp={xpData.nextLevelXp}
-        />
       </div>
     </div>
   );
@@ -442,7 +387,7 @@ function HeroStat({
     <div className="bg-white/70 backdrop-blur rounded-2xl border border-[#f3e8c7] px-3 py-2.5 flex flex-col items-center gap-1">
       <div className="h-5 flex items-center justify-center">{icon}</div>
       <p
-        className={`text-base font-extrabold leading-none ${
+        className={`text-base font-extrabold leading-none truncate max-w-full ${
           highlight ? 'text-[#46a302]' : 'text-[#3c3c3c]'
         }`}
       >
@@ -472,7 +417,6 @@ function ContinueLessonCard({
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
       <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] p-5 text-white relative">
-        {/* Soft white glow top-right */}
         <div
           aria-hidden
           className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
@@ -480,7 +424,6 @@ function ContinueLessonCard({
             background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
           }}
         />
-        {/* Bottom decorative chevrons */}
         <div
           aria-hidden
           className="absolute -bottom-6 right-3 text-white/15 pointer-events-none"
@@ -514,7 +457,6 @@ function ContinueLessonCard({
           </div>
           <Link
             href="/student/lessons/current"
-            onClick={() => playSound('xp', 0.5)}
             className="mt-4 block bg-white text-[#46a302] py-3 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
@@ -526,55 +468,49 @@ function ContinueLessonCard({
   );
 }
 
-function DailyGoalCard({
-  todayXp,
-  dailyGoal,
-  totalXp,
-  level,
-  nextLevelXp,
-}: {
-  todayXp: number;
-  dailyGoal: number;
-  totalXp: number;
-  level: string;
-  nextLevelXp: number;
-}) {
-  const goalHit = todayXp >= dailyGoal;
-  const xpToLevel = Math.max(0, nextLevelXp - totalXp);
-
+function StatusBlock({ data }: { data: StatusData | null }) {
+  // Per-discipline mentor-managed status colour. The whole block is
+  // shown even before the first lesson finishes (with "—" placeholders)
+  // so the student knows where the slots will surface their grades.
+  const items: { field: keyof StatusData; label: string; icon: React.ReactNode }[] = [
+    { field: 'englishStatus', label: 'Ingliz tili', icon: <BookOpen size={16} /> },
+    { field: 'personalStatus', label: 'Shaxsiy', icon: <Brain size={16} /> },
+    { field: 'criticalStatus', label: 'Tanqidiy', icon: <Lightbulb size={16} /> },
+  ];
   return (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
-      <div className="flex items-center gap-5">
-        <div className="shrink-0">
-          <DailyGoalRing
-            todayXp={todayXp}
-            goal={dailyGoal}
-            size={120}
-          />
-        </div>
-        <div className="flex-1 min-w-0 space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#7a5e2c]">
-            Kunlik maqsad
-          </p>
-          <p className="text-2xl font-extrabold text-[#3c3c3c] leading-tight">
-            {todayXp} / {dailyGoal} XP
-          </p>
-          <p className="text-xs font-semibold text-[#777] leading-snug">
-            {goalHit
-              ? 'Bugungi maqsadingiz bajarildi! Davom eting va zanjirni saqlang.'
-              : `Maqsadgacha yana ${dailyGoal - todayXp} XP qoldi`}
-          </p>
-          <div className="pt-1 flex items-center gap-2 text-[11px] font-bold">
-            <span className="bg-[#f3eedf] text-[#46a302] border border-[#e8e0d0] px-2 py-0.5 rounded-full">
-              Daraja: {level}
-            </span>
-            {xpToLevel > 0 && (
-              <span className="text-[#777]">
-                +{xpToLevel} XP keyingi darajaga
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] space-y-3">
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c]">
+          Sizning holatingiz
+        </p>
+        <span
+          className="text-[#94a3b8]"
+          title="Mentor har bir sohada belgilaydigan rang: yashil — yaxshi, sariq — diqqat, qizil — e'tibor"
+        >
+          <HelpCircle size={12} />
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((it) => {
+          const val: string = data?.[it.field] ?? '';
+          const v = STATUS_VISUAL[val] ?? STATUS_VISUAL[''];
+          return (
+            <div
+              key={it.field}
+              className={`rounded-2xl p-3 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 text-center`}
+            >
+              <div className={`relative ${v.text}`}>{it.icon}</div>
+              <p className={`text-sm font-extrabold ${v.text}`}>{v.label}</p>
+              <p className="text-[10px] text-[#777] font-bold uppercase tracking-wider">
+                {it.label}
+              </p>
+              <span
+                aria-hidden
+                className={`mt-0.5 w-2 h-2 rounded-full ${v.tone}`}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -688,11 +624,6 @@ function CertificatesCard({ certificates }: { certificates: Certificate[] }) {
   );
 }
 
-/**
- * Tile grid for destinations not in the bottom nav. Replaces the loose
- * 2x2 "Quick Actions" card and the dead PathMap500 mini-widget; one
- * coherent navigation hub instead of two competing surfaces.
- */
 function BrowseMoreGrid() {
   const items: { href: string; icon: React.ReactNode; title: string; sub: string; tint: string }[] = [
     {
@@ -784,46 +715,11 @@ function BrowseMoreGrid() {
   );
 }
 
-function LeagueGlyph({ tier }: { tier?: string }) {
-  const t = tier?.toLowerCase() ?? 'bronza';
-  const color =
-    t === 'almos' || t === 'diamond'
-      ? 'text-[#7c3aed]'
-      : t === 'platina' || t === 'platinum'
-        ? 'text-[#0e7490]'
-        : t === 'oltin' || t === 'gold'
-          ? 'text-[#d97706]'
-          : t === 'kumush' || t === 'silver'
-            ? 'text-[#64748b]'
-            : 'text-[#a16207]';
-  return <Trophy size={16} className={color} />;
-}
-
-function leagueLabel(tier?: string): string {
-  const map: Record<string, string> = {
-    bronza: 'Bronza',
-    bronze: 'Bronza',
-    kumush: 'Kumush',
-    silver: 'Kumush',
-    oltin: 'Oltin',
-    gold: 'Oltin',
-    platina: 'Platina',
-    platinum: 'Platina',
-    almos: 'Olmos',
-    diamond: 'Olmos',
-  };
-  return map[tier?.toLowerCase() ?? ''] ?? 'Bronza';
-}
-
-function pickGreetingSubtitle(streak: number, todayXp: number): string {
-  if (todayXp > 0 && streak >= 7) {
-    return `${streak} kun ketma-ket! Bugun yaxshi boshlandi`;
-  }
+function pickGreetingSubtitle(streak: number, currentStep: number): string {
   if (streak >= 30) return `${streak} kunlik afsonaviy zanjir 👑`;
   if (streak >= 14) return `${streak} kunlik olov 🔥 — davom etamiz`;
   if (streak >= 7) return `${streak} kunlik zanjir 🔥`;
   if (streak >= 3) return `${streak} kun ketma-ket — zo‘r ish!`;
-  if (streak === 1 || streak === 2)
-    return `Zanjirni saqlab qolaylik — bugun ${streak}-kun`;
-  return 'Bugun yangi qadam tashlaymiz';
+  if (currentStep === 1) return 'Birinchi qadamingizni tashlang!';
+  return `${currentStep}-qadamga keldingiz — davom etamiz`;
 }
