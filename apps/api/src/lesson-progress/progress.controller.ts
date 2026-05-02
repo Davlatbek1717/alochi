@@ -25,7 +25,13 @@ export class ProgressController {
   @Roles(UserRole.student, UserRole.tester)
   completeSession(
     @Param('lessonId') lessonId: string,
-    @Body() body: { videoWatched?: number; videoDuration?: number },
+    @Body()
+    body: {
+      videoWatched?: number;
+      videoDuration?: number;
+      /** 0-100 — drives the Variant B auto-status flow when present. */
+      accuracy?: number;
+    },
     @Request() req: any,
   ) {
     // 25.J.1: enforce 90% watch when caller reports the metric.
@@ -39,6 +45,7 @@ export class ProgressController {
       req.user.userId,
       lessonId,
       req.user.tenantId,
+      typeof body?.accuracy === 'number' ? body.accuracy : undefined,
     );
   }
 

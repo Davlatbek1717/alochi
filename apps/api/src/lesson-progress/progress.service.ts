@@ -11,6 +11,19 @@ import { CityService } from '../gamification/city.service';
 import { XpService } from '../gamification/xp.service';
 import { StreakService } from '../gamification/streak.service';
 import { QuestService } from '../gamification/quest.service';
+import { StatusService } from '../student-status/status.service';
+import type { StatusColor } from '../student-status/status.types';
+
+/**
+ * Accuracy → englishStatus mapping (Variant B — no AI dependency).
+ * Mirrors AiService.scoreToStatusColor so the two paths agree once the
+ * AI evaluate flow is also wired in.
+ */
+function accuracyToStatusColor(accuracy: number): StatusColor {
+  if (accuracy >= 80) return 'yashil';
+  if (accuracy >= 50) return 'sariq';
+  return 'qizil';
+}
 
 @Injectable()
 export class ProgressService {
@@ -22,6 +35,7 @@ export class ProgressService {
     @Optional() private xp?: XpService,
     @Optional() private streak?: StreakService,
     @Optional() private quest?: QuestService,
+    @Optional() private status?: StatusService,
   ) {}
 
   private async getEffectiveN(
@@ -59,7 +73,17 @@ export class ProgressService {
     }
   }
 
-  async completeSession(studentId: string, lessonId: string, tenantId: string) {
+  async completeSession(
+    studentId: string,
+    lessonId: string,
+    tenantId: string,
+    /** Per-session accuracy 0-100. When provided, drives the auto-status
+     *  flow (Variant B): the value is mapped to yashil/sariq/qizil and
+     *  written to today's StudentStatus row via StatusService. Optional
+     *  so older clients (and tests that don't care about status) keep
+     *  working unchanged. */
+    accuracy?: number,
+  ) {
     const effectiveN = await this.getEffectiveN(studentId, lessonId, tenantId);
 
     const current = await this.prisma.studentProgress.findUnique({
@@ -116,6 +140,27 @@ export class ProgressService {
       // 25.A.4: any session completion implicitly proves the video was
       // watched, so credit the daily "watch_video" quest too.
       this.quest.updateProgress(studentId, 'watch_video').catch(() => {});
+    }
+
+    // Variant B auto-status: when the client reports a per-session accuracy
+    // (0-100), map it to yashil/sariq/qizil and persist to today's
+    // StudentStatus row. Status writes are best-effort — a failure here
+    // must not roll back the lesson the student just earned. Mentor still
+    // sees and can override the colour from the group page.
+    if (
+      this.status &&
+      typeof accuracy === 'number' &&
+      Number.isFinite(accuracy)
+    ) {
+      const clamped = Math.max(0, Math.min(100, Math.round(accuracy)));
+      const color = accuracyToStatusColor(clamped);
+      this.status
+        .setEnglishStatus(studentId, color, {
+          source: 'lesson_accuracy',
+          lessonId,
+          score: clamped,
+        })
+        .catch(() => {});
     }
 
     // When the student finishes the home portion (sessionCount === N) emit a

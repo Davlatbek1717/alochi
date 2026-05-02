@@ -276,7 +276,18 @@ export default function LessonPage() {
     setCompleting(true);
     setSessionError(false);
     try {
-      await apiRequest(`/progress/${lesson.id}/complete-session`, { method: 'POST' }, token);
+      // Variant B auto-status: report the session's accuracy (computed
+      // from hearts remaining) so the backend can map it to today's
+      // englishStatus colour. Range is 0-100; 100 means no hearts lost.
+      const sessionAccuracy = Math.round((hearts / HEARTS_MAX) * 100);
+      await apiRequest(
+        `/progress/${lesson.id}/complete-session`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ accuracy: sessionAccuracy }),
+        },
+        token,
+      );
       // Refetch progress + XP + streak in parallel so the celebration screen
       // shows fresh numbers. All three are best-effort — a failure on any one
       // just hides that stat in the completion tiles.
