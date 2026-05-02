@@ -13,6 +13,7 @@ import {
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
+import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
 import type { PickPictureConfig } from './exercise-types';
@@ -69,6 +70,11 @@ export function PickPicture({ config, onPassed, onFailed }: PickPictureProps) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      try {
+        stopSpeaking();
+      } catch {
+        /* ignore */
+      }
       const a = audioElementRef.current;
       if (a) {
         try {
@@ -83,6 +89,27 @@ export function PickPicture({ config, onPassed, onFailed }: PickPictureProps) {
       }
     };
   }, []);
+
+  // Auto-play pronunciation on mount so the student hears the English word
+  // as soon as the exercise renders. Wrapped in a small delay to let the
+  // SpeechSynthesis voice list populate on first paint in some browsers.
+  useEffect(() => {
+    if (malformed || !word) return;
+    if (!getSpeechCapabilities().tts) return;
+    const t = setTimeout(() => {
+      if (!mountedRef.current) return;
+      setAudioState('playing');
+      speak(word, { lang: 'en-US', rate: 0.9 })
+        .then(() => {
+          if (mountedRef.current) setAudioState('idle');
+        })
+        .catch(() => {
+          if (mountedRef.current) setAudioState('idle');
+        });
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [word, malformed]);
 
   if (malformed) {
     return (
@@ -105,7 +132,18 @@ export function PickPicture({ config, onPassed, onFailed }: PickPictureProps) {
   }
 
   async function playAudio() {
-    if (audioState === 'loading') return;
+    if (audioState === 'loading' || audioState === 'playing') return;
+    // Browser TTS first — works offline, no Azure credit needed.
+    if (getSpeechCapabilities().tts) {
+      setAudioState('playing');
+      try {
+        await speak(word, { lang: 'en-US', rate: 0.9 });
+        if (mountedRef.current) setAudioState('idle');
+        return;
+      } catch {
+        if (mountedRef.current) setAudioState('idle');
+      }
+    }
     if (audioElementRef.current) {
       try {
         audioElementRef.current.currentTime = 0;
