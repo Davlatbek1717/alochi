@@ -31,8 +31,6 @@ export const FILADMIN_MONTHLY_KPI_THRESHOLDS = {
   /** Extra penalty applied when blocked-students ratio exceeds threshold. */
   BLOCKED_RATIO_PENALTY: 0.1,
   BLOCKED_PENALTY: -25,
-  /** Per-mentor-checkin daily reward (proxy for §8.1 "ran a lesson"). */
-  MENTOR_DAILY_BASE_POINTS: 5,
 } as const;
 
 @Injectable()
@@ -658,14 +656,22 @@ export class CronService {
   /**
    * §8.1 — Mentor KPI auto-calc.
    *
-   * Runs daily at 22:00 (after the school day is done). For every active
-   * mentor with a confirmed check-in today (`AttendanceStaff.loginTime
-   * IS NOT NULL`) we award a flat block of points — the closest proxy
-   * we have for "ran qualifying lesson(s) today". The schema has no
-   * Lesson-session model with mentorId/duration/studentCount, so a
-   * full per-lesson breakdown is not yet possible without a schema
-   * change; this implementation captures the "vaqtida xabar berdi /
-   * darsda qatnashdi" portion of the spec.
+   * Runs daily at 22:00 (after the school day is done). For every
+   * active mentor who checked in today, derive the four §8.1 scoring
+   * inputs from existing data and call `kpi.computeMentorDaily`:
+   *
+   *   studentsTaught   ← AttendanceStudent rows (present/late) for
+   *                      students in the mentor's group, today.
+   *   durationMinutes  ← 60 if loginTime exists else 0 (we have no
+   *                      logout time in schema, so this approximates
+   *                      "stayed for the lesson"). Threshold is 15.
+   *   scoresGiven      ← StudentStatus rows dated today for students
+   *                      in the mentor's group.
+   *   redNotified      ← Warning rows where givenBy = mentor.id today.
+   *
+   * Was previously a flat MENTOR_DAILY_BASE_POINTS = 5 award per
+   * check-in, ignoring all the spec inputs. Now scored 0-20 ball via
+   * the real formula.
    *
    * Idempotent per mentor per day via `kpi.hasAwardInRange`.
    */
@@ -679,14 +685,18 @@ export class CronService {
     try {
       const mentors = await this.prisma.user.findMany({
         where: { role: 'mentor', status: 'active' },
-        select: { id: true, tenantId: true, branchId: true },
+        select: {
+          id: true,
+          tenantId: true,
+          branchId: true,
+          groupId: true,
+        },
       });
 
       let awarded = 0;
       let skipped = 0;
 
       for (const mentor of mentors) {
-        // Skip if already awarded for this reason today (idempotency).
         const already = await this.kpi.hasAwardInRange(
           mentor.id,
           KPI_REASONS.AUTO_MENTOR_DAILY,
@@ -698,22 +708,65 @@ export class CronService {
           continue;
         }
 
-        // Did the mentor actually check in today? loginTime IS NOT NULL
-        // is our proxy for "showed up and ran the day".
+        // Did the mentor actually show up?
         const checkin = await this.prisma.attendanceStaff.findFirst({
           where: {
             userId: mentor.id,
             date: { gte: today, lt: tomorrow },
             loginTime: { not: null },
           },
-          select: { id: true },
+          select: { id: true, loginTime: true },
         });
         if (!checkin) continue;
+
+        // Mentors without a group can't be measured (no group → no
+        // students to teach). Skip rather than award arbitrary points.
+        if (!mentor.groupId) {
+          skipped++;
+          continue;
+        }
+
+        const [studentsTaught, scoresGiven, redNotified] = await Promise.all([
+          this.prisma.attendanceStudent.count({
+            where: {
+              date: { gte: today, lt: tomorrow },
+              status: { in: ['present', 'late'] },
+              student: { groupId: mentor.groupId },
+            },
+          }),
+          this.prisma.studentStatus.count({
+            where: {
+              date: { gte: today, lt: tomorrow },
+              student: { groupId: mentor.groupId },
+            },
+          }),
+          this.prisma.warning.count({
+            where: {
+              givenBy: mentor.id,
+              isCancelled: false,
+              createdAt: { gte: today, lt: tomorrow },
+            },
+          }),
+        ]);
+
+        const { totalScore } = this.kpi.computeMentorDaily({
+          studentsTaught,
+          // Schema has no logout time; checked-in mentors get the
+          // full 60-min credit so the duration row scores +5.
+          durationMinutes: 60,
+          scoresGiven,
+          redNotified,
+        });
+
+        if (totalScore <= 0) {
+          skipped++;
+          continue;
+        }
 
         await this.kpi.award({
           tenantId: mentor.tenantId,
           userId: mentor.id,
-          score: FILADMIN_MONTHLY_KPI_THRESHOLDS.MENTOR_DAILY_BASE_POINTS,
+          score: totalScore,
           reason: KPI_REASONS.AUTO_MENTOR_DAILY,
         });
         awarded++;

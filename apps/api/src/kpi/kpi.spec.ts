@@ -146,27 +146,48 @@ describe('KpiService', () => {
     });
   });
 
-  describe('computeMentorDaily (25.F)', () => {
-    it('caps studentsTaught at 20', () => {
+  describe('computeMentorDaily (§8.1)', () => {
+    it('caps each row at +5 ball — full target hit on every input', () => {
       const r = service.computeMentorDaily({
-        studentsTaught: 25,
-        durationMinutes: 30,
-        scoresGiven: 1,
-        redNotified: 0,
+        studentsTaught: 25, // capped at 20 → 5 ball
+        durationMinutes: 30, // ≥ 15 → 5 ball
+        scoresGiven: 25, // capped at 20 → 5 ball
+        redNotified: 1, // ≥ 1 → 5 ball
       });
       expect(r.cappedStudents).toBe(20);
-      // 20 students * 5 = 100, duration 5, scores 5 = 110
-      expect(r.totalScore).toBe(110);
+      expect(r.totalScore).toBe(20);
     });
 
     it('zeros duration bonus when lesson under 15 minutes', () => {
       const r = service.computeMentorDaily({
-        studentsTaught: 5,
+        studentsTaught: 20,
         durationMinutes: 14,
-        scoresGiven: 0,
+        scoresGiven: 20,
         redNotified: 0,
       });
-      expect(r.totalScore).toBe(25); // 5 students * 5 only
+      // students 5 + duration 0 + scores 5 + red 0
+      expect(r.totalScore).toBe(10);
+    });
+
+    it('scales students linearly when below the 20-target', () => {
+      const r = service.computeMentorDaily({
+        studentsTaught: 4, // 4/20 × 5 = 1
+        durationMinutes: 60,
+        scoresGiven: 4, // 4/20 × 5 = 1
+        redNotified: 0,
+      });
+      // students 1 + duration 5 + scores 1 + red 0
+      expect(r.totalScore).toBe(7);
+    });
+
+    it('red notification is binary, not per-warning', () => {
+      const five = service.computeMentorDaily({
+        studentsTaught: 0,
+        durationMinutes: 0,
+        scoresGiven: 0,
+        redNotified: 5, // five warnings still = +5, not +25
+      });
+      expect(five.totalScore).toBe(5);
     });
   });
 });

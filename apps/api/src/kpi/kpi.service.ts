@@ -115,9 +115,17 @@ export class KpiService {
   }
 
   /**
-   * 25.F.3: Daily KPI for a mentor based on session activity.
-   * Caps the rewardable student count at 20 to prevent gaming with stuffed
-   * lessons. Rewards 5 points per student up to the cap.
+   * §8.1 — Daily KPI breakdown for a mentor. Each row caps at +5 ball
+   * when the spec target is hit; partial completion scales linearly.
+   *
+   *   Darsda o'quvchi soni      target: 20 ta        +5
+   *   Dars davomiyligi          target: ≥15 daqiqa   +5 (binary)
+   *   Balllar qo'yilishi        target: 20 ta        +5
+   *   Vaqtida habar berish      target: ≥1 qizil     +5 (binary)
+   *
+   * Max per day = 20. The previous version multiplied studentsTaught
+   * × 5 (capping at 100) which over-rewarded by a factor of 4 vs.
+   * the spec table.
    */
   computeMentorDaily(input: {
     studentsTaught: number;
@@ -125,17 +133,31 @@ export class KpiService {
     scoresGiven: number;
     redNotified: number;
   }): { totalScore: number; cappedStudents: number } {
-    const STUDENT_CAP = 20;
+    const STUDENT_TARGET = 20;
+    const SCORES_TARGET = 20;
     const cappedStudents = Math.min(
-      STUDENT_CAP,
+      STUDENT_TARGET,
       Math.max(0, input.studentsTaught),
     );
-    const studentScore = cappedStudents * KPI_POINTS.MENTOR_LESSON_STUDENTS;
+    const cappedScores = Math.min(
+      SCORES_TARGET,
+      Math.max(0, input.scoresGiven),
+    );
+
+    // Linear scale to KPI_POINTS.MENTOR_LESSON_STUDENTS at the target.
+    // Round so we don't store fractional ball.
+    const studentScore = Math.round(
+      (cappedStudents / STUDENT_TARGET) * KPI_POINTS.MENTOR_LESSON_STUDENTS,
+    );
     const durationScore =
       input.durationMinutes >= 15 ? KPI_POINTS.MENTOR_LESSON_DURATION : 0;
-    const scoresScore =
-      input.scoresGiven > 0 ? KPI_POINTS.MENTOR_SCORES_GIVEN : 0;
-    const redScore = input.redNotified * KPI_POINTS.MENTOR_RED_NOTIFIED;
+    const scoresScore = Math.round(
+      (cappedScores / SCORES_TARGET) * KPI_POINTS.MENTOR_SCORES_GIVEN,
+    );
+    // Spec: "Vaqtida habar berish | Qizil o'quvchi | +5" — binary,
+    // not per-warning, so spamming warnings doesn't farm KPI.
+    const redScore = input.redNotified > 0 ? KPI_POINTS.MENTOR_RED_NOTIFIED : 0;
+
     return {
       totalScore: studentScore + durationScore + scoresScore + redScore,
       cappedStudents,
