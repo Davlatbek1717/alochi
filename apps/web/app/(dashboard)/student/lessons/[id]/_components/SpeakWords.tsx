@@ -29,12 +29,12 @@ interface SpeakWordsProps {
 type WordStatus = 'pending' | 'active' | 'correct' | 'wrong';
 type Phase = 'idle' | 'listening' | 'passed' | 'failed';
 
-// Per-word fuzzy match threshold. similarityScore() from lib/speech.ts
-// returns 0-100 (NOT 0-1), so this constant must be on the same scale.
-// 65 forgives 1-2 character differences on short words and accent
-// substitutions on longer ones, while still rejecting clearly wrong
-// words like "launch" vs "morning" (which scores ~14).
-const WORD_MATCH_THRESHOLD = 65;
+// Per-word match threshold on the 0-100 scale returned by
+// similarityScore(). 100 means "exact match after normalization"
+// (lowercase + diacritics + punctuation stripped) — only a perfect
+// pronunciation counts as correct, per the spec. Even one wrong
+// character drops the score below 100 and marks the word red.
+const WORD_MATCH_THRESHOLD = 100;
 
 /**
  * Normalize a word for comparison: lowercase, strip diacritics + all
