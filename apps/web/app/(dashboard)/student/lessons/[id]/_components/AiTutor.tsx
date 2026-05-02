@@ -4,6 +4,7 @@ import { Mic, Send, Square } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getSpeechCapabilities, listen } from '@/lib/speech';
+import { apiRequest } from '@/lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -117,21 +118,22 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
     setReadyError('');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/qa/answer`, {
+      // Use apiRequest so the JWT is attached + auto-refreshed on 401.
+      // The endpoint is guarded by JwtAuthGuard + @Roles(student) — a
+      // raw fetch without Authorization always fails with 401 and the
+      // student sees "AI hozir band".
+      const envelope = await apiRequest<{ answer?: string }>('/ai/qa/answer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonContext,
           question,
           history: historySnapshot.map((m) => ({ role: m.role, content: m.content })),
         }),
       });
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      // Support both wrapped { success, data } and legacy raw response.
-      const data = json && typeof json === 'object' && 'data' in json ? json.data : json;
-      setMessages((prev) => [...prev, { role: 'assistant', content: data?.answer ?? '' }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: envelope.data?.answer ?? '' },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,
