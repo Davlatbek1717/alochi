@@ -54,7 +54,7 @@ export class AuthService {
           user = matches[0];
         } else if (matches.length > 1) {
           throw new UnauthorizedException(
-            "Bir xil login bir nechta markazda topildi. Iltimos, markaz nomini kiriting.",
+            'Bir xil login bir nechta markazda topildi. Iltimos, markaz nomini kiriting.',
           );
         }
       }
@@ -102,6 +102,13 @@ export class AuthService {
         name: user.name,
         role: user.role,
         tenantId: user.tenantId,
+        // branchId / groupId are read from `localStorage.user` by
+        // several role pages (filadmin students, manager dashboard,
+        // mentor group). Omitting them forced those pages to fall
+        // through to an empty state — they had no branch to scope
+        // queries against. The JWT already carries both fields.
+        branchId: user.branchId,
+        groupId: user.groupId,
       },
     };
   }

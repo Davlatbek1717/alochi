@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Users, Search, Filter, GraduationCap } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken } from '@/lib/jwt';
 import { EmptyState, Skeleton, useToast } from '@/components/ui';
 import { UserCard, type UserStatusColor } from '../../_components/UserCard';
 
@@ -55,11 +56,17 @@ export default function FiladminStudentsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    let branchId = '';
-    try {
-      const u = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
-      branchId = u.branchId ?? '';
-    } catch { /* ignore */ }
+    // Prefer the JWT-decoded branchId — it survives stale `user`
+    // objects in localStorage left over from before login responses
+    // started returning the branch field. Fall back to the user blob
+    // for safety.
+    let branchId = getBranchIdFromToken() ?? '';
+    if (!branchId) {
+      try {
+        const u = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
+        branchId = u.branchId ?? '';
+      } catch { /* ignore */ }
+    }
 
     async function load() {
       if (!branchId) {

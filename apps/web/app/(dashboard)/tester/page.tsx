@@ -1,396 +1,493 @@
 'use client';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { RefreshCw, BarChart2, Trophy, GraduationCap, Award, FlaskConical, ClipboardList, AlertTriangle } from 'lucide-react';
-import { XpBar } from '../student/_components/XpBar';
-import { StreakBadge } from '../student/_components/StreakBadge';
-import { DailyQuests } from '../student/_components/DailyQuests';
-import { SocialFeed } from '../student/_components/SocialFeed';
-import VirtualCity from '../student/_components/VirtualCity';
-import PathMap500 from '@/components/PathMap500';
-import CertificateShare from '@/components/CertificateShare';
+import {
+  Users,
+  ClipboardList,
+  CheckCircle,
+  ChevronRight,
+  Target,
+  CalendarDays,
+  FlaskConical,
+  Wrench,
+  Clock,
+  PlayCircle,
+  Hourglass,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, SkeletonCard } from '@/components/ui';
+import { getBranchIdFromToken } from '@/lib/jwt';
+import { formatDateWeekday } from '@/lib/date-uz';
+import { Skeleton } from '@/components/ui';
 
-type Quest = {
-  questType: string;
-  targetValue: number;
-  progress: number;
-  completed: boolean;
-  xpReward: number;
-};
-
-type XpData = {
-  totalXp: number;
-  level: string;
-  nextLevelXp: number;
-};
-
-type StreakData = {
-  streak: number;
-  hasShield: boolean;
-};
-
-type CityData = {
-  buildings: Array<{
-    id: string;
-    type: string;
-    tier: number;
-    index: number;
-    unlockedAt: string;
-    isNewest: boolean;
-  }>;
-  tier: { level: number; name: string };
-  lessonsCompleted: number;
-  nextTierAt: number | null;
-  // Back-compat fields the API still returns
-  level?: number;
-  name?: string;
-  nextLevelAt?: number | null;
-};
-
-type StatusData = {
-  englishStatus?: string;
-  personalStatus?: string;
-  criticalStatus?: string;
-};
-
-type ReviewItem = { word: string; easeFactor: number; interval: number };
-
-type Warning = {
+type Task = { id: string; status: string; title: string; createdAt: string; senderName?: string };
+type Student = { id: string; name: string; role: string };
+type AttendanceRow = { studentId: string; status: string };
+type ActiveExam = {
   id: string;
-  reasonType: string;
-  reasonText: string;
-  isCancelled: boolean;
-  createdAt: string;
+  studentId: string;
+  status: string;
+  grantedAt: string;
+  student: { id: string; name: string };
+  lesson: { id: string; title: string; orderNumber: number } | null;
+  exam: { id: string; title: string } | null;
 };
 
-type Certificate = {
-  id: string;
-  level: string;
-  lessonsCompleted: number;
-  qrCode?: string;
-  issuedAt: string;
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  yashil: '🟢',
-  sariq: '🟡',
-  qizil: '🔴',
-  '': '⚪',
-};
+const KPI_TARGET_DAILY = 30;
+const KPI_TARGET_MONTHLY = 600;
 
 export default function TesterDashboard() {
-  const [xpData, setXpData] = useState<XpData>({ totalXp: 0, level: 'Novice', nextLevelXp: 5000 });
-  const [quests, setQuests] = useState<Quest[]>([]);
-  const [cityData, setCityData] = useState<CityData | null>(null);
-  const [streak, setStreak] = useState(0);
-  const [hasShield, setHasShield] = useState(false);
-  const [lessonProgress, setLessonProgress] = useState(0);
+  const router = useRouter();
+  const [kpiToday, setKpiToday] = useState(0);
+  const [kpiMonthly, setKpiMonthly] = useState(0);
+  const [studentCount, setStudentCount] = useState(0);
+  const [presentToday, setPresentToday] = useState(0);
+  const [pendingExams, setPendingExams] = useState<ActiveExam[]>([]);
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+  const [testerName, setTesterName] = useState('');
   const [loading, setLoading] = useState(true);
-  const [statusData, setStatusData] = useState<StatusData | null>(null);
-  const [warnings, setWarnings] = useState<Warning[]>([]);
-  const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    const branchId = getBranchIdFromToken();
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
+    setTesterName(user.name ?? '');
 
-    async function fetchData() {
-      try {
-        const [xpRes, questsRes, cityRes, streakRes, progressRes, statusRes, warningsRes, reviewRes, certsRes] = await Promise.all([
-          apiRequest<XpData>('/gamification/xp', {}, token),
-          apiRequest<Quest[]>('/gamification/quests', {}, token),
-          apiRequest<CityData>('/gamification/city', {}, token),
-          apiRequest<StreakData>('/gamification/streak', {}, token),
-          apiRequest<unknown[]>('/progress/my', {}, token).catch(() => ({ data: [] as unknown[] })),
-          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
-          apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
-          apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
-          apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
-        ]);
-        setXpData(xpRes.data);
-        setQuests(questsRes.data);
-        setCityData(cityRes.data);
-        setStreak(streakRes.data.streak);
-        setHasShield(streakRes.data.hasShield);
-        setLessonProgress(progressRes.data?.length ?? 0);
-        setStatusData(statusRes.data);
-        setWarnings(warningsRes.data ?? []);
-        setReviewItems(reviewRes.data ?? []);
-        setCertificates(certsRes.data ?? []);
-      } catch {
-        // keep defaults on error
-      } finally {
-        setLoading(false);
-      }
-    }
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
 
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="max-w-lg mx-auto space-y-4 pb-20 pt-4 px-4">
-        <Skeleton theme="light" className="h-28 w-full rounded-2xl" />
-        <div className="grid grid-cols-3 gap-3">
-          <Skeleton theme="light" className="h-16 rounded-xl" />
-          <Skeleton theme="light" className="h-16 rounded-xl" />
-          <Skeleton theme="light" className="h-16 rounded-xl" />
-        </div>
-        <SkeletonCard theme="light" />
-        <SkeletonCard theme="light" />
-      </div>
-    );
-  }
-
-  const activeWarnings = warnings.filter((w) => !w.isCancelled);
-
-  return (
-    <div className="max-w-lg mx-auto space-y-4 pb-20">
-      <div className="bg-[#0f172a] rounded-2xl p-4 text-white relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-15 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="flex justify-between items-start relative z-10">
-          <div>
-            <p className="text-[#94a3b8] text-sm">🧪 Tester paneli</p>
-            <p className="text-2xl font-bold mt-1">Dars #{lessonProgress}</p>
-          </div>
-          <StreakBadge streak={streak} hasShield={hasShield} />
-        </div>
-        <div className="mt-3 relative z-10">
-          <XpBar totalXp={xpData.totalXp} level={xpData.level} nextLevelXp={xpData.nextLevelXp} />
-        </div>
-      </div>
-
-      {activeWarnings.length > 0 && (
-        <div className={`rounded-xl p-3 flex items-start gap-3 ${activeWarnings.length >= 3 ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`}>
-          <span className="text-xl shrink-0">{activeWarnings.length >= 3 ? '🔴' : '⚠️'}</span>
-          <div className="flex-1">
-            <p className={`font-semibold text-sm ${activeWarnings.length >= 3 ? 'text-red-700' : 'text-yellow-700'}`}>
-              {activeWarnings.length >= 3 ? 'Hisobingiz bloklangan' : `${activeWarnings.length} ta ogohlantirish`}
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {activeWarnings[0].reasonText}
-              {activeWarnings.length > 1 && ` va yana ${activeWarnings.length - 1} ta`}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Ingliz tili', field: 'englishStatus' as const },
-          { label: 'Shaxsiy', field: 'personalStatus' as const },
-          { label: 'Tanqidiy', field: 'criticalStatus' as const },
-        ].map((s) => (
-          <div key={s.field} className="bg-white rounded-xl p-3 text-center shadow-sm">
-            <p className="text-2xl">
-              {STATUS_COLOR[statusData?.[s.field] ?? ''] ?? '⚪'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <DailyQuests quests={quests} />
-
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          Yo&apos;l xaritasi
-        </p>
-        <PathMap500 currentStep={lessonProgress} />
-        <p className="text-xs text-gray-500 mt-2 text-right">
-          {lessonProgress} / 500 dars
-        </p>
-      </div>
-
-      {certificates.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-3">
-            <Award size={16} className="text-amber-500" />
-            <h2 className="font-bold text-gray-800 text-sm">Sertifikatlar</h2>
-            <span className="text-xs text-gray-500">{certificates.length} ta</span>
-          </div>
-          <div className="space-y-3">
-            {certificates.slice(0, 3).map((cert) => (
-              <div
-                key={cert.id}
-                className="border border-amber-100 bg-amber-50/40 rounded-xl p-3"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-amber-700 text-sm capitalize">
-                    {cert.level} sertifikati
-                  </p>
-                  <span className="text-xs text-gray-500">
-                    {cert.lessonsCompleted} dars
-                  </span>
-                </div>
-                <CertificateShare cert={cert} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {cityData && (
-        <VirtualCity
-          buildings={cityData.buildings ?? []}
-          tier={cityData.tier ?? { level: cityData.level ?? 1, name: cityData.name ?? 'Qishloq' }}
-          lessonsCompleted={cityData.lessonsCompleted ?? 0}
-          nextTierAt={cityData.nextTierAt ?? cityData.nextLevelAt ?? null}
-        />
-      )}
-
-      {reviewItems.length > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-          <div className="flex items-center gap-2">
-            <RefreshCw size={16} className="text-[#0d9488]" />
-            <h2 className="font-bold text-gray-800">Kunlik Takrorlash</h2>
-          </div>
-          <p className="text-sm text-gray-500">{reviewItems.length} ta so&apos;z takrorlanishi kerak</p>
-          <div className="flex flex-wrap gap-2">
-            {reviewItems.slice(0, 6).map((item) => (
-              <span
-                key={item.word}
-                className="bg-indigo-50 text-indigo-700 text-sm px-3 py-1 rounded-full border border-indigo-100"
-              >
-                {item.word}
-              </span>
-            ))}
-            {reviewItems.length > 6 && (
-              <span className="bg-gray-50 text-gray-500 text-sm px-3 py-1 rounded-full border border-gray-100">
-                +{reviewItems.length - 6} ta
-              </span>
-            )}
-          </div>
-          <Link
-            href="/student/review"
-            className="block text-center text-sm bg-[#0f172a] hover:bg-[#1e293b] text-white py-2.5 rounded-xl font-semibold transition-colors"
-          >
-            Takrorlashni boshlash →
-          </Link>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/student/review"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
-        >
-          <RefreshCw size={22} className="text-[#0d9488]" />
-          <p className="font-bold text-sm text-gray-800">Takrorlash</p>
-          <p className="text-xs text-gray-500">Spaced repetition</p>
-        </Link>
-        <Link
-          href="/student/errors"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
-        >
-          <BarChart2 size={22} className="text-[#7c3aed]" />
-          <p className="font-bold text-sm text-gray-800">Xato tahlili</p>
-          <p className="text-xs text-gray-500">AI tavsiyalar</p>
-        </Link>
-        <Link
-          href="/student/tournaments"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
-        >
-          <Trophy size={22} className="text-[#f59e0b]" />
-          <p className="font-bold text-sm text-gray-800">Turnirlar</p>
-          <p className="text-xs text-gray-500">Musobaqalar</p>
-        </Link>
-        <Link
-          href="/student/exams"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2"
-        >
-          <GraduationCap size={22} className="text-[#7c3aed]" />
-          <p className="font-bold text-sm text-gray-800">Imtihonlar</p>
-          <p className="text-xs text-gray-500">Imtihon topshirish</p>
-        </Link>
-      </div>
-
-      <Link
-        href="/tester/exam-queue"
-        className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 hover:scale-[1.02] transition-transform"
-      >
-        <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
-          <FlaskConical size={22} className="text-amber-600" />
-        </div>
-        <div className="flex-1">
-          <p className="font-bold text-sm text-gray-800">🧪 Sinov navbati</p>
-          <p className="text-xs text-gray-500">Imtihon topshirayotgan o&apos;quvchilar</p>
-        </div>
-        <span className="text-gray-300 text-xl">›</span>
-      </Link>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/tester/tasks"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2 hover:scale-[1.02] transition-transform"
-        >
-          <ClipboardList size={22} className="text-[#0d9488]" />
-          <p className="font-bold text-sm text-gray-800">Vazifalar</p>
-          <p className="text-xs text-gray-500">Tester topshiriqlari</p>
-        </Link>
-        <Link
-          href="/tester/tech-issues"
-          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col gap-2 hover:scale-[1.02] transition-transform"
-        >
-          <AlertTriangle size={22} className="text-rose-500" />
-          <p className="font-bold text-sm text-gray-800">Texnik muammo</p>
-          <p className="text-xs text-gray-500">Bug-report yuborish</p>
-        </Link>
-      </div>
-
-      <SocialFeed />
-
-      {/* 25.H.1: tiny chip that shows current lesson session/N */}
-
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5rem)] left-0 right-0 px-4 max-w-lg mx-auto space-y-2">
-        <CurrentLessonChip />
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          className="!rounded-2xl !py-4 !bg-[#f59e0b] hover:!bg-[#d97706] !border-[#f59e0b] shadow-lg"
-          onClick={() => { window.location.href = '/tester/lessons/current'; }}
-        >
-          ▶️ Sinov darsi
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/**
- * 25.H.1: "Sessiya {sessionCount}/{N}" chip rendered just above the
- * "Sinov darsi" CTA. Reads from /lessons/next + /progress/my.
- */
-function CurrentLessonChip() {
-  const [text, setText] = useState<string | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken') ?? '';
-    if (!token) return;
-    type LessonInfo = { id: string; nRepetitions: number };
-    type ProgressRow = { lessonId: string; sessionCount: number };
     Promise.all([
-      apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => null),
-      apiRequest<ProgressRow[]>('/progress/my', {}, token).catch(() => null),
-    ]).then(([lesson, progress]) => {
-      const data = lesson?.data ?? null;
-      if (!data) return;
-      const row = progress?.data?.find((p) => p.lessonId === data.id);
-      const count = row?.sessionCount ?? 0;
-      setText(`Sessiya ${count}/${data.nRepetitions}`);
-    });
+      apiRequest<number>('/kpi/daily', {}, token).catch(() => ({ data: 0 })),
+      apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token).catch(() => ({ data: 0 })),
+      branchId
+        ? apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token).catch(
+            () => ({ data: [] as Student[] }),
+          )
+        : Promise.resolve({ data: [] as Student[] }),
+      branchId
+        ? apiRequest<AttendanceRow[]>(`/attendance/students/${branchId}/${today}`, {}, token).catch(
+            () => ({ data: [] as AttendanceRow[] }),
+          )
+        : Promise.resolve({ data: [] as AttendanceRow[] }),
+      apiRequest<ActiveExam[]>('/exams/branch/active', {}, token).catch(
+        () => ({ data: [] as ActiveExam[] }),
+      ),
+      apiRequest<Task[]>('/tasks/my', {}, token).catch(() => ({ data: [] as Task[] })),
+    ])
+      .then(([kpiT, kpiM, studentsRes, attRes, examsRes, tasksRes]) => {
+        setKpiToday((kpiT as { data: number }).data ?? 0);
+        setKpiMonthly((kpiM as { data: number }).data ?? 0);
+        setStudentCount((studentsRes.data ?? []).length);
+        setPresentToday(
+          (attRes.data ?? []).filter((a) => a.status === 'present' || a.status === 'late').length,
+        );
+        setPendingExams(examsRes.data ?? []);
+        const incoming = (tasksRes.data ?? []).filter(
+          (t) => t.status !== 'done' && t.status !== 'confirmed',
+        );
+        setPendingTasks(incoming);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!text) return null;
+  const dateStr = formatDateWeekday(new Date());
+  const kpiPercent = Math.min(100, Math.round((kpiToday / KPI_TARGET_DAILY) * 100));
+  const monthlyPercent = Math.min(100, Math.round((kpiMonthly / KPI_TARGET_MONTHLY) * 100));
+  const circumference = 2 * Math.PI * 32;
+  const strokeDashoffset = circumference - (circumference * kpiPercent) / 100;
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Xayrli tong';
+    if (hour < 18) return 'Xayrli kun';
+    return 'Xayrli kech';
+  }, []);
+
+  // Tester is dedicated supervisory staff — the dashboard surfaces
+  // exam-queue throughput, branch attendance, KPI progress, and
+  // outstanding tasks. No student gamification (XP, streak, virtual
+  // city, daily quests, certificates) — those belonged to a copy
+  // of the student dashboard and were never meaningful for staff.
+  const navCards = [
+    {
+      href: '/tester/exam-queue',
+      icon: <FlaskConical size={20} />,
+      title: 'Imtihon navbati',
+      desc: pendingExams.length > 0
+        ? `${pendingExams.length} ta navbatda`
+        : 'Bugungi imtihon ro\'yxati',
+      tint: 'text-amber-700 bg-amber-50 border-amber-200',
+      hoverBorder: 'hover:border-amber-300',
+      badge: pendingExams.length > 0 ? pendingExams.length : undefined,
+    },
+    {
+      href: '/tester/lessons/current',
+      icon: <PlayCircle size={20} />,
+      title: 'Sinov darsi',
+      desc: 'Talabalardan oldin sinab ko\'rish',
+      tint: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      hoverBorder: 'hover:border-emerald-300',
+    },
+    {
+      href: '/tester/tasks',
+      icon: <ClipboardList size={20} />,
+      title: 'Vazifalar',
+      desc: pendingTasks.length > 0
+        ? `${pendingTasks.length} ta kutilmoqda`
+        : 'Mening topshiriqlarim',
+      tint: 'text-blue-700 bg-blue-50 border-blue-200',
+      hoverBorder: 'hover:border-blue-300',
+      badge: pendingTasks.length > 0 ? pendingTasks.length : undefined,
+    },
+    {
+      href: '/tester/tech-issues',
+      icon: <Wrench size={20} />,
+      title: 'Texnik muammo',
+      desc: 'Bug-report yuborish',
+      tint: 'text-rose-700 bg-rose-50 border-rose-200',
+      hoverBorder: 'hover:border-rose-300',
+    },
+  ];
+
   return (
-    <div className="bg-white border-[1.5px] border-[#ede9e1] rounded-full px-3 py-1 text-xs font-semibold text-[#0f172a] inline-block shadow-sm">
-      {text}
+    <div className="min-h-full bg-[#f7f4ef] pb-12">
+      {/* Header — staff amber accent on dark navy */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-15 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
+        />
+        <div className="relative z-10 space-y-4">
+          {/* Greeting */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[#94a3b8] text-[11px] font-bold uppercase tracking-widest">
+                {greeting} · Tester
+              </p>
+              <p className="text-white text-xl font-extrabold truncate">
+                {testerName || 'Tester'}
+              </p>
+              <p className="text-[#475569] text-[11px] mt-0.5 font-bold inline-flex items-center gap-1.5">
+                <CalendarDays size={11} /> {dateStr}
+              </p>
+            </div>
+          </div>
+
+          {/* KPI hero card — same shape as mentor for visual parity */}
+          <div className="bg-[#162032] border border-white/5 rounded-3xl p-4 flex items-center gap-4">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg
+                width="80"
+                height="80"
+                viewBox="0 0 80 80"
+                style={{ transform: 'rotate(-90deg)' }}
+              >
+                <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(245,158,11,0.12)" strokeWidth="6" />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="32"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="6"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 600ms ease-out' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {loading ? (
+                  <span className="text-[#f59e0b] text-xs font-bold">...</span>
+                ) : (
+                  <>
+                    <span className="text-[#f59e0b] text-xl font-extrabold leading-none font-mono">
+                      {kpiToday}
+                    </span>
+                    <span className="text-[#f59e0b]/60 text-[9px] font-bold uppercase tracking-wider">
+                      ball
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Target size={12} className="text-[#f59e0b]" />
+                <p className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-widest">
+                  Bugungi maqsad
+                </p>
+              </div>
+              <p className="text-white text-base font-extrabold">
+                {kpiToday} / {KPI_TARGET_DAILY}{' '}
+                <span className="text-[#94a3b8] font-bold text-xs">({kpiPercent}%)</span>
+              </p>
+              <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#f59e0b] to-[#fbbf24] rounded-full transition-all duration-500"
+                  style={{ width: `${monthlyPercent}%` }}
+                />
+              </div>
+              <p className="text-[#94a3b8] text-[10px] mt-1 font-bold">
+                Oylik: {kpiMonthly} / {KPI_TARGET_MONTHLY} ball ({monthlyPercent}%)
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="max-w-lg mx-auto px-4 pt-5 pb-6 space-y-5">
+        {/* Today snapshot — exam queue lead, then 3 stat tiles */}
+        <section>
+          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
+            Bugungi holat
+          </p>
+
+          {/* Big exam-queue card with live count */}
+          <button
+            type="button"
+            onClick={() => router.push('/tester/exam-queue')}
+            className={`w-full text-left rounded-2xl border-[1.5px] p-4 flex items-center gap-3 transition-colors ${
+              pendingExams.length > 0
+                ? 'bg-amber-50 border-amber-200 hover:border-amber-300'
+                : 'bg-emerald-50 border-emerald-200 hover:border-emerald-300'
+            }`}
+          >
+            <div
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                pendingExams.length > 0
+                  ? 'bg-amber-500 text-white motion-safe:animate-pulse'
+                  : 'bg-emerald-500 text-white'
+              }`}
+            >
+              {pendingExams.length > 0 ? (
+                <Hourglass size={20} />
+              ) : (
+                <CheckCircle size={20} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className={`text-sm font-extrabold ${
+                  pendingExams.length > 0 ? 'text-amber-900' : 'text-emerald-800'
+                }`}
+              >
+                {pendingExams.length > 0
+                  ? `${pendingExams.length} ta o'quvchi navbatda`
+                  : 'Navbat bo\'sh'}
+              </p>
+              <p
+                className={`text-[11px] font-bold mt-0.5 ${
+                  pendingExams.length > 0 ? 'text-amber-800/70' : 'text-emerald-700/70'
+                }`}
+              >
+                {pendingExams.length > 0
+                  ? "Imtihon navbati sahifasiga o'ting"
+                  : "Hech kim imtihon kutilmayapti"}
+              </p>
+            </div>
+            <ChevronRight
+              size={18}
+              className={pendingExams.length > 0 ? 'text-amber-800/50' : 'text-emerald-700/50'}
+            />
+          </button>
+
+          {/* 3-tile compact stat grid */}
+          {loading ? (
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} theme="light" className="h-20 rounded-2xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <SnapshotTile
+                icon={<Users size={16} />}
+                value={studentCount}
+                label="O'quvchilar"
+                tint="text-blue-700"
+                bg="bg-blue-50 border-blue-100"
+              />
+              <SnapshotTile
+                icon={<CheckCircle size={16} />}
+                value={presentToday}
+                label="Bugun keldi"
+                tint="text-emerald-700"
+                bg="bg-emerald-50 border-emerald-100"
+              />
+              <SnapshotTile
+                icon={<Clock size={16} />}
+                value={pendingExams.length}
+                label="Navbatda"
+                tint="text-amber-700"
+                bg="bg-amber-50 border-amber-100"
+              />
+            </div>
+          )}
+        </section>
+
+        {/* Pending exam queue preview — first 3 names so the tester
+            knows who's up next without leaving the dashboard. */}
+        {!loading && pendingExams.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
+                Keyingi imtihon topshiruvchilar
+              </p>
+              <Link
+                href="/tester/exam-queue"
+                className="text-[11px] font-bold text-[#f59e0b] hover:underline"
+              >
+                Barchasi →
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {pendingExams.slice(0, 3).map((p) => {
+                const subjectTitle = p.exam?.title ?? p.lesson?.title ?? 'Imtihon';
+                const subjectKind = p.exam ? 'Katalog' : 'Dars';
+                return (
+                  <li
+                    key={p.id}
+                    className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 font-black text-xs shrink-0">
+                      {p.student.name
+                        .split(' ')
+                        .slice(0, 2)
+                        .map((w) => w[0])
+                        .join('')
+                        .toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-extrabold text-[#0f172a] truncate">
+                        {p.student.name}
+                      </p>
+                      <p className="text-[11px] text-[#64748b] font-bold truncate">
+                        <span className="text-amber-700">{subjectKind}</span> · {subjectTitle}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {/* Quick action grid */}
+        <section>
+          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
+            Tezkor harakatlar
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {navCards.map((card) => (
+              <Link
+                key={card.href}
+                href={card.href}
+                className={`relative bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4 flex flex-col gap-2 transition-colors ${card.hoverBorder}`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border-[1.5px] ${card.tint}`}
+                >
+                  {card.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-extrabold text-sm text-[#0f172a]">{card.title}</p>
+                  <p className="text-[11px] font-bold text-[#64748b] truncate mt-0.5">
+                    {card.desc}
+                  </p>
+                </div>
+                {card.badge !== undefined && (
+                  <span className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {card.badge}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Outstanding tasks — last 3 incoming, link to full list */}
+        {!loading && pendingTasks.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
+                Yangi vazifalar
+              </p>
+              <Link
+                href="/tester/tasks"
+                className="text-[11px] font-bold text-[#f59e0b] hover:underline"
+              >
+                Barchasi →
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {pendingTasks.slice(0, 3).map((t) => (
+                <li
+                  key={t.id}
+                  className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center gap-3"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                    <ClipboardList size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-extrabold text-[#0f172a] truncate">{t.title}</p>
+                    <p className="text-[11px] text-[#64748b] font-bold truncate">
+                      {t.senderName ? `${t.senderName} · ` : ''}
+                      {new Date(t.createdAt).toLocaleDateString('uz-UZ')}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                    Yangi
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Empty all-clear hint — both queue and tasks empty */}
+        {!loading && pendingExams.length === 0 && pendingTasks.length === 0 && (
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle size={22} className="text-emerald-600" />
+            </div>
+            <p className="text-sm font-extrabold text-[#0f172a]">Hammasi tayyor</p>
+            <p className="text-[11px] font-bold text-[#64748b] mt-1">
+              Imtihon navbatida hech kim yo&apos;q va yangi vazifalar yo&apos;q
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+interface SnapshotTileProps {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  tint: string;
+  bg: string;
+}
+
+function SnapshotTile({ icon, value, label, tint, bg }: SnapshotTileProps) {
+  return (
+    <div className={`rounded-2xl border-[1.5px] ${bg} p-3 flex flex-col gap-1.5`}>
+      <div className={`w-7 h-7 rounded-lg bg-white/70 flex items-center justify-center ${tint}`}>
+        {icon}
+      </div>
+      <p className="text-xl font-extrabold text-[#0f172a] font-mono leading-none">{value}</p>
+      <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider truncate">
+        {label}
+      </p>
+    </div>
+  );
+}
+
