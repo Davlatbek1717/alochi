@@ -298,26 +298,78 @@ export default function LessonPage() {
     }
   }
 
+  /**
+   * MCQ extractor — handles BOTH config shapes that ship in production:
+   *
+   *   1. Aggregate: { questions: [{ text, options, correct }] } — what
+   *      the legacy /lessons/:id/mcq POST writes and what the
+   *      per-component configurator MCQ form also stores. Each component
+   *      can carry many questions.
+   *   2. Per-component flat: { question, options, correctIndex } — older
+   *      assumed single-question shape that some seeds used.
+   *
+   * Walking the components and accumulating from either shape keeps the
+   * runner from blanking out with a "MCQ savollar topilmadi" SkipPanel
+   * when the data is actually present in the aggregate format.
+   */
   function getMcqQuestions() {
     if (!lesson) return [];
-    return lesson.components_data
-      .filter((c) => c.type === 'mcq')
-      .map((c) => {
-        const cfg = c.config as McqConfig;
-        return { text: cfg?.question ?? '', options: cfg?.options ?? [], correct: cfg?.correctIndex ?? 0 };
-      })
-      .filter((q) => q.text && q.options.length > 0);
+    const out: { text: string; options: string[]; correct: number }[] = [];
+    for (const c of lesson.components_data) {
+      if (c.type !== 'mcq') continue;
+      const cfg = c.config as {
+        questions?: Array<{ text?: string; options?: string[]; correct?: number }>;
+        question?: string;
+        options?: string[];
+        correctIndex?: number;
+      };
+      if (Array.isArray(cfg?.questions) && cfg.questions.length > 0) {
+        for (const q of cfg.questions) {
+          if (q?.text && Array.isArray(q.options) && q.options.length > 0) {
+            out.push({
+              text: q.text,
+              options: q.options,
+              correct: typeof q.correct === 'number' ? q.correct : 0,
+            });
+          }
+        }
+      } else if (cfg?.question && Array.isArray(cfg.options) && cfg.options.length > 0) {
+        out.push({
+          text: cfg.question,
+          options: cfg.options,
+          correct: typeof cfg.correctIndex === 'number' ? cfg.correctIndex : 0,
+        });
+      }
+    }
+    return out;
   }
 
+  /**
+   * Word-order extractor — same dual-shape handling as getMcqQuestions.
+   * Aggregate shape: { sentences: [{ words, correct }] }.
+   * Flat shape:      { words, correct }.
+   */
   function getWordOrderSentences() {
     if (!lesson) return [];
-    return lesson.components_data
-      .filter((c) => c.type === 'word_order')
-      .map((c) => {
-        const cfg = c.config as WordOrderConfig;
-        return { words: cfg?.words ?? [], correct: cfg?.correct ?? '' };
-      })
-      .filter((s) => s.words.length > 0 && s.correct);
+    const out: { words: string[]; correct: string }[] = [];
+    for (const c of lesson.components_data) {
+      if (c.type !== 'word_order') continue;
+      const cfg = c.config as {
+        sentences?: Array<{ words?: string[]; correct?: string }>;
+        words?: string[];
+        correct?: string;
+      };
+      if (Array.isArray(cfg?.sentences) && cfg.sentences.length > 0) {
+        for (const s of cfg.sentences) {
+          if (Array.isArray(s?.words) && s.words.length > 0 && s.correct) {
+            out.push({ words: s.words, correct: s.correct });
+          }
+        }
+      } else if (Array.isArray(cfg?.words) && cfg.words.length > 0 && cfg?.correct) {
+        out.push({ words: cfg.words, correct: cfg.correct });
+      }
+    }
+    return out;
   }
 
   /** Pass 2 — Translate configs (A). */
@@ -653,6 +705,26 @@ export default function LessonPage() {
 
   // ─── Completion screen ────────────────────────────────────────────────────
   if (step === 'done') {
+    // Treat the freshly-saved progress row as authoritative for session
+    // accounting. The student needs `nRepetitions` total sessions before
+    // homeCompleted flips to true; until then we re-frame the screen as
+    // "session done, lesson not yet finished" and the primary CTA
+    // restarts the lesson at intro.
+    const sessionsDone = progress?.sessionCount ?? 0;
+    const totalSessions = lesson.nRepetitions ?? 1;
+    const lessonHomeCompleted = progress?.homeCompleted ?? sessionsDone >= totalSessions;
+    const handlePrimary = () => {
+      if (!lessonHomeCompleted) {
+        // Start another rotation through the same lesson. Reload over
+        // navigate so every state resets cleanly (hearts, wrong counter,
+        // step pointer, fetched data).
+        if (typeof window !== 'undefined') {
+          window.location.reload();
+        }
+        return;
+      }
+      router.push('/student/lessons');
+    };
     return (
       <>
         <CompletionScreen
@@ -661,15 +733,18 @@ export default function LessonPage() {
           accuracy={accuracy}
           leveledUp={leveledUp}
           notice={
-            lesson.hasExam
+            lesson.hasExam && lessonHomeCompleted
               ? 'Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.'
               : undefined
           }
-          onPrimary={() => router.push('/student/lessons')}
-          primaryLabel="Keyingi dars"
+          onPrimary={handlePrimary}
+          primaryLabel={lessonHomeCompleted ? 'Keyingi dars' : 'Yana ishlash'}
           onSecondary={() => router.push('/student')}
           errorBanner={sessionError ? 'Sessiyani saqlashda xato yuz berdi.' : undefined}
           onRetry={sessionError ? completeSession : undefined}
+          sessionCount={sessionsDone}
+          totalSessions={totalSessions}
+          homeCompleted={lessonHomeCompleted}
         />
         <FeedbackWidget lessonId={id} />
       </>

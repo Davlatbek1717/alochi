@@ -26,6 +26,12 @@ interface CompletionScreenProps {
   errorBanner?: string;
   /** Optional retry action when errorBanner is shown. */
   onRetry?: () => void;
+  /** When provided AND `homeCompleted === false`, the screen re-frames
+   *  itself as "session done, lesson not yet complete" — different copy,
+   *  different primary CTA, and a Sessiya {N}/{Total} progress strip. */
+  sessionCount?: number;
+  totalSessions?: number;
+  homeCompleted?: boolean;
 }
 
 /**
@@ -51,41 +57,103 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
   onSecondary,
   errorBanner,
   onRetry,
+  sessionCount,
+  totalSessions,
+  homeCompleted,
 }) => {
+  // The "session done but lesson not yet complete" branch: triggered when
+  // we know the lesson requires N sessions (totalSessions > 1) and the
+  // student is still mid-rotation. Confetti + level-up sounds stay off
+  // here — the celebration is reserved for the actual lesson completion
+  // (homeCompleted === true).
+  const isSessionOnly =
+    typeof totalSessions === 'number' &&
+    totalSessions > 1 &&
+    homeCompleted === false;
+
   useEffect(() => {
+    if (isSessionOnly) {
+      // Lighter sound — we don't want to keep firing the big "complete"
+      // chime on every one of N sessions.
+      playSound('xp', 0.5);
+      return undefined;
+    }
     playSound('complete', 0.55);
     if (leveledUp) {
       const t = window.setTimeout(() => playSound('levelup', 0.6), 350);
       return () => window.clearTimeout(t);
     }
     return undefined;
-  }, [leveledUp]);
+  }, [leveledUp, isSessionOnly]);
 
   const xp = xpEarned ?? 30;
   const showStreak = typeof streak === 'number' && streak > 0;
   const showAccuracy =
     typeof accuracy === 'number' && Number.isFinite(accuracy);
 
+  // Resolved title/subtitle/CTA based on the three branches:
+  //   - isSessionOnly:       "Sessiya tugadi" + "Yana ishlash"
+  //   - leveledUp:           "YANGI DARAJA!"
+  //   - homeCompleted/other: "AJOYIB!" + "Keyingi dars"
+  const title = isSessionOnly
+    ? 'SESSIYA TUGADI'
+    : leveledUp
+      ? 'YANGI DARAJA!'
+      : 'AJOYIB!';
+  const subtitle = isSessionOnly
+    ? `Bu darsni yana ${Math.max(0, (totalSessions ?? 0) - (sessionCount ?? 0))} marta takrorlash kerak`
+    : leveledUp
+      ? 'Keyingi darajaga ko‘tarildingiz! Davom etamiz.'
+      : 'Sessiyani muvaffaqiyatli yakunladingiz';
+  const resolvedPrimaryLabel = isSessionOnly ? 'Yana ishlash' : primaryLabel;
+
+  const sessionPct =
+    typeof totalSessions === 'number' && totalSessions > 0
+      ? Math.min(100, Math.round(((sessionCount ?? 0) / totalSessions) * 100))
+      : 0;
+
   return (
     <div className="relative min-h-screen bg-[#fffaf0] overflow-hidden">
-      <Confetti count={32} />
+      {/* Confetti only on the real lesson completion — keeps "session N
+          of M" reads as a milestone, not a finale. */}
+      {!isSessionOnly && <Confetti count={32} />}
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
         <div className="motion-safe:[animation:bounce-in_600ms_ease-out]">
-          <Mascot expression="happy" size={180} animated />
+          <Mascot
+            expression={isSessionOnly ? 'idle' : 'happy'}
+            size={isSessionOnly ? 140 : 180}
+            animated
+          />
         </div>
 
         <h1
           className="mt-6 text-3xl sm:text-4xl font-extrabold leading-tight text-[#3c3c3c]"
           style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
         >
-          {leveledUp ? 'YANGI DARAJA!' : 'AJOYIB!'}
+          {title}
         </h1>
         <p className="mt-1 text-sm sm:text-base font-semibold text-[#7a5e2c] max-w-sm">
-          {leveledUp
-            ? "Keyingi darajaga ko‘tarildingiz! Davom etamiz."
-            : 'Sessiyani muvaffaqiyatli yakunladingiz'}
+          {subtitle}
         </p>
+
+        {/* Per-lesson session progress strip — only shown in the
+            isSessionOnly branch. Reads at a glance: "you're at 1/3,
+            two more passes to go". */}
+        {isSessionOnly && (
+          <div className="mt-6 w-full max-w-sm">
+            <div className="flex items-center justify-between text-[11px] font-extrabold text-[#7a5e2c] uppercase tracking-wider mb-1.5">
+              <span>Sessiya {sessionCount} / {totalSessions}</span>
+              <span>{sessionPct}%</span>
+            </div>
+            <div className="h-2.5 bg-white border border-[#e8e0d0] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#58cc02] to-[#46a302] rounded-full transition-all duration-500"
+                style={{ width: `${sessionPct}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Stat tiles row */}
         <div className="mt-8 grid grid-cols-3 gap-2 w-full max-w-sm">
@@ -141,7 +209,7 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
             onClick={onPrimary}
             className="!py-4 !text-base"
           >
-            {primaryLabel}
+            {resolvedPrimaryLabel}
           </Button>
           <button
             type="button"
