@@ -218,7 +218,7 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
+      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
         <Skeleton theme="light" className="h-32 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
@@ -231,7 +231,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="bg-[#fffaf0] min-h-screen">
-      <div className="max-w-lg mx-auto pb-28 pt-4 px-4 space-y-5">
+      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl pb-28 pt-4 px-4 md:px-6 space-y-5">
         {/* 1. Compact greeting hero — mascot + name + streak/step */}
         <GreetingHero
           firstName={firstName}
@@ -310,13 +310,13 @@ function GreetingHero({
     >
       <div
         aria-hidden
-        className="absolute -top-12 -right-12 w-44 h-44 rounded-full opacity-60 pointer-events-none"
+        className="absolute -top-12 -right-12 w-44 h-44 md:w-72 md:h-72 rounded-full opacity-60 pointer-events-none"
         style={{
           background:
             'radial-gradient(circle, rgba(251,191,36,0.55) 0%, transparent 70%)',
         }}
       />
-      <div className="relative z-10 p-5 space-y-4">
+      <div className="relative z-10 p-5 md:px-8 md:py-8 space-y-4">
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             <Mascot expression={mood} size={88} animated />
@@ -684,7 +684,7 @@ function BrowseMoreGrid() {
       <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c] px-1">
         Yana
       </p>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
         {items.map((it) => (
           <Link
             key={it.href}

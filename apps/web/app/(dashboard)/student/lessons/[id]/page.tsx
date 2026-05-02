@@ -659,7 +659,7 @@ export default function LessonPage() {
             <Skeleton theme="light" className="w-20 h-6 rounded-full shrink-0" />
           </div>
         </div>
-        <div className="px-4 pt-6 space-y-4 max-w-md mx-auto">
+        <div className="px-4 pt-6 space-y-4 max-w-md mx-auto md:max-w-3xl lg:max-w-4xl">
           <Skeleton theme="light" className="w-full aspect-video rounded-2xl" />
           <Skeleton theme="light" className="h-12 w-full rounded-2xl" />
         </div>
@@ -871,7 +871,7 @@ export default function LessonPage() {
 
       {/* Sticky cream header: ✕ + progress bar + hearts */}
       <header className="sticky top-0 z-30 bg-[#fffaf0] border-b border-[#f3eedf]">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 py-3 flex items-center gap-3">
           <button
             type="button"
             onClick={handleBackClick}
@@ -888,7 +888,7 @@ export default function LessonPage() {
           <Hearts remaining={hearts} max={HEARTS_MAX} />
         </div>
         {progress ? (
-          <div className="max-w-md mx-auto px-4 pb-2 flex items-center justify-between">
+          <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 pb-2 flex items-center justify-between">
             <p
               className="text-xs font-extrabold text-[#7a5e2c] uppercase tracking-wider truncate"
               style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
@@ -903,7 +903,7 @@ export default function LessonPage() {
       </header>
 
       {/* Body */}
-      <main className="px-4 pt-6 pb-10 space-y-4 max-w-md mx-auto">
+      <main className="px-4 pt-6 pb-10 space-y-4 max-w-md mx-auto md:max-w-3xl lg:max-w-4xl">
         {step === 'video' && (
           <div className="space-y-4">
             <VideoPlayer

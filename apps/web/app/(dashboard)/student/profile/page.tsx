@@ -218,7 +218,7 @@ export default function StudentProfilePage() {
           <Skeleton theme="light" className="h-8 w-48 mb-3" />
           <Skeleton theme="light" className="h-4 w-32" />
         </div>
-        <div className="px-4 pt-5 space-y-3 max-w-lg mx-auto">
+        <div className="px-4 pt-5 space-y-3 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24 rounded-2xl" theme="light" />
           ))}
@@ -309,8 +309,8 @@ export default function StudentProfilePage() {
   return (
     <div className="min-h-full bg-[#fffaf0] pb-28">
       {/* Hero card — avatar + name + branch + Aloqush */}
-      <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 relative overflow-hidden">
-        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto">
+      <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 md:px-8 md:py-8 relative overflow-hidden">
+        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           <div
             className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${league.color} border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl shrink-0`}
             aria-hidden
@@ -351,7 +351,7 @@ export default function StudentProfilePage() {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-6 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {/* League card with progress to next */}
         <div
           className={`relative rounded-3xl p-4 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden`}
@@ -399,7 +399,7 @@ export default function StudentProfilePage() {
         </div>
 
         {/* Compact stat grid — 4 most-loved metrics, no awkward "Keyingi" */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 md:grid-cols-4 gap-2 md:gap-3">
           <StatCard
             icon={<Star size={18} className="text-[#fbbf24]" />}
             value={totalXp}

@@ -56,7 +56,7 @@ export default function StudentLentaPage() {
     <div className="min-h-full bg-[#fffaf0] pb-28">
       {/* Sticky cream header */}
       <header className="sticky top-0 z-10 bg-[#fffaf0]/95 backdrop-blur border-b-[1.5px] border-[#ede9e1]">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl px-4 py-3 flex items-center gap-3">
           <Link
             href="/student"
             aria-label="Orqaga"
@@ -94,7 +94,7 @@ export default function StudentLentaPage() {
         </div>
       </header>
 
-      <div className="px-4 pt-4 pb-6 space-y-4 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {/* Friends summary card. Hidden until the count loads so the page
             doesn't flash a "0 do'st" state while the request is in-flight. */}
         {friendCount !== null && (

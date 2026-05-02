@@ -107,7 +107,7 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-[#fffaf0] pb-28">
       {/* Sticky cream header */}
       <header className="sticky top-0 z-10 bg-[#fffaf0]/95 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 pt-3 pb-3">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           <div className="flex items-center gap-3 mb-3">
             <Link
               href="/student"
@@ -155,7 +155,7 @@ export default function LeaderboardPage() {
         </div>
       </header>
 
-      <div className="px-4 pt-4 pb-6 space-y-4 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {tab === 'national' && (
           <div className="flex gap-2">
             {(['weekly', 'monthly'] as const).map((p) => (
@@ -271,7 +271,7 @@ export default function LeaderboardPage() {
                 }))}
               />
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {national
                 .filter((e) => e.rank > 3)
                 .map((e) => (
@@ -432,18 +432,20 @@ function ZoneSection({
           {label}
         </p>
       </div>
-      {entries.map((e) => (
-        <RankRow
-          key={e.id}
-          rank={e.rank}
-          name={e.name}
-          xp={e.totalXp}
-          streak={e.streak}
-          isMe={e.id === myId}
-          promotion={zone === 'promote'}
-          demotion={zone === 'demote'}
-        />
-      ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {entries.map((e) => (
+          <RankRow
+            key={e.id}
+            rank={e.rank}
+            name={e.name}
+            xp={e.totalXp}
+            streak={e.streak}
+            isMe={e.id === myId}
+            promotion={zone === 'promote'}
+            demotion={zone === 'demote'}
+          />
+        ))}
+      </div>
     </section>
   );
 }

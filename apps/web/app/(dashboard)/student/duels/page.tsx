@@ -120,7 +120,7 @@ export default function StudentDuelsPage() {
     <div className="min-h-full bg-[#fffaf0] pb-28">
       {/* Sticky cream header */}
       <header className="sticky top-0 z-10 bg-[#fffaf0]/95 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl flex items-center gap-3">
           <Link
             href="/student"
             aria-label="Orqaga"
@@ -140,7 +140,7 @@ export default function StudentDuelsPage() {
         </div>
       </header>
 
-      <div className="px-4 pt-5 pb-6 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
             {error}
@@ -244,9 +244,11 @@ export default function StudentDuelsPage() {
                     {grouped.active.length} ta
                   </span>
                 </div>
-                {grouped.active.map((d) => (
-                  <DuelRow key={d.id} duel={d} myId={myId} />
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {grouped.active.map((d) => (
+                    <DuelRow key={d.id} duel={d} myId={myId} />
+                  ))}
+                </div>
               </section>
             )}
             {grouped.completed.length > 0 && (
@@ -259,9 +261,11 @@ export default function StudentDuelsPage() {
                     {grouped.completed.length} ta
                   </span>
                 </div>
-                {grouped.completed.map((d) => (
-                  <DuelRow key={d.id} duel={d} myId={myId} />
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {grouped.completed.map((d) => (
+                    <DuelRow key={d.id} duel={d} myId={myId} />
+                  ))}
+                </div>
               </section>
             )}
           </>

@@ -55,9 +55,9 @@ export default function StudentTournamentsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
+          className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <button
@@ -76,7 +76,7 @@ export default function StudentTournamentsPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-6 space-y-3">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-3 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -102,7 +102,8 @@ export default function StudentTournamentsPage() {
             />
           </div>
         ) : (
-          tournaments.map((t) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {tournaments.map((t) => {
             const active = isActive(t);
             const upcoming = isUpcoming(t);
             const isReg = registered.has(t.id);
@@ -159,7 +160,8 @@ export default function StudentTournamentsPage() {
                 )}
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
     </div>

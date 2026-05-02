@@ -112,12 +112,12 @@ export default function FriendsPage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          className="absolute top-0 right-0 w-48 h-48 md:w-72 md:h-72 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
-        <div className="relative z-10 flex items-end justify-between">
+        <div className="relative z-10 flex items-end justify-between max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           <div>
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
             <p className="text-white text-xl font-bold">Do&apos;stlar</p>
@@ -134,7 +134,7 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-6 space-y-4">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {error && (
           <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
         )}
@@ -193,7 +193,7 @@ export default function FriendsPage() {
                 <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
                   Kutilayotgan so&apos;rovlar — {pending.length}
                 </p>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {pending.map((req) => (
                     <div key={req.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
                       <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-black text-sm shrink-0">
@@ -239,7 +239,7 @@ export default function FriendsPage() {
                   className="py-6"
                 />
               ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {friends.map((f) => (
                     <div key={f.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
                       <div className="w-9 h-9 rounded-xl bg-[#0f172a]/10 flex items-center justify-center text-[#0f172a] font-black text-sm shrink-0">

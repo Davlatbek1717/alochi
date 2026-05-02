@@ -80,7 +80,7 @@ export default function StudentLettersPage() {
           <Skeleton theme="light" className="h-6 w-40 mb-2" />
           <Skeleton theme="light" className="h-3 w-32" />
         </header>
-        <div className="max-w-lg mx-auto p-4 grid grid-cols-6 gap-2">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl p-4 grid grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2">
           {Array.from({ length: 36 }).map((_, i) => (
             <Skeleton
               key={i}
@@ -97,7 +97,7 @@ export default function StudentLettersPage() {
     <div className="min-h-full bg-[#fffaf0] pb-28">
       {/* Sticky cream header */}
       <header className="sticky top-0 z-10 bg-[#fffaf0]/95 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl flex items-center gap-3">
           <Link
             href="/student"
             aria-label="Orqaga"
@@ -116,7 +116,7 @@ export default function StudentLettersPage() {
           </div>
         </div>
         {/* Progress bar */}
-        <div className="max-w-lg mx-auto mt-2.5 h-2 bg-white border border-[#ede9e1] rounded-full overflow-hidden">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mt-2.5 h-2 bg-white border border-[#ede9e1] rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-[#fbbf24] via-[#f59e0b] to-[#d97706] rounded-full transition-all duration-500"
             style={{ width: `${pct}%` }}
@@ -124,7 +124,7 @@ export default function StudentLettersPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4 pb-6 space-y-4">
+      <main className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl px-4 md:px-6 pt-4 pb-6 space-y-4">
         {/* Filter chips */}
         {letters.length > 0 && (
           <div className="overflow-x-auto -mx-4 px-4">
@@ -228,7 +228,7 @@ export default function StudentLettersPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-6 md:grid-cols-9 lg:grid-cols-12 gap-2">
             {visible.map((letter) => (
               <LetterCard
                 key={letter.id}

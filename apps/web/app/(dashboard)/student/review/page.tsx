@@ -50,7 +50,7 @@ export default function ReviewPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f4ef]">
-        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
           <Skeleton className="h-4 w-20 mb-4 rounded" />
           <Skeleton className="h-1.5 w-full rounded-full" />
         </div>
@@ -121,8 +121,8 @@ export default function ReviewPage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef] flex flex-col">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
+        <div className="flex items-center justify-between mb-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl">
           <button
             onClick={() => router.push('/student')}
             className="text-[#94a3b8] flex items-center gap-1 text-sm hover:text-white transition-colors"
@@ -131,7 +131,7 @@ export default function ReviewPage() {
           </button>
           <span className="text-[#94a3b8] text-sm font-mono">{current + 1} / {items.length}</span>
         </div>
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-[#f59e0b] rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -143,7 +143,7 @@ export default function ReviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <button
           onClick={() => setFlipped((f) => !f)}
-          className="w-full max-w-sm focus:outline-none"
+          className="w-full max-w-sm md:max-w-md focus:outline-none"
         >
           <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 text-center transition-all duration-200 ${
             flipped ? 'bg-indigo-50 border-indigo-200' : 'border-[#ede9e1]'
@@ -167,7 +167,7 @@ export default function ReviewPage() {
         </button>
 
         {flipped && (
-          <div className="flex gap-4 mt-6 w-full max-w-sm">
+          <div className="flex gap-4 mt-6 w-full max-w-sm md:max-w-md">
             <Button
               variant="danger"
               size="lg"

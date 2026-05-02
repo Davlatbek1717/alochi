@@ -336,9 +336,9 @@ export default function StudentExamsPage() {
   if (!permission) {
     return (
       <div className="min-h-screen bg-[#f7f4ef]">
-        <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
           <div
-            className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+            className="absolute top-0 right-0 w-48 h-48 md:w-72 md:h-72 rounded-full opacity-10"
             style={{
               background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)',
               transform: 'translate(30%, -30%)',
@@ -391,7 +391,7 @@ export default function StudentExamsPage() {
           cameraWarnings={cameraWarnings}
           onLookAway={handleLookAway}
         />
-        <div className="px-4 pt-5 pb-8 space-y-4">
+        <div className="px-4 md:px-6 pt-5 pb-8 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl">
           {legacyQuestions.length > 0 && (
             <div className="space-y-4">
               {legacyQuestions.map((q, qi) => (
@@ -529,7 +529,7 @@ export default function StudentExamsPage() {
         </div>
       </header>
 
-      <main className="px-4 pt-4 pb-10 space-y-4 max-w-md mx-auto">
+      <main className="px-4 pt-4 pb-10 space-y-4 max-w-md mx-auto md:max-w-3xl lg:max-w-4xl">
         {/* Camera monitor */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -569,9 +569,9 @@ function ExamHeader({
   onLookAway: () => void;
 }) {
   return (
-    <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+    <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
       <div
-        className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+        className="absolute top-0 right-0 w-48 h-48 md:w-72 md:h-72 rounded-full opacity-10"
         style={{
           background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)',
           transform: 'translate(30%, -30%)',

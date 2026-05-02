@@ -172,11 +172,13 @@ export default function GroupChatPage() {
     : 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#f7f4ef]">
+    <div className="flex flex-col h-full bg-[#f7f4ef] lg:flex-row lg:items-stretch">
+      {/* Main chat column — full width on mobile, 60% on desktop */}
+      <div className="flex flex-col flex-1 lg:max-w-[60%] h-full min-h-0">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-4 relative overflow-hidden shrink-0">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-4 md:px-8 md:py-6 relative overflow-hidden shrink-0">
         <div
-          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
+          className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="relative z-10 flex items-center justify-between">
@@ -328,6 +330,10 @@ export default function GroupChatPage() {
           </button>
         </div>
       </div>
+      </div>{/* end main chat column */}
+
+      {/* Desktop sidebar placeholder — graceful empty space */}
+      <div className="hidden lg:block lg:flex-1 bg-[#f0ede8] border-l border-[#ede9e1]" aria-hidden />
     </div>
   );
 }

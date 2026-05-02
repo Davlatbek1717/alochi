@@ -248,7 +248,7 @@ export default function LessonsPathPage() {
     <div className="min-h-screen bg-[#fffaf0]">
       {/* Sticky top bar with overall progress ribbon */}
       <header className="sticky top-0 z-30 bg-[#fffaf0]/95 backdrop-blur border-b border-[#ede9e1]">
-        <div className="max-w-lg mx-auto px-4 pt-3 pb-2.5">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl px-4 md:px-6 pt-3 pb-2.5">
           <div className="flex items-center gap-3">
             <Link
               href="/student"
@@ -288,7 +288,7 @@ export default function LessonsPathPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4 pb-24">
+      <main className="max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl px-4 md:px-6 pt-4 pb-24">
         {error && (
           <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-2xl text-sm mb-4">
             {error}

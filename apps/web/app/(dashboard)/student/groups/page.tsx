@@ -52,13 +52,13 @@ export default function StudentGroupsPage() {
   return (
     <div className="min-h-full bg-[#fffaf0] pb-8">
       <header className="sticky top-0 z-10 bg-[#fffaf0]/90 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl flex items-center gap-3">
           <GraduationCap size={20} className="text-[#10b981]" />
           <h1 className="text-[#0f172a] text-lg font-extrabold">Mening guruhim</h1>
         </div>
       </header>
 
-      <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-3 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
             {error}

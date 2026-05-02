@@ -46,13 +46,13 @@ export default function StudentCertificatesPage() {
   return (
     <div className="min-h-full bg-[#fffaf0] pb-8">
       <header className="sticky top-0 z-10 bg-[#fffaf0]/90 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center gap-3">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl flex items-center gap-3">
           <Award size={20} className="text-[#fbbf24]" />
           <h1 className="text-[#0f172a] text-lg font-extrabold">Sertifikatlar</h1>
         </div>
       </header>
 
-      <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-3 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
             {error}
@@ -79,7 +79,8 @@ export default function StudentCertificatesPage() {
             </div>
           </div>
         ) : (
-          certs.map((cert) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {certs.map((cert) => (
             <article
               key={cert.id}
               className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] overflow-hidden hover:scale-[1.02] transition-transform shadow-sm"
@@ -119,7 +120,8 @@ export default function StudentCertificatesPage() {
                 <CertificateShare cert={cert} />
               </div>
             </article>
-          ))
+          ))}
+          </div>
         )}
       </div>
     </div>

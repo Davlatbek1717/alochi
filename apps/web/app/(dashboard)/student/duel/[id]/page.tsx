@@ -160,7 +160,7 @@ export default function DuelPage() {
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Hero header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-8 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-8 md:px-8 md:py-8 relative overflow-hidden">
         <div
           className="absolute inset-0"
           style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(225,29,72,0.15) 0%, transparent 60%)' }}
@@ -206,7 +206,7 @@ export default function DuelPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-5 pb-6 space-y-4">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl">
         {/* Pending: invitation response */}
         {duel.status === 'pending' && (() => {
           const isChallenged = currentUserId === duel.challengedId;
