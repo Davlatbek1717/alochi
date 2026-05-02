@@ -231,29 +231,7 @@ export default function TopNav({ role }: Props) {
   const items = NAV[role] ?? [];
   if (items.length === 0) return null;
 
-  // Resolve which top-level entry the current path belongs to. A path
-  // belongs to an entry when it starts with the entry's href or with
-  // the href of one of its sub-items.
-  const activeEntry = items.find((entry) => {
-    if (entry.href && (pathname === entry.href || pathname.startsWith(entry.href + '/'))) {
-      // For exact dashboard match (e.g. /superadmin), only consider
-      // this entry active when no more specific group also matches.
-      if (entry.href.length > 1) return true;
-      const moreSpecific = items.some(
-        (other) =>
-          other !== entry &&
-          ((other.href && pathname.startsWith(other.href + '/')) ||
-            (other.items?.some((s) => pathname.startsWith(s.href)))),
-      );
-      return !moreSpecific && pathname === entry.href;
-    }
-    if (entry.items) {
-      return entry.items.some(
-        (s) => pathname === s.href || pathname.startsWith(s.href + '/'),
-      );
-    }
-    return false;
-  });
+  const activeEntry = findActiveEntry(items, pathname);
 
   return (
     <nav
@@ -311,6 +289,55 @@ export default function TopNav({ role }: Props) {
       </div>
     </nav>
   );
+}
+
+/**
+ * Resolve which nav entry "owns" the current path. Done in three
+ * phases so root-style hrefs (like "/superadmin") don't shadow
+ * deeper sections that nest underneath them:
+ *
+ *   1. Prefer the group whose sub-item href matches the path. This
+ *      catches the common case ("/superadmin/tenants" belongs to
+ *      "Markazlar").
+ *   2. Fall back to a direct-link entry with an EXACT path match.
+ *      Only exact — never a prefix — so "/superadmin" matches the
+ *      dashboard entry but doesn't claim every nested route.
+ *   3. Last resort: longest-prefix match against any direct-link
+ *      entry. Used for routes deeper than a known link, e.g.
+ *      "/tester/lessons/current/X" mapping back to "Sinov darsi".
+ */
+function findActiveEntry(
+  items: NavEntry[],
+  pathname: string,
+): NavEntry | undefined {
+  // Phase 1 — group sub-items.
+  for (const entry of items) {
+    if (
+      entry.items?.some(
+        (s) => pathname === s.href || pathname.startsWith(s.href + '/'),
+      )
+    ) {
+      return entry;
+    }
+  }
+  // Phase 2 — exact direct-link match.
+  for (const entry of items) {
+    if (entry.href && pathname === entry.href) return entry;
+  }
+  // Phase 3 — longest-prefix direct-link match.
+  let best: NavEntry | undefined;
+  let bestLen = 0;
+  for (const entry of items) {
+    if (
+      entry.href &&
+      entry.href.length > bestLen &&
+      pathname.startsWith(entry.href + '/')
+    ) {
+      best = entry;
+      bestLen = entry.href.length;
+    }
+  }
+  return best;
 }
 
 function PrimaryEntry({
