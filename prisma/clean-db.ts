@@ -1,22 +1,24 @@
 /**
  * Destructive DB cleanup — wipes every table except the row(s)
- * needed to keep the existing superadmin login working.
+ * needed to keep the existing superadmin login working AND the
+ * superadmin-authored lessons + their components, so the operator
+ * doesn't have to re-author the curriculum on every reset.
  *
  * Behaviour:
- *   1. Snapshot the current superadmin user + their tenant.
+ *   1. Snapshot the superadmin user + their tenant + every Lesson
+ *      and its LessonComponent rows.
  *   2. TRUNCATE every public table (except _prisma_migrations) with
  *      CASCADE so foreign-keyed children are torn down too.
- *   3. Re-insert the saved tenant + superadmin so the operator can
- *      still log in.
+ *   3. Re-insert tenant → user → lessons → lesson components.
  *
  * Usage:
- *   pnpm --filter api exec ts-node -r tsconfig-paths/register \
- *     ../../prisma/clean-db.ts
- *
- * Or from repo root:
  *   pnpm exec ts-node -r tsconfig-paths/register prisma/clean-db.ts
  */
-import { PrismaClient, type UserRole } from '@prisma/client';
+import {
+  PrismaClient,
+  type UserRole,
+  type LessonType,
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -46,6 +48,33 @@ interface UserSnapshot {
   birthDate: Date | null;
   parentTelegramId: string | null;
   createdAt: Date;
+}
+
+interface LessonSnapshot {
+  id: string;
+  tenantId: string;
+  title: string;
+  type: LessonType;
+  orderNumber: number;
+  subcategory: string | null;
+  orderInSubcategory: number | null;
+  youtubeUrl: string;
+  nRepetitions: number;
+  maxNOverride: number;
+  components: unknown;
+  hasExam: boolean;
+  cameraEnabled: boolean;
+  aiTutorContext: string | null;
+  isPublished: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface LessonComponentSnapshot {
+  id: string;
+  lessonId: string;
+  type: string;
+  config: unknown;
 }
 
 async function main() {
@@ -95,12 +124,49 @@ async function main() {
     createdAt: superadmin.createdAt,
   };
 
+  // Snapshot every lesson + its components so the curriculum
+  // survives the wipe. We re-insert with the original IDs to keep
+  // any external references (e.g. URL bookmarks) stable.
+  const lessons = await prisma.lesson.findMany({
+    include: { components_data: true },
+  });
+  const lessonSnapshots: LessonSnapshot[] = lessons.map((l) => ({
+    id: l.id,
+    tenantId: l.tenantId,
+    title: l.title,
+    type: l.type,
+    orderNumber: l.orderNumber,
+    subcategory: l.subcategory,
+    orderInSubcategory: l.orderInSubcategory,
+    youtubeUrl: l.youtubeUrl,
+    nRepetitions: l.nRepetitions,
+    maxNOverride: l.maxNOverride,
+    components: l.components,
+    hasExam: l.hasExam,
+    cameraEnabled: l.cameraEnabled,
+    aiTutorContext: l.aiTutorContext,
+    isPublished: l.isPublished,
+    createdAt: l.createdAt,
+    updatedAt: l.updatedAt,
+  }));
+  const componentSnapshots: LessonComponentSnapshot[] = lessons.flatMap((l) =>
+    l.components_data.map((c) => ({
+      id: c.id,
+      lessonId: c.lessonId,
+      type: c.type,
+      config: c.config,
+    })),
+  );
+
   console.log(`Preserving:`);
   console.log(
     `  Tenant: "${tenantSnapshot.name}" (slug: ${tenantSnapshot.slug})`,
   );
   console.log(
     `  User:   "${userSnapshot.name}" (login: ${userSnapshot.login}, role: ${userSnapshot.role})`,
+  );
+  console.log(
+    `  Lessons: ${lessonSnapshots.length} (with ${componentSnapshots.length} components)`,
   );
 
   // Pre-truncate counts for the audit line.
@@ -150,20 +216,45 @@ async function main() {
     data: userSnapshot,
   });
 
+  // Re-insert the curriculum. Lessons first (no FK dependencies on
+  // user/branch since they belong to the tenant), then their
+  // components.
+  if (lessonSnapshots.length > 0) {
+    await prisma.lesson.createMany({
+      data: lessonSnapshots.map((l) => ({
+        ...l,
+        components: l.components as never,
+      })),
+    });
+  }
+  if (componentSnapshots.length > 0) {
+    await prisma.lessonComponent.createMany({
+      data: componentSnapshots.map((c) => ({
+        ...c,
+        config: c.config as never,
+      })),
+    });
+  }
+
   // Final state confirmation.
   const afterUsers = await prisma.user.count();
   const afterTenants = await prisma.tenant.count();
   const afterLessons = await prisma.lesson.count();
+  const afterComponents = await prisma.lessonComponent.count();
   console.log(
-    `After:  ${afterUsers} users, ${afterTenants} tenants, ${afterLessons} lessons (...)`,
+    `After:  ${afterUsers} users, ${afterTenants} tenants, ${afterLessons} lessons, ${afterComponents} components`,
   );
 
-  if (afterUsers !== 1 || afterTenants !== 1) {
+  if (
+    afterUsers !== 1 ||
+    afterTenants !== 1 ||
+    afterLessons !== lessonSnapshots.length
+  ) {
     console.warn(
-      '[WARN] Final counts are not 1 user / 1 tenant — inspect manually.',
+      '[WARN] Final counts diverge from snapshot — inspect manually.',
     );
   } else {
-    console.log('Cleanup complete. Only the superadmin remains.');
+    console.log('Cleanup complete. Superadmin + curriculum preserved.');
   }
 }
 
