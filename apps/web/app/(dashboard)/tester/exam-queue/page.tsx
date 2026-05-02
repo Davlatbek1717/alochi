@@ -1,6 +1,24 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Clock, UserX, PlayCircle, Users, BookOpen, ChevronDown, GraduationCap } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import Link from 'next/link';
+import {
+  CheckCircle,
+  Clock,
+  UserX,
+  PlayCircle,
+  Users,
+  BookOpen,
+  ChevronDown,
+  GraduationCap,
+  Search,
+  X as XIcon,
+  CheckCheck,
+  ArrowLeft,
+  Timer,
+  XCircle,
+  History,
+  FlaskConical,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 
@@ -17,7 +35,23 @@ interface CatalogueExam {
 }
 type ExamSource = 'lesson' | 'catalogue';
 type QueueStatus = 'waiting' | 'testing' | 'done' | 'absent';
-interface StudentRow { id: string; name: string; attendance: 'present' | 'absent' | null; queue: QueueStatus; activeExamId?: string; }
+interface StudentRow {
+  id: string;
+  name: string;
+  attendance: 'present' | 'absent' | null;
+  queue: QueueStatus;
+  activeExamId?: string;
+}
+
+// Track granted exams for history footer
+interface GrantedEntry {
+  studentId: string;
+  studentName: string;
+  subjectTitle: string;
+  subjectKind: 'Katalog' | 'Dars';
+  grantedAt: Date;
+  result: 'Hisoblanmoqda' | 'Tugatdi';
+}
 
 function getBranchIdFromToken(): string | null {
   try {
@@ -39,6 +73,23 @@ function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
+// Elapsed-time hook: returns "MM:SS" string, updates every second
+function useElapsedTimer(startTime: Date | null): string {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!startTime) { setElapsed(0); return; }
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+type ChipFilter = 'all' | 'arrived' | 'waiting' | 'done';
+
 const QUEUE_LABEL: Record<QueueStatus, string> = {
   waiting: 'Navbatda', testing: 'Topshirmoqda', done: 'Tugadi', absent: 'Kelmadi',
 };
@@ -50,6 +101,23 @@ export default function TesterExamQueuePage() {
   const [error, setError] = useState('');
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [catalogueExams, setCatalogueExams] = useState<CatalogueExam[]>([]);
+
+  // Search + filter state
+  const [search, setSearch] = useState('');
+  const [chipFilter, setChipFilter] = useState<ChipFilter>('all');
+
+  // Bulk "mark all present" loading
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Active session state
+  const [testingStartTime, setTestingStartTime] = useState<Date | null>(null);
+  const [testingSubjectTitle, setTestingSubjectTitle] = useState('');
+  const [testingSubjectKind, setTestingSubjectKind] = useState<'Katalog' | 'Dars'>('Katalog');
+  const [testingQuestionCount, setTestingQuestionCount] = useState<number | null>(null);
+  const elapsed = useElapsedTimer(testingStartTime);
+
+  // Granted history
+  const [grantedHistory, setGrantedHistory] = useState<GrantedEntry[]>([]);
 
   // Grant modal state
   const [grantModal, setGrantModal] = useState<{ studentId: string; name: string } | null>(null);
@@ -114,10 +182,36 @@ export default function TesterExamQueuePage() {
     }
   }
 
+  async function markAllPresent() {
+    const notArrived = rows.filter((r) => r.attendance !== 'present');
+    if (notArrived.length === 0) return;
+    setBulkLoading(true);
+    const token = localStorage.getItem('accessToken') ?? '';
+    const branchId = getBranchIdFromToken();
+    const tenantId = getTenantIdFromToken();
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
+    try {
+      await Promise.all(
+        notArrived.map((s) =>
+          apiRequest('/attendance/students', {
+            method: 'POST',
+            body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present', markedBy: user.id ?? '', tenantId, branchId }] }),
+          }, token),
+        ),
+      );
+      setRows((prev) => prev.map((r) =>
+        r.attendance !== 'present' ? { ...r, attendance: 'present', queue: 'waiting' } : r,
+      ));
+      success(`${notArrived.length} ta o'quvchi keldi deb belgilandi`);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   function openGrantModal(student: StudentRow) {
     setGrantModal({ studentId: student.id, name: student.name });
-    // Default to whichever source has options. Catalogue first when
-    // both exist, since superadmin-authored exams tend to be richer.
     const defaultSource: ExamSource = catalogueExams.length > 0 ? 'catalogue' : 'lesson';
     setGrantSource(defaultSource);
     setSelectedLesson(lessons[0]?.id ?? '');
@@ -132,6 +226,16 @@ export default function TesterExamQueuePage() {
     setGranting(true);
     setGrantError('');
     const token = localStorage.getItem('accessToken') ?? '';
+
+    // Resolve the human-readable subject info before the API call
+    const subjectTitle = grantSource === 'lesson'
+      ? (lessons.find((l) => l.id === targetId)?.title ?? 'Dars imtihoni')
+      : (catalogueExams.find((e) => e.id === targetId)?.title ?? 'Katalog imtihoni');
+    const subjectKind: 'Katalog' | 'Dars' = grantSource === 'catalogue' ? 'Katalog' : 'Dars';
+    const questionCount = grantSource === 'catalogue'
+      ? (catalogueExams.find((e) => e.id === targetId)?._count.questions ?? null)
+      : null;
+
     try {
       const body =
         grantSource === 'lesson'
@@ -141,9 +245,29 @@ export default function TesterExamQueuePage() {
         method: 'POST',
         body: JSON.stringify(body),
       }, token);
+
+      const now = new Date();
       setRows((prev) => prev.map((r) =>
         r.id === grantModal.studentId ? { ...r, queue: 'testing' } : r,
       ));
+      setTestingStartTime(now);
+      setTestingSubjectTitle(subjectTitle);
+      setTestingSubjectKind(subjectKind);
+      setTestingQuestionCount(questionCount);
+
+      // Add to history
+      setGrantedHistory((prev) => [
+        {
+          studentId: grantModal.studentId,
+          studentName: grantModal.name,
+          subjectTitle,
+          subjectKind,
+          grantedAt: now,
+          result: 'Hisoblanmoqda',
+        },
+        ...prev.slice(0, 4),
+      ]);
+
       success("Imtihon ruxsati berildi");
       setGrantModal(null);
     } catch (err) {
@@ -155,116 +279,256 @@ export default function TesterExamQueuePage() {
 
   function setDone(studentId: string) {
     setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'done' } : r));
+    // Mark the most recent history entry for this student as done
+    setGrantedHistory((prev) => {
+      const idx = prev.findIndex((e) => e.studentId === studentId && e.result === 'Hisoblanmoqda');
+      if (idx === -1) return prev;
+      return prev.map((e, i) => i === idx ? { ...e, result: 'Tugatdi' as const } : e);
+    });
+    setTestingStartTime(null);
   }
 
+  function cancelTesting(studentId: string) {
+    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'waiting' } : r));
+    setTestingStartTime(null);
+  }
+
+  // Computed groups
   const arrived = rows.filter((r) => r.attendance === 'present');
   const notArrived = rows.filter((r) => r.attendance !== 'present');
   const testingNow = rows.find((r) => r.queue === 'testing');
   const doneCount = rows.filter((r) => r.queue === 'done').length;
+  const waitingCount = arrived.filter((r) => r.queue === 'waiting').length;
+
+  // Chips
+  const chipCounts = {
+    all: rows.length,
+    arrived: arrived.length,
+    waiting: waitingCount,
+    done: doneCount,
+  };
+
+  // Filter rows for the lists
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (q && !r.name.toLowerCase().includes(q)) return false;
+      if (chipFilter === 'arrived') return r.attendance === 'present';
+      if (chipFilter === 'waiting') return r.queue === 'waiting';
+      if (chipFilter === 'done') return r.queue === 'done';
+      return true;
+    });
+  }, [rows, search, chipFilter]);
+
+  const filteredArrived = filteredRows.filter((r) => r.attendance === 'present');
+  const filteredNotArrived = filteredRows.filter((r) => r.attendance !== 'present');
+
+  const chips: { key: ChipFilter; label: string }[] = [
+    { key: 'all', label: 'Hammasi' },
+    { key: 'arrived', label: 'Kelganlar' },
+    { key: 'waiting', label: 'Kutmoqda' },
+    { key: 'done', label: 'Tugatdi' },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
-      <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
-        <div className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-        <div className="relative z-10 mb-5">
-          <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">Tester paneli</p>
-          <p className="text-white text-xl font-bold">Bugungi navbat</p>
-          <p className="text-[#475569] text-xs mt-1 font-mono">{today}</p>
+    <div className="min-h-screen bg-[#f7f4ef] pb-10">
+      {/* Header — dark navy + amber accent (staff theme) */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-15 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
+        />
+        <div className="relative z-10 space-y-4">
+          {/* Back + title row */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/tester"
+              aria-label="Orqaga"
+              className="w-9 h-9 rounded-full bg-white/10 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition-colors"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <p className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-widest">Tester</p>
+              <p className="text-white text-lg font-extrabold leading-tight">Bugungi navbat</p>
+              <p className="text-[#475569] text-[11px] font-bold mt-0.5 font-mono">{today}</p>
+            </div>
+          </div>
+
+          {/* Stats grid — 4 tiles */}
+          {loading ? (
+            <div className="grid grid-cols-4 gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-[#162032] rounded-[14px] p-3 space-y-1">
+                  <Skeleton className="h-3 w-3" />
+                  <Skeleton className="h-6 w-8" />
+                  <Skeleton className="h-2.5 w-10" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-2">
+              <StatTile icon={<Users size={13} className="text-[#f59e0b]" />} value={arrived.length} label="Keldi" />
+              <StatTile icon={<CheckCircle size={13} className="text-emerald-400" />} value={doneCount} label="Topshirdi" />
+              <StatTile icon={<Clock size={13} className="text-blue-400" />} value={waitingCount} label="Kutmoqda" />
+              <StatTile icon={<FlaskConical size={13} className="text-rose-400" />} value={rows.length} label="Jami" />
+            </div>
+          )}
         </div>
-        {loading ? (
-          <div className="grid grid-cols-3 gap-2 relative z-10">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#162032] rounded-[14px] p-3 space-y-1">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-7 w-10" />
-                <Skeleton className="h-3 w-12" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 relative z-10">
-            <div className="bg-[#162032] rounded-[14px] p-3">
-              <Users size={14} className="text-[#0d9488] mb-1" />
-              <p className="text-white text-xl font-black font-mono">{arrived.length}</p>
-              <p className="text-[#94a3b8] text-[10px] mt-0.5">Keldi</p>
-            </div>
-            <div className="bg-[#162032] rounded-[14px] p-3">
-              <CheckCircle size={14} className="text-emerald-400 mb-1" />
-              <p className="text-white text-xl font-black font-mono">{doneCount}</p>
-              <p className="text-[#94a3b8] text-[10px] mt-0.5">Topshirdi</p>
-            </div>
-            <div className="bg-[#162032] rounded-[14px] p-3">
-              <Clock size={14} className="text-[#f59e0b] mb-1" />
-              <p className="text-white text-xl font-black font-mono">{arrived.length - doneCount}</p>
-              <p className="text-[#94a3b8] text-[10px] mt-0.5">Kutmoqda</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      <div className="px-4 pt-8 pb-6 space-y-5">
-        {error && <p className="text-rose-500 text-sm">{error}</p>}
+      {/* Body */}
+      <div className="px-4 pt-4 pb-6 space-y-4 max-w-lg mx-auto">
+        {error && (
+          <div className="bg-rose-50 border-[1.5px] border-rose-200 rounded-2xl px-4 py-3">
+            <p className="text-rose-700 text-sm font-bold">{error}</p>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
-                <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-7 w-20 rounded-xl" />
+              <div key={i} className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-4 py-3 flex items-center gap-3">
+                <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
+                <Skeleton theme="light" className="h-4 flex-1" />
+                <Skeleton theme="light" className="h-8 w-20 rounded-xl" />
               </div>
             ))}
           </div>
         ) : (
           <>
+            {/* Search bar */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="O'quvchi ismi bo'yicha qidirish..."
+                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  aria-label="Qidiruvni tozalash"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a] p-1"
+                >
+                  <XIcon size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Filter chips */}
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-0.5">
+              {chips.map((c) => {
+                const isActive = chipFilter === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => setChipFilter(c.key)}
+                    className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-full border transition-colors ${
+                      isActive
+                        ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                        : 'bg-white text-[#64748b] border-[#ede9e1] hover:bg-[#fffaf0]'
+                    }`}
+                  >
+                    {c.label}
+                    <span className={isActive ? 'text-white/80' : 'text-[#94a3b8]'}>
+                      {chipCounts[c.key]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Active session card */}
             {testingNow && (
-              <div className="bg-gradient-to-br from-[#1e3a5f] to-[#1e293b] rounded-[18px] p-4 border border-blue-500/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <PlayCircle size={14} className="text-blue-400" />
-                  <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Hozir topshirmoqda</span>
+              <div className="bg-gradient-to-br from-[#1a2e4a] to-[#1e293b] rounded-2xl p-4 border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <PlayCircle size={14} className="text-amber-400" />
+                  <span className="text-amber-400 text-xs font-extrabold uppercase tracking-widest">Hozir topshirmoqda</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-300 font-black text-sm shrink-0">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-300 font-black text-sm shrink-0">
                     {getInitials(testingNow.name)}
                   </div>
-                  <p className="text-white text-lg font-bold flex-1">{testingNow.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-base font-extrabold truncate">{testingNow.name}</p>
+                    {testingSubjectTitle && (
+                      <p className="text-[#94a3b8] text-xs font-bold truncate">
+                        <span className="text-amber-400">{testingSubjectKind}</span> · {testingSubjectTitle}
+                      </p>
+                    )}
+                  </div>
+                  {/* Elapsed timer */}
+                  <div className="flex items-center gap-1 bg-white/10 rounded-xl px-2.5 py-1.5 shrink-0">
+                    <Timer size={12} className="text-amber-400" />
+                    <span className="text-amber-300 text-xs font-extrabold font-mono">{elapsed}</span>
+                  </div>
+                </div>
+                {testingQuestionCount !== null && (
+                  <p className="text-[#64748b] text-xs mb-3">
+                    Topshirayapti — <span className="text-white font-bold">{testingQuestionCount} ta savol bor</span>
+                  </p>
+                )}
+                <div className="flex gap-2">
                   <Button
                     variant="success"
                     size="sm"
+                    icon={<CheckCircle size={14} />}
                     onClick={() => setDone(testingNow.id)}
+                    className="flex-1"
                   >
                     Tugatdi
                   </Button>
+                  <button
+                    type="button"
+                    onClick={() => cancelTesting(testingNow.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#94a3b8] bg-white/10 border border-white/10 px-3 py-2 rounded-xl hover:bg-white/15 transition-colors"
+                  >
+                    <XCircle size={13} />
+                    Bekor qilish
+                  </button>
                 </div>
               </div>
             )}
 
-            {arrived.length > 0 && (
+            {/* Arrived list */}
+            {filteredArrived.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+                <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
                   Kelganlar — {arrived.length}/{rows.length}
                 </p>
                 <div className="space-y-2">
-                  {arrived.map((s) => {
+                  {filteredArrived.map((s) => {
                     const isDone = s.queue === 'done';
                     const isTesting = s.queue === 'testing';
                     const isWaiting = s.queue === 'waiting';
                     return (
-                      <div key={s.id} className={`bg-white rounded-[14px] px-4 py-3 border-[1.5px] flex items-center gap-3 ${
-                        isDone ? 'border-emerald-100' : isTesting ? 'border-blue-200' : 'border-[#ede9e1]'
+                      <div key={s.id} className={`bg-white rounded-2xl px-4 py-3 border-[1.5px] flex items-center gap-3 ${
+                        isDone ? 'border-emerald-100' : isTesting ? 'border-amber-200' : 'border-[#ede9e1]'
                       }`}>
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${
-                          isDone ? 'bg-emerald-100 text-emerald-700' : isTesting ? 'bg-blue-100 text-blue-700' : 'bg-[#f7f4ef] text-[#0f172a]'
+                          isDone ? 'bg-emerald-100 text-emerald-700' : isTesting ? 'bg-amber-100 text-amber-700' : 'bg-[#f7f4ef] text-[#0f172a]'
                         }`}>
                           {isDone ? <CheckCircle size={16} /> : getInitials(s.name)}
                         </div>
-                        <p className={`flex-1 text-sm font-semibold ${isDone ? 'text-[#94a3b8] line-through' : 'text-[#0f172a]'}`}>{s.name}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isDone ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                          isTesting ? 'bg-blue-50 text-blue-600 border border-blue-200' :
-                          'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]'
-                        }`}>{QUEUE_LABEL[s.queue]}</span>
+                        <p className={`flex-1 text-sm font-extrabold truncate ${isDone ? 'text-[#94a3b8] line-through' : 'text-[#0f172a]'}`}>
+                          {s.name}
+                        </p>
+                        <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border shrink-0 ${
+                          isDone ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          isTesting ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'
+                        }`}>
+                          {QUEUE_LABEL[s.queue]}
+                        </span>
                         {isWaiting && (
                           <Button
                             variant="secondary"
@@ -283,18 +547,34 @@ export default function TesterExamQueuePage() {
               </div>
             )}
 
-            {notArrived.length > 0 && (
+            {/* Not-arrived list */}
+            {filteredNotArrived.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
+                <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
                   Kutilmoqda — {notArrived.length} ta
                 </p>
+                {/* Bulk "mark all present" — only when not arrived exist */}
+                {notArrived.length > 0 && chipFilter !== 'arrived' && chipFilter !== 'done' && (
+                  <button
+                    type="button"
+                    onClick={markAllPresent}
+                    disabled={bulkLoading}
+                    className="w-full mb-2 inline-flex items-center justify-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2.5 rounded-xl hover:bg-emerald-100 transition-colors disabled:opacity-60"
+                  >
+                    {bulkLoading ? (
+                      <span className="inline-flex items-center gap-1.5"><Clock size={13} className="animate-spin" /> Belgilanmoqda...</span>
+                    ) : (
+                      <><CheckCheck size={13} /> Hammani Keldi deb belgilash</>
+                    )}
+                  </button>
+                )}
                 <div className="space-y-2">
-                  {notArrived.map((s) => (
-                    <div key={s.id} className="bg-white rounded-[14px] px-4 py-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
+                  {filteredNotArrived.map((s) => (
+                    <div key={s.id} className="bg-white rounded-2xl px-4 py-3 border-[1.5px] border-[#ede9e1] flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8] shrink-0">
                         <UserX size={16} />
                       </div>
-                      <p className="flex-1 text-sm text-[#94a3b8]">{s.name}</p>
+                      <p className="flex-1 text-sm text-[#94a3b8] font-bold truncate">{s.name}</p>
                       <Button
                         variant="success"
                         size="sm"
@@ -308,14 +588,55 @@ export default function TesterExamQueuePage() {
               </div>
             )}
 
+            {/* Empty state */}
             {rows.length === 0 && !error && (
-              <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+              <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1]">
                 <EmptyState
                   theme="light"
                   icon={<Users size={28} />}
                   title="O'quvchilar topilmadi"
                   description="Bu filialda o'quvchilar ro'yxatga olinmagan"
                 />
+              </div>
+            )}
+
+            {/* No filter results */}
+            {rows.length > 0 && filteredRows.length === 0 && (
+              <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center">
+                <p className="text-sm font-extrabold text-[#0f172a]">Natija topilmadi</p>
+                <p className="text-xs text-[#64748b] mt-1">Qidiruv yoki filtrni o&apos;zgartiring</p>
+              </div>
+            )}
+
+            {/* Granted history footer */}
+            {grantedHistory.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2.5 px-1">
+                  <History size={13} className="text-[#64748b]" />
+                  <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">Bugungi tarix</p>
+                </div>
+                <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] divide-y divide-[#ede9e1]">
+                  {grantedHistory.map((entry, i) => (
+                    <div key={i} className="px-4 py-3 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 font-black text-[10px] shrink-0">
+                        {getInitials(entry.studentName)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-extrabold text-[#0f172a] truncate">{entry.studentName}</p>
+                        <p className="text-[11px] text-[#64748b] font-bold truncate">
+                          <span className="text-amber-700">{entry.subjectKind}</span> · {entry.subjectTitle}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full border shrink-0 ${
+                        entry.result === 'Tugatdi'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'
+                      }`}>
+                        {entry.result}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -352,9 +673,6 @@ export default function TesterExamQueuePage() {
             <p className="text-white font-semibold">{grantModal?.name}</p>
           </div>
 
-          {/* Source tabs — both shown only when both have content; if
-              only one has content, the tabs collapse so the tester
-              isn't faced with a useless empty selector. */}
           {(lessons.length > 0 || catalogueExams.length > 0) && (
             <div className="flex bg-slate-800/60 border border-slate-700 rounded-xl p-1 gap-1">
               <button
@@ -439,7 +757,7 @@ export default function TesterExamQueuePage() {
                     const picked = catalogueExams.find((e) => e.id === selectedExam);
                     if (!picked?.description) return null;
                     return (
-                      <p className="text-xs text-slate-400 bg-slate-800/40 border border-slate-700 rounded-lg px-3 py-2">
+                      <p className="text-xs text-slate-400 bg-slate-800/40 border border-slate-700 rounded-lg px-3 py-2 line-clamp-3 overflow-hidden">
                         {picked.description}
                       </p>
                     );
@@ -454,6 +772,17 @@ export default function TesterExamQueuePage() {
           )}
         </div>
       </Modal>
+    </div>
+  );
+}
+
+// Small stat tile for the header
+function StatTile({ icon, value, label }: { icon: React.ReactNode; value: number; label: string }) {
+  return (
+    <div className="bg-[#162032] rounded-[14px] p-3">
+      <div className="mb-1">{icon}</div>
+      <p className="text-white text-xl font-extrabold font-mono leading-none">{value}</p>
+      <p className="text-[#94a3b8] text-[10px] mt-0.5 font-bold truncate">{label}</p>
     </div>
   );
 }
