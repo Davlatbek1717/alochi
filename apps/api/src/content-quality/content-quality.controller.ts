@@ -52,6 +52,21 @@ export class ContentQualityController {
     return this.cq.getABResults(id, req.user.tenantId);
   }
 
+  /**
+   * Student-facing — returns the caller's stable variant assignment
+   * for a lesson, or null when the lesson has no active variants.
+   * Stable = the first call assigns randomly and the assignment is
+   * persisted, every subsequent call for the same student+lesson
+   * returns the same row. This is what makes A/B observable: the
+   * same student always sees the same variant for the duration of
+   * the test.
+   */
+  @Get('lessons/:id/my-variant')
+  @Roles(UserRole.student)
+  getMyVariant(@Param('id') id: string, @Request() req: any) {
+    return this.cq.getVariantPayloadForStudent(req.user.userId, id);
+  }
+
   @Post('lessons/:id/promote/:variant')
   @Roles(UserRole.superadmin)
   promoteVariant(

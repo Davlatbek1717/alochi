@@ -69,6 +69,15 @@ export default function ContentQualityPage() {
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [abResults, setAbResults] = useState<ABResult[] | null>(null);
   const [abLoading, setAbLoading] = useState(false);
+  // Variant-creation modal state — superadmin picks how B differs
+  // from A before the variant is persisted.
+  const [variantModal, setVariantModal] = useState<{
+    lessonId: string;
+    title: string;
+  } | null>(null);
+  const [variantMaxComponents, setVariantMaxComponents] = useState(3);
+  const [variantNotes, setVariantNotes] = useState('');
+  const [variantSaving, setVariantSaving] = useState(false);
   const toast = useToast();
 
   const token = () => localStorage.getItem('accessToken') ?? '';
@@ -99,19 +108,35 @@ export default function ContentQualityPage() {
     }
   }
 
-  async function startABTest(lessonId: string) {
+  function openVariantModal(lesson: LessonStat) {
+    setVariantModal({ lessonId: lesson.lessonId, title: lesson.title });
+    setVariantMaxComponents(3);
+    setVariantNotes('');
+  }
+
+  async function submitVariant() {
+    if (!variantModal) return;
+    setVariantSaving(true);
     try {
       await apiRequest(
-        `/content-quality/lessons/${lessonId}/variant`,
+        `/content-quality/lessons/${variantModal.lessonId}/variant`,
         {
           method: 'POST',
-          body: JSON.stringify({ config: { description: 'B varianti' } }),
+          body: JSON.stringify({
+            config: {
+              maxComponents: variantMaxComponents,
+              notes: variantNotes.trim() || undefined,
+            },
+          }),
         },
         token(),
       );
       toast.success('B variant yaratildi');
+      setVariantModal(null);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Xato yuz berdi');
+    } finally {
+      setVariantSaving(false);
     }
   }
 
@@ -294,12 +319,90 @@ export default function ContentQualityPage() {
                 rank={idx + 1}
                 lesson={lesson}
                 onABResults={() => viewABResults(lesson.lessonId)}
-                onABStart={() => startABTest(lesson.lessonId)}
+                onABStart={() => openVariantModal(lesson)}
               />
             ))}
           </ul>
         )}
       </div>
+
+      {/* Variant-creation modal — superadmin picks how B differs */}
+      <Modal
+        open={variantModal !== null}
+        onClose={() => !variantSaving && setVariantModal(null)}
+        title="A/B test boshlash"
+        description={variantModal?.title}
+        size="md"
+        theme="light"
+        footer={
+          <>
+            <button
+              onClick={() => setVariantModal(null)}
+              disabled={variantSaving}
+              className="px-4 py-2 rounded-xl text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={submitVariant}
+              disabled={variantSaving || variantMaxComponents < 1}
+              className="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              {variantSaving ? '...' : (
+                <>
+                  <Play size={14} /> B variant yaratish
+                </>
+              )}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+            <p className="text-xs font-bold text-violet-900">
+              TZ §21.4 — A/B testing
+            </p>
+            <p className="text-[11px] text-violet-800/80 font-semibold mt-0.5 leading-snug">
+              Tizim o&apos;quvchilarni teng bo&apos;lib A va B variantlarga ajratadi.
+              B variant kichikroq topshiriqlar to&apos;plami bilan sinab ko&apos;riladi.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+              B variantda nechta topshiriq?
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={variantMaxComponents}
+              onChange={(e) =>
+                setVariantMaxComponents(
+                  Math.max(1, Math.min(20, Number(e.target.value) || 1)),
+                )
+              }
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-violet-500"
+            />
+            <p className="text-[11px] text-slate-500 font-semibold mt-1">
+              Birinchi N ta topshiriq ko&apos;rsatiladi (qolganlari yashiriladi).
+              Standart: 3.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wide mb-1.5">
+              Izoh (ixtiyoriy)
+            </label>
+            <textarea
+              value={variantNotes}
+              onChange={(e) => setVariantNotes(e.target.value)}
+              rows={2}
+              maxLength={300}
+              placeholder="Masalan: 5 savol o'rniga 3 — vaqt cheklovini sinash"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 resize-none focus:outline-none focus:border-violet-500"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* A/B results modal */}
       <Modal

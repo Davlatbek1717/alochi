@@ -231,14 +231,39 @@ export default function LessonPage() {
     setLoading(true);
     setError('');
     try {
-      // Lesson is required; progress/xp are best-effort so a temporary
-      // gamification outage doesn't block opening the lesson.
+      // Lesson is required; progress/xp/variant are best-effort so a
+      // temporary outage doesn't block opening the lesson.
       const lessonRes = await apiRequest<Lesson>(`/lessons/${id}`, {}, token);
-      const [progressRes, xpRes] = await Promise.all([
+      const [progressRes, xpRes, variantRes] = await Promise.all([
         apiRequest<ProgressEntry[]>('/progress/my', {}, token).catch(() => null),
         apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
+        apiRequest<{
+          variant: 'A' | 'B';
+          config: { maxComponents?: number; visibleTypes?: string[] } | null;
+        } | null>(
+          `/content-quality/lessons/${id}/my-variant`,
+          {},
+          token,
+        ).catch(() => null),
       ]);
-      setLesson(lessonRes.data);
+      // §21.4 — A/B testing. If the student is assigned to a variant
+      // with overrides, slice the lesson's components_data BEFORE we
+      // commit it to state so the rest of the runner (steps, MCQ
+      // extractors, progress bar) sees the variant's reduced surface.
+      let baseLesson = lessonRes.data;
+      const variantPayload = variantRes?.data;
+      if (variantPayload?.config) {
+        const cfg = variantPayload.config;
+        let cd = baseLesson.components_data ?? [];
+        if (Array.isArray(cfg.visibleTypes) && cfg.visibleTypes.length > 0) {
+          cd = cd.filter((c) => cfg.visibleTypes!.includes(c.type));
+        }
+        if (typeof cfg.maxComponents === 'number' && cfg.maxComponents > 0) {
+          cd = cd.slice(0, cfg.maxComponents);
+        }
+        baseLesson = { ...baseLesson, components_data: cd };
+      }
+      setLesson(baseLesson);
       if (progressRes) {
         const myProgress =
           progressRes.data.find((p) => p.lessonId === id) ?? null;

@@ -101,6 +101,30 @@ export class ContentQualityService {
     }
   }
 
+  /**
+   * Same as getVariantForStudent but joins the LessonVariant row so
+   * the caller gets the variant letter ('A' | 'B') and its differential
+   * config in one round-trip. Returns null when this lesson has no
+   * active variants — caller should fall through to the default
+   * (un-variant) lesson rendering. This is what the student lesson
+   * runner uses to actually apply A/B differences (§21.4).
+   */
+  async getVariantPayloadForStudent(studentId: string, lessonId: string) {
+    const assignment = await this.getVariantForStudent(studentId, lessonId);
+    if (!assignment) return null;
+    const variant = await this.prisma.lessonVariant.findUnique({
+      where: { id: assignment.variantId },
+      select: { id: true, variant: true, config: true, isActive: true },
+    });
+    if (!variant || !variant.isActive) return null;
+    return {
+      assignmentId: assignment.id,
+      variantId: variant.id,
+      variant: variant.variant, // 'A' | 'B'
+      config: variant.config, // Json — currently { maxComponents?: number, notes?: string }
+    };
+  }
+
   async getABResults(lessonId: string, tenantId: string) {
     await this.assertLessonOwnership(lessonId, tenantId);
     const variants = await this.prisma.lessonVariant.findMany({
