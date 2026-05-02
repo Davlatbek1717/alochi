@@ -76,6 +76,7 @@ const NAV: Record<string, NavEntry[]> = {
       icon: <BookMarked size={15} />,
       items: [
         { href: '/superadmin/lessons', icon: <BookMarked size={14} />, label: 'Darslar' },
+        { href: '/superadmin/exams', icon: <GraduationCap size={14} />, label: 'Imtihonlar' },
         { href: '/superadmin/tournaments', icon: <Trophy size={14} />, label: 'Turnirlar' },
         { href: '/superadmin/certificate-design', icon: <Award size={14} />, label: 'Sertifikat dizayni' },
         { href: '/superadmin/adaptive', icon: <Zap size={14} />, label: 'Adaptiv qiyinlik' },

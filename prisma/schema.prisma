@@ -42,6 +42,7 @@ model Tenant {
   tournaments              Tournament[]              @relation("TenantTournaments")
   adaptiveDifficultyConfig AdaptiveDifficultyConfig?
   churnScores              ChurnScore[]              @relation("ChurnTenant")
+  exams                    Exam[]                    @relation("TenantExams")
 
   @@map("tenants")
 }
@@ -1117,6 +1118,46 @@ model KpiOverrideLog {
   @@index([studentId, lessonId])
   @@index([changedAt])
   @@map("kpi_override_log")
+}
+
+// Superadmin-authored exam definitions. Independent of the per-lesson
+// `hasExam` flag and the mentor-driven ExamPermission flow — these are
+// standalone exams composed of MCQ questions, surfaced to students via
+// /student/exams once linked to a granted permission.
+model Exam {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  title            String
+  description      String?
+  // Pass threshold as a percentage (0-100).
+  passThreshold    Int      @default(70) @map("pass_threshold")
+  // Optional time budget; null means no enforcement.
+  timeLimitMinutes Int?     @map("time_limit_minutes")
+  isPublished      Boolean  @default(false) @map("is_published")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant    Tenant         @relation("TenantExams", fields: [tenantId], references: [id], onDelete: Cascade)
+  questions ExamQuestion[]
+
+  @@index([tenantId, isPublished])
+  @@map("exams")
+}
+
+model ExamQuestion {
+  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  examId       String @map("exam_id") @db.Uuid
+  text         String
+  // Stored as a JSON string array; the form enforces 2+ entries.
+  options      Json
+  correctIndex Int    @map("correct_index")
+  // Display order within the exam; lower renders first.
+  orderIndex   Int    @default(0) @map("order_index")
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId, orderIndex])
+  @@map("exam_questions")
 }
 
 // 25.G.1 Persistent exam queue
