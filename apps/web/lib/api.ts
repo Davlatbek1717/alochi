@@ -36,6 +36,24 @@ interface RefreshResponse {
  */
 let refreshInFlight: Promise<string | null> | null = null;
 
+/**
+ * Single-flight redirect to /login. When tokens are bad on a stale tab,
+ * dozens of parallel widget fetches all hit 401 within ~50ms — without
+ * this guard each one would call window.location.replace() and the
+ * browser cancels the navigation in-flight, leaving the user stuck on
+ * the broken page. The flag also blocks recursive redirects when /login
+ * itself happens to issue any apiRequest calls during render.
+ */
+let redirectingToLogin = false;
+function bounceToLogin() {
+  if (typeof window === 'undefined') return;
+  if (redirectingToLogin) return;
+  if (window.location.pathname.startsWith('/login')) return;
+  redirectingToLogin = true;
+  // replace() so the broken page doesn't pile up in the back-button stack.
+  window.location.replace('/login');
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   if (refreshInFlight) return refreshInFlight;
@@ -117,10 +135,14 @@ export async function apiRequest<T>(
       activeToken = refreshed;
       const retry = await doFetch<T>(path, options, activeToken);
       if (retry.kind === 'success') return retry.envelope;
-      throw retry.error;
+      // Retry also rejected. If still 401, fall through to the bounce
+      // below. Otherwise surface the new error to the caller.
+      if (retry.kind !== 'unauthorized') throw retry.error;
     }
-    // Refresh failed — surface the original 401 so the caller / global handler
-    // can route to /login. The toast message is preserved.
+    // Refresh missing or failed (or retry still 401) — tokens are dead.
+    // Bounce to /login so the user gets a working page instead of a
+    // dashboard full of red 401 errors.
+    bounceToLogin();
     throw result.error;
   }
 
