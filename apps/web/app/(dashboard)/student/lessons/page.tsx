@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, Target } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton } from '@/components/ui';
 import { StreakFlame } from '../_components/StreakFlame';
@@ -69,6 +69,12 @@ export default function LessonsPathPage() {
 
   // Auto-scroll-into-view target for the current node.
   const currentNodeRef = useRef<HTMLButtonElement | null>(null);
+
+  // FAB visibility — show "scroll to current" when the current node has
+  // scrolled out of view (e.g. user scrolled forward to peek at later
+  // units). The FAB hides itself the moment the node is back in the
+  // viewport so it doesn't obstruct the path.
+  const [fabVisible, setFabVisible] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -161,6 +167,35 @@ export default function LessonsPathPage() {
     return () => window.cancelAnimationFrame(id);
   }, [loading, currentIndex]);
 
+  // Track whether the current-node button is in the viewport. When it
+  // leaves we show a floating "back to current" FAB. IntersectionObserver
+  // is cheap and fires only on threshold crossings, so this won't burn
+  // frames on long paths.
+  useEffect(() => {
+    if (loading) return;
+    const el = currentNodeRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Hide the FAB while the node is on screen (any portion).
+        // Show it when the node is fully out — the user has scrolled
+        // away to peek at locked nodes or earlier units.
+        setFabVisible(!entry.isIntersecting);
+      },
+      // Trigger slightly before the node leaves so the FAB doesn't snap
+      // in at the very edge.
+      { threshold: 0, rootMargin: '-80px 0px -80px 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loading, currentIndex]);
+
+  const scrollToCurrent = useCallback(() => {
+    const el = currentNodeRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
+
   // Group lessons into units of 5.
   const units = useMemo(() => {
     const groups: { lessons: Lesson[]; states: NodeState[]; theme: UnitTheme }[] = [];
@@ -202,27 +237,56 @@ export default function LessonsPathPage() {
     router.push(`/student/lessons/${lessonId}`);
   }
 
+  // Overall progress numbers for the header ribbon.
+  const completedCount = useMemo(
+    () => lessonStates.filter((s) => s === 'completed').length,
+    [lessonStates],
+  );
+  const totalCount = lessons.length;
+  const progressPct =
+    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-[#fffaf0]">
-      {/* Sticky top bar */}
+      {/* Sticky top bar with overall progress ribbon */}
       <header className="sticky top-0 z-30 bg-[#fffaf0]/95 backdrop-blur border-b border-[#ede9e1]">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
-          <Link
-            href="/student"
-            aria-label="Ortga"
-            className="w-9 h-9 rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </Link>
-          <h1 className="flex-1 text-center text-base font-extrabold text-[#3c3c3c]">
-            Sayohat xaritasi
-          </h1>
-          <div className="flex items-center gap-3 shrink-0">
-            <StreakFlame streak={streak} hasShield={hasShield} size={26} showLabel={false} />
-            <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#46a302]">
-              <Sparkles size={14} className="text-[#fbbf24]" /> {todayXp}
-            </span>
+        <div className="max-w-lg mx-auto px-4 pt-3 pb-2.5">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/student"
+              aria-label="Ortga"
+              className="w-9 h-9 rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors shrink-0"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+            <div className="flex-1 min-w-0 text-center">
+              <h1 className="text-base font-extrabold text-[#3c3c3c] leading-tight">
+                Sayohat xaritasi
+              </h1>
+              {totalCount > 0 && (
+                <p className="text-[11px] font-bold text-[#777] leading-snug">
+                  {completedCount} / {totalCount} dars · {progressPct}%
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <StreakFlame streak={streak} hasShield={hasShield} size={24} showLabel={false} />
+              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#46a302]">
+                <Sparkles size={14} className="text-[#fbbf24]" /> {todayXp}
+              </span>
+            </div>
           </div>
+          {/* Progress ribbon — slim duo-green track that fills as the
+              student completes lessons. Only rendered once we have data so
+              it doesn't flash empty during load. */}
+          {totalCount > 0 && (
+            <div className="mt-2 h-1.5 bg-[#e8e0d0] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-[#58cc02] to-[#46a302] rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+          )}
         </div>
       </header>
 
@@ -259,6 +323,23 @@ export default function LessonsPathPage() {
           </div>
         )}
       </main>
+
+      {/* Floating "back to current" button — appears only when the
+          current node is off-screen so it never overlaps the path while
+          the student is naturally working through it. Lives above the
+          bottom-nav safe area. */}
+      {fabVisible && !loading && lessons.length > 0 && (
+        <button
+          type="button"
+          onClick={scrollToCurrent}
+          aria-label="Joriy darsga qaytish"
+          className="fixed left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 bg-[#58cc02] text-white border-b-[4px] border-[#46a302] px-4 py-2.5 rounded-full font-extrabold text-sm uppercase tracking-wide active:translate-y-[2px] active:border-b-[2px] transition-all shadow-lg motion-safe:animate-[bounce-in_300ms_ease-out]"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 76px)' }}
+        >
+          <Target size={16} />
+          Joriy dars
+        </button>
+      )}
 
       <LessonBottomSheet
         open={sheetOpen}
@@ -367,35 +448,69 @@ function TreasureChestNode() {
   return (
     <div className="mt-4 flex flex-col items-center gap-1.5">
       <div
-        className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-b from-[#fbbf24] to-[#d97706] border-b-[4px] border-[#92400e] shadow-[0_4px_0_rgba(0,0,0,0.08)] motion-safe:animate-[bounce-in_500ms_ease-out]"
+        className="relative w-20 h-20 rounded-2xl flex items-center justify-center text-3xl bg-gradient-to-b from-[#fbbf24] to-[#d97706] border-b-[4px] border-[#92400e] shadow-[0_4px_0_rgba(0,0,0,0.08)] motion-safe:animate-[bounce-in_500ms_ease-out]"
         aria-label="Bo'lim mukofoti"
         role="img"
       >
-        <span aria-hidden>🎁</span>
+        {/* Soft amber halo so the chest reads as "claimed reward" not
+            just another node. Hidden under reduced-motion via the
+            global motion-safe override in globals.css. */}
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-2xl bg-[#fbbf24]/40 blur-md motion-safe:animate-pulse pointer-events-none"
+        />
+        <span className="relative" aria-hidden>🎁</span>
       </div>
       <p className="text-xs font-extrabold uppercase tracking-wider text-[#d97706]">
-        +50 XP
+        Bo&apos;lim tugadi · +50 XP
       </p>
     </div>
   );
 }
 
 function EndOfPathTile({ completedAll }: { completedAll: boolean }) {
-  const expression = completedAll ? 'sleeping' : 'sad';
-  const message = completedAll
-    ? "Yangi darslar qo'shilishini kuting"
-    : "Keyingi darslar qulflangan — boshlashda davom eting";
+  // Two distinct states deserve two distinct cards:
+  //   - completedAll: the student has cleared every published lesson.
+  //     Celebrate them and explain why there's nothing past this point.
+  //   - !completedAll: they've reached the end of the rendered path
+  //     before completing it (fast scroller). Encourage them back.
+  if (completedAll) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl border-[1.5px] border-[#fbbf24]/40 p-5 bg-gradient-to-br from-[#fffbeb] via-[#fef3c7] to-[#fde68a] motion-safe:animate-[bounce-in_500ms_ease-out]">
+        <div
+          aria-hidden
+          className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#fbbf24]/25"
+        />
+        <div className="relative flex items-center gap-4">
+          <div className="shrink-0">
+            <Mascot expression="happy" size={80} animated />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-wider text-[#92400e]">
+              Barcha darslar bajarildi
+            </p>
+            <p className="text-base font-extrabold text-[#7c2d12] leading-tight mt-1">
+              Sayohat oxiriga yetdingiz! 🎉
+            </p>
+            <p className="text-xs font-bold text-[#92400e]/80 leading-snug mt-1">
+              Yangi darslar tez orada qo&apos;shiladi. Ungacha takrorlang yoki do&apos;stlar bilan duel qiling.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="bg-white rounded-3xl border-[1.5px] border-dashed border-[#ede9e1] p-5 flex items-center gap-4">
       <div className="shrink-0">
-        <Mascot expression={expression} size={72} animated />
+        <Mascot expression="sleeping" size={72} animated />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-extrabold uppercase tracking-wider text-[#777]">
-          Yo&apos;l oxiri
+          Yo&apos;l davom etadi
         </p>
         <p className="text-sm font-bold text-[#3c3c3c] leading-snug mt-0.5">
-          {message}
+          Keyingi darslar qulflangan — joriy darsdan boshlashda davom eting
         </p>
       </div>
     </div>
