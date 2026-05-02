@@ -44,7 +44,7 @@ export class TenantsController {
 
   /** 25.C.3: Read certificate template for the calling tenant. */
   @Get('me/cert-template')
-  @Roles(UserRole.superadmin, UserRole.filadmin)
+  @Roles(UserRole.superadmin)
   getCertTemplate(@Request() req: any) {
     return this.tenants.getCertTemplate(req.user.tenantId);
   }

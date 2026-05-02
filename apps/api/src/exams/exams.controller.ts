@@ -21,13 +21,29 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 export class ExamsController {
   constructor(private exams: ExamsService) {}
 
+  // Tester grants either a lesson-anchored exam (legacy `hasExam`
+  // flow) or a standalone catalogue exam — exactly one of lessonId
+  // / examId must be supplied. The service rejects mixed/empty input.
   @Post('grant')
   @Roles(UserRole.tester)
   grant(
-    @Body() body: { studentId: string; lessonId: string },
+    @Body() body: { studentId: string; lessonId?: string; examId?: string },
     @Request() req: any,
   ) {
-    return this.exams.grant(req.user.userId, body.studentId, body.lessonId);
+    return this.exams.grant(req.user.userId, body.studentId, {
+      lessonId: body.lessonId,
+      examId: body.examId,
+    });
+  }
+
+  // List published catalogue exams for the current tenant. Tester
+  // uses this to pick a catalogue exam in the grant modal; mounted
+  // under /exams (not /exams/admin) so the tester role can read
+  // without inheriting full superadmin CRUD.
+  @Get('available')
+  @Roles(UserRole.tester)
+  listAvailable(@Request() req: any) {
+    return this.exams.listAvailableForTester(req.user.tenantId);
   }
 
   @Get('my-active')

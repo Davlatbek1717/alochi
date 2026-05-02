@@ -1,12 +1,21 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { CheckCircle, Clock, UserX, PlayCircle, Users, BookOpen, ChevronDown } from 'lucide-react';
+import { CheckCircle, Clock, UserX, PlayCircle, Users, BookOpen, ChevronDown, GraduationCap } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 
 interface Student { id: string; name: string; }
 interface AttendanceRecord { studentId: string; status: string; student: { id: string; name: string }; }
 interface Lesson { id: string; title: string; orderNumber: number; hasExam: boolean; }
+interface CatalogueExam {
+  id: string;
+  title: string;
+  description: string | null;
+  passThreshold: number;
+  timeLimitMinutes: number | null;
+  _count: { questions: number };
+}
+type ExamSource = 'lesson' | 'catalogue';
 type QueueStatus = 'waiting' | 'testing' | 'done' | 'absent';
 interface StudentRow { id: string; name: string; attendance: 'present' | 'absent' | null; queue: QueueStatus; activeExamId?: string; }
 
@@ -40,10 +49,13 @@ export default function TesterExamQueuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [catalogueExams, setCatalogueExams] = useState<CatalogueExam[]>([]);
 
   // Grant modal state
   const [grantModal, setGrantModal] = useState<{ studentId: string; name: string } | null>(null);
+  const [grantSource, setGrantSource] = useState<ExamSource>('lesson');
   const [selectedLesson, setSelectedLesson] = useState('');
+  const [selectedExam, setSelectedExam] = useState('');
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState('');
 
@@ -57,15 +69,17 @@ export default function TesterExamQueuePage() {
     if (!branchId) { setError('Branch topilmadi'); setLoading(false); return; }
 
     try {
-      const [studentsRes, attendanceRes, lessonsRes] = await Promise.all([
+      const [studentsRes, attendanceRes, lessonsRes, examsRes] = await Promise.all([
         apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token),
         apiRequest<AttendanceRecord[]>(`/attendance/students/${branchId}/${today}`, {}, token)
           .catch(() => ({ data: [] as AttendanceRecord[] })),
         apiRequest<Lesson[]>('/lessons', {}, token).catch(() => ({ data: [] as Lesson[] })),
+        apiRequest<CatalogueExam[]>('/exams/available', {}, token).catch(() => ({ data: [] as CatalogueExam[] })),
       ]);
 
       const attendanceMap = new Map(attendanceRes.data.map((a) => [a.studentId, a.status]));
       setLessons(lessonsRes.data.filter((l) => l.hasExam));
+      setCatalogueExams(examsRes.data);
       setRows(studentsRes.data.map((s) => {
         const att = attendanceMap.get(s.id);
         return {
@@ -102,19 +116,30 @@ export default function TesterExamQueuePage() {
 
   function openGrantModal(student: StudentRow) {
     setGrantModal({ studentId: student.id, name: student.name });
+    // Default to whichever source has options. Catalogue first when
+    // both exist, since superadmin-authored exams tend to be richer.
+    const defaultSource: ExamSource = catalogueExams.length > 0 ? 'catalogue' : 'lesson';
+    setGrantSource(defaultSource);
     setSelectedLesson(lessons[0]?.id ?? '');
+    setSelectedExam(catalogueExams[0]?.id ?? '');
     setGrantError('');
   }
 
   async function handleGrant() {
-    if (!grantModal || !selectedLesson) return;
+    if (!grantModal) return;
+    const targetId = grantSource === 'lesson' ? selectedLesson : selectedExam;
+    if (!targetId) return;
     setGranting(true);
     setGrantError('');
     const token = localStorage.getItem('accessToken') ?? '';
     try {
+      const body =
+        grantSource === 'lesson'
+          ? { studentId: grantModal.studentId, lessonId: targetId }
+          : { studentId: grantModal.studentId, examId: targetId };
       await apiRequest('/exams/grant', {
         method: 'POST',
-        body: JSON.stringify({ studentId: grantModal.studentId, lessonId: selectedLesson }),
+        body: JSON.stringify(body),
       }, token);
       setRows((prev) => prev.map((r) =>
         r.id === grantModal.studentId ? { ...r, queue: 'testing' } : r,
@@ -245,7 +270,7 @@ export default function TesterExamQueuePage() {
                             variant="secondary"
                             size="sm"
                             icon={<BookOpen size={12} />}
-                            disabled={!!testingNow || lessons.length === 0}
+                            disabled={!!testingNow || (lessons.length === 0 && catalogueExams.length === 0)}
                             onClick={() => openGrantModal(s)}
                           >
                             Boshlash
@@ -310,7 +335,9 @@ export default function TesterExamQueuePage() {
             <Button
               variant="primary"
               loading={granting}
-              disabled={!selectedLesson}
+              disabled={
+                grantSource === 'lesson' ? !selectedLesson : !selectedExam
+              }
               icon={<BookOpen size={16} />}
               onClick={handleGrant}
             >
@@ -325,24 +352,102 @@ export default function TesterExamQueuePage() {
             <p className="text-white font-semibold">{grantModal?.name}</p>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Dars tanlang</p>
-            <div className="relative">
-              <select
-                value={selectedLesson}
-                onChange={(e) => setSelectedLesson(e.target.value)}
-                aria-label="Dars tanlang"
-                className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
+          {/* Source tabs — both shown only when both have content; if
+              only one has content, the tabs collapse so the tester
+              isn't faced with a useless empty selector. */}
+          {(lessons.length > 0 || catalogueExams.length > 0) && (
+            <div className="flex bg-slate-800/60 border border-slate-700 rounded-xl p-1 gap-1">
+              <button
+                type="button"
+                onClick={() => setGrantSource('catalogue')}
+                disabled={catalogueExams.length === 0}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg transition-colors ${
+                  grantSource === 'catalogue'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
               >
-                {lessons.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    #{l.orderNumber} — {l.title}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <GraduationCap size={12} />
+                Katalog imtihoni ({catalogueExams.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setGrantSource('lesson')}
+                disabled={lessons.length === 0}
+                className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg transition-colors ${
+                  grantSource === 'lesson'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                <BookOpen size={12} />
+                Dars imtihoni ({lessons.length})
+              </button>
             </div>
-          </div>
+          )}
+
+          {grantSource === 'lesson' ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Dars tanlang</p>
+              {lessons.length === 0 ? (
+                <p className="text-slate-400 text-xs">
+                  Imtihonli darslar mavjud emas. Superadmin darsda &quot;Imtihon&quot; flagini yoqishi kerak.
+                </p>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={selectedLesson}
+                    onChange={(e) => setSelectedLesson(e.target.value)}
+                    aria-label="Dars tanlang"
+                    className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
+                  >
+                    {lessons.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        #{l.orderNumber} — {l.title}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Imtihon tanlang</p>
+              {catalogueExams.length === 0 ? (
+                <p className="text-slate-400 text-xs">
+                  Nashr qilingan katalog imtihonlari mavjud emas. Superadmin /superadmin/exams sahifasida nashr qilishi kerak.
+                </p>
+              ) : (
+                <>
+                  <div className="relative">
+                    <select
+                      value={selectedExam}
+                      onChange={(e) => setSelectedExam(e.target.value)}
+                      aria-label="Imtihon tanlang"
+                      className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
+                    >
+                      {catalogueExams.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.title} — {e._count.questions} ta savol · {e.passThreshold}% o&apos;tish
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                  {(() => {
+                    const picked = catalogueExams.find((e) => e.id === selectedExam);
+                    if (!picked?.description) return null;
+                    return (
+                      <p className="text-xs text-slate-400 bg-slate-800/40 border border-slate-700 rounded-lg px-3 py-2">
+                        {picked.description}
+                      </p>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          )}
 
           {grantError && (
             <p className="text-rose-400 text-sm">{grantError}</p>

@@ -12,15 +12,33 @@ type McqQuestion = {
   correctIndex: number;
 };
 
+// `lesson` is set for legacy lesson-anchored exams (Lesson.hasExam +
+// MCQ components); `exam` is set for standalone catalogue exams. The
+// service guarantees exactly one of the two is present.
 type ActiveExam = {
   id: string;
-  lessonId: string;
+  lessonId: string | null;
+  examId: string | null;
   status: string;
   lesson: {
     id: string;
     title: string;
     components_data: { id: string; type: string; config: Record<string, unknown> }[];
-  };
+  } | null;
+  exam: {
+    id: string;
+    title: string;
+    description: string | null;
+    passThreshold: number;
+    timeLimitMinutes: number | null;
+    questions: {
+      id: string;
+      text: string;
+      options: unknown;
+      correctIndex: number;
+      orderIndex: number;
+    }[];
+  } | null;
 };
 
 type ExamResult = {
@@ -48,9 +66,24 @@ export default function StudentExamsPage() {
       .then((res) => {
         setExam(res.data);
         if (res.data) {
-          const qs: McqQuestion[] = (res.data.lesson.components_data ?? [])
-            .filter((c) => c.type === 'mcq')
-            .map((c) => c.config as McqQuestion);
+          // Catalogue-exam questions live on `exam.questions`; legacy
+          // lesson-anchored exams expose them via lesson.components_data
+          // (only `mcq` rows). Both are normalised to the same
+          // McqQuestion shape so the renderer below stays simple.
+          let qs: McqQuestion[] = [];
+          if (res.data.exam) {
+            qs = res.data.exam.questions.map((q) => ({
+              question: q.text,
+              options: Array.isArray(q.options)
+                ? (q.options as unknown[]).map((o) => String(o ?? ''))
+                : [],
+              correctIndex: q.correctIndex,
+            }));
+          } else if (res.data.lesson) {
+            qs = (res.data.lesson.components_data ?? [])
+              .filter((c) => c.type === 'mcq')
+              .map((c) => c.config as McqQuestion);
+          }
           setQuestions(qs);
           setAnswers(Array(qs.length).fill(null));
         }
@@ -128,7 +161,7 @@ export default function StudentExamsPage() {
             </p>
           ) : (
             <p className="text-rose-700 text-sm bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-              Imtihondan o&apos;tish uchun 70% kerak. Qayta urinish uchun testerga murojaat qiling.
+              Imtihondan o&apos;tish uchun {exam?.exam?.passThreshold ?? 70}% kerak. Qayta urinish uchun testerga murojaat qiling.
             </p>
           )}
           <Button
@@ -217,7 +250,9 @@ export default function StudentExamsPage() {
             </div>
             <div>
               <p className="text-[#94a3b8] text-xs">Imtihon</p>
-              <p className="text-white font-bold text-base leading-tight">{exam.lesson.title}</p>
+              <p className="text-white font-bold text-base leading-tight">
+                {exam.exam?.title ?? exam.lesson?.title ?? 'Imtihon'}
+              </p>
             </div>
           </div>
           {cameraWarnings > 0 && (

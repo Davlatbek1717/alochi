@@ -877,7 +877,11 @@ enum ExamStatus {
 model ExamPermission {
   id          String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   studentId   String     @map("student_id") @db.Uuid
-  lessonId    String     @map("lesson_id") @db.Uuid
+  // Either lessonId (legacy lesson-anchored exam — Lesson.hasExam +
+  // its MCQ components) OR examId (standalone catalogue Exam). Never
+  // both, never neither. The service layer enforces XOR on grant.
+  lessonId    String?    @map("lesson_id") @db.Uuid
+  examId      String?    @map("exam_id") @db.Uuid
   grantedBy   String     @map("granted_by") @db.Uuid
   status      ExamStatus @default(active)
   score       Int?
@@ -885,12 +889,15 @@ model ExamPermission {
   grantedAt   DateTime   @default(now()) @map("granted_at")
   completedAt DateTime?  @map("completed_at")
 
-  student User   @relation("ExamStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  granter User   @relation("ExamGranter", fields: [grantedBy], references: [id], onDelete: Cascade)
+  student User    @relation("ExamStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exam    Exam?   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  granter User    @relation("ExamGranter", fields: [grantedBy], references: [id], onDelete: Cascade)
 
   @@unique([studentId, lessonId])
+  @@unique([studentId, examId])
   @@index([studentId, status])
+  @@index([examId])
   @@map("exam_permissions")
 }
 
@@ -1137,8 +1144,9 @@ model Exam {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  tenant    Tenant         @relation("TenantExams", fields: [tenantId], references: [id], onDelete: Cascade)
-  questions ExamQuestion[]
+  tenant      Tenant           @relation("TenantExams", fields: [tenantId], references: [id], onDelete: Cascade)
+  questions   ExamQuestion[]
+  permissions ExamPermission[]
 
   @@index([tenantId, isPublished])
   @@map("exams")
