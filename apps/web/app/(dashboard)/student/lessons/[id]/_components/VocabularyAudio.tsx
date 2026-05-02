@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Mic, Square } from 'lucide-react';
+import { Mic, Square, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
+import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { Waveform } from './Waveform';
 
 type VocabularyAudioProps = {
@@ -44,6 +45,24 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+
+  // Browser TTS support — drives whether to render the "Eshitish" pronunciation
+  // example button. Computed once on mount so SSR/hydration stay consistent.
+  const [ttsAvailable, setTtsAvailable] = useState(false);
+  useEffect(() => {
+    setTtsAvailable(getSpeechCapabilities().tts);
+    return () => {
+      // Stop any in-flight pronunciation example when the exercise unmounts.
+      stopSpeaking();
+    };
+  }, []);
+
+  function playExample() {
+    if (!ttsAvailable) return;
+    void speak(word, { lang: 'en-US', rate: 0.9 }).catch(() => {
+      // Silent — pronunciation example is a nice-to-have.
+    });
+  }
 
   // Whenever a score is set, route it to onPassed/onFailed once.
   useEffect(() => {
@@ -191,6 +210,23 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
         >
           {word}
         </p>
+        {/* Pronunciation example — Web Speech only; hidden if unsupported so
+            we don't dangle a dead button. Server fallback isn't worth the
+            complexity here since the recording flow already works fine. */}
+        {ttsAvailable && (
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              onClick={playExample}
+              aria-label="Talaffuz namunasini eshitish"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold border-2 border-b-[3px] active:translate-y-[1px] active:border-b-2 transition-all duration-150 bg-white border-[#e8e0d0] text-[#7a5e2c] hover:border-[#c8b890]"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              <Volume2 size={14} />
+              <span>Talaffuzni eshitish</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {permError && (

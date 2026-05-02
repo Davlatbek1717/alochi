@@ -18,6 +18,7 @@ import {
 import { apiRequest } from '@/lib/api';
 import { Mascot, Modal, Skeleton, Switch, useToast } from '@/components/ui';
 import { isSoundEnabled, setSoundEnabled } from '@/lib/sound';
+import { getWebSpeechPreference, setWebSpeechPreference } from '@/lib/speech';
 import { AnimatedCounter } from '../_components/AnimatedCounter';
 import {
   AchievementCarousel,
@@ -100,12 +101,21 @@ export default function StudentProfilePage() {
 
   // Settings — sound toggle (mirrored from localStorage on mount).
   const [soundOn, setSoundOn] = useState(true);
+  // Browser-speech (Web Speech API) toggle. When OFF, every component falls
+  // through to the server TTS/STT path — useful if the student dislikes
+  // the OS voice or the recognizer keeps mis-hearing them.
+  const [webSpeechOn, setWebSpeechOn] = useState(true);
   useEffect(() => {
     setSoundOn(isSoundEnabled());
+    setWebSpeechOn(getWebSpeechPreference());
   }, []);
   function toggleSound(next: boolean) {
     setSoundOn(next);
     setSoundEnabled(next);
+  }
+  function toggleWebSpeech(next: boolean) {
+    setWebSpeechOn(next);
+    setWebSpeechPreference(next);
   }
 
   useEffect(() => {
@@ -407,9 +417,9 @@ export default function StudentProfilePage() {
           </div>
         </section>
 
-        {/* Settings — sound effects toggle */}
-        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-5">
-          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-3">
+        {/* Settings — sound effects + browser speech toggles */}
+        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-5 space-y-4">
+          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
             Sozlamalar
           </p>
           <div className="flex items-center justify-between gap-3">
@@ -425,6 +435,21 @@ export default function StudentProfilePage() {
               checked={soundOn}
               onChange={toggleSound}
               label="Ovoz effektlari"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#f3eedf]">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-extrabold text-[#0f172a]">
+                Brauzer ovozi (Web Speech)
+              </p>
+              <p className="text-xs text-[#64748b] font-semibold mt-0.5">
+                Tezkor brauzer talaffuzi va ovoz aniqlash. O&apos;chirilsa, server xizmatlari ishlatiladi.
+              </p>
+            </div>
+            <Switch
+              checked={webSpeechOn}
+              onChange={toggleWebSpeech}
+              label="Brauzer ovozi"
             />
           </div>
         </section>

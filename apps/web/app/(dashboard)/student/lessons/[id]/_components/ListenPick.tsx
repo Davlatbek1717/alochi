@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Loader2, Volume2, VolumeX, XCircle } from 
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
+import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
 import type { ListenPickConfig } from './exercise-types';
@@ -58,6 +59,9 @@ export function ListenPick({ config, onPassed, onFailed }: ListenPickProps) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      // Stop browser TTS too — otherwise an in-flight utterance keeps
+      // talking after the student has navigated past the exercise.
+      stopSpeaking();
       const a = audioElementRef.current;
       if (a) {
         try {
@@ -87,6 +91,21 @@ export function ListenPick({ config, onPassed, onFailed }: ListenPickProps) {
 
   async function playAudio() {
     if (audioState === 'loading') return;
+    // Browser TTS first — instant, free, no network. Falls through to the
+    // Azure server path on older browsers (e.g. some Firefox builds) or
+    // when the user has disabled "Brauzer ovozi" in profile settings.
+    if (getSpeechCapabilities().tts) {
+      setAudioState('playing');
+      try {
+        // Slightly slower for kids — 0.9 is the sweet spot in our testing.
+        await speak(text, { lang: 'en-US', rate: 0.9 });
+        if (mountedRef.current) setAudioState('idle');
+        return;
+      } catch {
+        // Fall through to the server path below.
+        if (mountedRef.current) setAudioState('idle');
+      }
+    }
     // Replay path — cached element. Reset to start so taps always replay
     // from the beginning.
     if (audioElementRef.current) {

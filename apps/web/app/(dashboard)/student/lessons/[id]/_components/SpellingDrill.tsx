@@ -12,6 +12,7 @@ import {
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio } from '@/lib/exercises';
+import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
 import type { SpellingConfig } from './exercise-types';
@@ -77,6 +78,7 @@ export function SpellingDrill({ config, onPassed, onFailed }: SpellingProps) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      stopSpeaking();
       const a = audioElementRef.current;
       if (a) {
         try {
@@ -143,6 +145,18 @@ export function SpellingDrill({ config, onPassed, onFailed }: SpellingProps) {
 
   async function playAudio() {
     if (audioState === 'loading') return;
+    // Browser TTS first — see ListenPick for fallback rationale.
+    if (getSpeechCapabilities().tts) {
+      setAudioState('playing');
+      try {
+        // Spelling needs an even slower rate so each phoneme is clear.
+        await speak(word, { lang: 'en-US', rate: 0.85 });
+        if (mountedRef.current) setAudioState('idle');
+        return;
+      } catch {
+        if (mountedRef.current) setAudioState('idle');
+      }
+    }
     if (audioElementRef.current) {
       try {
         audioElementRef.current.currentTime = 0;

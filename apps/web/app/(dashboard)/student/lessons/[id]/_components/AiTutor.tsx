@@ -1,8 +1,9 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Mic, Send, Square } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
+import { getSpeechCapabilities, listen } from '@/lib/speech';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -36,11 +37,73 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
   const [loading, setLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
   const [readyError, setReadyError] = useState('');
+  // Browser-STT availability + live recording state. Computed once on
+  // mount so SSR matches the initial client render.
+  const [sttAvailable, setSttAvailable] = useState(false);
+  const [listening, setListening] = useState(false);
+  const listenHandleRef = useRef<{ stop: () => void } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    setSttAvailable(getSpeechCapabilities().stt);
+    return () => {
+      // Always stop any in-flight recognition when the tutor unmounts.
+      try {
+        listenHandleRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  /**
+   * Toggle browser STT. While listening:
+   *  - interim transcripts pipe into the input live (acts as a caption).
+   *  - on final result, the recognizer auto-stops; we keep the text in
+   *    the input so the student can edit before sending.
+   * If unsupported (Firefox / settings off), the button is hidden upstream.
+   */
+  function toggleVoiceInput() {
+    if (listening) {
+      try {
+        listenHandleRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      setListening(false);
+      return;
+    }
+    try {
+      const handle = listen({
+        lang: 'en-US',
+        continuous: true,
+        onInterim: (txt) => setInput(txt),
+        onResult: (txt) => {
+          setInput(txt);
+          setListening(false);
+        },
+        onError: (err) => {
+          if (err === 'not-allowed' || err === 'service-not-allowed') {
+            setReadyError('Mikrofon ruxsati berilmadi.');
+          } else if (err === 'no-speech') {
+            setReadyError("Ovoz eshitilmadi — qayta urinib ko'ring.");
+          }
+          setListening(false);
+        },
+        onEnd: () => setListening(false),
+      });
+      listenHandleRef.current = handle;
+      setListening(true);
+      setReadyError('');
+    } catch {
+      setReadyError("Brauzer ovozini boshlab bo'lmadi.");
+      setListening(false);
+    }
+  }
 
   async function sendQuestion(question: string) {
     if (!question.trim() || loading) return;
@@ -185,11 +248,31 @@ export function AiTutor({ lessonContext, onCompleted }: AiTutorProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendQuestion(input)}
-            placeholder="Savolingizni yozing..."
+            placeholder={
+              listening ? 'Tinglanmoqda...' : 'Savolingizni yozing...'
+            }
             aria-label="AI tutorga savol yozing"
             className="flex-1 border-[1.5px] border-[#e8e0d0] rounded-2xl px-4 py-2.5 text-sm font-semibold text-[#3c3c3c] focus:outline-none focus:border-[#58cc02]"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           />
+          {/* Voice input — only rendered when SpeechRecognition is supported
+              AND the user hasn't disabled "Brauzer ovozi" in settings. */}
+          {sttAvailable && (
+            <button
+              type="button"
+              onClick={toggleVoiceInput}
+              disabled={loading}
+              aria-label={listening ? "Yozishni to'xtatish" : 'Ovozli savol'}
+              title={listening ? "Yozishni to'xtatish" : 'Ovozli savol'}
+              className={`w-11 h-11 rounded-full flex items-center justify-center text-white border-b-[3px] active:translate-y-[1px] active:border-b-[1px] transition-all duration-150 disabled:opacity-60 ${
+                listening
+                  ? 'bg-[#ef4444] border-[#b91c1c] motion-safe:[animation:pulse-ring_1.2s_ease-out_infinite]'
+                  : 'bg-[#fbbf24] border-[#d97706]'
+              }`}
+            >
+              {listening ? <Square size={16} fill="currentColor" /> : <Mic size={18} />}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => sendQuestion(input)}

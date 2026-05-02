@@ -11,6 +11,7 @@ import {
 import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio, gradeTranslation } from '@/lib/exercises';
+import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
 import type { ListenTypeConfig } from './exercise-types';
@@ -69,6 +70,7 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      stopSpeaking();
       const a = audioElementRef.current;
       if (a) {
         try {
@@ -105,6 +107,20 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
 
   async function playAudio() {
     if (audioState === 'loading') return;
+    // Browser TTS first — same fallback strategy as ListenPick.
+    if (getSpeechCapabilities().tts) {
+      setAudioState('playing');
+      try {
+        await speak(text, { lang: 'en-US', rate: 0.9 });
+        if (mountedRef.current) {
+          setAudioState('idle');
+          setHasPlayedOnce(true);
+        }
+        return;
+      } catch {
+        if (mountedRef.current) setAudioState('idle');
+      }
+    }
     if (audioElementRef.current) {
       try {
         audioElementRef.current.currentTime = 0;
@@ -190,6 +206,7 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
     } catch {
       /* ignore */
     }
+    stopSpeaking();
     setPhase('checking');
     setFeedback('');
 
