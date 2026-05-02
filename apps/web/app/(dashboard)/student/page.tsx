@@ -11,19 +11,23 @@ import {
   Sparkles,
   BookOpen,
   Star,
+  Newspaper,
+  Mail,
+  Users,
+  Swords,
+  ChevronRight,
+  Bell,
 } from 'lucide-react';
 import { XpBar } from './_components/XpBar';
 import { StudentDailyQuests } from './_components/StudentDailyQuests';
 import { SocialFeed } from './_components/SocialFeed';
 import VirtualCity from './_components/VirtualCity';
-import { MascotGreeting } from './_components/MascotGreeting';
 import { DailyGoalRing } from './_components/DailyGoalRing';
 import { StreakFlame } from './_components/StreakFlame';
 import { LessonPathPreview } from './_components/LessonPathPreview';
-import PathMap500 from '@/components/PathMap500';
 import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, SkeletonCard, type MascotExpression } from '@/components/ui';
+import { Mascot, Skeleton, SkeletonCard } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 
 type Quest = {
@@ -61,16 +65,9 @@ type CityData = {
   tier: { level: number; name: string };
   lessonsCompleted: number;
   nextTierAt: number | null;
-  // Back-compat fields the API still returns
   level?: number;
   name?: string;
   nextLevelAt?: number | null;
-};
-
-type StatusData = {
-  englishStatus?: string;
-  personalStatus?: string;
-  criticalStatus?: string;
 };
 
 type ReviewItem = { word: string; easeFactor: number; interval: number };
@@ -110,13 +107,6 @@ type ProgressRow = { lessonId: string; sessionCount: number };
 
 type LeagueData = { tier?: string; rank?: number };
 
-const STATUS_LABELS: Record<string, { label: string; bg: string; ring: string; text: string }> = {
-  yashil: { label: 'Yaxshi', bg: 'bg-emerald-50', ring: 'ring-emerald-200', text: 'text-emerald-700' },
-  sariq: { label: 'Diqqat', bg: 'bg-amber-50', ring: 'ring-amber-200', text: 'text-amber-700' },
-  qizil: { label: "E'tibor", bg: 'bg-red-50', ring: 'ring-red-200', text: 'text-red-700' },
-  '': { label: '—', bg: 'bg-[#f3eedf]', ring: 'ring-[#e8e0d0]', text: 'text-[#777]' },
-};
-
 export default function StudentDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [xpData, setXpData] = useState<XpData>({
@@ -132,14 +122,12 @@ export default function StudentDashboard() {
   const [hasShield, setHasShield] = useState(false);
   const [lessonProgress, setLessonProgress] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [reviewItems, setReviewItems] = useState<ReviewItem[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [nextLesson, setNextLesson] = useState<LessonInfo | null>(null);
   const [nextLessonSession, setNextLessonSession] = useState<{ count: number; total: number } | null>(null);
   const [league, setLeague] = useState<LeagueData | null>(null);
-  const [mascotMood, setMascotMood] = useState<MascotExpression>('idle');
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -147,6 +135,11 @@ export default function StudentDashboard() {
 
     async function fetchData(initial = false) {
       try {
+        // The dashboard fans out 11 parallel requests on load — every one
+        // is wrapped in .catch so a transient gamification 5xx never
+        // blanks the page. The lessons/next call is the one that drives
+        // the hero CTA, so a failure there falls back to a generic
+        // "keyingi dars sizni kutmoqda" copy.
         const [
           profileRes,
           xpRes,
@@ -154,7 +147,6 @@ export default function StudentDashboard() {
           cityRes,
           streakRes,
           progressRes,
-          statusRes,
           warningsRes,
           reviewRes,
           certsRes,
@@ -167,7 +159,6 @@ export default function StudentDashboard() {
           apiRequest<CityData>('/gamification/city', {}, token),
           apiRequest<StreakData>('/gamification/streak', {}, token),
           apiRequest<ProgressRow[]>('/progress/my', {}, token),
-          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
           apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
           apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
           apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
@@ -182,7 +173,6 @@ export default function StudentDashboard() {
         setStreak(streakRes.data.streak);
         setHasShield(streakRes.data.hasShield);
         setLessonProgress(progressRes.data.length);
-        setStatusData(statusRes.data);
         setWarnings(warningsRes.data ?? []);
         setReviewItems(reviewRes.data ?? []);
         setCertificates(certsRes.data ?? []);
@@ -210,11 +200,6 @@ export default function StudentDashboard() {
     fetchData(true);
 
     // Refetch when the tab regains focus or visibility flips back to visible.
-    // This is the cheapest "did I just complete a lesson?" signal we have —
-    // when the student taps "Bosh sahifa" on the completion screen the
-    // dashboard remounts and gets fresh data; but if they navigate via the
-    // browser back button the existing component stays mounted and we'd
-    // otherwise show the pre-completion numbers until a manual refresh.
     function onFocus() {
       fetchData(false);
     }
@@ -233,31 +218,18 @@ export default function StudentDashboard() {
   const todayXp = xpData.todayXp ?? 0;
   const dailyGoal = Math.max(1, xpData.dailyGoal ?? 30);
 
-  // First name extraction — split on first space, fall back to full name.
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();
     if (!n) return '';
     return n.split(/\s+/)[0];
   }, [profile?.name]);
 
-  const handleGoalHit = () => {
-    setMascotMood('happy');
-    window.setTimeout(() => setMascotMood('idle'), 3000);
-  };
-
   if (loading) {
     return (
       <div className="max-w-lg mx-auto space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
         <Skeleton theme="light" className="h-32 w-full rounded-3xl" />
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] flex items-center gap-4">
-          <Skeleton theme="light" className="h-32 w-32 rounded-full shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton theme="light" className="h-4 w-24 rounded" />
-            <Skeleton theme="light" className="h-8 w-32 rounded" />
-            <Skeleton theme="light" className="h-3 w-20 rounded" />
-          </div>
-        </div>
-        <SkeletonCard theme="light" />
+        <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
+        <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
         <SkeletonCard theme="light" />
       </div>
     );
@@ -267,161 +239,55 @@ export default function StudentDashboard() {
 
   return (
     <div className="bg-[#fffaf0] min-h-screen">
-      <div className="max-w-lg mx-auto space-y-5 pb-28 pt-4 px-4">
-        {/* 1. Mascot greeting hero */}
-        <MascotGreeting firstName={firstName} streak={streak} expression={mascotMood} />
+      <div className="max-w-lg mx-auto pb-28 pt-4 px-4 space-y-5">
+        {/* 1. Compact greeting hero — combines mascot + greeting + key stats
+            in a single card so the user gets identity + status at a glance
+            without scrolling through 3 separate widgets like before. */}
+        <GreetingHero
+          firstName={firstName}
+          streak={streak}
+          hasShield={hasShield}
+          todayXp={todayXp}
+          xpData={xpData}
+          league={league}
+        />
 
-        {/* 2. Daily goal ring + Streak/League */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] flex items-center gap-5">
-          <div className="shrink-0">
-            <DailyGoalRing
-              todayXp={todayXp}
-              goal={dailyGoal}
-              size={130}
-              onGoalHit={handleGoalHit}
-            />
-          </div>
-          <div className="flex-1 min-w-0 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <StreakFlame streak={streak} hasShield={hasShield} size={36} />
-              <LeagueBadge league={league} />
-            </div>
-            <XpBar
-              totalXp={xpData.totalXp}
-              level={xpData.level}
-              nextLevelXp={xpData.nextLevelXp}
-            />
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#777]">
-              Bugun: <span className="text-[#46a302] font-extrabold">{todayXp} XP</span>
-            </p>
-          </div>
-        </div>
-
-        {/* 3. Warning banner (only if active) */}
+        {/* 2. Active warnings — only when present, never a perma-banner. */}
         {activeWarnings.length > 0 && (
-          <div
-            className={`rounded-2xl p-4 flex items-start gap-3 border ${
-              activeWarnings.length >= 3
-                ? 'bg-red-50 border-red-200'
-                : 'bg-amber-50 border-amber-200'
-            }`}
-          >
-            <span className="text-2xl shrink-0" aria-hidden>
-              {activeWarnings.length >= 3 ? '\u{1F6A8}' : '\u{26A0}\u{FE0F}'}
-            </span>
-            <div className="flex-1">
-              <p
-                className={`font-extrabold text-sm ${
-                  activeWarnings.length >= 3 ? 'text-red-700' : 'text-amber-700'
-                }`}
-              >
-                {activeWarnings.length >= 3
-                  ? 'Hisobingiz bloklangan'
-                  : `${activeWarnings.length} ta ogohlantirish`}
-              </p>
-              <p className="text-xs text-[#5b5b5b] mt-0.5 leading-snug">
-                {activeWarnings[0].reasonText}
-                {activeWarnings.length > 1 && ` va yana ${activeWarnings.length - 1} ta`}
-              </p>
-            </div>
-          </div>
+          <WarningBanner warnings={activeWarnings} />
         )}
 
-        {/* 4. Davom etish CTA card */}
+        {/* 3. Primary CTA — promoted to second-from-top so opening the
+            app means seeing "Davom etish" within thumb's reach, not
+            below 3 status widgets. */}
         <ContinueLessonCard
           nextLesson={nextLesson}
           session={nextLessonSession}
           lessonNumber={lessonProgress + 1}
         />
 
-        {/* 5. Daily quests as chests */}
-        {quests.length > 0 && <StudentDailyQuests quests={quests} />}
-
-        {/* 6. Lesson path preview */}
-        <LessonPathPreview />
-
-        {/* 7. Stats strip */}
-        <StatsStrip
+        {/* 4. Daily-goal ring with mini stats — secondary status, decoupled
+            from the greeting so the ring's animation reads on its own. */}
+        <DailyGoalCard
+          todayXp={todayXp}
+          dailyGoal={dailyGoal}
           totalXp={xpData.totalXp}
           level={xpData.level}
-          streak={streak}
-          lessonsCompleted={lessonProgress}
-          certificates={certificates.length}
+          nextLevelXp={xpData.nextLevelXp}
         />
 
-        {/* 8. Status pills (mood / behaviour) */}
-        {statusData && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#777] mb-3">
-              Sizning holatingiz
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Ingliz tili', field: 'englishStatus' as const },
-                { label: 'Shaxsiy', field: 'personalStatus' as const },
-                { label: 'Tanqidiy', field: 'criticalStatus' as const },
-              ].map((s) => {
-                const status = statusData?.[s.field] ?? '';
-                const cfg = STATUS_LABELS[status] ?? STATUS_LABELS[''];
-                return (
-                  <div
-                    key={s.field}
-                    className={`rounded-2xl p-3 text-center ring-1 ${cfg.bg} ${cfg.ring}`}
-                  >
-                    <p className={`text-sm font-extrabold ${cfg.text}`}>{cfg.label}</p>
-                    <p className="text-[10px] text-[#777] mt-1 font-semibold">{s.label}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* 5. Daily quests — gamification hook, only when present. */}
+        {quests.length > 0 && <StudentDailyQuests quests={quests} />}
+
+        {/* 6. Daily review — spaced-repetition list, only when items exist. */}
+        {reviewItems.length > 0 && (
+          <DailyReviewCard items={reviewItems} />
         )}
 
-        {/* 9. Path map preview */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#777]">
-              Yo&apos;l xaritasi
-            </p>
-            <span className="text-xs font-bold text-[#46a302]">
-              {lessonProgress} / 500 dars
-            </span>
-          </div>
-          <PathMap500 currentStep={lessonProgress} />
-        </div>
+        {/* 7. Lesson path peek. */}
+        <LessonPathPreview />
 
-        {/* 10. Certificates */}
-        {certificates.length > 0 && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
-            <div className="flex items-center gap-2 mb-3">
-              <Award size={18} className="text-amber-500" />
-              <h2 className="font-extrabold text-[#3c3c3c] text-base">Sertifikatlar</h2>
-              <span className="text-xs text-[#777] font-semibold">
-                {certificates.length} ta
-              </span>
-            </div>
-            <div className="space-y-3">
-              {certificates.slice(0, 3).map((cert) => (
-                <div
-                  key={cert.id}
-                  className="border border-amber-200 bg-amber-50/60 rounded-2xl p-3"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-extrabold text-amber-700 text-sm capitalize">
-                      {cert.level} sertifikati
-                    </p>
-                    <span className="text-xs text-[#777] font-semibold">
-                      {cert.lessonsCompleted} dars
-                    </span>
-                  </div>
-                  <CertificateShare cert={cert} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 11. Virtual city */}
+        {/* 8. Virtual city — long-term motivation. */}
         {cityData && (
           <VirtualCity
             buildings={cityData.buildings ?? []}
@@ -431,76 +297,149 @@ export default function StudentDashboard() {
           />
         )}
 
-        {/* 12. Daily review (spaced repetition) */}
-        {reviewItems.length > 0 && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] space-y-3">
-            <div className="flex items-center gap-2">
-              <RefreshCw size={18} className="text-[#46a302]" />
-              <h2 className="font-extrabold text-[#3c3c3c]">Kunlik Takrorlash</h2>
-            </div>
-            <p className="text-sm text-[#777] font-semibold">
-              {reviewItems.length} ta so&apos;z takrorlanishi kerak
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {reviewItems.slice(0, 6).map((item) => (
-                <span
-                  key={item.word}
-                  className="bg-[#f3eedf] text-[#46a302] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-bold"
-                >
-                  {item.word}
-                </span>
-              ))}
-              {reviewItems.length > 6 && (
-                <span className="bg-[#f3eedf] text-[#777] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-semibold">
-                  +{reviewItems.length - 6} ta
-                </span>
-              )}
-            </div>
-            <Link
-              href="/student/review"
-              className="block text-center text-sm bg-[#58cc02] hover:brightness-105 text-white py-3 rounded-2xl font-extrabold uppercase tracking-wide border-b-[3px] border-[#46a302] active:translate-y-[2px] active:border-b-[1px] transition-all"
-            >
-              Takrorlashni boshlash
-            </Link>
-          </div>
+        {/* 9. Certificates — surface only when earned, max 2 inline. */}
+        {certificates.length > 0 && (
+          <CertificatesCard
+            certificates={certificates}
+          />
         )}
 
-        {/* 13. Quick actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <QuickAction
-            href="/student/review"
-            icon={<RefreshCw size={22} className="text-[#46a302]" />}
-            title="Takrorlash"
-            sub="Spaced repetition"
-          />
-          <QuickAction
-            href="/student/errors"
-            icon={<BarChart2 size={22} className="text-[#ce82ff]" />}
-            title="Xato tahlili"
-            sub="AI tavsiyalar"
-          />
-          <QuickAction
-            href="/student/tournaments"
-            icon={<Trophy size={22} className="text-[#fbbf24]" />}
-            title="Turnirlar"
-            sub="Musobaqalar"
-          />
-          <QuickAction
-            href="/student/exams"
-            icon={<GraduationCap size={22} className="text-[#ce82ff]" />}
-            title="Imtihonlar"
-            sub="Imtihon topshirish"
-          />
-        </div>
+        {/* 10. Browse more — destinations not in the bottom nav. Replaces
+            the loose "Quick Actions" tiles + dead PathMap500 widget. */}
+        <BrowseMoreGrid />
 
-        {/* 14. Friends activity */}
+        {/* 11. Friends activity — kept compact, last few items. */}
         <SocialFeed />
       </div>
     </div>
   );
 }
 
-/* ---------------- subcomponents ---------------- */
+/* ============================================================================
+   Subcomponents — kept in this file so the dashboard reads top-to-bottom.
+   ============================================================================ */
+
+function GreetingHero({
+  firstName,
+  streak,
+  hasShield,
+  todayXp,
+  xpData,
+  league,
+}: {
+  firstName: string;
+  streak: number;
+  hasShield: boolean;
+  todayXp: number;
+  xpData: XpData;
+  league: LeagueData | null;
+}) {
+  const greeting = firstName ? `Salom, ${firstName}!` : 'Salom, do‘stim!';
+  const subtitle = pickGreetingSubtitle(streak, todayXp);
+  const mood = streak >= 3 || todayXp > 0 ? 'happy' : 'idle';
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-3xl border border-[#f3e8c7] shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]"
+      style={{
+        background:
+          'linear-gradient(135deg, #fffaf0 0%, #fef3c7 60%, #fde68a 100%)',
+      }}
+    >
+      {/* Sun ray accent */}
+      <div
+        aria-hidden
+        className="absolute -top-12 -right-12 w-44 h-44 rounded-full opacity-60 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(251,191,36,0.55) 0%, transparent 70%)',
+        }}
+      />
+      <div className="relative z-10 p-5 space-y-4">
+        {/* Top row: mascot + greeting + bell */}
+        <div className="flex items-start gap-4">
+          <div className="shrink-0">
+            <Mascot expression={mood} size={88} animated />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1
+              className="text-2xl font-extrabold leading-tight text-[#3c3c3c] truncate"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              {greeting}
+            </h1>
+            <p className="mt-1 text-sm font-bold text-[#7a5e2c] leading-snug">
+              {subtitle}
+            </p>
+          </div>
+          <Link
+            href="/student/profile"
+            aria-label="Bildirishnomalar"
+            className="shrink-0 w-9 h-9 rounded-full bg-white/70 backdrop-blur border border-[#f3e8c7] flex items-center justify-center text-[#7a5e2c] hover:bg-white transition-colors"
+          >
+            <Bell size={16} />
+          </Link>
+        </div>
+
+        {/* Bottom row: streak | today XP | league — single horizontal strip
+            replaces what used to be a separate full-width white card */}
+        <div className="grid grid-cols-3 gap-2">
+          <HeroStat
+            icon={<StreakFlame streak={streak} hasShield={hasShield} size={18} showLabel={false} />}
+            value={streak.toString()}
+            label="Kun zanjir"
+          />
+          <HeroStat
+            icon={<Sparkles size={16} className="text-[#46a302]" />}
+            value={todayXp.toString()}
+            label="Bugun XP"
+            highlight={todayXp > 0}
+          />
+          <HeroStat
+            icon={<LeagueGlyph tier={league?.tier} />}
+            value={leagueLabel(league?.tier)}
+            label="Liga"
+          />
+        </div>
+
+        {/* XP / level progress bar */}
+        <XpBar
+          totalXp={xpData.totalXp}
+          level={xpData.level}
+          nextLevelXp={xpData.nextLevelXp}
+        />
+      </div>
+    </div>
+  );
+}
+
+function HeroStat({
+  icon,
+  value,
+  label,
+  highlight,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="bg-white/70 backdrop-blur rounded-2xl border border-[#f3e8c7] px-3 py-2.5 flex flex-col items-center gap-1">
+      <div className="h-5 flex items-center justify-center">{icon}</div>
+      <p
+        className={`text-base font-extrabold leading-none ${
+          highlight ? 'text-[#46a302]' : 'text-[#3c3c3c]'
+        }`}
+      >
+        {value}
+      </p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-[#7a5e2c]">
+        {label}
+      </p>
+    </div>
+  );
+}
 
 function ContinueLessonCard({
   nextLesson,
@@ -517,142 +456,360 @@ function ContinueLessonCard({
   const showSession = session && session.total > 1;
 
   return (
-    <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] rounded-3xl p-5 shadow-sm text-white relative overflow-hidden motion-safe:animate-[bounce-in_500ms_ease-out]">
-      <div
-        aria-hidden
-        className="absolute -top-10 -right-8 w-40 h-40 rounded-full opacity-30 pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
-        }}
-      />
-      <div className="relative z-10">
-        <div className="flex items-center gap-2 mb-2">
-          <PlayCircle size={18} className="text-white/90" />
-          <p className="text-xs font-extrabold uppercase tracking-wider text-white/90">
-            Keyingi dars
-          </p>
-          {showSession && (
-            <span className="ml-auto bg-white/25 backdrop-blur text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-              Sessiya {session.count}/{session.total}
-            </span>
-          )}
-        </div>
-        <p className="text-xl sm:text-2xl font-extrabold leading-tight">{title}</p>
-        <div className="mt-2 flex items-center gap-3 text-xs font-bold text-white/90">
-          <span className="inline-flex items-center gap-1">
-            <BookOpen size={14} /> Dars {lessonNumber}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Sparkles size={14} /> ~{minutes} daqiqa
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Star size={14} /> +{xp} XP
-          </span>
-        </div>
-        <Button
-          variant="duo"
-          size="lg"
-          fullWidth
-          className="mt-4 !bg-white !text-[#46a302] !border-b-[#cfe9b0] hover:!bg-white hover:brightness-105"
-          onClick={() => {
-            playSound('xp', 0.5);
-            window.location.href = '/student/lessons/current';
+    <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
+      <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] p-5 text-white relative">
+        {/* Soft white glow top-right */}
+        <div
+          aria-hidden
+          className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
           }}
+        />
+        {/* Bottom decorative chevrons */}
+        <div
+          aria-hidden
+          className="absolute -bottom-6 right-3 text-white/15 pointer-events-none"
         >
-          Davom etish
-        </Button>
+          <ChevronRight size={120} strokeWidth={1.5} />
+        </div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <PlayCircle size={18} className="text-white/95" />
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/90">
+              Davom etamiz
+            </p>
+            {showSession && (
+              <span className="ml-auto bg-white/25 backdrop-blur text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                Sessiya {session.count}/{session.total}
+              </span>
+            )}
+          </div>
+          <p className="text-2xl font-extrabold leading-tight">{title}</p>
+          <div className="mt-2.5 flex items-center gap-3 text-[11px] font-bold text-white/90 flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <BookOpen size={12} /> Dars {lessonNumber}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Sparkles size={12} /> ~{minutes} daqiqa
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Star size={12} /> +{xp} XP
+            </span>
+          </div>
+          <Link
+            href="/student/lessons/current"
+            onClick={() => playSound('xp', 0.5)}
+            className="mt-4 block bg-white text-[#46a302] py-3 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            Davom etish
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
-function StatsStrip({
+function DailyGoalCard({
+  todayXp,
+  dailyGoal,
   totalXp,
   level,
-  streak,
-  lessonsCompleted,
-  certificates,
+  nextLevelXp,
 }: {
+  todayXp: number;
+  dailyGoal: number;
   totalXp: number;
   level: string;
-  streak: number;
-  lessonsCompleted: number;
-  certificates: number;
+  nextLevelXp: number;
 }) {
-  const tiles: { icon: string; value: string | number; label: string; color: string }[] = [
-    { icon: '⚡', value: totalXp.toLocaleString(), label: 'Total XP', color: 'text-[#ce82ff]' },
-    { icon: '\u{1F3C5}', value: level, label: 'Daraja', color: 'text-[#46a302]' },
-    { icon: '\u{1F525}', value: streak, label: 'Streak', color: 'text-[#ff9500]' },
-    { icon: '\u{1F4DA}', value: lessonsCompleted, label: 'Darslar', color: 'text-[#58a6ff]' },
-    { icon: '\u{1F396}\u{FE0F}', value: certificates, label: 'Sertifikat', color: 'text-amber-600' },
-  ];
+  const goalHit = todayXp >= dailyGoal;
+  const xpToLevel = Math.max(0, nextLevelXp - totalXp);
 
   return (
-    <div className="-mx-4 px-4 overflow-x-auto scrollbar-thin">
-      <div className="flex gap-3 min-w-max">
-        {tiles.map((t) => (
-          <div
-            key={t.label}
-            className="bg-white rounded-2xl p-3 shadow-sm border border-[#ede9e1] min-w-[88px] text-center"
-          >
-            <p className="text-xl leading-none">{t.icon}</p>
-            <p className={`text-lg font-extrabold mt-1 ${t.color} leading-tight truncate`}>
-              {t.value}
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#777] mt-0.5">
-              {t.label}
-            </p>
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
+      <div className="flex items-center gap-5">
+        <div className="shrink-0">
+          <DailyGoalRing
+            todayXp={todayXp}
+            goal={dailyGoal}
+            size={120}
+          />
+        </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#7a5e2c]">
+            Kunlik maqsad
+          </p>
+          <p className="text-2xl font-extrabold text-[#3c3c3c] leading-tight">
+            {todayXp} / {dailyGoal} XP
+          </p>
+          <p className="text-xs font-semibold text-[#777] leading-snug">
+            {goalHit
+              ? 'Bugungi maqsadingiz bajarildi! Davom eting va zanjirni saqlang.'
+              : `Maqsadgacha yana ${dailyGoal - todayXp} XP qoldi`}
+          </p>
+          <div className="pt-1 flex items-center gap-2 text-[11px] font-bold">
+            <span className="bg-[#f3eedf] text-[#46a302] border border-[#e8e0d0] px-2 py-0.5 rounded-full">
+              Daraja: {level}
+            </span>
+            {xpToLevel > 0 && (
+              <span className="text-[#777]">
+                +{xpToLevel} XP keyingi darajaga
+              </span>
+            )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WarningBanner({ warnings }: { warnings: Warning[] }) {
+  const isBlocked = warnings.length >= 3;
+  return (
+    <div
+      className={`rounded-2xl p-4 flex items-start gap-3 border ${
+        isBlocked
+          ? 'bg-red-50 border-red-200'
+          : 'bg-amber-50 border-amber-200'
+      }`}
+    >
+      <span className="text-2xl shrink-0" aria-hidden>
+        {isBlocked ? '\u{1F6A8}' : '\u{26A0}\u{FE0F}'}
+      </span>
+      <div className="flex-1">
+        <p
+          className={`font-extrabold text-sm ${
+            isBlocked ? 'text-red-700' : 'text-amber-700'
+          }`}
+        >
+          {isBlocked
+            ? 'Hisobingiz bloklangan'
+            : `${warnings.length} ta ogohlantirish`}
+        </p>
+        <p className="text-xs text-[#5b5b5b] mt-0.5 leading-snug">
+          {warnings[0].reasonText}
+          {warnings.length > 1 && ` va yana ${warnings.length - 1} ta`}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DailyReviewCard({ items }: { items: ReviewItem[] }) {
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] space-y-3">
+      <div className="flex items-center gap-2">
+        <RefreshCw size={18} className="text-[#46a302]" />
+        <h2 className="font-extrabold text-[#3c3c3c]">Kunlik takrorlash</h2>
+        <span className="ml-auto text-xs font-bold text-[#777]">
+          {items.length} ta so&apos;z
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.slice(0, 8).map((item) => (
+          <span
+            key={item.word}
+            className="bg-[#f3eedf] text-[#46a302] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-bold"
+          >
+            {item.word}
+          </span>
+        ))}
+        {items.length > 8 && (
+          <span className="bg-[#f3eedf] text-[#777] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-semibold">
+            +{items.length - 8}
+          </span>
+        )}
+      </div>
+      <Link
+        href="/student/review"
+        className="block text-center text-sm bg-[#58cc02] hover:brightness-105 text-white py-3 rounded-2xl font-extrabold uppercase tracking-wide border-b-[3px] border-[#46a302] active:translate-y-[2px] active:border-b-[1px] transition-all"
+      >
+        Takrorlashni boshlash
+      </Link>
+    </div>
+  );
+}
+
+function CertificatesCard({ certificates }: { certificates: Certificate[] }) {
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
+      <div className="flex items-center gap-2 mb-3">
+        <Award size={18} className="text-amber-500" />
+        <h2 className="font-extrabold text-[#3c3c3c] text-base">Sertifikatlar</h2>
+        <span className="ml-auto text-xs text-[#777] font-bold">
+          {certificates.length} ta
+        </span>
+      </div>
+      <div className="space-y-2.5">
+        {certificates.slice(0, 2).map((cert) => (
+          <div
+            key={cert.id}
+            className="border border-amber-200 bg-amber-50/60 rounded-2xl p-3"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-extrabold text-amber-700 text-sm capitalize">
+                {cert.level} sertifikati
+              </p>
+              <span className="text-xs text-[#777] font-semibold">
+                {cert.lessonsCompleted} dars
+              </span>
+            </div>
+            <CertificateShare cert={cert} />
+          </div>
+        ))}
+      </div>
+      {certificates.length > 2 && (
+        <Link
+          href="/student/certificates"
+          className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#46a302] hover:underline"
+        >
+          Barchasini ko‘rish ({certificates.length})
+          <ChevronRight size={12} />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Tile grid for destinations not in the bottom nav. Replaces the loose
+ * 2x2 "Quick Actions" card and the dead PathMap500 mini-widget; one
+ * coherent navigation hub instead of two competing surfaces.
+ */
+function BrowseMoreGrid() {
+  const items: { href: string; icon: React.ReactNode; title: string; sub: string; tint: string }[] = [
+    {
+      href: '/student/lenta',
+      icon: <Newspaper size={20} />,
+      title: 'Lenta',
+      sub: 'Do‘stlar yangiliklari',
+      tint: 'text-[#1cb0f6] bg-[#e0f2fe] border-[#bae6fd]',
+    },
+    {
+      href: '/student/duels',
+      icon: <Swords size={20} />,
+      title: 'Duellar',
+      sub: 'Tanlovlar',
+      tint: 'text-[#ce82ff] bg-[#f5edff] border-[#e7d8ff]',
+    },
+    {
+      href: '/student/tournaments',
+      icon: <Trophy size={20} />,
+      title: 'Turnirlar',
+      sub: 'Musobaqalar',
+      tint: 'text-[#fbbf24] bg-[#fef3c7] border-[#fde68a]',
+    },
+    {
+      href: '/student/letters',
+      icon: <Mail size={20} />,
+      title: 'Harflar',
+      sub: 'Kolleksiya',
+      tint: 'text-[#10b981] bg-[#d1fae5] border-[#a7f3d0]',
+    },
+    {
+      href: '/student/errors',
+      icon: <BarChart2 size={20} />,
+      title: 'Xato tahlili',
+      sub: 'AI tavsiyalar',
+      tint: 'text-[#ef4444] bg-[#fee2e2] border-[#fecaca]',
+    },
+    {
+      href: '/student/friends',
+      icon: <Users size={20} />,
+      title: 'Do‘stlar',
+      sub: 'Aloqalar',
+      tint: 'text-[#46a302] bg-[#dcfce7] border-[#bbf7d0]',
+    },
+    {
+      href: '/student/leaderboard',
+      icon: <Trophy size={20} />,
+      title: 'Reyting',
+      sub: 'Liga',
+      tint: 'text-[#fbbf24] bg-[#fef3c7] border-[#fde68a]',
+    },
+    {
+      href: '/student/exams',
+      icon: <GraduationCap size={20} />,
+      title: 'Imtihonlar',
+      sub: 'Sinov',
+      tint: 'text-[#7c3aed] bg-[#ede9fe] border-[#ddd6fe]',
+    },
+  ];
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c] px-1">
+        Yana
+      </p>
+      <div className="grid grid-cols-2 gap-2.5">
+        {items.map((it) => (
+          <Link
+            key={it.href}
+            href={it.href}
+            className="bg-white rounded-2xl p-3.5 shadow-sm border border-[#ede9e1] flex items-center gap-3 hover:border-[#58cc02]/40 hover:shadow-md transition-all"
+          >
+            <div
+              className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${it.tint}`}
+            >
+              {it.icon}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-extrabold text-sm text-[#3c3c3c] truncate">
+                {it.title}
+              </p>
+              <p className="text-[11px] text-[#777] font-semibold truncate">
+                {it.sub}
+              </p>
+            </div>
+          </Link>
         ))}
       </div>
     </div>
   );
 }
 
-function QuickAction({
-  href,
-  icon,
-  title,
-  sub,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="bg-white rounded-2xl p-4 shadow-sm border border-[#ede9e1] flex flex-col gap-2 hover:border-[#58cc02] hover:shadow-md transition-all"
-    >
-      {icon}
-      <p className="font-extrabold text-sm text-[#3c3c3c]">{title}</p>
-      <p className="text-xs text-[#777] font-semibold">{sub}</p>
-    </Link>
-  );
+function LeagueGlyph({ tier }: { tier?: string }) {
+  const t = tier?.toLowerCase() ?? 'bronza';
+  const color =
+    t === 'almos' || t === 'diamond'
+      ? 'text-[#7c3aed]'
+      : t === 'platina' || t === 'platinum'
+        ? 'text-[#0e7490]'
+        : t === 'oltin' || t === 'gold'
+          ? 'text-[#d97706]'
+          : t === 'kumush' || t === 'silver'
+            ? 'text-[#64748b]'
+            : 'text-[#a16207]';
+  return <Trophy size={16} className={color} />;
 }
 
-function LeagueBadge({ league }: { league: LeagueData | null }) {
-  const tier = league?.tier?.toLowerCase() ?? 'bronza';
-  const map: Record<string, { color: string; label: string }> = {
-    bronza: { color: 'bg-amber-100 text-amber-700 border-amber-300', label: 'Bronza' },
-    bronze: { color: 'bg-amber-100 text-amber-700 border-amber-300', label: 'Bronza' },
-    kumush: { color: 'bg-slate-100 text-slate-600 border-slate-300', label: 'Kumush' },
-    silver: { color: 'bg-slate-100 text-slate-600 border-slate-300', label: 'Kumush' },
-    oltin: { color: 'bg-yellow-100 text-yellow-700 border-yellow-300', label: 'Oltin' },
-    gold: { color: 'bg-yellow-100 text-yellow-700 border-yellow-300', label: 'Oltin' },
-    platina: { color: 'bg-cyan-100 text-cyan-700 border-cyan-300', label: 'Platina' },
-    platinum: { color: 'bg-cyan-100 text-cyan-700 border-cyan-300', label: 'Platina' },
-    almos: { color: 'bg-violet-100 text-violet-700 border-violet-300', label: 'Olmos' },
-    diamond: { color: 'bg-violet-100 text-violet-700 border-violet-300', label: 'Olmos' },
+function leagueLabel(tier?: string): string {
+  const map: Record<string, string> = {
+    bronza: 'Bronza',
+    bronze: 'Bronza',
+    kumush: 'Kumush',
+    silver: 'Kumush',
+    oltin: 'Oltin',
+    gold: 'Oltin',
+    platina: 'Platina',
+    platinum: 'Platina',
+    almos: 'Olmos',
+    diamond: 'Olmos',
   };
-  const cfg = map[tier] ?? map.bronza;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-full border ${cfg.color}`}
-    >
-      <Trophy size={10} />
-      {cfg.label}
-    </span>
-  );
+  return map[tier?.toLowerCase() ?? ''] ?? 'Bronza';
+}
+
+function pickGreetingSubtitle(streak: number, todayXp: number): string {
+  if (todayXp > 0 && streak >= 7) {
+    return `${streak} kun ketma-ket! Bugun yaxshi boshlandi`;
+  }
+  if (streak >= 30) return `${streak} kunlik afsonaviy zanjir 👑`;
+  if (streak >= 14) return `${streak} kunlik olov 🔥 — davom etamiz`;
+  if (streak >= 7) return `${streak} kunlik zanjir 🔥`;
+  if (streak >= 3) return `${streak} kun ketma-ket — zo‘r ish!`;
+  if (streak === 1 || streak === 2)
+    return `Zanjirni saqlab qolaylik — bugun ${streak}-kun`;
+  return 'Bugun yangi qadam tashlaymiz';
 }
