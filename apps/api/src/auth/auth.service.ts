@@ -20,14 +20,45 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, tenantSlug?: string) {
-    const whereClause = tenantSlug
-      ? { login: dto.login, tenant: { slug: tenantSlug } }
-      : { login: dto.login, role: UserRole.superadmin };
-
-    const user = await this.prisma.user.findFirst({
-      where: whereClause,
-      include: { tenant: true },
-    });
+    // Resolution rules:
+    //   - If the caller passed an x-tenant-slug header, scope the lookup
+    //     to that tenant and accept any role (mentor / manager / student
+    //     / etc). This is the multi-tenant disambiguation path.
+    //   - If no slug, search across every tenant. Prefer superadmin so
+    //     the platform owner always wins their login race. For non-
+    //     superadmins, only succeed when exactly one row matches —
+    //     otherwise we can't tell which tenant they meant. This makes
+    //     freshly-created students / mentors able to log in WITHOUT
+    //     having to know their markaz slug, as long as their login is
+    //     unique on the deployment (the typical case for single-tenant
+    //     installs).
+    let user;
+    if (tenantSlug) {
+      user = await this.prisma.user.findFirst({
+        where: { login: dto.login, tenant: { slug: tenantSlug } },
+        include: { tenant: true },
+      });
+    } else {
+      // Try superadmin first — they are the canonical "global" login.
+      user = await this.prisma.user.findFirst({
+        where: { login: dto.login, role: UserRole.superadmin },
+        include: { tenant: true },
+      });
+      if (!user) {
+        const matches = await this.prisma.user.findMany({
+          where: { login: dto.login },
+          include: { tenant: true },
+          take: 2,
+        });
+        if (matches.length === 1) {
+          user = matches[0];
+        } else if (matches.length > 1) {
+          throw new UnauthorizedException(
+            "Bir xil login bir nechta markazda topildi. Iltimos, markaz nomini kiriting.",
+          );
+        }
+      }
+    }
 
     if (!user) throw new UnauthorizedException("Login yoki parol noto'g'ri");
     if (user.status === UserStatus.blocked_warning)
