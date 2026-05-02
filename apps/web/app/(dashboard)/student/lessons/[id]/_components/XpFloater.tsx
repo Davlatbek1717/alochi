@@ -1,49 +1,33 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 /**
- * Pass 5 helper — small `+N XP` chip that floats up and fades out.
+ * No-op stub. The "+N XP" floating chip used to animate up and fade
+ * after every correct answer; per UX cleanup, all XP messaging was
+ * stripped from the student-facing flow. Rather than rip XpFloater
+ * out of all twelve exercise components, the component is now a
+ * silent component that fires its `onDone` callback once and renders
+ * nothing.
  *
- * Drops in absolutely-positioned over a parent container; the parent supplies
- * the trigger by mounting/unmounting this component (or by changing the `key`
- * prop). The float-up keyframe is defined in `globals.css`.
- *
- * The element auto-removes itself after the animation duration so consumers
- * don't have to manage timeouts. Pass `onDone` if you want a callback when the
- * float finishes (e.g. to clear a parent state flag).
+ * The callback path matters because some consumers gate state on it
+ * (e.g. resetting a `showFloater` flag). Calling onDone immediately
+ * keeps that state machine moving without making the chip visible.
  */
 interface XpFloaterProps {
   amount: number;
-  /** ms — must match (or exceed) the float-up keyframe duration. */
   durationMs?: number;
-  /** Optional callback once the float-up animation finishes. */
   onDone?: () => void;
   className?: string;
 }
 
-export function XpFloater({ amount, durationMs = 900, onDone, className = '' }: XpFloaterProps) {
-  const [visible, setVisible] = useState(true);
-
+export function XpFloater({ onDone }: XpFloaterProps) {
   useEffect(() => {
-    const t = setTimeout(() => {
-      setVisible(false);
-      onDone?.();
-    }, durationMs);
-    return () => clearTimeout(t);
-  }, [durationMs, onDone]);
+    onDone?.();
+    // Fire-and-forget; the callback is a parent state setter that
+    // tolerates being invoked synchronously on mount.
+  }, [onDone]);
 
-  if (!visible) return null;
-
-  return (
-    <span
-      role="status"
-      aria-live="polite"
-      className={`pointer-events-none select-none font-extrabold text-[#fbbf24] drop-shadow-[0_1px_0_rgba(0,0,0,0.18)] motion-safe:[animation:float-up_900ms_ease-out_forwards] ${className}`}
-      style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-    >
-      +{amount} XP
-    </span>
-  );
+  return null;
 }
 
 export default XpFloater;
