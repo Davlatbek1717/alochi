@@ -46,6 +46,7 @@
     "class-validator": "^0.15.1",
     "grammy": "^1.42.0",
     "helmet": "^8.1.0",
+    "isomorphic-dompurify": "^3.11.0",
     "nestjs-pino": "^4.6.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
