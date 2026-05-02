@@ -7,9 +7,14 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import { StatusService } from '../student-status/status.service';
 import { StatusColor } from '../student-status/status.types';
+
+// Gemini 2.5 Flash — fast, cheap, multilingual (good Uzbek), supports
+// system instructions + JSON mode. We use it for tutor chat, translation
+// grading, wrong-answer explanations, and error pattern analysis.
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 /**
  * Phase 21.1: retry transient failures (5xx, network errors, timeouts) for
@@ -46,7 +51,7 @@ export async function withRetry<T>(
 @Injectable()
 export class AiService {
   private readonly aiServiceUrl: string;
-  private anthropic: Anthropic;
+  private genai: GoogleGenAI;
   private readonly logger = new Logger(AiService.name);
 
   constructor(
@@ -59,8 +64,8 @@ export class AiService {
       'AI_SERVICE_URL',
       'http://localhost:8000',
     );
-    this.anthropic = new Anthropic({
-      apiKey: this.config.get('ANTHROPIC_API_KEY', ''),
+    this.genai = new GoogleGenAI({
+      apiKey: this.config.get('GEMINI_API_KEY', ''),
     });
   }
 
@@ -71,7 +76,7 @@ export class AiService {
   ) {
     // Try the Python AI microservice first (richer pedagogical features when
     // available). On any failure — including when the service simply isn't
-    // running — fall through to a direct Claude call so the student is never
+    // running — fall through to a direct Gemini call so the student is never
     // blocked. Keeps the behaviour simple in dev where only the API + DB
     // containers are up.
     if (this.aiServiceUrl) {
@@ -90,44 +95,49 @@ export class AiService {
         return res.data;
       } catch (err) {
         this.logger.warn(
-          `askTutor: Python AI service unreachable, falling back to Claude. ${(err as Error).message}`,
+          `askTutor: Python AI service unreachable, falling back to Gemini. ${(err as Error).message}`,
         );
       }
     }
 
-    // Direct Claude fallback. Encourages short, friendly Uzbek answers
+    // Direct Gemini fallback. Encourages short, friendly Uzbek answers
     // appropriate for 3-7 graders and stays within the lesson context so
-    // the tutor doesn't drift off-topic.
-    const messages: { role: 'user' | 'assistant'; content: string }[] = [];
+    // the tutor doesn't drift off-topic. Gemini's chat format uses
+    // role: 'model' for assistant turns (not 'assistant').
+    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
     for (const turn of history) {
-      const role = turn.role === 'assistant' ? 'assistant' : 'user';
-      if (turn.content) messages.push({ role, content: turn.content });
+      if (!turn.content) continue;
+      const role: 'user' | 'model' =
+        turn.role === 'assistant' || turn.role === 'model' ? 'model' : 'user';
+      contents.push({ role, parts: [{ text: turn.content }] });
     }
-    messages.push({ role: 'user', content: question });
+    contents.push({ role: 'user', parts: [{ text: question }] });
 
     try {
-      const message = await withRetry(() =>
-        this.anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 350,
-          system:
-            "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
-            "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
-            'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
-            'Faqat darsdagi mavzuga oid javob ber.\n\n' +
-            `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
-          messages,
+      const response = await withRetry(() =>
+        this.genai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents,
+          config: {
+            systemInstruction:
+              "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
+              "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
+              'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
+              'Faqat darsdagi mavzuga oid javob ber.\n\n' +
+              `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
+            maxOutputTokens: 350,
+            temperature: 0.7,
+          },
         }),
       );
-      const text =
-        message.content[0]?.type === 'text' ? message.content[0].text : '';
+      const text = response.text ?? '';
       return {
         answer:
           text || 'Kechirasiz, hozir javob bera olmayman. Yana savol bering.',
       };
     } catch (err) {
       this.logger.error(
-        `askTutor: Claude fallback also failed. ${(err as Error).message}`,
+        `askTutor: Gemini fallback also failed. ${(err as Error).message}`,
       );
       throw new ServiceUnavailableException('AI servis vaqtincha ishlamayapti');
     }
@@ -135,7 +145,7 @@ export class AiService {
 
   /**
    * Score a student's lesson answers via the Python evaluation service
-   * (Claude under the hood). When `studentId` is provided, the resulting
+   * (Gemini under the hood). When `studentId` is provided, the resulting
    * score is also mapped to a {@link StatusColor} and persisted onto
    * today's `englishStatus` slot via {@link StatusService.setEnglishStatus}.
    *
@@ -308,35 +318,64 @@ export class AiService {
       .map((e) => `"${e.question}" (${e.errorCount} marta xato)`)
       .join('\n');
 
-    const message = await withRetry(() =>
-      this.anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
-        messages: [
-          {
-            role: 'user',
-            content:
-              `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
-              `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
-              `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
-          },
-        ],
-      }),
-    );
-
     try {
-      const text =
-        message.content[0].type === 'text' ? message.content[0].text : '{}';
-      const parsed = JSON.parse(text) as {
-        weakAreas: string[];
-        recommendation: string;
+      const response = await withRetry(() =>
+        this.genai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents:
+            `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
+            `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
+            `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
+          config: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 300,
+            temperature: 0.4,
+          },
+        }),
+      );
+      const raw = response.text ?? '{}';
+      // responseMimeType: 'application/json' usually returns clean JSON, but
+      // be defensive in case the model wraps it in fences or stray text.
+      const parsed = AiService.parseAnalyzeErrorsJson(raw);
+      if (parsed) return parsed;
+    } catch (err) {
+      this.logger.warn(
+        `analyzeErrors fell back to canned response: ${(err as Error).message}`,
+      );
+    }
+    return {
+      weakAreas: ['Grammatika', "Lug'at"],
+      recommendation: "Qayta ko'rib chiqing.",
+    };
+  }
+
+  /** Tolerant parser for {@link analyzeErrors}. */
+  static parseAnalyzeErrorsJson(
+    raw: string,
+  ): { weakAreas: string[]; recommendation: string } | null {
+    if (!raw) return null;
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const slice = fenced ? fenced[1] : raw;
+    const first = slice.indexOf('{');
+    const last = slice.lastIndexOf('}');
+    if (first < 0 || last < 0 || last <= first) return null;
+    try {
+      const parsed = JSON.parse(slice.slice(first, last + 1)) as {
+        weakAreas?: unknown;
+        recommendation?: unknown;
       };
-      return parsed;
+      if (
+        !Array.isArray(parsed.weakAreas) ||
+        typeof parsed.recommendation !== 'string'
+      ) {
+        return null;
+      }
+      const weakAreas = parsed.weakAreas.filter(
+        (s): s is string => typeof s === 'string',
+      );
+      return { weakAreas, recommendation: parsed.recommendation };
     } catch {
-      return {
-        weakAreas: ['Grammatika', "Lug'at"],
-        recommendation: "Qayta ko'rib chiqing.",
-      };
+      return null;
     }
   }
 
@@ -409,7 +448,7 @@ export class AiService {
    *
    * Forgives typos (1-2 chars), synonyms, capitalisation, and minor
    * punctuation differences. Falls back to strict case-insensitive string
-   * match if Claude is unavailable or returns malformed JSON, so the UI
+   * match if Gemini is unavailable or returns malformed JSON, so the UI
    * stays responsive even when the AI call fails.
    *
    * @returns `{ correct, score 0-100, feedback (Uzbek), accepted_answers? }`
@@ -429,7 +468,7 @@ export class AiService {
   }> {
     // Strict-match shortcut: if the student typed exactly the canonical
     // answer (or any accepted variant), short-circuit to "correct" without
-    // burning a Claude call. This also makes the lesson resilient to a
+    // burning a Gemini call. This also makes the lesson resilient to a
     // missing/misconfigured ANTHROPIC_API_KEY.
     if (input.correctAnswer) {
       const fast = AiService.strictTranslationMatch(
@@ -467,15 +506,18 @@ export class AiService {
       `- accepted_answers: 2-3 alternative valid translations of source`;
 
     try {
-      const message = await withRetry(() =>
-        this.anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: prompt }],
+      const response = await withRetry(() =>
+        this.genai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 200,
+            temperature: 0.2,
+          },
         }),
       );
-      const text =
-        message.content[0]?.type === 'text' ? message.content[0].text : '{}';
+      const text = response.text ?? '{}';
       const parsed = AiService.parseGraderJson(text);
       if (parsed) return parsed;
     } catch (err) {
@@ -494,7 +536,7 @@ export class AiService {
    * Pass 1 (revised): Strict-match shortcut. If the student typed exactly
    * the canonical answer or any accepted variant (case-insensitive trim),
    * pass without calling the AI. Returns null when no match so the caller
-   * can fall through to Claude.
+   * can fall through to Gemini.
    */
   static strictTranslationMatch(
     studentAnswer: string,
@@ -563,7 +605,7 @@ export class AiService {
     accepted_answers?: string[];
   } | null {
     if (!raw) return null;
-    // Common Claude wrapping: ```json ... ``` fences.
+    // Common Gemini wrapping: ```json ... ``` fences.
     const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
     const slice = fenced ? fenced[1] : raw;
     // Snip to the first balanced { ... } block to tolerate stray text.
@@ -606,7 +648,7 @@ export class AiService {
    * the "Tushuntirish" button (feature M) post-exercise, regardless of
    * which exercise type the student got wrong.
    *
-   * Falls back to a generic Uzbek hint if Claude is unavailable so the UI
+   * Falls back to a generic Uzbek hint if Gemini is unavailable so the UI
    * never shows a hard error.
    */
   async explainAnswer(input: {
@@ -636,15 +678,18 @@ export class AiService {
       `Tone: encouraging, kid-friendly. NEVER scold or use complex linguistics.`;
 
     try {
-      const message = await withRetry(() =>
-        this.anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 250,
-          messages: [{ role: 'user', content: prompt }],
+      const response = await withRetry(() =>
+        this.genai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 250,
+            temperature: 0.4,
+          },
         }),
       );
-      const text =
-        message.content[0]?.type === 'text' ? message.content[0].text : '{}';
+      const text = response.text ?? '{}';
       const parsed = AiService.parseExplainJson(text);
       if (parsed) return parsed;
     } catch (err) {

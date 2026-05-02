@@ -23,8 +23,8 @@
     "seed:churn-training": "python ../ml-service/scripts/seed_training_data.py"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1",
     "@clickhouse/client": "^1.18.3",
+    "@google/genai": "^1.51.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.4",
