@@ -8,9 +8,73 @@ interface VideoPlayerProps {
   lessonId?: string;
 }
 
+/**
+ * Pull the 11-char YouTube video ID out of any of the formats authors
+ * paste into the lesson editor. Supersedes a much stricter regex that
+ * silently rejected `shorts/`, `live/`, `m.youtube.com`, the privacy
+ * domain, and bare-ID inputs — leaving the student stuck on
+ * "Video URL noto'g'ri" while the same URL rendered fine in the
+ * superadmin link list.
+ *
+ * Supported inputs:
+ *   - https://youtu.be/VIDEO_ID
+ *   - https://www.youtube.com/watch?v=VIDEO_ID  (with any extra params)
+ *   - https://m.youtube.com/watch?v=VIDEO_ID
+ *   - https://www.youtube.com/embed/VIDEO_ID
+ *   - https://www.youtube.com/v/VIDEO_ID
+ *   - https://www.youtube.com/shorts/VIDEO_ID
+ *   - https://www.youtube.com/live/VIDEO_ID
+ *   - https://www.youtube-nocookie.com/embed/VIDEO_ID
+ *   - VIDEO_ID  (raw 11-char id)
+ *
+ * Returns null only when the input has no recognizable 11-char id at all.
+ */
 function extractVideoId(url: string): string | null {
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^?&\s]{11})/);
-  return match ? match[1] : null;
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  // Bare id — 11 chars, alnum + `-` + `_`.
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  // Try real URL parsing first; fall back to regex if the input lacks a
+  // protocol or has stray characters that confuse the URL constructor.
+  try {
+    const u = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') {
+      const id = u.pathname.slice(1).split('/')[0];
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+    }
+    if (
+      host === 'youtube.com' ||
+      host === 'm.youtube.com' ||
+      host === 'youtube-nocookie.com'
+    ) {
+      // /watch?v=ID
+      const v = u.searchParams.get('v');
+      if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+      // /embed/ID, /v/ID, /shorts/ID, /live/ID — second path segment.
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (
+        parts.length >= 2 &&
+        ['embed', 'v', 'shorts', 'live'].includes(parts[0])
+      ) {
+        const id = parts[1];
+        return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+      }
+    }
+  } catch {
+    /* fall through to regex */
+  }
+
+  // Last-resort regex sweep: pick any 11-char id that follows a known
+  // separator anywhere in the string. Keeps us robust against malformed
+  // pastes like trailing whitespace or surrounding quotes.
+  const fallback = trimmed.match(
+    /(?:v=|\/embed\/|\/shorts\/|\/live\/|\/v\/|youtu\.be\/)([A-Za-z0-9_-]{11})/,
+  );
+  return fallback ? fallback[1] : null;
 }
 
 interface YTPlayer {
