@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { loggerConfig } from './common/logger.config';
 import { PrismaModule } from './prisma/prisma.module';
@@ -54,22 +53,6 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     LoggerModule.forRoot(loggerConfig),
-    ThrottlerModule.forRoot([
-      // SINGLE global throttler. Every route shares this budget. In dev
-      // we lift the ceiling so StrictMode double-mounts + hot reload +
-      // many widget fetches per page never trigger 429. In production a
-      // sane 300 req/min/IP protects against abuse.
-      //
-      // NOTE: Auth-specific throttling (5 req/min for login + refresh)
-      // is applied per-controller via @Throttle on AuthController —
-      // NOT a separate named global throttler, because @nestjs/throttler
-      // applies every named throttler to every route by default.
-      {
-        name: 'default',
-        ttl: 60000,
-        limit: process.env.NODE_ENV === 'production' ? 300 : 100000,
-      },
-    ]),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -114,7 +97,6 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ContactRequestsModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_INTERCEPTOR, useClass: DelegationContextInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

@@ -9,7 +9,6 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -23,9 +22,8 @@ import { UpdateContactRequestDto } from './dto/update-contact-request.dto';
  * Public demo-request endpoint + superadmin triage CRUD.
  *
  * Auth model: the `POST /contact-requests` create endpoint is intentionally
- * public — landing-page visitors are not logged in. The global
- * ThrottlerGuard plus the per-method `@Throttle` decorator keeps spam to
- * 5 requests / minute / IP. All other endpoints require superadmin.
+ * public — landing-page visitors are not logged in. All other endpoints
+ * require superadmin.
  */
 @ApiTags('contact-requests')
 @Controller('contact-requests')
@@ -33,7 +31,6 @@ export class ContactRequestsController {
   constructor(private service: ContactRequestsService) {}
 
   @Post()
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   create(@Body() dto: CreateContactRequestDto, @Request() req: any) {
     const ip =
       (typeof req.ip === 'string' && req.ip) ||
