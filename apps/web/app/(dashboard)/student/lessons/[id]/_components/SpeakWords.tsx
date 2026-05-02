@@ -228,11 +228,18 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
         // without ending the recognition session.
         continuous: true,
         onInterim: (txt) => {
+          // Live caption only — DON'T advance the cursor. Interim text
+          // grows letter-by-letter ("h" → "he" → "hello"), so any
+          // similarityScore against the expected word would briefly
+          // dip below the match threshold and falsely mark the word
+          // wrong before the speaker finishes saying it.
           if (!mountedRef.current) return;
           setInterimTranscript(txt);
-          processTranscript(txt);
         },
         onResult: (txt) => {
+          // Final result for the latest utterance — recognition has
+          // committed to the wording, safe to advance the cursor and
+          // colour the words.
           if (!mountedRef.current) return;
           setInterimTranscript(txt);
           processTranscript(txt);

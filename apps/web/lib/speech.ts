@@ -220,13 +220,31 @@ export function listen(opts: ListenOptions): ListenHandle {
   recog.interimResults = !!opts.onInterim;
   recog.maxAlternatives = 1;
 
+  // With `continuous: true` the recognizer issues a separate result entry
+  // per utterance (a pause finalises the previous one). The browser does
+  // NOT concatenate them for us — `event.results[i]` only holds that
+  // segment's text. Callers that need the full conversation transcript
+  // (e.g. SpeakWords cursor-based matching) would only see the most
+  // recent word and silently miss the earlier ones.
+  //
+  // To make the public API intuitive, listen() emits the *cumulative*
+  // transcript: all previously-finalised segments concatenated, plus
+  // the running interim of the current utterance overlaid on top.
+  // Single-utterance callers (continuous=false) get the same string,
+  // just shorter.
+  const finalizedSegments: string[] = [];
+
   recog.onresult = (event: SpeechRecognitionEventLike) => {
     const last = event.results[event.results.length - 1];
-    const transcript = (last?.[0]?.transcript ?? '').trim();
+    const segText = (last?.[0]?.transcript ?? '').trim();
     if (last?.isFinal) {
-      opts.onResult(transcript);
+      if (segText) finalizedSegments.push(segText);
+      const cumulative = finalizedSegments.join(' ').trim();
+      opts.onResult(cumulative);
     } else {
-      opts.onInterim?.(transcript);
+      const base = finalizedSegments.join(' ');
+      const cumulative = (base ? `${base} ${segText}` : segText).trim();
+      opts.onInterim?.(cumulative);
     }
   };
   recog.onerror = (event: { error?: string }) => {
