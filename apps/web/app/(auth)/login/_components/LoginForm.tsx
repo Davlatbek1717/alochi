@@ -66,7 +66,7 @@ export function LoginForm() {
             type="text"
             value={tenantSlug}
             onChange={(e) => setTenantSlug(e.target.value)}
-            placeholder="masalan: demo"
+            placeholder="markaz nomi"
             autoComplete="organization"
             className="w-full border-[1.5px] border-[#ede9e1] rounded-xl pl-10 pr-4 py-3 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
           />
