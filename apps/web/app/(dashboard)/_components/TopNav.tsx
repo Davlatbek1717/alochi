@@ -1,7 +1,6 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
 import {
   Home,
   BookOpen,
@@ -13,7 +12,6 @@ import {
   AlertTriangle,
   Building2,
   BookMarked,
-  Send,
   ShieldOff,
   Trophy,
   FlaskConical,
@@ -25,38 +23,29 @@ import {
   Video,
   Bell,
   Settings,
-  ChevronDown,
   Layers,
   Wrench,
   CheckCircle,
   PiggyBank,
   Calendar,
-  HelpCircle,
 } from 'lucide-react';
 
 interface SubItem {
   href: string;
   icon?: React.ReactNode;
   label: string;
-  description?: string;
 }
 
 interface NavEntry {
   label: string;
-  /** When set, the entry is a single link (no dropdown). */
+  /** When set, the entry is a single direct link (no sub-items). */
   href?: string;
   icon?: React.ReactNode;
-  /** Sub-items shown in the dropdown panel. */
+  /** Sub-pages of this section. The first sub-item is treated as the
+   *  default landing for the group. */
   items?: SubItem[];
 }
 
-/**
- * Per-role grouped navigation. Top-level entries appear inline on the
- * top bar; entries with `items[]` open a hover/click dropdown panel
- * with sub-pages organised by topic. Replaces the previous left sidebar
- * which only showed 4-5 of the role's destinations and forced a
- * dashboard round-trip to reach the rest.
- */
 const NAV: Record<string, NavEntry[]> = {
   // ─── Superadmin — 19 routes grouped into 6 menus ─────────────────────────
   superadmin: [
@@ -69,149 +58,58 @@ const NAV: Record<string, NavEntry[]> = {
       label: 'Markazlar',
       icon: <Building2 size={15} />,
       items: [
-        {
-          href: '/superadmin/tenants',
-          icon: <Building2 size={14} />,
-          label: 'Markazlar',
-          description: "A'lochi markazlari ro'yxati",
-        },
-        {
-          href: '/superadmin/branches',
-          icon: <Building2 size={14} />,
-          label: 'Filiallar',
-          description: "Qo'shish, boshqarish",
-        },
-        {
-          href: '/superadmin/contact-requests',
-          icon: <Inbox size={14} />,
-          label: "Demo so'rovlar",
-          description: 'Mijozlardan yangi so\'rov',
-        },
+        { href: '/superadmin/tenants', icon: <Building2 size={14} />, label: 'Markazlar' },
+        { href: '/superadmin/branches', icon: <Building2 size={14} />, label: 'Filiallar' },
+        { href: '/superadmin/contact-requests', icon: <Inbox size={14} />, label: "Demo so'rovlar" },
       ],
     },
     {
       label: 'Foydalanuvchilar',
       icon: <Users size={15} />,
       items: [
-        {
-          href: '/superadmin/users',
-          icon: <Users size={14} />,
-          label: 'Foydalanuvchilar',
-          description: 'Yaratish, tahrirlash',
-        },
-        {
-          href: '/superadmin/blocked-students',
-          icon: <AlertTriangle size={14} />,
-          label: "Bloklangan o'quvchilar",
-          description: "To'lov va ogohlantirish",
-        },
+        { href: '/superadmin/users', icon: <Users size={14} />, label: 'Foydalanuvchilar' },
+        { href: '/superadmin/blocked-students', icon: <AlertTriangle size={14} />, label: "Bloklangan o'quvchilar" },
       ],
     },
     {
-      label: 'Ta\'lim',
+      label: "Ta'lim",
       icon: <BookMarked size={15} />,
       items: [
-        {
-          href: '/superadmin/lessons',
-          icon: <BookMarked size={14} />,
-          label: 'Darslar',
-          description: 'Yaratish, tahrirlash, nashr',
-        },
-        {
-          href: '/superadmin/tournaments',
-          icon: <Trophy size={14} />,
-          label: 'Turnirlar',
-          description: 'Musobaqalar boshqaruvi',
-        },
-        {
-          href: '/superadmin/certificate-design',
-          icon: <Award size={14} />,
-          label: 'Sertifikat dizayni',
-          description: 'Shablon va brending',
-        },
-        {
-          href: '/superadmin/adaptive',
-          icon: <Zap size={14} />,
-          label: 'Adaptiv qiyinlik',
-          description: 'N-back sozlamalari',
-        },
-        {
-          href: '/superadmin/content-quality',
-          icon: <BarChart2 size={14} />,
-          label: 'Kontent sifati',
-          description: 'A/B test, pass rate',
-        },
+        { href: '/superadmin/lessons', icon: <BookMarked size={14} />, label: 'Darslar' },
+        { href: '/superadmin/tournaments', icon: <Trophy size={14} />, label: 'Turnirlar' },
+        { href: '/superadmin/certificate-design', icon: <Award size={14} />, label: 'Sertifikat dizayni' },
+        { href: '/superadmin/adaptive', icon: <Zap size={14} />, label: 'Adaptiv qiyinlik' },
+        { href: '/superadmin/content-quality', icon: <BarChart2 size={14} />, label: 'Kontent sifati' },
       ],
     },
     {
       label: 'Moliya',
       icon: <CreditCard size={15} />,
       items: [
-        {
-          href: '/superadmin/payments',
-          icon: <CreditCard size={14} />,
-          label: "To'lovlar",
-          description: 'Qarzdorlar, filial statistikasi',
-        },
+        { href: '/superadmin/payments', icon: <CreditCard size={14} />, label: "To'lovlar" },
       ],
     },
     {
       label: 'Tahlil',
       icon: <BarChart2 size={15} />,
       items: [
-        {
-          href: '/superadmin/analytics',
-          icon: <BarChart2 size={14} />,
-          label: 'Analytics',
-          description: 'Filial va dars statistika',
-        },
-        {
-          href: '/superadmin/churn',
-          icon: <TrendingDown size={14} />,
-          label: 'Churn monitor',
-          description: "Xavfli o'quvchilar",
-        },
-        {
-          href: '/superadmin/face-sla',
-          icon: <ScanFace size={14} />,
-          label: 'Face ID monitoring',
-          description: 'Face ID natijalari va SLA',
-        },
+        { href: '/superadmin/analytics', icon: <BarChart2 size={14} />, label: 'Analytics' },
+        { href: '/superadmin/churn', icon: <TrendingDown size={14} />, label: 'Churn monitor' },
+        { href: '/superadmin/face-sla', icon: <ScanFace size={14} />, label: 'Face ID monitoring' },
       ],
     },
     {
       label: 'Sozlamalar',
       icon: <Settings size={15} />,
       items: [
-        {
-          href: '/superadmin/settings',
-          icon: <Settings size={14} />,
-          label: 'Sozlamalar',
-          description: 'Bloklash chegarasi, telefon',
-        },
-        {
-          href: '/superadmin/keywords',
-          icon: <ShieldOff size={14} />,
-          label: "Taqiqlangan so'zlar",
-          description: 'Chat filtrlash',
-        },
-        {
-          href: '/superadmin/video-guides',
-          icon: <Video size={14} />,
-          label: "Video qo'llanmalar",
-          description: 'Foydalanuvchilar uchun',
-        },
-        {
-          href: '/superadmin/templates',
-          icon: <Bell size={14} />,
-          label: 'Bildirishnoma shablonlari',
-          description: 'Telegram / inapp / SMS',
-        },
+        { href: '/superadmin/settings', icon: <Settings size={14} />, label: 'Sozlamalar' },
+        { href: '/superadmin/keywords', icon: <ShieldOff size={14} />, label: "Taqiqlangan so'zlar" },
+        { href: '/superadmin/video-guides', icon: <Video size={14} />, label: "Video qo'llanmalar" },
+        { href: '/superadmin/templates', icon: <Bell size={14} />, label: 'Bildirishnoma shablonlari' },
       ],
     },
   ],
 
-  // ─── Mentor — 5 routes, all flat ──────────────────────────────────────────
   mentor: [
     { label: 'Bosh sahifa', href: '/mentor', icon: <Home size={15} /> },
     { label: 'Guruh', href: '/mentor/group', icon: <GraduationCap size={15} /> },
@@ -220,7 +118,6 @@ const NAV: Record<string, NavEntry[]> = {
     { label: "O'quvchilar", href: '/mentor/students', icon: <Users size={15} /> },
   ],
 
-  // ─── Manager — 8 routes ───────────────────────────────────────────────────
   manager: [
     { label: 'Bosh sahifa', href: '/manager', icon: <Home size={15} /> },
     {
@@ -250,7 +147,6 @@ const NAV: Record<string, NavEntry[]> = {
     },
   ],
 
-  // ─── Filadmin — 14 routes grouped into 5 menus ────────────────────────────
   filadmin: [
     { label: 'Bosh sahifa', href: '/filadmin', icon: <Home size={15} /> },
     {
@@ -292,7 +188,6 @@ const NAV: Record<string, NavEntry[]> = {
     },
   ],
 
-  // ─── Tester — 5 routes, all flat ──────────────────────────────────────────
   tester: [
     { label: 'Bosh sahifa', href: '/tester', icon: <Home size={15} /> },
     { label: 'Sinov darsi', href: '/tester/lessons/current', icon: <FlaskConical size={15} /> },
@@ -301,7 +196,6 @@ const NAV: Record<string, NavEntry[]> = {
     { label: 'Texnik muammo', href: '/tester/tech-issues', icon: <Wrench size={15} /> },
   ],
 
-  // ─── Student — 5 primary, rest in BrowseMoreGrid on the dashboard ────────
   student: [
     { label: 'Bosh sahifa', href: '/student', icon: <Home size={15} /> },
     { label: 'Darslar', href: '/student/lessons', icon: <BookOpen size={15} /> },
@@ -315,54 +209,125 @@ interface Props {
   role: string;
 }
 
+/**
+ * Two-row top navigation:
+ *
+ *   Row 1 — primary groups. Always visible. Each group either is a
+ *           direct link (Bosh sahifa) or a section header. Clicking
+ *           a section header navigates to its first sub-item.
+ *   Row 2 — sub-pills of the currently active section. Renders only
+ *           when the active group has sub-items, persists for as long
+ *           as the user stays inside that section, and disappears on
+ *           plain links or when off-section (dashboard, profile).
+ *
+ * This replaces the previous hover-dropdown design that surfaced
+ * sub-items only on hover and was easy to miss when the dark page
+ * header sat right under the menu — visibility was the user-reported
+ * issue. Now sub-items are *always* visible the moment you're inside
+ * a section.
+ */
 export default function TopNav({ role }: Props) {
   const pathname = usePathname();
   const items = NAV[role] ?? [];
   if (items.length === 0) return null;
 
+  // Resolve which top-level entry the current path belongs to. A path
+  // belongs to an entry when it starts with the entry's href or with
+  // the href of one of its sub-items.
+  const activeEntry = items.find((entry) => {
+    if (entry.href && (pathname === entry.href || pathname.startsWith(entry.href + '/'))) {
+      // For exact dashboard match (e.g. /superadmin), only consider
+      // this entry active when no more specific group also matches.
+      if (entry.href.length > 1) return true;
+      const moreSpecific = items.some(
+        (other) =>
+          other !== entry &&
+          ((other.href && pathname.startsWith(other.href + '/')) ||
+            (other.items?.some((s) => pathname.startsWith(s.href)))),
+      );
+      return !moreSpecific && pathname === entry.href;
+    }
+    if (entry.items) {
+      return entry.items.some(
+        (s) => pathname === s.href || pathname.startsWith(s.href + '/'),
+      );
+    }
+    return false;
+  });
+
   return (
     <nav
       aria-label="Asosiy navigatsiya"
-      className="hidden md:block sticky top-[44px] z-40 bg-white/95 backdrop-blur border-b border-[#ede9e1]"
+      className="hidden md:block sticky top-[44px] z-40 bg-white border-b border-[#ede9e1]"
     >
       <div className="max-w-7xl mx-auto px-4">
+        {/* Row 1 — primary groups */}
         <ul className="flex items-stretch gap-1 overflow-x-auto">
-          {items.map((entry) =>
-            entry.items ? (
-              <DropdownEntry
-                key={entry.label}
-                entry={entry}
-                pathname={pathname}
-              />
-            ) : (
-              <LinkEntry key={entry.label} entry={entry} pathname={pathname} />
-            ),
-          )}
-          <div className="ml-auto inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] gap-1 shrink-0">
-            <HelpCircle size={11} />
+          {items.map((entry) => (
+            <PrimaryEntry
+              key={entry.label}
+              entry={entry}
+              isActive={entry === activeEntry}
+            />
+          ))}
+          <div className="ml-auto inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] gap-1 shrink-0 px-2">
             <span>{role}</span>
           </div>
         </ul>
+
+        {/* Row 2 — sub-pills for the active section. Only shown when
+            the active group has sub-items so dashboard and direct-link
+            destinations don't render an empty strip. */}
+        {activeEntry?.items && activeEntry.items.length > 0 && (
+          <div className="bg-[#fffaf0] -mx-4 px-4 border-t border-[#f3eedf]">
+            <ul className="flex items-center gap-1.5 overflow-x-auto py-2 max-w-7xl mx-auto">
+              {activeEntry.items.map((sub) => {
+                const isSubActive =
+                  pathname === sub.href ||
+                  pathname.startsWith(sub.href + '/');
+                return (
+                  <li key={sub.href} className="shrink-0">
+                    <Link
+                      href={sub.href}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold rounded-full transition-colors ${
+                        isSubActive
+                          ? 'bg-[#0d9488] text-white'
+                          : 'bg-white text-[#64748b] border border-[#ede9e1] hover:text-[#0f172a] hover:border-[#0d9488]/40'
+                      }`}
+                    >
+                      {sub.icon && (
+                        <span className={isSubActive ? 'text-white' : 'text-[#94a3b8]'}>
+                          {sub.icon}
+                        </span>
+                      )}
+                      {sub.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </nav>
   );
 }
 
-function LinkEntry({
+function PrimaryEntry({
   entry,
-  pathname,
+  isActive,
 }: {
   entry: NavEntry;
-  pathname: string;
+  isActive: boolean;
 }) {
-  const href = entry.href ?? '#';
-  const isActive =
-    pathname === href ||
-    (href.length > 1 && pathname.startsWith(href + '/'));
+  // For section groups, clicking the header navigates to the first
+  // sub-item (the section's "default page"). Direct-link entries
+  // (Bosh sahifa) just route to their href.
+  const targetHref = entry.href ?? entry.items?.[0]?.href ?? '#';
   return (
     <li className="shrink-0">
       <Link
-        href={href}
+        href={targetHref}
         className={`inline-flex items-center gap-2 px-3 py-2.5 text-sm font-bold border-b-2 transition-colors ${
           isActive
             ? 'border-[#0d9488] text-[#0f172a]'
@@ -372,113 +337,6 @@ function LinkEntry({
         {entry.icon}
         <span>{entry.label}</span>
       </Link>
-    </li>
-  );
-}
-
-function DropdownEntry({
-  entry,
-  pathname,
-}: {
-  entry: NavEntry;
-  pathname: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLLIElement | null>(null);
-
-  // Click-outside to close. Hover handlers below also keep the panel
-  // pinned while the cursor is inside either the trigger or the panel.
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    if (open) document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [open]);
-
-  // Active when any of the dropdown's sub-items matches the current path.
-  const items = entry.items ?? [];
-  const isActive = items.some(
-    (s) =>
-      pathname === s.href ||
-      (s.href.length > 1 && pathname.startsWith(s.href + '/')),
-  );
-
-  return (
-    <li
-      ref={containerRef}
-      className="relative shrink-0"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-2 px-3 py-2.5 text-sm font-bold border-b-2 transition-colors ${
-          isActive
-            ? 'border-[#0d9488] text-[#0f172a]'
-            : 'border-transparent text-[#64748b] hover:text-[#0f172a] hover:border-[#cbd5e1]'
-        }`}
-      >
-        {entry.icon}
-        <span>{entry.label}</span>
-        <ChevronDown
-          size={13}
-          className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute left-0 top-full mt-1 w-72 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] shadow-xl overflow-hidden motion-safe:animate-[scaleIn_140ms_ease-out_forwards]"
-        >
-          <ul className="p-1.5 space-y-0.5">
-            {items.map((sub) => {
-              const subActive =
-                pathname === sub.href ||
-                (sub.href.length > 1 && pathname.startsWith(sub.href + '/'));
-              return (
-                <li key={sub.href}>
-                  <Link
-                    href={sub.href}
-                    role="menuitem"
-                    onClick={() => setOpen(false)}
-                    className={`flex items-start gap-2.5 px-3 py-2 rounded-xl text-sm transition-colors ${
-                      subActive
-                        ? 'bg-[#0d9488]/10 text-[#0f172a]'
-                        : 'text-[#0f172a] hover:bg-[#f7f4ef]'
-                    }`}
-                  >
-                    {sub.icon && (
-                      <span
-                        className={`mt-0.5 shrink-0 ${
-                          subActive ? 'text-[#0d9488]' : 'text-[#64748b]'
-                        }`}
-                      >
-                        {sub.icon}
-                      </span>
-                    )}
-                    <span className="min-w-0">
-                      <span className="block font-bold leading-tight truncate">
-                        {sub.label}
-                      </span>
-                      {sub.description && (
-                        <span className="block text-[11px] font-medium text-[#64748b] mt-0.5 leading-snug">
-                          {sub.description}
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
     </li>
   );
 }
