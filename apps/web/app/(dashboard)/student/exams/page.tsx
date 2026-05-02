@@ -113,10 +113,39 @@ export default function StudentExamsPage() {
       .then((res) => {
         setPermission(res.data);
         if (res.data?.lesson) {
-          // Legacy: extract MCQ questions from lesson components_data
-          const qs: McqQuestion[] = (res.data.lesson.components_data ?? [])
-            .filter((c) => c.type === 'mcq')
-            .map((c) => c.config as McqQuestion);
+          // Legacy: extract MCQ questions from lesson components_data.
+          // Lesson MCQ stores questions in two shapes — aggregate
+          // { questions: [{ text, options, correct }, ...] } or flat
+          // { question, options, correctIndex } — depending on which
+          // seed/UI authored it. Mirror the lesson runner's extractor
+          // so both shapes flow through to the legacy renderer.
+          const qs: McqQuestion[] = [];
+          for (const c of res.data.lesson.components_data ?? []) {
+            if (c.type !== 'mcq') continue;
+            const cfg = c.config as {
+              questions?: Array<{ text?: string; options?: string[]; correct?: number }>;
+              question?: string;
+              options?: string[];
+              correctIndex?: number;
+            };
+            if (Array.isArray(cfg?.questions) && cfg.questions.length > 0) {
+              for (const q of cfg.questions) {
+                if (q?.text && Array.isArray(q.options) && q.options.length > 0) {
+                  qs.push({
+                    question: q.text,
+                    options: q.options,
+                    correctIndex: typeof q.correct === 'number' ? q.correct : 0,
+                  });
+                }
+              }
+            } else if (cfg?.question && Array.isArray(cfg.options) && cfg.options.length > 0) {
+              qs.push({
+                question: cfg.question,
+                options: cfg.options,
+                correctIndex: typeof cfg.correctIndex === 'number' ? cfg.correctIndex : 0,
+              });
+            }
+          }
           setLegacyQuestions(qs);
           setLegacyAnswers(Array(qs.length).fill(null));
         }
