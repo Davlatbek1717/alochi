@@ -107,6 +107,20 @@ type ProgressRow = { lessonId: string; sessionCount: number };
 
 type LeagueData = { tier?: string; rank?: number };
 
+/**
+ * Local XP-to-league mapping. Mirrors the same thresholds the profile
+ * page uses, so the dashboard badge stays in sync without depending on
+ * a `/gamification/league/my` endpoint that the API doesn't expose
+ * (the previous fetch was 404'ing in the console on every page load).
+ */
+function deriveLeagueFromXp(totalXp: number): LeagueData {
+  if (totalXp >= 5000) return { tier: 'almos' };
+  if (totalXp >= 2500) return { tier: 'platina' };
+  if (totalXp >= 1000) return { tier: 'oltin' };
+  if (totalXp >= 300) return { tier: 'kumush' };
+  return { tier: 'bronza' };
+}
+
 export default function StudentDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [xpData, setXpData] = useState<XpData>({
@@ -151,7 +165,6 @@ export default function StudentDashboard() {
           reviewRes,
           certsRes,
           nextLessonRes,
-          leagueRes,
         ] = await Promise.all([
           apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
           apiRequest<XpData>('/gamification/xp', {}, token),
@@ -163,7 +176,6 @@ export default function StudentDashboard() {
           apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
           apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
           apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
-          apiRequest<LeagueData>('/gamification/league/my', {}, token).catch(() => ({ data: null as LeagueData | null })),
         ]);
         if (cancelled) return;
         if (profileRes.data) setProfile(profileRes.data);
@@ -189,7 +201,9 @@ export default function StudentDashboard() {
         } else {
           setNextLessonSession(null);
         }
-        if (leagueRes.data) setLeague(leagueRes.data);
+        // League tier is derived from totalXp client-side — no server
+        // round-trip, no 404 noise from a missing endpoint.
+        setLeague(deriveLeagueFromXp(xpRes.data?.totalXp ?? 0));
       } catch {
         // keep defaults on error
       } finally {
