@@ -6,6 +6,43 @@ interface CameraMonitorProps {
   onSilenceTooLong: () => void;
 }
 
+/**
+ * Inject a `<script src="...">` tag and resolve when it has loaded.
+ * Used to side-load mediapipe's UMD bundles, which rely on running
+ * with `this === window` to register their globals — something a
+ * webpack/turbopack dynamic `import()` cannot guarantee.
+ *
+ * Caches a single tag per src so HMR re-mounts don't pile up dozens
+ * of identical scripts.
+ */
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(
+      `script[data-mp-src="${src}"]`,
+    ) as (HTMLScriptElement & { _mpReady?: boolean }) | null;
+    if (existing) {
+      if (existing._mpReady) return resolve();
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () =>
+        reject(new Error(`Failed to load ${src}`)),
+      );
+      return;
+    }
+    const s = document.createElement('script') as HTMLScriptElement & {
+      _mpReady?: boolean;
+    };
+    s.src = src;
+    s.crossOrigin = 'anonymous';
+    s.dataset.mpSrc = src;
+    s.onload = () => {
+      s._mpReady = true;
+      resolve();
+    };
+    s.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
 // Sustained-violation thresholds (ms). Tuned for exam strictness —
 // shorter than the original 2 s so that turning the head triggers
 // quickly, but long enough that a brief glance away or a sneeze
@@ -118,12 +155,23 @@ export function CameraMonitor({ onLookAway, onSilenceTooLong }: CameraMonitorPro
     let stream: MediaStream | null = null;
 
     async function init() {
-      // Mediapipe ships UMD bundles that attach `FaceDetection` and
-      // `Camera` to `window` as a side-effect of being imported —
-      // there are no named ESM exports. So we await the imports for
-      // the side-effect, then read the constructors off the window.
-      await import('@mediapipe/face_detection');
-      await import('@mediapipe/camera_utils');
+      // Mediapipe's face_detection / camera_utils packages ship UMD
+      // bundles that wrap their entry in `(function(){...}).call(this)`
+      // and rely on `this === window` to attach FaceDetection / Camera
+      // as globals. Inside an ES module, `this` is `undefined` (strict
+      // mode), so dynamic `import('@mediapipe/...')` succeeds but the
+      // globals never get registered → `new FaceDetection()` throws
+      // "is not a constructor". The documented workaround is to load
+      // the bundle via a real `<script>` tag, which does run with
+      // `this === window`.
+      await Promise.all([
+        loadScript(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js',
+        ),
+        loadScript(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js',
+        ),
+      ]);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w = window as any;
