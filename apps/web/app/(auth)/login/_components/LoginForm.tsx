@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, LogIn, Building2 } from 'lucide-react';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
 
@@ -13,17 +13,27 @@ interface LoginResponse {
 
 const ROLE_ROUTES: Record<string, string> = {
   superadmin: '/superadmin',
-  filadmin:   '/filadmin',
-  manager:    '/manager',
-  mentor:     '/mentor',
-  tester:     '/tester',
-  student:    '/student',
+  filadmin: '/filadmin',
+  manager: '/manager',
+  mentor: '/mentor',
+  tester: '/tester',
+  student: '/student',
 };
 
+/**
+ * LoginForm — login + parol only.
+ *
+ * The Markaz (tenant slug) field used to live here as an "ixtiyoriy"
+ * input. The backend now resolves the user from the login alone (see
+ * auth.service.ts: prefer superadmin → fall back to a globally-unique
+ * login → ambiguity error if multiple matches), so the form no longer
+ * needs to ask for the slug. This is also a UX win — most operators
+ * don't know their slug and were leaving the field blank, which was
+ * the very thing that broke non-superadmin login before.
+ */
 export function LoginForm() {
   const router = useRouter();
   const toast = useToast();
-  const [tenantSlug, setTenantSlug] = useState('');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -33,19 +43,13 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const headers: Record<string, string> = {};
-      const slug = tenantSlug.trim().toLowerCase();
-      if (slug) headers['x-tenant-slug'] = slug;
-
       const res = await apiRequest<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ login, password }),
-        headers,
       });
       localStorage.setItem('accessToken', res.data.accessToken);
       localStorage.setItem('refreshToken', res.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      if (slug) localStorage.setItem('tenantSlug', slug);
       router.push(ROLE_ROUTES[res.data.user.role] ?? '/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login yoki parol noto'g'ri");
@@ -58,26 +62,6 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
-          Markaz (ixtiyoriy)
-        </label>
-        <div className="relative">
-          <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
-          <input
-            type="text"
-            value={tenantSlug}
-            onChange={(e) => setTenantSlug(e.target.value)}
-            placeholder="markaz nomi"
-            autoComplete="organization"
-            className="w-full border-[1.5px] border-[#ede9e1] rounded-xl pl-10 pr-4 py-3 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
-          />
-        </div>
-        <p className="text-[11px] text-[#94a3b8] mt-1.5">
-          Superadmin uchun bo&apos;sh qoldiring. Markaz slug&apos;ini bilmasangiz Superadmindan so&apos;rang.
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
           Login
         </label>
         <input
@@ -86,6 +70,7 @@ export function LoginForm() {
           onChange={(e) => setLogin(e.target.value)}
           placeholder="loginni kiriting"
           required
+          autoFocus
           autoComplete="username"
           className="w-full border-[1.5px] border-[#ede9e1] rounded-xl px-4 py-3 text-sm text-[#0f172a] outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all placeholder:text-[#94a3b8]"
         />
@@ -107,7 +92,7 @@ export function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPwd((v) => !v)}
-            aria-label={showPwd ? 'Parolni yashirish' : 'Parolni ko\'rsatish'}
+            aria-label={showPwd ? 'Parolni yashirish' : "Parolni ko'rsatish"}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#64748b] focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-offset-1 rounded transition-colors"
           >
             {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
