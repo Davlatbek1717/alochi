@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, GitBranch, Calendar, Shield, FileText, CheckCircle, XCircle, AlertTriangle, CreditCard, Users, Clock } from 'lucide-react';
+import { ArrowLeft, GitBranch, Calendar, Shield, FileText, CheckCircle, XCircle, AlertTriangle, CreditCard, Users, Clock, Printer } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateShort, formatDateTime } from '@/lib/date-uz';
 
@@ -96,6 +96,26 @@ export default function DelegationDetailPage() {
     fetchAll();
   }, [id]);
 
+  // Browser-native print → save as PDF. The page itself has print
+  // styles that hide chrome (TopNav, action buttons) and emit a clean
+  // single-page audit record. Beats bundling jsPDF for a feature
+  // that's used a few times a month.
+  const handleExportPdf = useCallback(() => {
+    // Set a friendlier filename for the print dialog. Browsers use
+    // document.title as the default download name. Restore it after
+    // a short timeout so the title doesn't stick if the user cancels.
+    const original = document.title;
+    if (delegation) {
+      const safe = `delegatsiya-${delegation.fromUser.name}-${formatDate(delegation.startsAt)}`
+        .replace(/[^\wЀ-ӿ-]+/g, '_');
+      document.title = safe;
+    }
+    setTimeout(() => {
+      window.print();
+      document.title = original;
+    }, 50);
+  }, [delegation]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
@@ -108,37 +128,73 @@ export default function DelegationDetailPage() {
   const statusCfg = STATUS_CONFIG[status] ?? { label: status, className: 'bg-white/10 text-white border-white/20' };
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-screen bg-[#f7f4ef] print:bg-white">
+      {/* Print-only styles — collapse the dashboard chrome (TopNav,
+          dark header, sticky elements) and render a clean white-paper
+          audit record. Tailwind ships a `print:` variant for the
+          modifier; everything else inherits the screen layout. */}
+      <style jsx global>{`
+        @media print {
+          @page { size: A4; margin: 16mm 14mm; }
+          body { background: #fff !important; }
+          /* Hide the global top navigation */
+          nav[aria-label="Asosiy navigatsiya"] { display: none !important; }
+          /* Hide notification bell + tester banner anything in the
+             outer dashboard layout that floats above content */
+          header, .no-print { display: none !important; }
+          /* Make cards borderless on paper */
+          .bg-white { box-shadow: none !important; }
+        }
+      `}</style>
+
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden print:bg-white print:text-[#0f172a] print:px-0 print:pt-0 print:pb-4 print:border-b print:border-[#ede9e1]">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 print:hidden"
           style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="relative z-10">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm print:hidden">
             <ArrowLeft size={16} /> Orqaga
           </button>
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
-                <GitBranch size={18} className="text-indigo-400" />
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 print:bg-indigo-100">
+                <GitBranch size={18} className="text-indigo-400 print:text-indigo-700" />
               </div>
               <div>
-                <p className="text-white font-bold text-lg leading-tight">
+                <p className="text-white font-bold text-lg leading-tight print:text-[#0f172a]">
                   {delegation ? `${delegation.fromUser.name} → ${delegation.toUser.name}` : 'Delegatsiya'}
                 </p>
                 {delegation && (
-                  <p className="text-[#94a3b8] text-xs mt-0.5">
+                  <p className="text-[#94a3b8] text-xs mt-0.5 print:text-[#64748b]">
                     {formatDate(delegation.startsAt)} – {formatDate(delegation.endsAt)}
                   </p>
                 )}
               </div>
             </div>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border shrink-0 ${statusCfg.className}`}>
-              {statusCfg.label}
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleExportPdf}
+                disabled={!delegation}
+                className="hidden sm:inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white border border-white/20 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors print:hidden"
+              >
+                <Printer size={12} /> PDF eksport
+              </button>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusCfg.className} print:bg-white print:text-[#0f172a] print:border-[#ede9e1]`}>
+                {statusCfg.label}
+              </span>
+            </div>
           </div>
+          {/* Mobile-friendly export button — full-width below the
+              header row when the inline one wraps off-screen. */}
+          <button
+            onClick={handleExportPdf}
+            disabled={!delegation}
+            className="sm:hidden mt-3 w-full inline-flex items-center justify-center gap-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white border border-white/20 px-3 py-2 rounded-xl text-xs font-bold transition-colors print:hidden"
+          >
+            <Printer size={12} /> PDF eksport
+          </button>
         </div>
       </div>
 
