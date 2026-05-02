@@ -1,5 +1,23 @@
 'use client';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  Pencil,
+  Plus,
+  Trash2,
+  type LucideIcon,
+  CheckSquare,
+  ArrowDownNarrowWide,
+  Volume2,
+  Headphones,
+  Pencil as PencilIcon,
+  Image as ImageIcon,
+  ListOrdered,
+  Languages,
+  Mic,
+  MessageCircle,
+  PuzzleIcon,
+  Type,
+  AudioLines,
+} from 'lucide-react';
 
 /**
  * Pass 5 — Components list (read-only render of `lesson.components_data`).
@@ -49,6 +67,27 @@ export const COMPONENT_BADGE_STYLES: Record<string, string> = {
   order_sentences: 'bg-rose-50 text-rose-700 border-rose-100',
   speak_sentence: 'bg-teal-50 text-teal-700 border-teal-100',
   speak_words: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+};
+
+/**
+ * Per-type icon used in the component card. Helps the admin scan a
+ * lesson's flow visually: the icon answers "what does the student see"
+ * faster than the textual label.
+ */
+export const COMPONENT_ICONS: Record<string, LucideIcon> = {
+  mcq: CheckSquare,
+  word_order: ArrowDownNarrowWide,
+  vocabulary: Volume2,
+  translate: Languages,
+  listen_pick: Headphones,
+  listen_type: PencilIcon,
+  match_pairs: PuzzleIcon,
+  pick_picture: ImageIcon,
+  fill_blank: Type,
+  spelling: AudioLines,
+  order_sentences: ListOrdered,
+  speak_sentence: Mic,
+  speak_words: MessageCircle,
 };
 
 /**
@@ -135,64 +174,98 @@ export function ComponentsList({
 }: Props) {
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        onClick={onAdd}
-        className="w-full border-2 border-dashed border-[#ede9e1] rounded-[18px] py-4 text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] text-sm font-bold transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus size={16} /> Topshiriq qo&apos;shish
-      </button>
-
       {components.length === 0 ? (
-        <div className="bg-white rounded-[18px] border-[1.5px] border-dashed border-[#ede9e1] p-6 text-center">
-          <p className="text-[#64748b] text-sm font-semibold">
-            Hali topshiriq yo&apos;q. Yuqoridagi tugmadan qo&apos;shing.
+        <button
+          type="button"
+          onClick={onAdd}
+          className="w-full border-2 border-dashed border-[#ede9e1] rounded-2xl py-10 text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-white transition-all flex flex-col items-center justify-center gap-2"
+        >
+          <div className="w-12 h-12 rounded-full bg-[#f7f4ef] flex items-center justify-center">
+            <Plus size={20} />
+          </div>
+          <p className="text-sm font-bold">Birinchi topshiriqni qo&apos;shing</p>
+          <p className="text-xs text-[#64748b] font-semibold">
+            13 turdagi mashq mavjud
           </p>
-        </div>
+        </button>
       ) : (
-        <ul className="space-y-2">
-          {components.map((comp) => {
-            const label = COMPONENT_LABELS[comp.type] ?? comp.type;
-            const badgeClass =
-              COMPONENT_BADGE_STYLES[comp.type] ??
-              'bg-slate-50 text-slate-700 border-slate-200';
-            const summary = summarizeConfig(comp);
-            return (
-              <li
-                key={comp.id}
-                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-3 flex items-center gap-3"
-              >
-                <span
-                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap ${badgeClass}`}
+        <>
+          <ul className="space-y-2">
+            {components.map((comp, idx) => {
+              const label = COMPONENT_LABELS[comp.type] ?? comp.type;
+              const badgeClass =
+                COMPONENT_BADGE_STYLES[comp.type] ??
+                'bg-slate-50 text-slate-700 border-slate-200';
+              const Icon = COMPONENT_ICONS[comp.type];
+              const summary = summarizeConfig(comp);
+              return (
+                <li
+                  key={comp.id}
+                  className="group bg-white rounded-2xl border-[1.5px] border-[#ede9e1] hover:border-[#0d9488]/40 hover:shadow-sm transition-all overflow-hidden"
                 >
-                  {label}
-                </span>
-                <span className="text-sm text-[#0f172a] font-semibold flex-1 min-w-0 truncate">
-                  {summary}
-                </span>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onEdit(comp)}
-                    aria-label={`${label} tahrirlash`}
-                    className="p-2 rounded-lg text-[#0f172a] hover:bg-[#f7f4ef] transition-colors"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(comp)}
-                    disabled={isDeleting === comp.id}
-                    aria-label={`${label} o'chirish`}
-                    className="p-2 rounded-lg text-[#e11d48] hover:bg-[#e11d48]/10 transition-colors disabled:opacity-50"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="p-3 flex items-start gap-3">
+                    {/* Order badge — student sees these in this order */}
+                    <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                      <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                        #{idx + 1}
+                      </span>
+                      <div
+                        className={`w-9 h-9 rounded-xl border flex items-center justify-center ${badgeClass}`}
+                      >
+                        {Icon ? <Icon size={16} /> : null}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${badgeClass}`}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#0f172a] font-semibold mt-1 line-clamp-2">
+                        {summary}
+                      </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(comp)}
+                        aria-label={`${label} tahrirlash`}
+                        className="flex items-center gap-1.5 text-xs font-bold text-[#0f172a] bg-[#f7f4ef] hover:bg-[#ede9e1] border border-[#ede9e1] px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Pencil size={12} /> Tahrir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(comp)}
+                        disabled={isDeleting === comp.id}
+                        aria-label={`${label} o'chirish`}
+                        className="p-2 rounded-lg text-[#e11d48] hover:bg-[#e11d48]/10 transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Add-another CTA at the bottom — feels natural after scrolling
+              through the list, and stays out of the way when empty. */}
+          <button
+            type="button"
+            onClick={onAdd}
+            className="w-full border-2 border-dashed border-[#ede9e1] rounded-2xl py-3.5 text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-white text-sm font-bold transition-all flex items-center justify-center gap-2"
+          >
+            <Plus size={16} /> Yana topshiriq qo&apos;shish
+          </button>
+        </>
       )}
     </div>
   );
