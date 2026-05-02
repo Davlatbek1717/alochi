@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Lock } from 'lucide-react';
 
 interface VideoPlayerProps {
   youtubeUrl: string;
@@ -295,13 +294,6 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
       <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] p-2 relative">
         <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden">
           <div ref={containerRef} className="w-full h-full" />
-          <div
-            className="absolute top-2 right-2 bg-[#fef3c7] text-[#a16207] border border-[#fbbf24] text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
-            <Lock size={11} strokeWidth={3} />
-            Tezlashtirish bloklangan
-          </div>
         </div>
       </div>
 
