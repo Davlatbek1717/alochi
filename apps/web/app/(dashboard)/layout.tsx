@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ToastProvider>
     <DuelNotificationProvider>
-      <div className="flex flex-col min-h-screen bg-[#f7f4ef]">
+      <div className="flex flex-col min-h-screen bg-[#f7f4ef] overflow-x-hidden">
         {/* Skip to main content — keyboard a11y */}
         <a
           href="#main-content"
@@ -50,16 +50,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </a>
         {/* Top header — identity + bell + logout. Sits above the per-role
             top nav so navigation chrome stays consistent across pages. */}
-        <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-white/5 px-4 py-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <header className="sticky top-0 z-50 bg-[#0f172a] border-b border-white/5 px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 min-w-0">
+          {/* Identity — must shrink so the right-side bell+logout buttons
+              never get cut off on narrow phones (e.g. 360-430px). The
+              `min-w-0` on the flex item is what actually lets the text
+              truncate; without it the inner <p> would expand to its
+              intrinsic content width and push the header beyond the
+              viewport. */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">
               {user?.name ? getInitials(user.name) : '…'}
             </div>
-            <p className="text-sm font-semibold text-white truncate max-w-[160px]">
+            <p className="text-sm font-semibold text-white truncate min-w-0">
               {user?.name ?? '…'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <NotificationBell />
             <Button
               variant="ghost"
