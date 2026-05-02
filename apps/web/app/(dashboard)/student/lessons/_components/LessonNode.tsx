@@ -1,5 +1,5 @@
 'use client';
-import { Check, Lock, Star, Play } from 'lucide-react';
+import { Check, Lock, Play } from 'lucide-react';
 import { forwardRef, type CSSProperties } from 'react';
 
 export type NodeState = 'locked' | 'current' | 'completed';
@@ -12,8 +12,6 @@ interface Props {
   accentColor?: string;
   /** Optional darker shadow side (3D press) — pairs with accentColor for the bottom border. */
   accentShadow?: string;
-  /** When true, draws an extra rotating gold ring outside (3-star perfect badge). */
-  isPerfect?: boolean;
   /** Click handler — only invoked when state is "current" or "completed". */
   onClick?: () => void;
   /** Inline style — used by the parent path layout to absolute-position the node. */
@@ -31,9 +29,6 @@ interface Props {
  *                 Renders a play arrow icon.
  *  - completed  : gold body with checkmark; gold-bordered ring.
  *
- * Perfect (3-star) lessons get a slowly rotating gold outline around the node
- * via an absolutely-positioned dashed ring with `motion-safe:animate-spin`.
- *
  * 3D depth comes from a thicker bottom border (`border-b-[Npx]`) plus an
  * `active:translate-y-[2px]` press feedback for available nodes.
  */
@@ -43,7 +38,6 @@ export const LessonNode = forwardRef<HTMLButtonElement, Props>(function LessonNo
     positionLabel,
     accentColor = '#58cc02',
     accentShadow = '#46a302',
-    isPerfect = false,
     onClick,
     style,
     ariaLabel,
@@ -101,15 +95,6 @@ export const LessonNode = forwardRef<HTMLButtonElement, Props>(function LessonNo
         />
       )}
 
-      {/* Perfect (3-star) rotating gold halo */}
-      {isPerfect && (
-        <span
-          aria-hidden
-          className="absolute top-[-6px] left-1/2 -translate-x-1/2 w-[92px] h-[92px] rounded-full border-4 border-dashed border-[#fbbf24] motion-safe:animate-spin pointer-events-none"
-          style={{ animationDuration: '8s' }}
-        />
-      )}
-
       <button
         ref={ref}
         type="button"
@@ -135,20 +120,6 @@ export const LessonNode = forwardRef<HTMLButtonElement, Props>(function LessonNo
         </span>
       )}
 
-      {/* Star burst row for completed nodes — small visual reward. */}
-      {isCompleted && (
-        <span className="flex items-center gap-0.5">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Star
-              key={i}
-              size={11}
-              fill={isPerfect || i === 0 ? '#fbbf24' : 'transparent'}
-              className={isPerfect || i === 0 ? 'text-[#d97706]' : 'text-[#d4d4d4]'}
-              strokeWidth={2}
-            />
-          ))}
-        </span>
-      )}
     </div>
   );
 });

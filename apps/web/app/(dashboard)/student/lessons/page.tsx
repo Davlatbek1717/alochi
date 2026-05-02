@@ -29,8 +29,6 @@ type Progress = {
   sessionCount: number;
   homeCompleted: boolean;
   academyCompleted: boolean;
-  /** Star rating from 0..3 — optional, only some progress rows include it. */
-  stars?: number;
 };
 
 type StreakData = { streak: number; hasShield: boolean };
@@ -315,7 +313,6 @@ export default function LessonsPathPage() {
                   unitIdx * UNIT_SIZE + localIdx === currentIndex
                 }
                 currentNodeRef={currentNodeRef}
-                progress={progress}
               />
             ))}
 
@@ -360,7 +357,6 @@ interface UnitBlockProps {
   onNodeClick: (localIdx: number) => void;
   isCurrentNode: (localIdx: number) => boolean;
   currentNodeRef: React.MutableRefObject<HTMLButtonElement | null>;
-  progress: Record<string, Progress>;
 }
 
 function UnitBlock({
@@ -369,7 +365,6 @@ function UnitBlock({
   onNodeClick,
   isCurrentNode,
   currentNodeRef,
-  progress,
 }: UnitBlockProps) {
   const allCompleted = unit.states.length === UNIT_SIZE && unit.states.every((s) => s === 'completed');
 
@@ -394,9 +389,6 @@ function UnitBlock({
             !!prevState &&
             (prevState === 'completed') &&
             (state === 'completed' || state === 'current');
-
-          const stars = progress[lesson.id]?.stars ?? 0;
-          const isPerfect = state === 'completed' && stars >= 3;
 
           return (
             <div
@@ -428,7 +420,6 @@ function UnitBlock({
                   positionLabel={localIdx + 1}
                   accentColor={unit.theme.bg}
                   accentShadow={unit.theme.shadow}
-                  isPerfect={isPerfect}
                   ariaLabel={`Dars ${lesson.orderNumber}: ${lesson.title}`}
                   onClick={() => onNodeClick(localIdx)}
                 />
