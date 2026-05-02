@@ -764,7 +764,7 @@ export function SpeakSentence({ config, onPassed, onFailed }: SpeakSentenceProps
             className="text-sm font-extrabold text-[#065f46]"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            Ajoyib talaffuz! +10 XP
+            Ajoyib talaffuz!
           </p>
         </div>
       )}

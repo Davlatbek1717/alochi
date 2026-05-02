@@ -265,7 +265,7 @@ export function McqTest({ questions, onPassed, onFailed }: McqTestProps) {
             className="text-sm font-extrabold text-[#065f46]"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            Ajoyib! +10 XP
+            Ajoyib!
           </p>
         </div>
       )}

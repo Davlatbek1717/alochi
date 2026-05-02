@@ -256,7 +256,7 @@ export function WordOrderTest({ sentences, onPassed, onFailed }: WordOrderTestPr
           ) : (
             <XCircle size={20} className="text-[#ef4444] shrink-0" />
           )}
-          {isCorrect ? "Ajoyib — to'g'ri tartib! +10 XP" : "Xato tartib — to'g'risi quyida"}
+          {isCorrect ? "Ajoyib — to'g'ri tartib!" : "Xato tartib — to'g'risi quyida"}
         </div>
       )}
 

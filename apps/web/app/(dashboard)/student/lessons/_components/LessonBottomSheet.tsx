@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, type FC } from 'react';
-import { Clock, Sparkles, BookOpen, X } from 'lucide-react';
+import { Clock, BookOpen, X } from 'lucide-react';
 import { Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 
@@ -61,7 +61,6 @@ export const LessonBottomSheet: FC<Props> = ({
   if (!open || !lesson) return null;
 
   const minutes = lesson.estimatedMinutes ?? 5;
-  const xp = lesson.xpReward ?? 10;
   const typeLabel = lesson.type ?? 'Dars';
   const isCompleted = state === 'completed';
 
@@ -118,16 +117,11 @@ export const LessonBottomSheet: FC<Props> = ({
           </div>
         </div>
 
-        <div className="px-5 grid grid-cols-3 gap-2">
+        <div className="px-5 grid grid-cols-2 gap-2">
           <StatTile
             icon={<Clock size={16} className="text-[#58a6ff]" />}
             value={`${minutes} daq.`}
             label="Davomiyligi"
-          />
-          <StatTile
-            icon={<Sparkles size={16} className="text-[#fbbf24]" />}
-            value={`+${xp} XP`}
-            label="Mukofot"
           />
           <StatTile
             icon={<BookOpen size={16} className="text-[#ce82ff]" />}

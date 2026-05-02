@@ -1,5 +1,5 @@
 'use client';
-import { X, Clock, Sparkles } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { type FC } from 'react';
 import { Mascot, Button } from '@/components/ui';
 
@@ -41,12 +41,10 @@ export const LessonIntro: FC<LessonIntroProps> = ({
   orderNumber,
   subtitle,
   estimatedMinutes,
-  xpReward,
   onStart,
   onClose,
 }) => {
   const minutes = estimatedMinutes ?? 5;
-  const xp = xpReward ?? 30;
 
   return (
     <div className="min-h-screen bg-[#fffaf0] flex flex-col">
@@ -90,15 +88,11 @@ export const LessonIntro: FC<LessonIntroProps> = ({
           </p>
         ) : null}
 
-        {/* Stat tiles */}
-        <div className="mt-8 grid grid-cols-2 gap-3 w-full max-w-sm">
+        {/* Stat tile */}
+        <div className="mt-8 w-full max-w-sm">
           <StatTile
             icon={<Clock size={18} className="text-[#1cb0f6]" />}
             label={`${minutes} daqiqa`}
-          />
-          <StatTile
-            icon={<Sparkles size={18} className="text-[#ce82ff]" />}
-            label={`+${xp} XP`}
           />
         </div>
 

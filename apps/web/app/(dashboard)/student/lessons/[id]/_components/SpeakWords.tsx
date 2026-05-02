@@ -571,7 +571,7 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
             className="text-sm font-extrabold text-[#065f46]"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            Ajoyib talaffuz! ({finalScore}%) +10 XP
+            Ajoyib talaffuz! ({finalScore}%)
           </p>
         </div>
       )}

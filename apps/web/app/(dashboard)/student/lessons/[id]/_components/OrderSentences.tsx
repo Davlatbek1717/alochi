@@ -293,7 +293,7 @@ export function OrderSentences({ config, onPassed, onFailed }: OrderSentencesPro
             <XCircle size={20} className="text-[#ef4444] shrink-0" />
           )}
           {isCorrect
-            ? "Ajoyib — to'g'ri tartib! +10 XP"
+            ? "Ajoyib — to'g'ri tartib!"
             : "Tartib noto'g'ri — qizil katakchalarga e'tibor bering"}
         </div>
       )}

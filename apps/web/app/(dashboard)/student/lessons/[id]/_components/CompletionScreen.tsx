@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, type FC } from 'react';
-import { Sparkles, Flame, Target } from 'lucide-react';
+import { Flame, Target } from 'lucide-react';
 import { Mascot, Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { Confetti } from './Confetti';
@@ -86,7 +86,6 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
     return undefined;
   }, [leveledUp, isSessionOnly]);
 
-  const xp = xpEarned ?? 30;
   const showStreak = typeof streak === 'number' && streak > 0;
   const showAccuracy =
     typeof accuracy === 'number' && Number.isFinite(accuracy);
@@ -155,13 +154,10 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
           </div>
         )}
 
-        {/* Stat tiles row */}
-        <div className="mt-8 grid grid-cols-3 gap-2 w-full max-w-sm">
-          <StatTile
-            icon={<Sparkles size={16} className="text-[#ce82ff]" />}
-            value={`+${xp}`}
-            label="XP"
-          />
+        {/* Stat tiles row — XP tile dropped per UX request to remove
+            point talk from the student-facing flow. Streak + Accuracy
+            still surface here since they reflect the student's effort. */}
+        <div className="mt-8 grid grid-cols-2 gap-2 w-full max-w-sm">
           <StatTile
             icon={<Flame size={16} className="text-[#ff9500]" />}
             value={showStreak ? String(streak) : '—'}

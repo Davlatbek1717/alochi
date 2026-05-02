@@ -411,7 +411,6 @@ function ContinueLessonCard({
 }) {
   const title = nextLesson?.title ?? 'Keyingi dars sizni kutmoqda';
   const minutes = nextLesson?.estimatedMinutes ?? 5;
-  const xp = nextLesson?.xpReward ?? 10;
   const showSession = session && session.total > 1;
 
   return (
@@ -450,9 +449,6 @@ function ContinueLessonCard({
             </span>
             <span className="inline-flex items-center gap-1">
               <Sparkles size={12} /> ~{minutes} daqiqa
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Star size={12} /> +{xp} XP
             </span>
           </div>
           <Link

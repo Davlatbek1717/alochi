@@ -486,7 +486,7 @@ export function SpellingDrill({ config, onPassed, onFailed }: SpellingProps) {
             className="text-sm font-extrabold text-[#065f46]"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            Ajoyib! +10 XP
+            Ajoyib!
           </p>
         </div>
       )}

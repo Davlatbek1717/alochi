@@ -276,7 +276,7 @@ export function TranslateInput({ config, onPassed, onFailed }: TranslateInputPro
             className="text-sm font-extrabold text-[#065f46] leading-snug"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            {feedback || 'Ajoyib! +10 XP'}
+            {feedback || 'Ajoyib!'}
           </p>
         </div>
       )}
