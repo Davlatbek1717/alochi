@@ -110,9 +110,23 @@ function matchPairs(
   return { type: 'match_pairs', config: { pairs } };
 }
 
+/**
+ * Pick-picture builder — generates loremflickr.com URLs.
+ *
+ * Each option provides a `tag` (comma-separated keywords for the
+ * Flickr-tag search) and a `lock` integer. The lock parameter pins
+ * the result to a specific photo so re-seeds and re-renders show
+ * the same image — without it, loremflickr cycles randomly through
+ * matches and the answer could end up looking like one of the
+ * decoys.
+ *
+ * The legacy emoji/bg/fg fields the old signature took are dropped
+ * — we now serve real photos. Admins can still swap any individual
+ * option's URL via the superadmin component configurator.
+ */
 function pickPicture(
   word: string,
-  options: Array<{ id: string; emoji: string; label: string; bg: string; fg: string }>,
+  options: Array<{ id: string; tag: string; lock: number }>,
   correctOptionId: string,
 ): ComponentSpec {
   return {
@@ -121,7 +135,7 @@ function pickPicture(
       word,
       options: options.map((o) => ({
         id: o.id,
-        imageUrl: `https://placehold.co/400x400/${o.bg}/${o.fg}?text=${encodeURIComponent(o.emoji + ' ' + o.label)}`,
+        imageUrl: `https://loremflickr.com/400/400/${o.tag}?lock=${o.lock}`,
       })),
       correctOptionId,
     },
@@ -222,10 +236,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Evening',
         [
-          { id: 'sunset', emoji: '🌆', label: 'Evening', bg: 'f59e0b', fg: '0f172a' },
-          { id: 'sunrise', emoji: '☀️', label: 'Morning', bg: 'fbbf24', fg: '0f172a' },
-          { id: 'night', emoji: '🌙', label: 'Night', bg: '0f172a', fg: 'fbbf24' },
-          { id: 'noon', emoji: '☀️', label: 'Noon', bg: 'fef3c7', fg: 'a16207' },
+          { id: 'sunset', tag: 'sunset,evening', lock: 5 },
+          { id: 'sunrise', tag: 'sunrise,morning', lock: 1 },
+          { id: 'night', tag: 'moon,night', lock: 2 },
+          { id: 'noon', tag: 'sun,noon', lock: 6 },
         ],
         'sunset',
       ),
@@ -299,10 +313,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Night',
         [
-          { id: 'moon', emoji: '🌙', label: 'Night', bg: '0f172a', fg: 'fbbf24' },
-          { id: 'sun', emoji: '☀️', label: 'Day', bg: 'fbbf24', fg: '0f172a' },
-          { id: 'star', emoji: '⭐', label: 'Star', bg: 'fef3c7', fg: 'a16207' },
-          { id: 'wave', emoji: '👋', label: 'Bye', bg: '1cb0f6', fg: 'ffffff' },
+          { id: 'moon', tag: 'moon,night', lock: 2 },
+          { id: 'sun', tag: 'sun,daylight', lock: 7 },
+          { id: 'star', tag: 'stars,sky', lock: 8 },
+          { id: 'wave', tag: 'goodbye,wave', lock: 4 },
         ],
         'moon',
       ),
@@ -381,10 +395,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Sleepy',
         [
-          { id: 'sleep', emoji: '😴', label: 'Sleepy', bg: '64748b', fg: 'ffffff' },
-          { id: 'happy', emoji: '😊', label: 'Happy', bg: 'fbbf24', fg: '0f172a' },
-          { id: 'angry', emoji: '😠', label: 'Angry', bg: 'ef4444', fg: 'ffffff' },
-          { id: 'sick', emoji: '🤒', label: 'Sick', bg: '10b981', fg: 'ffffff' },
+          { id: 'sleep', tag: 'sleeping,tired', lock: 3 },
+          { id: 'happy', tag: 'happy,smile', lock: 9 },
+          { id: 'angry', tag: 'angry,face', lock: 10 },
+          { id: 'sick', tag: 'sick,fever', lock: 11 },
         ],
         'sleep',
       ),
@@ -518,10 +532,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Mother',
         [
-          { id: 'mom', emoji: '👩', label: 'Mother', bg: 'ec4899', fg: 'ffffff' },
-          { id: 'dad', emoji: '👨', label: 'Father', bg: '0f172a', fg: 'ffffff' },
-          { id: 'sis', emoji: '👧', label: 'Sister', bg: 'a78bfa', fg: 'ffffff' },
-          { id: 'bro', emoji: '👦', label: 'Brother', bg: '1cb0f6', fg: 'ffffff' },
+          { id: 'mom', tag: 'mother,mom', lock: 12 },
+          { id: 'dad', tag: 'father,dad', lock: 13 },
+          { id: 'sis', tag: 'sister,girl', lock: 14 },
+          { id: 'bro', tag: 'brother,boy', lock: 15 },
         ],
         'mom',
       ),
@@ -610,10 +624,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Strong',
         [
-          { id: 'strong', emoji: '💪', label: 'Strong', bg: '10b981', fg: 'ffffff' },
-          { id: 'weak', emoji: '😩', label: 'Weak', bg: '94a3b8', fg: 'ffffff' },
-          { id: 'fast', emoji: '🏃', label: 'Fast', bg: '1cb0f6', fg: 'ffffff' },
-          { id: 'tall', emoji: '📏', label: 'Tall', bg: 'fbbf24', fg: '0f172a' },
+          { id: 'strong', tag: 'strong,muscle,athlete', lock: 16 },
+          { id: 'weak', tag: 'weak,exhausted', lock: 17 },
+          { id: 'fast', tag: 'running,sprint', lock: 18 },
+          { id: 'tall', tag: 'tall,height,giraffe', lock: 19 },
         ],
         'strong',
       ),
@@ -693,10 +707,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Happy',
         [
-          { id: 'happy', emoji: '😄', label: 'Happy', bg: 'fbbf24', fg: '0f172a' },
-          { id: 'sad', emoji: '😢', label: 'Sad', bg: '64748b', fg: 'ffffff' },
-          { id: 'angry', emoji: '😠', label: 'Angry', bg: 'ef4444', fg: 'ffffff' },
-          { id: 'tired', emoji: '😴', label: 'Tired', bg: '94a3b8', fg: 'ffffff' },
+          { id: 'happy', tag: 'happy,smile', lock: 9 },
+          { id: 'sad', tag: 'sad,crying', lock: 20 },
+          { id: 'angry', tag: 'angry,face', lock: 10 },
+          { id: 'tired', tag: 'tired,sleepy', lock: 3 },
         ],
         'happy',
       ),
@@ -789,10 +803,10 @@ const LESSONS: LessonSpec[] = [
       pickPicture(
         'Doctor',
         [
-          { id: 'doc', emoji: '👩‍⚕️', label: 'Doctor', bg: '10b981', fg: 'ffffff' },
-          { id: 'teach', emoji: '👩‍🏫', label: 'Teacher', bg: '1cb0f6', fg: 'ffffff' },
-          { id: 'cook', emoji: '👩‍🍳', label: 'Cook', bg: 'fbbf24', fg: '0f172a' },
-          { id: 'art', emoji: '👩‍🎨', label: 'Artist', bg: 'ec4899', fg: 'ffffff' },
+          { id: 'doc', tag: 'doctor,medical', lock: 21 },
+          { id: 'teach', tag: 'teacher,classroom', lock: 22 },
+          { id: 'cook', tag: 'chef,cooking', lock: 23 },
+          { id: 'art', tag: 'artist,painting', lock: 24 },
         ],
         'doc',
       ),

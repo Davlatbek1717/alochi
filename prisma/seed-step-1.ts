@@ -184,7 +184,10 @@ async function main() {
       },
     },
 
-    // 7. Pick picture — given the English word, pick the matching image
+    // 7. Pick picture — given the English word, pick the matching image.
+    // Uses loremflickr.com for real semantic photos. The `lock` parameter
+    // pins each option to a specific photo so re-seeds don't drift, and
+    // students see the same image every time.
     {
       type: 'pick_picture',
       config: {
@@ -192,23 +195,19 @@ async function main() {
         options: [
           {
             id: 'sun',
-            imageUrl:
-              'https://placehold.co/400x400/fbbf24/0f172a?text=☀️+Morning',
+            imageUrl: 'https://loremflickr.com/400/400/sunrise,morning?lock=1',
           },
           {
             id: 'moon',
-            imageUrl:
-              'https://placehold.co/400x400/0f172a/fbbf24?text=🌙+Night',
+            imageUrl: 'https://loremflickr.com/400/400/moon,night?lock=2',
           },
           {
             id: 'sleeping',
-            imageUrl:
-              'https://placehold.co/400x400/64748b/ffffff?text=😴+Sleep',
+            imageUrl: 'https://loremflickr.com/400/400/sleeping,bed?lock=3',
           },
           {
             id: 'wave',
-            imageUrl:
-              'https://placehold.co/400x400/1cb0f6/ffffff?text=👋+Hello',
+            imageUrl: 'https://loremflickr.com/400/400/wave,greeting?lock=4',
           },
         ],
         correctOptionId: 'sun',
