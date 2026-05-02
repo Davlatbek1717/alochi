@@ -30,11 +30,13 @@ type WordStatus = 'pending' | 'active' | 'correct' | 'wrong';
 type Phase = 'idle' | 'listening' | 'passed' | 'failed';
 
 // Per-word match threshold on the 0-100 scale returned by
-// similarityScore(). 100 means "exact match after normalization"
-// (lowercase + diacritics + punctuation stripped) — only a perfect
-// pronunciation counts as correct, per the spec. Even one wrong
-// character drops the score below 100 and marks the word red.
-const WORD_MATCH_THRESHOLD = 100;
+// similarityScore(). 90 forgives a single-character STT mishearing
+// on most words ("morning" → "mornin" still passes at 86 fails, but
+// "morning" → "mornings" at 88 fails) while still catching clearly
+// wrong words. Practical sweet spot between 100 (too strict — Web
+// Speech mishearings false-fail) and 65 (too lax — "launch" passes
+// for "morning").
+const WORD_MATCH_THRESHOLD = 90;
 
 /**
  * Normalize a word for comparison: lowercase, strip diacritics + all
