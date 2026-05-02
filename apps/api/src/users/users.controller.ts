@@ -77,7 +77,12 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.tester,
+  )
   findAll(
     @Query('branchId') branchId: string,
     @Query('role') role: UserRole,

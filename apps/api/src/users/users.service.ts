@@ -185,9 +185,13 @@ export class UsersService {
     role?: UserRole,
     caller?: { role: UserRole; branchId: string | null },
   ) {
-    // Manager callers are scoped to their own branch regardless of query.
+    // Manager and tester callers are pinned to their own branch
+    // regardless of query — both roles only ever need their own
+    // branch's students, and forcing the scope here prevents snooping
+    // by hand-crafting branchId in the query string.
+    const branchScopedRoles: UserRole[] = [UserRole.manager, UserRole.tester];
     const effectiveBranchId =
-      caller?.role === UserRole.manager
+      caller && branchScopedRoles.includes(caller.role)
         ? (caller.branchId ?? '__no_branch__')
         : branchId;
 
