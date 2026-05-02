@@ -42,14 +42,23 @@ export function CameraMonitor({ onLookAway, onSilenceTooLong }: CameraMonitorPro
     let stream: MediaStream | null = null;
 
     async function init() {
-      const { FaceDetection } = await import(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        '@mediapipe/face_detection' as any
-      );
-      const { Camera } = await import(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        '@mediapipe/camera_utils' as any
-      );
+      // Mediapipe ships UMD bundles that attach `FaceDetection` and
+      // `Camera` to `window` as a side-effect of being imported —
+      // there are no named ESM exports. So we await the imports for
+      // the side-effect, then read the constructors off the window.
+      // This is the documented workaround for the well-known
+      // `FaceDetection is not a constructor` error in Next.js.
+      await import('@mediapipe/face_detection');
+      await import('@mediapipe/camera_utils');
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w = window as any;
+      const FaceDetection = w.FaceDetection;
+      const Camera = w.Camera;
+      if (typeof FaceDetection !== 'function' || typeof Camera !== 'function') {
+        console.error('[CameraMonitor] Mediapipe globals not registered');
+        return;
+      }
 
       const mp = new FaceDetection({
         locateFile: (file: string) =>
