@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Award,
   Star,
@@ -14,6 +15,11 @@ import {
   Trophy,
   Sparkles,
   Crown,
+  ChevronRight,
+  LogOut,
+  Mail,
+  Volume2,
+  Mic,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Modal, Skeleton, Switch, useToast } from '@/components/ui';
@@ -50,31 +56,39 @@ type CityData = { lessonsCompleted?: number };
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT ?? '';
 
-const LEAGUE_LABELS: Record<string, { label: string; color: string }> = {
-  bronze: { label: 'Bronza', color: 'from-[#a16207] to-[#78350f]' },
-  silver: { label: 'Kumush', color: 'from-[#94a3b8] to-[#475569]' },
-  gold: { label: 'Oltin', color: 'from-[#fbbf24] to-[#d97706]' },
-  platinum: { label: 'Platina', color: 'from-[#7dd3fc] to-[#0369a1]' },
-  diamond: { label: 'Olmos', color: 'from-[#67e8f9] to-[#155e75]' },
-};
+const LEAGUE_TIERS = [
+  { key: 'bronze', label: 'Bronza', minXp: 0, color: 'from-[#a16207] to-[#78350f]' },
+  { key: 'silver', label: 'Kumush', minXp: 300, color: 'from-[#94a3b8] to-[#475569]' },
+  { key: 'gold', label: 'Oltin', minXp: 1000, color: 'from-[#fbbf24] to-[#d97706]' },
+  { key: 'platinum', label: 'Platina', minXp: 2500, color: 'from-[#7dd3fc] to-[#0369a1]' },
+  { key: 'diamond', label: 'Olmos', minXp: 5000, color: 'from-[#67e8f9] to-[#155e75]' },
+] as const;
+
+type LeagueTier = (typeof LEAGUE_TIERS)[number];
+
+function pickLeague(totalXp: number): {
+  current: LeagueTier;
+  next: LeagueTier | null;
+} {
+  // Highest tier whose minXp threshold is met.
+  let current: LeagueTier = LEAGUE_TIERS[0];
+  let next: LeagueTier | null = null;
+  for (let i = 0; i < LEAGUE_TIERS.length; i++) {
+    if (totalXp >= LEAGUE_TIERS[i].minXp) {
+      current = LEAGUE_TIERS[i];
+      next = LEAGUE_TIERS[i + 1] ?? null;
+    }
+  }
+  return { current, next };
+}
 
 function formatMember(date?: string | null): string {
   if (!date) return '';
   try {
     const d = new Date(date);
     const months = [
-      'Yanvar',
-      'Fevral',
-      'Mart',
-      'Aprel',
-      'May',
-      'Iyun',
-      'Iyul',
-      'Avgust',
-      'Sentabr',
-      'Oktabr',
-      'Noyabr',
-      'Dekabr',
+      'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
+      'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr',
     ];
     return `${months[d.getMonth()]} ${d.getFullYear()}`;
   } catch {
@@ -83,6 +97,7 @@ function formatMember(date?: string | null): string {
 }
 
 export default function StudentProfilePage() {
+  const router = useRouter();
   const toast = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [xp, setXp] = useState<XpData | null>(null);
@@ -93,17 +108,17 @@ export default function StudentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Edit state (modal sheet)
+  // Edit modal
   const [editing, setEditing] = useState(false);
   const [parentTg, setParentTg] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Settings — sound toggle (mirrored from localStorage on mount).
+  // Logout confirmation
+  const [logoutOpen, setLogoutOpen] = useState(false);
+
+  // Settings
   const [soundOn, setSoundOn] = useState(true);
-  // Browser-speech (Web Speech API) toggle. When OFF, every component falls
-  // through to the server TTS/STT path — useful if the student dislikes
-  // the OS voice or the recognizer keeps mis-hearing them.
   const [webSpeechOn, setWebSpeechOn] = useState(true);
   useEffect(() => {
     setSoundOn(isSoundEnabled());
@@ -183,6 +198,19 @@ export default function StudentProfilePage() {
     }
   }
 
+  function confirmLogout() {
+    // Clear stored creds and bounce to login. Mirrors the auto-bounce
+    // path in apiRequest so the user lands in the same place.
+    try {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    } catch {
+      /* private mode / quota — ignore */
+    }
+    router.replace('/login');
+  }
+
   if (loading) {
     return (
       <div className="min-h-full bg-[#fffaf0]">
@@ -216,21 +244,16 @@ export default function StudentProfilePage() {
       ? `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}:${profile.id}`
       : '';
 
-  // Determine league band from total XP — Duolingo-style tiers.
   const totalXp = xp?.totalXp ?? 0;
-  const leagueKey =
-    totalXp >= 5000
-      ? 'diamond'
-      : totalXp >= 2500
-        ? 'platinum'
-        : totalXp >= 1000
-          ? 'gold'
-          : totalXp >= 300
-            ? 'silver'
-            : 'bronze';
-  const league = LEAGUE_LABELS[leagueKey];
+  const { current: league, next: nextLeague } = pickLeague(totalXp);
+  const leagueProgress = nextLeague
+    ? Math.min(
+        1,
+        (totalXp - league.minXp) / (nextLeague.minXp - league.minXp),
+      )
+    : 1;
 
-  // Build a small set of achievements from existing data
+  // Achievements only show when they unlock — no empty section.
   const achievements: Achievement[] = [];
   if ((streak?.streak ?? 0) >= 7) {
     achievements.push({
@@ -284,62 +307,99 @@ export default function StudentProfilePage() {
   }
 
   return (
-    <div className="min-h-full bg-[#fffaf0] pb-8">
-      {/* Cream header with avatar + Aloqush */}
-      <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-7 relative overflow-hidden">
-        <div className="relative z-10 flex items-start gap-4 max-w-lg mx-auto">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl shrink-0">
+    <div className="min-h-full bg-[#fffaf0] pb-28">
+      {/* Hero card — avatar + name + branch + Aloqush */}
+      <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 relative overflow-hidden">
+        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto">
+          <div
+            className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${league.color} border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl shrink-0`}
+            aria-hidden
+          >
             {profile.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[#0f172a] text-2xl font-extrabold truncate font-[var(--font-nunito)]">
+            <h1
+              className="text-[#0f172a] text-2xl font-extrabold truncate"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
               {profile.name}
             </h1>
-            <p className="text-[#64748b] text-xs truncate">@{profile.login}</p>
-            <div className="flex flex-wrap items-center gap-2 mt-2">
+            <p className="text-[#64748b] text-xs truncate font-semibold">
+              @{profile.login}
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {profile.branch?.name && (
-                <span className="inline-flex items-center gap-1 text-xs text-[#64748b] bg-[#fffaf0] border border-[#ede9e1] rounded-full px-2 py-0.5">
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#64748b] bg-[#fffaf0] border border-[#ede9e1] rounded-full px-2 py-0.5 font-bold">
                   <GraduationCap size={11} /> {profile.branch.name}
                 </span>
               )}
+              {profile.group?.name && (
+                <span className="inline-flex items-center gap-1 text-[11px] text-[#46a302] bg-[#dcfce7] border border-[#bbf7d0] rounded-full px-2 py-0.5 font-bold">
+                  {profile.group.name}
+                </span>
+              )}
               {profile.createdAt && formatMember(profile.createdAt) && (
-                <span className="text-[10px] text-[#94a3b8] uppercase tracking-wider">
+                <span className="text-[10px] text-[#94a3b8] uppercase tracking-wider font-bold">
                   {formatMember(profile.createdAt)} dan
                 </span>
               )}
             </div>
           </div>
           <div className="hidden sm:block shrink-0">
-            <Mascot expression="happy" size={80} />
+            <Mascot expression="happy" size={72} />
           </div>
         </div>
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-5 max-w-lg mx-auto">
-        {/* League badge */}
+        {/* League card with progress to next */}
         <div
-          className={`relative rounded-[20px] p-4 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden`}
+          className={`relative rounded-3xl p-4 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden`}
         >
-          <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
-          <div className="relative z-10 flex items-center gap-3">
-            <Crown size={28} fill="white" />
-            <div>
-              <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
-                Liga
-              </p>
-              <p className="text-2xl font-extrabold">{league.label}</p>
+          <div
+            aria-hidden
+            className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10"
+          />
+          <div className="relative z-10 space-y-3">
+            <div className="flex items-center gap-3">
+              <Crown size={28} fill="white" />
+              <div className="flex-1">
+                <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
+                  Liga
+                </p>
+                <p className="text-2xl font-extrabold leading-tight">
+                  {league.label}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
+                  Daraja
+                </p>
+                <p className="text-xl font-extrabold">{xp?.level ?? '—'}</p>
+              </div>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
-                Daraja
+            {nextLeague ? (
+              <>
+                <div className="h-1.5 bg-white/25 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all duration-500"
+                    style={{ width: `${Math.round(leagueProgress * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[11px] font-bold opacity-90">
+                  {nextLeague.minXp - totalXp} XP — {nextLeague.label} ligasiga
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] font-bold opacity-90">
+                Eng yuqori liga — qoyilman! 🏆
               </p>
-              <p className="text-xl font-extrabold">{xp?.level ?? '—'}</p>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Animated stat cards */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Compact stat grid — 4 most-loved metrics, no awkward "Keyingi" */}
+        <div className="grid grid-cols-4 gap-2">
           <StatCard
             icon={<Star size={18} className="text-[#fbbf24]" />}
             value={totalXp}
@@ -351,49 +411,41 @@ export default function StudentProfilePage() {
             label="Streak"
           />
           <StatCard
-            icon={<Award size={18} className="text-[#ce82ff]" />}
-            value={certs.length}
-            label="Sertifikat"
-          />
-          <StatCard
             icon={<BookOpen size={18} className="text-[#1cb0f6]" />}
             value={lessonsCompleted}
             label="Darslar"
           />
           <StatCard
-            icon={<Sparkles size={18} className="text-[#f59e0b]" />}
-            value={lettersOwned}
-            label="Harflar"
-          />
-          <StatCard
-            icon={<Trophy size={18} className="text-[#10b981]" />}
-            value={xp?.nextLevelXp ?? 0}
-            label="Keyingi"
+            icon={<Award size={18} className="text-[#ce82ff]" />}
+            value={certs.length}
+            label="Sertif."
           />
         </div>
 
-        {/* Achievements */}
-        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
-              Yutuqlar
-            </p>
-            <span className="text-[10px] text-[#94a3b8]">
-              {achievements.length} ta
-            </span>
-          </div>
-          <AchievementCarousel items={achievements.slice(0, 6)} />
-        </section>
+        {/* Achievements — only when at least one is unlocked */}
+        {achievements.length > 0 && (
+          <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
+                Yutuqlar
+              </p>
+              <span className="text-[10px] text-[#94a3b8] font-bold">
+                {achievements.length} ta
+              </span>
+            </div>
+            <AchievementCarousel items={achievements.slice(0, 6)} />
+          </section>
+        )}
 
-        {/* Profile fields */}
-        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-5">
+        {/* Profile fields with edit button */}
+        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
               Maʼlumotlar
             </p>
             <button
               onClick={() => setEditing(true)}
-              className="flex items-center gap-1 text-xs font-bold text-[#1cb0f6] hover:underline"
+              className="flex items-center gap-1 text-xs font-bold text-[#46a302] hover:underline"
             >
               <Pencil size={12} /> Tahrirlash
             </button>
@@ -411,62 +463,68 @@ export default function StudentProfilePage() {
                   : 'Belgilanmagan'
               }
             />
-            {profile.group?.name && (
-              <Field label="Guruh" value={profile.group.name} />
+            {tgLink && !profile.parentTelegramLinked && (
+              <a
+                href={tgLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-[#1cb0f6]/10 border border-[#1cb0f6]/20 rounded-xl px-3 py-2.5 flex items-center gap-2 hover:bg-[#1cb0f6]/15 transition-colors"
+              >
+                <Send size={14} className="text-[#1cb0f6] shrink-0" />
+                <span className="text-xs font-bold text-[#0369a1] flex-1">
+                  Ota-onangizni Telegram orqali ulang
+                </span>
+                <ChevronRight size={14} className="text-[#1cb0f6] shrink-0" />
+              </a>
             )}
           </div>
         </section>
 
-        {/* Settings — sound effects + browser speech toggles */}
-        <section className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-5 space-y-4">
+        {/* Settings */}
+        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5 space-y-4">
           <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
             Sozlamalar
           </p>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-[#0f172a]">
-                Ovoz effektlari
-              </p>
-              <p className="text-xs text-[#64748b] font-semibold mt-0.5">
-                Toʻgʻri javob, xato va daraja ovozlari
-              </p>
-            </div>
-            <Switch
-              checked={soundOn}
-              onChange={toggleSound}
-              label="Ovoz effektlari"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#f3eedf]">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-extrabold text-[#0f172a]">
-                Brauzer ovozi (Web Speech)
-              </p>
-              <p className="text-xs text-[#64748b] font-semibold mt-0.5">
-                Tezkor brauzer talaffuzi va ovoz aniqlash. O&apos;chirilsa, server xizmatlari ishlatiladi.
-              </p>
-            </div>
-            <Switch
-              checked={webSpeechOn}
-              onChange={toggleWebSpeech}
-              label="Brauzer ovozi"
-            />
-          </div>
+          <SettingRow
+            icon={<Volume2 size={16} className="text-[#fbbf24]" />}
+            title="Ovoz effektlari"
+            sub="Toʻgʻri javob, xato va daraja ovozlari"
+            checked={soundOn}
+            onChange={toggleSound}
+            label="Ovoz effektlari"
+          />
+          <div className="border-t border-[#f3eedf]" />
+          <SettingRow
+            icon={<Mic size={16} className="text-[#46a302]" />}
+            title="Brauzer ovozi (Web Speech)"
+            sub="Tezkor brauzer talaffuzi va ovoz aniqlash"
+            checked={webSpeechOn}
+            onChange={toggleWebSpeech}
+            label="Brauzer ovozi"
+          />
         </section>
 
-        {/* Quick links */}
-        <div className="grid grid-cols-2 gap-3">
-          <QuickLink
+        {/* Account quick links */}
+        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-2 divide-y divide-[#f3eedf]">
+          <AccountRow
             href="/student/certificates"
             icon={<Award size={18} className="text-[#fbbf24]" />}
-            label="Sertifikatlar"
+            title="Sertifikatlar"
+            sub={`${certs.length} ta sertifikat`}
           />
-          <QuickLink
+          <AccountRow
+            href="/student/letters"
+            icon={<Mail size={18} className="text-[#10b981]" />}
+            title="Harflar kolleksiyasi"
+            sub={`${lettersOwned} ta to‘plangan`}
+          />
+          <AccountRow
             href="/student/groups"
-            icon={<GraduationCap size={18} className="text-[#10b981]" />}
-            label="Guruh"
+            icon={<GraduationCap size={18} className="text-[#1cb0f6]" />}
+            title="Mening guruhim"
+            sub={profile.group?.name ?? "Guruh tayinlanmagan"}
           />
-          <QuickLink
+          <AccountRow
             href="/profile/enroll"
             icon={
               <ScanFace
@@ -476,23 +534,21 @@ export default function StudentProfilePage() {
                 }
               />
             }
-            label={profile.faceEnrolled ? 'Yuz ID' : 'Yuz roʻyxat'}
+            title={profile.faceEnrolled ? 'Yuz ID — faol' : "Yuz ID ro‘yxat"}
+            sub={profile.faceEnrolled ? 'Davomatga ulangan' : "Bir martalik ro‘yxatdan o‘tish"}
           />
-          {tgLink && !profile.parentTelegramLinked && (
-            <a
-              href={tgLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-3 flex items-center gap-2 hover:scale-[1.02] transition-transform"
-            >
-              <Send size={18} className="text-[#1cb0f6]" />
-              <span className="text-sm font-bold text-[#0f172a]">Ota-ona TG</span>
-            </a>
-          )}
-        </div>
+        </section>
+
+        {/* Logout */}
+        <button
+          onClick={() => setLogoutOpen(true)}
+          className="w-full bg-white rounded-3xl border-[1.5px] border-[#fecaca] p-4 flex items-center justify-center gap-2 text-sm font-extrabold text-[#dc2626] hover:bg-rose-50 transition-colors"
+        >
+          <LogOut size={16} /> Profildan chiqish
+        </button>
       </div>
 
-      {/* Edit profile bottom-sheet modal */}
+      {/* Edit profile modal */}
       <Modal
         open={editing}
         onClose={() => setEditing(false)}
@@ -530,7 +586,7 @@ export default function StudentProfilePage() {
               value={parentTg}
               onChange={(e) => setParentTg(e.target.value)}
               placeholder="@username yoki raqam"
-              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#1cb0f6]"
+              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#46a302]"
             />
           </div>
           <div>
@@ -545,10 +601,39 @@ export default function StudentProfilePage() {
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#1cb0f6]"
+              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#46a302]"
             />
           </div>
         </div>
+      </Modal>
+
+      {/* Logout confirmation */}
+      <Modal
+        open={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        title="Profildan chiqasizmi?"
+        theme="light"
+        size="sm"
+        footer={
+          <>
+            <button
+              onClick={() => setLogoutOpen(false)}
+              className="px-4 py-2 text-sm font-bold text-[#64748b] hover:text-[#0f172a]"
+            >
+              Bekor qilish
+            </button>
+            <button
+              onClick={confirmLogout}
+              className="px-4 py-2 rounded-xl text-sm font-extrabold text-white bg-rose-600 border-b-[3px] border-rose-700 hover:brightness-105 active:translate-y-[1px] active:border-b-[1px] flex items-center gap-1.5"
+            >
+              <LogOut size={14} /> Chiqish
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-[#64748b] font-semibold leading-relaxed">
+          Qayta kirish uchun login va parolingizni kiritishingiz kerak bo‘ladi.
+        </p>
       </Modal>
     </div>
   );
@@ -564,9 +649,9 @@ function StatCard({
   label: string;
 }) {
   return (
-    <div className="bg-white rounded-[16px] border-[1.5px] border-[#ede9e1] p-3 text-center motion-safe:[animation:count-up-fade_400ms_ease-out]">
+    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 text-center motion-safe:[animation:count-up-fade_400ms_ease-out]">
       <div className="flex justify-center mb-1">{icon}</div>
-      <p className="text-xl font-extrabold text-[#0f172a]">
+      <p className="text-lg font-extrabold text-[#0f172a] leading-tight">
         <AnimatedCounter value={value} />
       </p>
       <p className="text-[10px] text-[#64748b] uppercase tracking-wider font-bold">
@@ -587,22 +672,65 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function QuickLink({
+function SettingRow({
+  icon,
+  title,
+  sub,
+  checked,
+  onChange,
+  label,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  sub: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="w-9 h-9 rounded-xl bg-[#fffaf0] border border-[#ede9e1] flex items-center justify-center shrink-0">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-extrabold text-[#0f172a]">{title}</p>
+          <p className="text-xs text-[#64748b] font-semibold mt-0.5 leading-snug">
+            {sub}
+          </p>
+        </div>
+      </div>
+      <Switch checked={checked} onChange={onChange} label={label} />
+    </div>
+  );
+}
+
+function AccountRow({
   href,
   icon,
-  label,
+  title,
+  sub,
 }: {
   href: string;
   icon: React.ReactNode;
-  label: string;
+  title: string;
+  sub: string;
 }) {
   return (
     <Link
       href={href}
-      className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-3 flex items-center gap-2 hover:scale-[1.02] transition-transform"
+      className="flex items-center gap-3 p-3 hover:bg-[#fffaf0] transition-colors rounded-2xl"
     >
-      {icon}
-      <span className="text-sm font-bold text-[#0f172a]">{label}</span>
+      <div className="w-10 h-10 rounded-xl bg-[#fffaf0] border border-[#ede9e1] flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-extrabold text-[#0f172a] truncate">{title}</p>
+        <p className="text-[11px] text-[#64748b] font-semibold truncate">
+          {sub}
+        </p>
+      </div>
+      <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
     </Link>
   );
 }
