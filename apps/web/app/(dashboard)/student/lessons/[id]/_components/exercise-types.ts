@@ -91,6 +91,21 @@ export interface SpeakSentenceConfig {
 }
 
 /**
+ * J — Word-by-word read-aloud exercise (Monkeytype-style coloring).
+ * The student speaks each word in sequence; live STT marks each word
+ * green (correct), red (wrong with correct-pronunciation playback),
+ * or active (currently expected). Passes when the % of correct words
+ * meets `minScore`. Always en-US, browser SpeechRecognition only —
+ * no server fallback because there is no server-side word-stream API.
+ */
+export interface SpeakWordsConfig {
+  /** Full English text the student reads. Auto-tokenized on whitespace. */
+  text: string;
+  /** Pass threshold = % of correctly-pronounced words. Default 70. */
+  minScore?: number;
+}
+
+/**
  * Discriminated union of every new component's `(type, config)` pair.
  * Pass 2-4 lesson runners narrow on `type` and pull the typed `config`.
  */
@@ -103,7 +118,8 @@ export type NewExerciseComponent =
   | { type: 'fill_blank'; config: FillBlankConfig }
   | { type: 'spelling'; config: SpellingConfig }
   | { type: 'order_sentences'; config: OrderSentencesConfig }
-  | { type: 'speak_sentence'; config: SpeakSentenceConfig };
+  | { type: 'speak_sentence'; config: SpeakSentenceConfig }
+  | { type: 'speak_words'; config: SpeakWordsConfig };
 
 /**
  * String literal of every new component type. Used by Pass 5's
@@ -119,6 +135,7 @@ export const NEW_EXERCISE_TYPES = [
   'spelling',
   'order_sentences',
   'speak_sentence',
+  'speak_words',
 ] as const;
 
 export type NewExerciseType = (typeof NEW_EXERCISE_TYPES)[number];

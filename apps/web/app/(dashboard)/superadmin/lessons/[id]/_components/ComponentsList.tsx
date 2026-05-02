@@ -32,6 +32,7 @@ export const COMPONENT_LABELS: Record<string, string> = {
   spelling: "So'zni terish",
   order_sentences: 'Jumlalarni tartiblash',
   speak_sentence: 'Jumlani aytish',
+  speak_words: "So'zlarni navbat bilan aytish",
 };
 
 export const COMPONENT_BADGE_STYLES: Record<string, string> = {
@@ -47,6 +48,7 @@ export const COMPONENT_BADGE_STYLES: Record<string, string> = {
   spelling: 'bg-lime-50 text-lime-700 border-lime-100',
   order_sentences: 'bg-rose-50 text-rose-700 border-rose-100',
   speak_sentence: 'bg-teal-50 text-teal-700 border-teal-100',
+  speak_words: 'bg-indigo-50 text-indigo-700 border-indigo-100',
 };
 
 /**
@@ -100,6 +102,12 @@ export function summarizeConfig(comp: ConfigComponent): string {
     case 'speak_sentence': {
       const sent = (cfg as { sentence?: string }).sentence;
       return sent ? `"${truncate(sent, 40)}"` : 'Sozlanmagan';
+    }
+    case 'speak_words': {
+      const txt = (cfg as { text?: string }).text;
+      if (!txt) return 'Sozlanmagan';
+      const wordCount = txt.trim().split(/\s+/).filter(Boolean).length;
+      return `${wordCount} ta so'z — "${truncate(txt, 30)}"`;
     }
     default:
       return 'Sozlanmagan';

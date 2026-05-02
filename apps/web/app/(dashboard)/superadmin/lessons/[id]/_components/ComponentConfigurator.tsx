@@ -36,7 +36,8 @@ export type ComponentTypeKey =
   | 'fill_blank'
   | 'spelling'
   | 'order_sentences'
-  | 'speak_sentence';
+  | 'speak_sentence'
+  | 'speak_words';
 
 export const ALL_TYPES: ComponentTypeKey[] = [
   'mcq',
@@ -50,6 +51,7 @@ export const ALL_TYPES: ComponentTypeKey[] = [
   'spelling',
   'order_sentences',
   'speak_sentence',
+  'speak_words',
   'vocabulary',
 ];
 
@@ -118,6 +120,8 @@ function FormForType(props: FormProps) {
       return <OrderSentencesForm {...props} />;
     case 'speak_sentence':
       return <SpeakSentenceForm {...props} />;
+    case 'speak_words':
+      return <SpeakWordsForm {...props} />;
     case 'vocabulary':
       return <VocabularyHint onCancel={props.onCancel} />;
     default:
@@ -820,6 +824,56 @@ function SpeakSentenceForm({ initialConfig, onSubmit, onCancel, saving }: FormPr
       </div>
       <div>
         <label className={labelClass}>O&apos;tish bali (0-100)</label>
+        <input
+          type="number"
+          value={minScore}
+          min={0}
+          max={100}
+          onChange={(e) => setMinScore(Number(e.target.value))}
+          className={inputClass}
+        />
+      </div>
+    </FormShell>
+  );
+}
+
+// ─── Speak Words form (J) ───────────────────────────────────────────────────
+
+function SpeakWordsForm({ initialConfig, onSubmit, onCancel, saving }: FormProps) {
+  const cfg = initialConfig as { text?: string; minScore?: number };
+  const [text, setText] = useState(cfg.text ?? '');
+  const [minScore, setMinScore] = useState<number>(
+    typeof cfg.minScore === 'number' ? cfg.minScore : 70,
+  );
+  const [error, setError] = useState('');
+
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+
+  function handleSave() {
+    if (!text.trim()) return setError('Matn kiritilmagan');
+    if (wordCount < 2) return setError("Kamida 2 ta so'z kerak");
+    if (minScore < 0 || minScore > 100)
+      return setError("Aniqlik foizi 0 dan 100 gacha bo'lsin");
+    setError('');
+    void onSubmit({ text: text.trim(), minScore });
+  }
+
+  return (
+    <FormShell onSubmit={handleSave} onCancel={onCancel} saving={saving} error={error}>
+      <div>
+        <label className={labelClass}>Matn (English) — har bir so&apos;z alohida talaffuz qilinadi</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className={`${inputClass} min-h-[110px] resize-y`}
+          placeholder="In the United States, Cinco de Mayo has evolved into a celebration of Mexican culture and heritage."
+        />
+        <p className="text-xs text-[#64748b] mt-1 font-semibold">
+          {wordCount} ta so&apos;z. Tinish belgilari avtomatik olib tashlanadi.
+        </p>
+      </div>
+      <div>
+        <label className={labelClass}>Aniqlik foizi (0-100) — bundan past bo&apos;lsa qayta urinadi</label>
         <input
           type="number"
           value={minScore}

@@ -22,6 +22,8 @@ import { IsIn, IsObject, IsOptional } from 'class-validator';
  *   - `spelling`         (G) — listen and spell English word letter-by-letter
  *   - `order_sentences`  (H) — drag sentences into the correct order
  *   - `speak_sentence`   (I) — read full English sentence aloud (pronunciation)
+ *   - `speak_words`      (J) — read text word-by-word with live per-word
+ *                              pronunciation coloring (Monkeytype-style)
  */
 export const COMPONENT_TYPES = [
   'mcq',
@@ -36,6 +38,7 @@ export const COMPONENT_TYPES = [
   'spelling',
   'order_sentences',
   'speak_sentence',
+  'speak_words',
 ] as const;
 
 export type ComponentType = (typeof COMPONENT_TYPES)[number];

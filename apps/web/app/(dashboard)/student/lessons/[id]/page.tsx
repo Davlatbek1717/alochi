@@ -14,6 +14,7 @@ import { SpellingDrill } from './_components/SpellingDrill';
 import { MatchPairs } from './_components/MatchPairs';
 import { PickPicture } from './_components/PickPicture';
 import { SpeakSentence } from './_components/SpeakSentence';
+import { SpeakWords } from './_components/SpeakWords';
 import { AiTutor } from './_components/AiTutor';
 import type {
   TranslateConfig,
@@ -25,6 +26,7 @@ import type {
   MatchPairsConfig,
   PickPictureConfig,
   SpeakSentenceConfig,
+  SpeakWordsConfig,
 } from './_components/exercise-types';
 import { FeedbackWidget } from './_components/FeedbackWidget';
 import { Hearts } from './_components/Hearts';
@@ -56,7 +58,8 @@ type LessonComponent = {
     | 'spelling'
     | 'match_pairs'
     | 'pick_picture'
-    | 'speak_sentence';
+    | 'speak_sentence'
+    | 'speak_words';
   config: Record<string, unknown>;
 };
 
@@ -122,6 +125,7 @@ type Step =
   | 'match_pairs'
   | 'pick_picture'
   | 'speak_sentence'
+  | 'speak_words'
   | 'ai_tutor'
   | 'done';
 
@@ -139,6 +143,7 @@ const EXERCISE_STEPS: Step[] = [
   'match_pairs',
   'pick_picture',
   'speak_sentence',
+  'speak_words',
   'ai_tutor',
 ];
 
@@ -172,6 +177,7 @@ function buildSteps(lesson: Lesson): Step[] {
   if (hasComponentOfType(components_data, 'match_pairs')) steps.push('match_pairs');
   if (hasComponentOfType(components_data, 'pick_picture')) steps.push('pick_picture');
   if (hasComponentOfType(components_data, 'speak_sentence')) steps.push('speak_sentence');
+  if (hasComponentOfType(components_data, 'speak_words')) steps.push('speak_words');
   if (components.ai_tutor) steps.push('ai_tutor');
   steps.push('done');
   return steps;
@@ -438,6 +444,18 @@ export default function LessonPage() {
       );
   }
 
+  /** Pass 6 — Speak Words configs (J). */
+  function getSpeakWordsConfigs(): SpeakWordsConfig[] {
+    if (!lesson) return [];
+    return lesson.components_data
+      .filter((c) => c.type === 'speak_words')
+      .map((c) => c.config as unknown as SpeakWordsConfig)
+      .filter(
+        (cfg) =>
+          cfg && typeof cfg.text === 'string' && cfg.text.trim().length > 0,
+      );
+  }
+
   function goToNextStep() {
     if (!lesson) return;
     const steps = buildSteps(lesson);
@@ -522,6 +540,8 @@ export default function LessonPage() {
       if (s === 'pick_picture') return hasComponentOfType(lesson.components_data, 'pick_picture');
       if (s === 'speak_sentence')
         return hasComponentOfType(lesson.components_data, 'speak_sentence');
+      if (s === 'speak_words')
+        return hasComponentOfType(lesson.components_data, 'speak_words');
       return Boolean(lesson.components[s as keyof ComponentFlags]);
     });
   }, [lesson]);
@@ -606,6 +626,7 @@ export default function LessonPage() {
   const matchPairsConfigs = getMatchPairsConfigs();
   const pickPictureConfigs = getPickPictureConfigs();
   const speakSentenceConfigs = getSpeakSentenceConfigs();
+  const speakWordsConfigs = getSpeakWordsConfigs();
 
   // Compute level-up + accuracy + xp delta for the completion screen.
   const xpEarned =
@@ -927,6 +948,18 @@ export default function LessonPage() {
 
         {step === 'speak_sentence' && !speakSentenceConfigs[0] && (
           <SkipPanel label="Ovozli o'qish topshiriqlari topilmadi" onSkip={goToNextStep} />
+        )}
+
+        {step === 'speak_words' && speakWordsConfigs[0] && (
+          <SpeakWords
+            config={speakWordsConfigs[0]}
+            onPassed={goToNextStep}
+            onFailed={handleExerciseFailed}
+          />
+        )}
+
+        {step === 'speak_words' && !speakWordsConfigs[0] && (
+          <SkipPanel label="So'z-ovozli mashq topilmadi" onSkip={goToNextStep} />
         )}
 
         {step === 'ai_tutor' && (
