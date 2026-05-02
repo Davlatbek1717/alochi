@@ -93,6 +93,16 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
   const statusesRef = useRef<WordStatus[]>([]);
   const cursorRef = useRef(0);
   const finishedRef = useRef(false);
+  // How many tokens of the cumulative spoken transcript we've already
+  // judged. Used so a token never gets re-evaluated on the next interim
+  // delivery — without this, the same "lawn" attempt would keep marking
+  // the active word red over and over.
+  const consumedSpokenIdxRef = useRef(0);
+  // Counts wrong attempts on the CURRENT active word. Resets when the
+  // student finally gets it right and the cursor advances. Drives the
+  // miss banner copy so it can change tone after a few tries.
+  const missesOnCurrentRef = useRef(0);
+  const [missCount, setMissCount] = useState(0);
 
   // Initialize per-word statuses whenever the word list changes.
   useEffect(() => {
@@ -102,6 +112,9 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     setStatuses(init);
     statusesRef.current = init;
     cursorRef.current = 0;
+    consumedSpokenIdxRef.current = 0;
+    missesOnCurrentRef.current = 0;
+    setMissCount(0);
     finishedRef.current = false;
     setPhase('idle');
     setFinalScore(null);
@@ -167,13 +180,16 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
   }
 
   /**
-   * Process a transcript update from the recognizer. Aligns spoken tokens
-   * with the expected words at index ≥ cursor and advances the cursor.
+   * Process a transcript update from the recognizer.
    *
-   * Algorithm: walk transcript tokens index-aligned to expected words from
-   * the cursor forward. For each pair, mark green/red by Levenshtein
-   * similarity. The next pending word becomes 'active' (the live cursor).
-   * Auto-finishes when the cursor reaches the end of the word list.
+   * Behaviour: the cursor only moves forward when the student pronounces
+   * the CURRENT expected word correctly (similarityScore ≥ threshold).
+   * If they say something else, the spoken token is consumed but the
+   * cursor stays put — the same word stays "active", the miss is
+   * counted, and the student must retry until they get it right.
+   *
+   * Punctuation-only words (very rare for English, but possible) are
+   * auto-skipped because there's nothing to pronounce.
    */
   function processTranscript(transcript: string) {
     if (finishedRef.current) return;
@@ -184,25 +200,64 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
       .filter(Boolean);
 
     let cursor = cursorRef.current;
+    let consumed = consumedSpokenIdxRef.current;
+    let misses = missesOnCurrentRef.current;
     const next = [...statusesRef.current];
+    let lastWasMiss = false;
+    let advancedThisPass = false;
 
-    while (cursor < words.length && cursor < spoken.length) {
+    while (consumed < spoken.length && cursor < words.length) {
       const expected = normalize(words[cursor]);
       if (!expected) {
-        // Pure punctuation token — skip past it.
+        // Pure punctuation entry — auto-pass and advance.
         next[cursor] = 'correct';
         cursor += 1;
+        misses = 0;
         continue;
       }
-      const sim = similarityScore(spoken[cursor], expected);
-      next[cursor] = sim >= WORD_MATCH_THRESHOLD ? 'correct' : 'wrong';
-      cursor += 1;
+      const sim = similarityScore(spoken[consumed], expected);
+      if (sim >= WORD_MATCH_THRESHOLD) {
+        // Hit — mark green, advance both pointers, reset miss counter.
+        next[cursor] = 'correct';
+        cursor += 1;
+        consumed += 1;
+        misses = 0;
+        lastWasMiss = false;
+        advancedThisPass = true;
+      } else {
+        // Miss — student spoke something that isn't the current expected
+        // word. Consume the token (so we don't keep grading it on the
+        // next interim) but DON'T move the cursor: they have to keep
+        // trying this word until it lands.
+        consumed += 1;
+        misses += 1;
+        lastWasMiss = true;
+      }
     }
-    if (cursor < words.length) next[cursor] = 'active';
+
+    // Visualise the active word: red if the most recent token was a
+    // miss, otherwise yellow "active" so the student knows where to aim.
+    if (cursor < words.length) {
+      next[cursor] = lastWasMiss ? 'wrong' : 'active';
+    }
 
     statusesRef.current = next;
     cursorRef.current = cursor;
-    if (mountedRef.current) setStatuses(next);
+    consumedSpokenIdxRef.current = consumed;
+    missesOnCurrentRef.current = misses;
+    if (mountedRef.current) {
+      setStatuses(next);
+      setMissCount(misses);
+    }
+
+    // Audio feedback: chime on a successful advance, buzz on a miss.
+    // Wrapped in try so a sound failure never breaks the recognizer loop.
+    try {
+      if (advancedThisPass) playSound('correct', 0.4);
+      else if (lastWasMiss) playSound('wrong', 0.35);
+    } catch {
+      /* ignore */
+    }
 
     if (cursor >= words.length) {
       finishExercise();
@@ -215,6 +270,9 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     setInterimTranscript('');
     setFinalScore(null);
     finishedRef.current = false;
+    consumedSpokenIdxRef.current = 0;
+    missesOnCurrentRef.current = 0;
+    setMissCount(0);
     // Reset to fresh-start statuses if previously failed/passed.
     if (phase !== 'idle') {
       const init: WordStatus[] = words.map((_, i) =>
@@ -346,6 +404,9 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     );
     statusesRef.current = init;
     cursorRef.current = 0;
+    consumedSpokenIdxRef.current = 0;
+    missesOnCurrentRef.current = 0;
+    setMissCount(0);
     finishedRef.current = false;
     setStatuses(init);
     setPhase('idle');
@@ -424,15 +485,48 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
 
       {/* Live caption while listening */}
       {isListening && (
-        <div className="bg-[#fffaf0] border-[1.5px] border-[#e8e0d0] rounded-2xl px-4 py-2 min-h-[2.5rem] text-center">
-          <p
-            className="text-sm font-extrabold text-[#3c3c3c] leading-snug"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
-            {interimTranscript || (
-              <span className="text-[#cbbf9c]">Tinglanmoqda...</span>
-            )}
-          </p>
+        <div className="space-y-2">
+          <div className="bg-[#fffaf0] border-[1.5px] border-[#e8e0d0] rounded-2xl px-4 py-2 min-h-[2.5rem] text-center">
+            <p
+              className="text-sm font-extrabold text-[#3c3c3c] leading-snug"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              {interimTranscript || (
+                <span className="text-[#cbbf9c]">Tinglanmoqda...</span>
+              )}
+            </p>
+          </div>
+
+          {/* Retry hint — surfaces after the student misses the current
+              word so they understand the cursor is intentionally stuck.
+              "X marta urinib ko'rdingiz" plus the literal expected word
+              gives them a concrete target. */}
+          {missCount > 0 && cursorRef.current < words.length && (
+            <div className="bg-[#fee2e2] border-[1.5px] border-[#fecaca] rounded-2xl px-4 py-2.5 flex items-center gap-2">
+              <AlertTriangle size={14} className="text-[#ef4444] shrink-0" />
+              <p
+                className="text-xs font-bold text-[#991b1b] leading-snug flex-1"
+                style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+              >
+                {missCount} marta xato.
+                {' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const w = words[cursorRef.current];
+                    if (w) {
+                      const clean = w.replace(/[^\p{L}\p{N}\s'-]/gu, '').trim();
+                      if (clean) speak(clean, { lang: 'en-US', rate: 0.65 }).catch(() => {});
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 font-extrabold text-[#ef4444] hover:underline"
+                >
+                  <Volume2 size={12} />
+                  &quot;{words[cursorRef.current]}&quot; — talaffuzni eshitish
+                </button>
+              </p>
+            </div>
+          )}
         </div>
       )}
 
