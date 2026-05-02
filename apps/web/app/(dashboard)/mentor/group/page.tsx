@@ -1,21 +1,32 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   Users,
   CheckCircle2,
   XCircle,
-  Save,
   ArrowLeft,
   Search,
   Sparkles,
   CheckCheck,
   Filter,
   X,
+  CloudOff,
+  Cloud,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
-import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/ui';
+
+/** Auto-save fires this long after the last edit. 800ms feels snappy
+ *  enough that the indicator transitions don't lag the UI, but long
+ *  enough that hammering the status pills coalesces into one network
+ *  round-trip. */
+const AUTOSAVE_DEBOUNCE_MS = 800;
+
+type SaveState = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 type Status = 'green' | 'yellow' | 'red';
 
@@ -55,14 +66,27 @@ type ApiStudent = { id: string; name: string; role: string };
 type FilterMode = 'all' | 'present' | 'absent' | 'attention';
 
 export default function MentorGroupPage() {
-  const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<LocalStudent[]>([]);
   const [original, setOriginal] = useState<LocalStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveError, setSaveError] = useState('');
+
+  // Refs for the debounced auto-save loop. Without these, the timer's
+  // closure would capture stale `students`, and a second edit during
+  // an in-flight save would clobber the queued change.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const studentsRef = useRef<LocalStudent[]>([]);
+  const savingRef = useRef(false);
+  const queuedRef = useRef(false);
+  const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    studentsRef.current = students;
+  }, [students]);
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
@@ -129,8 +153,24 @@ export default function MentorGroupPage() {
     );
   }
 
-  async function saveAll() {
-    setSaving(true);
+  /**
+   * Persist the latest in-memory roster to the server. Called by the
+   * debounced auto-save effect — never directly by user action.
+   *
+   * Concurrency: while a save is in flight, additional edits set
+   * `queuedRef` so we re-run once the current request finishes. This
+   * way a hammering mentor can't lose updates to a race.
+   */
+  const persist = useCallback(async () => {
+    if (savingRef.current) {
+      queuedRef.current = true;
+      return;
+    }
+    savingRef.current = true;
+    setSaveState('saving');
+    setSaveError('');
+
+    const snapshot = studentsRef.current;
     const token = localStorage.getItem('accessToken') ?? '';
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
       id?: string;
@@ -145,7 +185,7 @@ export default function MentorGroupPage() {
         {
           method: 'POST',
           body: JSON.stringify({
-            records: students.map((s) => ({
+            records: snapshot.map((s) => ({
               studentId: s.id,
               status: s.attendance ? 'present' : 'absent',
               markedBy: user.id ?? '',
@@ -158,7 +198,7 @@ export default function MentorGroupPage() {
         token,
       );
       await Promise.all(
-        students.map((s) =>
+        snapshot.map((s) =>
           apiRequest(
             '/status/personal',
             {
@@ -175,14 +215,21 @@ export default function MentorGroupPage() {
         ),
       );
       localStorage.setItem(`attendance_marked_${today}`, '1');
-      setOriginal(students);
-      success('Davomat saqlandi');
+      setOriginal(snapshot);
+      setSaveState('saved');
     } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      setSaveError(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      setSaveState('error');
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      // Drain the queue: if more edits arrived mid-save, persist again
+      // immediately so the server-side state catches up.
+      if (queuedRef.current) {
+        queuedRef.current = false;
+        persist();
+      }
     }
-  }
+  }, []);
 
   // Aggregate counts for the header strip + filter chip subtitles.
   const counts = useMemo(() => {
@@ -207,6 +254,37 @@ export default function MentorGroupPage() {
       );
     });
   }, [students, original, loading]);
+
+  // Debounced auto-save. Skips the very first paint after data loads
+  // (initialLoadRef gate) so we don't fire a no-op POST on mount.
+  // Resets the timer on every edit so rapid changes coalesce.
+  useEffect(() => {
+    if (loading) return;
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+      return;
+    }
+    if (!isDirty) return;
+
+    setSaveState('pending');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      persist();
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [students, loading, isDirty, persist]);
+
+  // Reset the "Saqlandi" pill back to the neutral idle state after a
+  // beat so it doesn't sit there forever after the last edit.
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    const t = setTimeout(() => {
+      setSaveState((prev) => (prev === 'saved' ? 'idle' : prev));
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [saveState]);
 
   const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -266,9 +344,13 @@ export default function MentorGroupPage() {
       <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-3">
           <p className="text-rose-500 text-sm font-bold">{error}</p>
-          <Button variant="primary" onClick={loadStudents}>
+          <button
+            type="button"
+            onClick={loadStudents}
+            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-extrabold transition-colors"
+          >
             Qayta urinish
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -454,47 +536,69 @@ export default function MentorGroupPage() {
         )}
       </div>
 
-      {/* Sticky save bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#f7f4ef] via-[#f7f4ef] to-transparent pt-4 pb-[env(safe-area-inset-bottom)] px-4 pointer-events-none">
-        <div className="max-w-lg mx-auto pointer-events-auto pb-2">
-          <div
-            className={`rounded-2xl border-[1.5px] p-3 shadow-lg transition-all ${
-              isDirty
-                ? 'bg-white border-[#f59e0b]/40'
-                : 'bg-white border-[#ede9e1]'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <span
-                className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-full border shrink-0 ${
-                  isDirty
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isDirty ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`}
-                />
-                {isDirty ? "O'zgarish bor" : 'Saqlangan'}
-              </span>
-              <Button
-                variant="primary"
-                size="sm"
-                loading={saving}
-                disabled={!isDirty || saving}
-                icon={<Save size={14} />}
-                onClick={saveAll}
-                className="ml-auto"
-              >
-                {saving ? 'Saqlanmoqda...' : 'Saqlash'}
-              </Button>
-            </div>
-          </div>
+      {/* Sticky auto-save status pill — replaces the manual save button.
+          Edits persist automatically after a brief debounce, so the UI
+          here is just a passive indicator. Compact + centred so it
+          doesn't dominate the bottom of the screen. */}
+      <div className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] px-4 pt-3 pointer-events-none">
+        <div className="max-w-lg mx-auto pb-2 flex justify-center">
+          <SaveStatusPill state={saveState} error={saveError} onRetry={persist} />
         </div>
       </div>
     </div>
+  );
+}
+
+function SaveStatusPill({
+  state,
+  error,
+  onRetry,
+}: {
+  state: SaveState;
+  error: string;
+  onRetry: () => void;
+}) {
+  if (state === 'idle') return null;
+
+  if (state === 'pending') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-white border border-[#ede9e1] text-[#94a3b8] shadow-md pointer-events-auto">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#94a3b8] animate-pulse" />
+        Yozilmoqda...
+      </span>
+    );
+  }
+
+  if (state === 'saving') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-white border border-amber-200 text-amber-700 shadow-md pointer-events-auto">
+        <Loader2 size={11} className="animate-spin" />
+        Saqlanmoqda...
+      </span>
+    );
+  }
+
+  if (state === 'saved') {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-md pointer-events-auto motion-safe:animate-[bounce-in_300ms_ease-out]">
+        <Cloud size={11} />
+        Saqlandi
+      </span>
+    );
+  }
+
+  // error
+  return (
+    <button
+      type="button"
+      onClick={onRetry}
+      className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 shadow-md pointer-events-auto hover:bg-rose-100 transition-colors"
+      title={error || 'Saqlashda xatolik'}
+    >
+      <CloudOff size={11} />
+      Xato — qayta urinish
+      <AlertCircle size={11} />
+    </button>
   );
 }
 
