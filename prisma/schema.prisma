@@ -1153,14 +1153,19 @@ model Exam {
 }
 
 model ExamQuestion {
-  id           String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  examId       String @map("exam_id") @db.Uuid
-  text         String
-  // Stored as a JSON string array; the form enforces 2+ entries.
-  options      Json
-  correctIndex Int    @map("correct_index")
+  id     String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  examId String @map("exam_id") @db.Uuid
+  // Polymorphic question — same shape as LessonComponent so the
+  // student-side exercise renderers can be reused. `type` is one of
+  // the 12 exercise keys (mcq, word_order, translate, listen_pick,
+  // listen_type, match_pairs, pick_picture, fill_blank, spelling,
+  // order_sentences, speak_sentence, speak_words). `config` carries
+  // the per-type payload (question text, options, correct answer,
+  // assets, etc.).
+  type       String
+  config     Json
   // Display order within the exam; lower renders first.
-  orderIndex   Int    @default(0) @map("order_index")
+  orderIndex Int    @default(0) @map("order_index")
 
   exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 

@@ -419,23 +419,58 @@ async function main() {
       isPublished:  true,
     },
   });
-  // 5 questions for exam1
+  // 5 questions for exam1 — mix of MCQ and translate to show the new
+  // polymorphic shape working alongside the legacy MCQ-only path.
   const exam1Questions = [
-    { text: '"Good morning" qanday tarjima qilinadi?',    options: ['Xayrli tun','Xayrli tong','Xayr','Salom'],          correctIndex: 1 },
-    { text: '"Wake up" so\'zining ma\'nosi?',             options: ['Yot','Yur','Uyg\'on','Yurish'],                     correctIndex: 2 },
-    { text: 'Qaysi jumla to\'g\'ri?',                    options: ['She go school','She goes to school','She going school','She goed school'], correctIndex: 1 },
-    { text: '"Everyone" so\'zi qaysi guruhga kiradi?',   options: ['Fe\'l','Ot','Olmosh','Sifat'],                       correctIndex: 2 },
-    { text: '"Morning" so\'zining antonimi?',            options: ['Night','Noon','Evening','Afternoon'],                correctIndex: 0 },
+    {
+      type: 'mcq',
+      config: {
+        question: '"Good morning" qanday tarjima qilinadi?',
+        options: ['Xayrli tun', 'Xayrli tong', 'Xayr', 'Salom'],
+        correctIndex: 1,
+      },
+    },
+    {
+      type: 'translate',
+      config: {
+        sourceText: 'Wake up',
+        sourceLang: 'en',
+        targetLang: 'uz',
+        acceptedAnswers: ["Uyg'on", "Uygon"],
+      },
+    },
+    {
+      type: 'mcq',
+      config: {
+        question: "Qaysi jumla to'g'ri?",
+        options: ['She go school', 'She goes to school', 'She going school', 'She goed school'],
+        correctIndex: 1,
+      },
+    },
+    {
+      type: 'word_order',
+      config: {
+        targetSentence: 'I go to school every day',
+        words: ['I', 'go', 'school', 'to', 'every', 'day'],
+      },
+    },
+    {
+      type: 'mcq',
+      config: {
+        question: '"Morning" so\'zining antonimi?',
+        options: ['Night', 'Noon', 'Evening', 'Afternoon'],
+        correctIndex: 0,
+      },
+    },
   ];
   for (let i = 0; i < exam1Questions.length; i++) {
     const q = exam1Questions[i];
     await prisma.examQuestion.create({
       data: {
-        examId:       exam1.id,
-        text:         q.text,
-        options:      q.options,
-        correctIndex: q.correctIndex,
-        orderIndex:   i,
+        examId:     exam1.id,
+        type:       q.type,
+        config:     q.config as never,
+        orderIndex: i,
       },
     });
   }
@@ -450,26 +485,25 @@ async function main() {
       isPublished:  true,
     },
   });
-  // 8 questions for exam2
-  const exam2Questions = [
-    { text: '"School" so\'zining tarjimasi?',     options: ['Uy','Maktab','Bozor','Ko\'cha'],           correctIndex: 1 },
-    { text: '"Teacher" kimni bildiradi?',         options: ['O\'quvchi','Ota','O\'qituvchi','Do\'st'],   correctIndex: 2 },
-    { text: '"Book" so\'zining ko\'pligi?',        options: ['Bookies','Books','Bookes','Bookses'],       correctIndex: 1 },
-    { text: '"Happy" antonimi?',                  options: ['Glad','Sad','Tired','Busy'],                correctIndex: 1 },
-    { text: 'She ___ a student.',                options: ['am','is','are','be'],                        correctIndex: 1 },
-    { text: 'They ___ friends.',                 options: ['is','am','are','be'],                        correctIndex: 2 },
-    { text: '"Big" sinonimi?',                   options: ['Small','Large','Tiny','Short'],              correctIndex: 1 },
-    { text: '"Beautiful" so\'zi qanday talaffuz?',options: ['byoo-tee-ful','bee-oo-tful','byoo-ti-ful','byot-ful'], correctIndex: 2 },
+  // 8 questions for exam2 — all MCQ to keep validation simple here.
+  const exam2Questions: Array<{ type: string; config: Record<string, unknown> }> = [
+    { type: 'mcq', config: { question: '"School" so\'zining tarjimasi?', options: ['Uy', 'Maktab', 'Bozor', "Ko'cha"], correctIndex: 1 } },
+    { type: 'mcq', config: { question: '"Teacher" kimni bildiradi?', options: ["O'quvchi", 'Ota', "O'qituvchi", "Do'st"], correctIndex: 2 } },
+    { type: 'mcq', config: { question: '"Book" so\'zining ko\'pligi?', options: ['Bookies', 'Books', 'Bookes', 'Bookses'], correctIndex: 1 } },
+    { type: 'mcq', config: { question: '"Happy" antonimi?', options: ['Glad', 'Sad', 'Tired', 'Busy'], correctIndex: 1 } },
+    { type: 'mcq', config: { question: 'She ___ a student.', options: ['am', 'is', 'are', 'be'], correctIndex: 1 } },
+    { type: 'mcq', config: { question: 'They ___ friends.', options: ['is', 'am', 'are', 'be'], correctIndex: 2 } },
+    { type: 'mcq', config: { question: '"Big" sinonimi?', options: ['Small', 'Large', 'Tiny', 'Short'], correctIndex: 1 } },
+    { type: 'mcq', config: { question: '"Beautiful" so\'zi qanday talaffuz?', options: ['byoo-tee-ful', 'bee-oo-tful', 'byoo-ti-ful', 'byot-ful'], correctIndex: 2 } },
   ];
   for (let i = 0; i < exam2Questions.length; i++) {
     const q = exam2Questions[i];
     await prisma.examQuestion.create({
       data: {
-        examId:       exam2.id,
-        text:         q.text,
-        options:      q.options,
-        correctIndex: q.correctIndex,
-        orderIndex:   i,
+        examId:     exam2.id,
+        type:       q.type,
+        config:     q.config as never,
+        orderIndex: i,
       },
     });
   }
@@ -484,17 +518,19 @@ async function main() {
     },
   });
   // 3 draft questions
-  const exam3Questions = [
-    { text: 'Birinchi savol (qoralama)', options: ['A','B','C','D'], correctIndex: 0 },
-    { text: 'Ikkinchi savol (qoralama)', options: ['A','B','C','D'], correctIndex: 1 },
-    { text: 'Uchinchi savol (qoralama)', options: ['A','B','C','D'], correctIndex: 2 },
+  const exam3Questions: Array<{ type: string; config: Record<string, unknown> }> = [
+    { type: 'mcq', config: { question: 'Birinchi savol (qoralama)', options: ['A', 'B', 'C', 'D'], correctIndex: 0 } },
+    { type: 'mcq', config: { question: 'Ikkinchi savol (qoralama)', options: ['A', 'B', 'C', 'D'], correctIndex: 1 } },
+    { type: 'mcq', config: { question: 'Uchinchi savol (qoralama)', options: ['A', 'B', 'C', 'D'], correctIndex: 2 } },
   ];
   for (let i = 0; i < exam3Questions.length; i++) {
     const q = exam3Questions[i];
     await prisma.examQuestion.create({
       data: {
-        examId: exam3.id, text: q.text, options: q.options,
-        correctIndex: q.correctIndex, orderIndex: i,
+        examId:     exam3.id,
+        type:       q.type,
+        config:     q.config as never,
+        orderIndex: i,
       },
     });
   }

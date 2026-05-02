@@ -104,7 +104,11 @@ export class ExamsService {
     return permission ?? null;
   }
 
-  async submit(examPermissionId: string, studentId: string, answers: number[]) {
+  async submit(
+    examPermissionId: string,
+    studentId: string,
+    payload: { answers?: number[]; results?: boolean[] },
+  ) {
     const permission = await this.prisma.examPermission.findUnique({
       where: { id: examPermissionId },
       include: {
@@ -119,24 +123,34 @@ export class ExamsService {
     if (permission.status !== ExamStatus.active)
       throw new BadRequestException('Imtihon allaqachon yakunlangan');
 
-    // Pull correct answers from whichever source this permission targets.
-    let correctIndices: number[] = [];
+    // Two grading paths:
+    //   - Catalogue exam → client sends `results: boolean[]` because
+    //     polymorphic question types (12 supported) are easier to
+    //     grade on the client where the per-type renderers already
+    //     live; server just tallies.
+    //   - Legacy lesson exam → client sends `answers: number[]` (MCQ
+    //     option index per question); server compares to stored
+    //     correctIndex.
+    let total = 0;
+    let correct = 0;
     let passThresholdRatio = LEGACY_PASS_THRESHOLD;
+
     if (permission.exam) {
-      correctIndices = permission.exam.questions.map((q) => q.correctIndex);
+      total = permission.exam.questions.length;
+      const results = payload.results ?? [];
+      correct = results.slice(0, total).filter(Boolean).length;
       passThresholdRatio = permission.exam.passThreshold / 100;
     } else if (permission.lesson) {
-      correctIndices = permission.lesson.components_data.map((c) => {
+      const correctIndices = permission.lesson.components_data.map((c) => {
         const cfg = c.config as { correctIndex: number };
         return cfg.correctIndex;
       });
+      total = correctIndices.length;
+      const answers = payload.answers ?? [];
+      correctIndices.forEach((correctIdx, i) => {
+        if (answers[i] === correctIdx) correct++;
+      });
     }
-
-    const total = correctIndices.length;
-    let correct = 0;
-    correctIndices.forEach((correctIdx, i) => {
-      if (answers[i] === correctIdx) correct++;
-    });
 
     const score = total > 0 ? Math.round((correct / total) * 100) : 100;
     const passed = total === 0 || correct / total >= passThresholdRatio;

@@ -112,13 +112,9 @@ export class ExamService {
 }
 
 function mapQuestion(q: ExamQuestionInputDto, fallbackOrder: number) {
-  // Defensive: clamp correctIndex to a valid options range so a
-  // mis-numbered DTO can't poison persisted state.
-  const safeIndex = Math.max(0, Math.min(q.options.length - 1, q.correctIndex));
   return {
-    text: q.text.trim(),
-    options: q.options.map((o) => o.trim()) as unknown as object,
-    correctIndex: safeIndex,
+    type: q.type,
+    config: q.config as unknown as object,
     orderIndex: q.orderIndex ?? fallbackOrder,
   };
 }

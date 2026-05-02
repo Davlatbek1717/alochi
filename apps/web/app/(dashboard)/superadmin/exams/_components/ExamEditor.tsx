@@ -1,25 +1,34 @@
 'use client';
-import { useState, type ChangeEvent } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Save,
   Trash2,
-  Plus,
-  CheckCircle2,
   AlertTriangle,
-  GripVertical,
 } from 'lucide-react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { useToast, Modal } from '@/components/ui';
+import {
+  COMPONENT_LABELS,
+  COMPONENT_BADGE_STYLES,
+  COMPONENT_ICONS,
+  summarizeConfig,
+} from '../../lessons/[id]/_components/ComponentsList';
+import {
+  ComponentConfigurator,
+  ALL_TYPES,
+  type ComponentTypeKey,
+} from '../../lessons/[id]/_components/ComponentConfigurator';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface ExamQuestion {
   id?: string;
-  text: string;
-  options: string[];
-  correctIndex: number;
-  orderIndex?: number;
+  type: string;
+  config: Record<string, unknown>;
+  orderIndex: number;
 }
 
 export interface ExamPayload {
@@ -37,18 +46,26 @@ interface Props {
   initial: ExamPayload;
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
+
 /**
  * Shared editor used by both /superadmin/exams/new and
- * /superadmin/exams/[id]. Holds the entire question set in local state
- * and submits the canonical list on save — the server mirrors with a
- * wipe-and-replace transaction so the form doesn't have to track
- * delta operations per row.
+ * /superadmin/exams/[id]. Holds the full question set in local state and
+ * submits the canonical list on save — the server mirrors with a
+ * wipe-and-replace transaction. Uses the same type-picker + configurator
+ * pattern as the lesson editor so all 12 exercise types are supported.
  */
 export function ExamEditor({ examId, initial }: Props) {
   const router = useRouter();
   const toast = useToast();
   const [form, setForm] = useState<ExamPayload>(initial);
   const [saving, setSaving] = useState(false);
+
+  // Picker + configurator state (mirrors lesson editor pattern exactly)
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [configType, setConfigType] = useState<ComponentTypeKey | null>(null);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [savingConfig, setSavingConfig] = useState(false);
 
   const fieldLabel =
     'block text-xs font-bold uppercase tracking-widest text-[#64748b] mb-1.5';
@@ -59,50 +76,64 @@ export function ExamEditor({ examId, initial }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function addQuestion() {
-    setForm((prev) => ({
-      ...prev,
-      questions: [
-        ...prev.questions,
-        {
-          text: '',
-          options: ['', '', '', ''],
-          correctIndex: 0,
-        },
-      ],
-    }));
+  // ── Picker / configurator handlers ────────────────────────────────────────
+
+  function openTypePicker() {
+    setEditingIdx(null);
+    setConfigType(null);
+    setPickerOpen(true);
+  }
+
+  function pickType(type: ComponentTypeKey) {
+    setPickerOpen(false);
+    setEditingIdx(null);
+    setConfigType(type);
+  }
+
+  function openEdit(idx: number) {
+    const q = form.questions[idx];
+    setEditingIdx(idx);
+    setConfigType(q.type as ComponentTypeKey);
+  }
+
+  function closeConfigurator() {
+    setConfigType(null);
+    setEditingIdx(null);
+    setSavingConfig(false);
+  }
+
+  function handleConfigSubmit(config: Record<string, unknown>) {
+    if (!configType) return;
+    setSavingConfig(true);
+    setForm((prev) => {
+      if (editingIdx !== null) {
+        // Edit existing question
+        const updated = prev.questions.map((q, i) =>
+          i === editingIdx ? { ...q, config } : q,
+        );
+        return { ...prev, questions: updated };
+      } else {
+        // Add new question
+        const newQ: ExamQuestion = {
+          type: configType,
+          config,
+          orderIndex: prev.questions.length,
+        };
+        return { ...prev, questions: [...prev.questions, newQ] };
+      }
+    });
+    setSavingConfig(false);
+    toast.success(editingIdx !== null ? 'Savol yangilandi' : "Savol qo'shildi");
+    closeConfigurator();
   }
 
   function removeQuestion(idx: number) {
+    if (!window.confirm('Bu savolni oʻchirmoqchimisiz?')) return;
     setForm((prev) => ({
       ...prev,
-      questions: prev.questions.filter((_, i) => i !== idx),
-    }));
-  }
-
-  function updateQuestion(
-    idx: number,
-    patch: Partial<ExamQuestion>,
-  ) {
-    setForm((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q, i) =>
-        i === idx ? { ...q, ...patch } : q,
-      ),
-    }));
-  }
-
-  function updateOption(qIdx: number, optIdx: number, value: string) {
-    setForm((prev) => ({
-      ...prev,
-      questions: prev.questions.map((q, i) =>
-        i === qIdx
-          ? {
-              ...q,
-              options: q.options.map((o, j) => (j === optIdx ? value : o)),
-            }
-          : q,
-      ),
+      questions: prev.questions
+        .filter((_, i) => i !== idx)
+        .map((q, i) => ({ ...q, orderIndex: i })),
     }));
   }
 
@@ -114,9 +145,14 @@ export function ExamEditor({ examId, initial }: Props) {
       const t = next[idx];
       next[idx] = next[swapIdx];
       next[swapIdx] = t;
-      return { ...prev, questions: next };
+      return {
+        ...prev,
+        questions: next.map((q, i) => ({ ...q, orderIndex: i })),
+      };
     });
   }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   async function handleSave() {
     if (!form.title.trim()) {
@@ -126,23 +162,6 @@ export function ExamEditor({ examId, initial }: Props) {
     if (form.passThreshold < 0 || form.passThreshold > 100) {
       toast.error("O'tish foizi 0 dan 100 gacha bo'lsin");
       return;
-    }
-    // Validate questions: each must have non-empty text + 2+ non-empty options
-    for (let i = 0; i < form.questions.length; i++) {
-      const q = form.questions[i];
-      if (!q.text.trim()) {
-        toast.error(`${i + 1}-savol matnini kiriting`);
-        return;
-      }
-      const filled = q.options.filter((o) => o.trim());
-      if (filled.length < 2) {
-        toast.error(`${i + 1}-savolda kamida 2 ta javob kerak`);
-        return;
-      }
-      if (q.correctIndex >= q.options.length || !q.options[q.correctIndex]?.trim()) {
-        toast.error(`${i + 1}-savolda to'g'ri javob tanlanmagan`);
-        return;
-      }
     }
 
     setSaving(true);
@@ -154,12 +173,9 @@ export function ExamEditor({ examId, initial }: Props) {
       timeLimitMinutes: form.timeLimitMinutes ?? undefined,
       isPublished: form.isPublished,
       questions: form.questions.map((q, i) => ({
-        text: q.text.trim(),
-        // Strip empty option slots from the trailing end so the server
-        // doesn't store ghost entries the editor showed but the user
-        // never filled.
-        options: q.options.map((o) => o.trim()).filter((o) => o !== ''),
-        correctIndex: q.correctIndex,
+        ...(q.id ? { id: q.id } : {}),
+        type: q.type,
+        config: q.config,
         orderIndex: i,
       })),
     };
@@ -179,7 +195,6 @@ export function ExamEditor({ examId, initial }: Props) {
           token,
         );
         toast.success('Imtihon yaratildi');
-        // Land on the edit page so the admin can keep iterating.
         router.replace(`/superadmin/exams/${res.data.id}`);
         return;
       }
@@ -189,6 +204,11 @@ export function ExamEditor({ examId, initial }: Props) {
       setSaving(false);
     }
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  const editingQuestion =
+    editingIdx !== null ? form.questions[editingIdx] : null;
 
   return (
     <div className="min-h-screen bg-[#f7f4ef] pb-28">
@@ -226,9 +246,7 @@ export function ExamEditor({ examId, initial }: Props) {
             <input
               type="text"
               value={form.title}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                patch('title', e.target.value)
-              }
+              onChange={(e) => patch('title', e.target.value)}
               className={fieldInput}
               placeholder="Masalan: 1-bo'lim — Salomlashish imtihoni"
               autoFocus
@@ -300,7 +318,7 @@ export function ExamEditor({ examId, initial }: Props) {
           </label>
         </section>
 
-        {/* Questions */}
+        {/* Questions section */}
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
@@ -308,64 +326,104 @@ export function ExamEditor({ examId, initial }: Props) {
             </p>
             <button
               type="button"
-              onClick={addQuestion}
+              onClick={openTypePicker}
               className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0d9488] bg-white hover:bg-[#0d9488]/5 border border-[#0d9488]/30 px-3 py-1.5 rounded-lg transition-colors"
             >
-              <Plus size={12} /> Yangi savol
+              + Yangi savol
             </button>
           </div>
 
           {form.questions.length === 0 ? (
             <button
               type="button"
-              onClick={addQuestion}
+              onClick={openTypePicker}
               className="w-full border-2 border-dashed border-[#ede9e1] rounded-2xl py-10 text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-white transition-all flex flex-col items-center justify-center gap-2"
             >
               <div className="w-12 h-12 rounded-full bg-[#f7f4ef] flex items-center justify-center">
-                <Plus size={20} />
+                <span className="text-2xl font-bold">+</span>
               </div>
               <p className="text-sm font-bold">Birinchi savolni qo&apos;shing</p>
+              <p className="text-xs text-[#64748b] font-semibold">
+                12 turdagi mashq mavjud
+              </p>
             </button>
           ) : (
-            <ul className="space-y-3">
-              {form.questions.map((q, qIdx) => (
-                <li
-                  key={qIdx}
-                  className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4 space-y-3"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="mt-1 text-[#94a3b8] cursor-grab" aria-hidden>
-                      <GripVertical size={14} />
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-extrabold text-[#94a3b8] uppercase tracking-widest">
-                          Savol #{qIdx + 1}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          {qIdx > 0 && (
+            <>
+              <ul className="space-y-2">
+                {form.questions.map((q, idx) => {
+                  const label = COMPONENT_LABELS[q.type] ?? q.type;
+                  const badgeClass =
+                    COMPONENT_BADGE_STYLES[q.type] ??
+                    'bg-slate-50 text-slate-700 border-slate-200';
+                  const Icon = COMPONENT_ICONS[q.type];
+                  // Build a fake ConfigComponent for summarizeConfig
+                  const fakeComp = { id: String(idx), type: q.type, config: q.config };
+                  const summary = summarizeConfig(fakeComp);
+                  return (
+                    <li
+                      key={idx}
+                      className="group bg-white rounded-2xl border-[1.5px] border-[#ede9e1] hover:border-[#0d9488]/40 hover:shadow-sm transition-all overflow-hidden"
+                    >
+                      <div className="p-3 flex items-start gap-3">
+                        {/* Order badge */}
+                        <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+                          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">
+                            #{idx + 1}
+                          </span>
+                          <div
+                            className={`w-9 h-9 rounded-xl border flex items-center justify-center ${badgeClass}`}
+                          >
+                            {Icon ? <Icon size={16} /> : null}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${badgeClass}`}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#0f172a] font-semibold mt-1 line-clamp-2">
+                            {summary}
+                          </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {idx > 0 && (
                             <button
                               type="button"
-                              onClick={() => moveQuestion(qIdx, -1)}
+                              onClick={() => moveQuestion(idx, -1)}
                               aria-label="Yuqoriga"
-                              className="text-xs text-[#64748b] hover:text-[#0f172a] px-2 py-1 rounded hover:bg-[#f7f4ef]"
+                              className="text-xs text-[#64748b] hover:text-[#0f172a] px-2 py-1.5 rounded hover:bg-[#f7f4ef]"
                             >
                               ↑
                             </button>
                           )}
-                          {qIdx < form.questions.length - 1 && (
+                          {idx < form.questions.length - 1 && (
                             <button
                               type="button"
-                              onClick={() => moveQuestion(qIdx, 1)}
+                              onClick={() => moveQuestion(idx, 1)}
                               aria-label="Pastga"
-                              className="text-xs text-[#64748b] hover:text-[#0f172a] px-2 py-1 rounded hover:bg-[#f7f4ef]"
+                              className="text-xs text-[#64748b] hover:text-[#0f172a] px-2 py-1.5 rounded hover:bg-[#f7f4ef]"
                             >
                               ↓
                             </button>
                           )}
                           <button
                             type="button"
-                            onClick={() => removeQuestion(qIdx)}
+                            onClick={() => openEdit(idx)}
+                            aria-label={`${label} tahrirlash`}
+                            className="flex items-center gap-1.5 text-xs font-bold text-[#0f172a] bg-[#f7f4ef] hover:bg-[#ede9e1] border border-[#ede9e1] px-2.5 py-1.5 rounded-lg transition-colors"
+                          >
+                            Tahrir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeQuestion(idx)}
                             aria-label="Savolni o'chirish"
                             className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-colors"
                           >
@@ -373,54 +431,19 @@ export function ExamEditor({ examId, initial }: Props) {
                           </button>
                         </div>
                       </div>
-                      <input
-                        type="text"
-                        value={q.text}
-                        onChange={(e) => updateQuestion(qIdx, { text: e.target.value })}
-                        placeholder="Savol matni..."
-                        className={`${fieldInput} mb-3`}
-                      />
-                      <div className="space-y-2">
-                        {q.options.map((opt, optIdx) => (
-                          <div key={optIdx} className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => updateQuestion(qIdx, { correctIndex: optIdx })}
-                              aria-pressed={q.correctIndex === optIdx}
-                              aria-label={`${optIdx + 1}-javobni to'g'ri deb belgilash`}
-                              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                                q.correctIndex === optIdx
-                                  ? 'border-emerald-500 bg-emerald-500'
-                                  : 'border-[#ede9e1] hover:border-emerald-300'
-                              }`}
-                            >
-                              {q.correctIndex === optIdx && (
-                                <CheckCircle2 size={14} className="text-white" />
-                              )}
-                            </button>
-                            <input
-                              type="text"
-                              value={opt}
-                              onChange={(e) => updateOption(qIdx, optIdx, e.target.value)}
-                              placeholder={`Javob ${optIdx + 1}`}
-                              className={`flex-1 border rounded-xl px-3 py-1.5 text-sm bg-[#f7f4ef] focus:outline-none ${
-                                q.correctIndex === optIdx
-                                  ? 'border-emerald-300 focus:border-emerald-500 text-[#065f46]'
-                                  : 'border-[#ede9e1] focus:border-[#0f172a] text-[#0f172a]'
-                              }`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[11px] text-[#94a3b8] font-semibold mt-2 inline-flex items-center gap-1">
-                        <CheckCircle2 size={11} className="text-emerald-500" />
-                        Yashil tugmacha — to&apos;g&apos;ri javob
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <button
+                type="button"
+                onClick={openTypePicker}
+                className="w-full border-2 border-dashed border-[#ede9e1] rounded-2xl py-3.5 text-[#0f172a] hover:border-[#0d9488] hover:text-[#0d9488] hover:bg-white text-sm font-bold transition-all flex items-center justify-center gap-2"
+              >
+                + Yana savol qo&apos;shish
+              </button>
+            </>
           )}
         </section>
 
@@ -461,6 +484,64 @@ export function ExamEditor({ examId, initial }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Type-picker modal */}
+      <Modal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Savol turini tanlang"
+        size="md"
+        theme="light"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {ALL_TYPES.map((t) => {
+            const Icon = COMPONENT_ICONS[t];
+            const badge = COMPONENT_BADGE_STYLES[t] ?? '';
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => pickType(t)}
+                className="text-left px-3 py-2.5 rounded-xl border-[1.5px] border-[#ede9e1] hover:border-[#0d9488] hover:bg-[#f7f4ef] transition-colors flex items-center gap-3"
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${badge}`}
+                >
+                  {Icon ? <Icon size={16} /> : null}
+                </div>
+                <span className="text-sm font-bold text-[#0f172a]">
+                  {COMPONENT_LABELS[t]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
+
+      {/* Configurator modal */}
+      <Modal
+        open={configType !== null}
+        onClose={closeConfigurator}
+        title={
+          editingQuestion
+            ? `${COMPONENT_LABELS[editingQuestion.type] ?? editingQuestion.type} — tahrir`
+            : configType
+              ? `${COMPONENT_LABELS[configType] ?? configType} — yangi`
+              : ''
+        }
+        size="lg"
+        theme="light"
+      >
+        {configType && (
+          <ComponentConfigurator
+            type={configType}
+            initialConfig={editingQuestion?.config}
+            onSubmit={handleConfigSubmit}
+            onCancel={closeConfigurator}
+            saving={savingConfig}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

@@ -56,10 +56,13 @@ export class ExamsController {
   @Roles(UserRole.student)
   submit(
     @Param('id') id: string,
-    @Body('answers') answers: number[],
+    @Body() body: { answers?: number[]; results?: boolean[] },
     @Request() req: any,
   ) {
-    return this.exams.submit(id, req.user.userId, answers ?? []);
+    return this.exams.submit(id, req.user.userId, {
+      answers: body.answers,
+      results: body.results,
+    });
   }
 
   @Get('student/:studentId')

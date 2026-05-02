@@ -16,9 +16,8 @@ interface ExamFromApi {
   isPublished: boolean;
   questions: Array<{
     id: string;
-    text: string;
-    options: unknown;
-    correctIndex: number;
+    type: string;
+    config: Record<string, unknown>;
     orderIndex: number;
   }>;
 }
@@ -47,14 +46,8 @@ export default function EditExamPage() {
             .sort((a, b) => a.orderIndex - b.orderIndex)
             .map((q) => ({
               id: q.id,
-              text: q.text,
-              // `options` comes back as Json — server stored a string[] —
-              // but the Prisma type is `unknown`, so guard before passing
-              // a non-array shape to the editor (which would crash on map).
-              options: Array.isArray(q.options)
-                ? (q.options as unknown[]).map((o) => String(o ?? ''))
-                : ['', '', '', ''],
-              correctIndex: q.correctIndex,
+              type: q.type,
+              config: q.config ?? {},
               orderIndex: q.orderIndex,
             })),
         });
