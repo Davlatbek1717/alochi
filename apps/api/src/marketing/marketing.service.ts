@@ -128,13 +128,27 @@ export class MarketingService {
     const progressPct =
       totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
 
+    // PII trim: this endpoint is unauthenticated, so a scraper that
+    // walks UUIDs (or just enumerates /marketing/students) shouldn't
+    // be able to reconstruct each child's day-by-day learning calendar.
+    // Round the join date to the start of its month and drop the exact
+    // per-lesson completedAt timestamps — keep only the public signal
+    // that the student is active and how far along they are.
+    const joinedMonth = new Date(
+      Date.UTC(
+        student.createdAt.getUTCFullYear(),
+        student.createdAt.getUTCMonth(),
+        1,
+      ),
+    );
+
     return {
       id: student.id,
       name: student.name,
       region: student.region,
       school: student.school,
       avatarUrl: student.avatarUrl,
-      joinedAt: student.createdAt,
+      joinedAt: joinedMonth,
       completedLessons: completed,
       totalLessons,
       progress: progressPct,
@@ -143,7 +157,6 @@ export class MarketingService {
         lessonOrder: p.lesson?.orderNumber ?? null,
         sessionCount: p.sessionCount,
         academyCompleted: p.academyCompleted,
-        completedAt: p.completedAt,
       })),
     };
   }
@@ -164,14 +177,27 @@ export class MarketingService {
           distinct: ['school'],
         }),
         this.prisma.lesson.count({ where: { isPublished: true } }),
+        // Without the student-status filter this counted progress rows
+        // owned by deactivated/blocked accounts too — and the avgProgress
+        // ratio uses `totalStudents` (active-only), so the numerator and
+        // denominator drifted out of agreement, inflating the headline.
+        // Scope both sides to active students.
         this.prisma.studentProgress.count({
-          where: { academyCompleted: true },
+          where: {
+            academyCompleted: true,
+            student: { status: 'active' },
+          },
         }),
       ]);
 
     const avgProgress =
       totalStudents > 0 && totalLessons > 0
-        ? Math.round((completedSessions / (totalStudents * totalLessons)) * 100)
+        ? Math.min(
+            100,
+            Math.round(
+              (completedSessions / (totalStudents * totalLessons)) * 100,
+            ),
+          )
         : 0;
 
     return {

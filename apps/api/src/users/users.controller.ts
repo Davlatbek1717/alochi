@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -125,7 +126,11 @@ export class UsersController {
 
   @Patch(':id')
   @Roles(UserRole.superadmin, UserRole.filadmin)
-  update(@Param('id') id: string, @Body() data: any, @Request() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateUserDto,
+    @Request() req: any,
+  ) {
     return this.users.update(id, req.user.tenantId, data);
   }
 

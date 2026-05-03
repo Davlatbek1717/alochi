@@ -180,8 +180,19 @@ export class ExamsService {
       });
     }
 
-    const score = total > 0 ? Math.round((correct / total) * 100) : 100;
-    const passed = total === 0 || correct / total >= passThresholdRatio;
+    // total === 0 means we found a permission whose lesson/exam has
+    // zero gradable questions. Without this guard the next two lines
+    // would auto-award 100% and mark the exam passed, which a mentor
+    // could exploit by granting a lesson-bound permission for any
+    // lesson that happens to have no MCQ components — the student
+    // would auto-complete the lesson without answering anything.
+    if (total === 0) {
+      throw new BadRequestException(
+        'Bu darsda yoki imtihonda baholanadigan savollar mavjud emas',
+      );
+    }
+    const score = Math.round((correct / total) * 100);
+    const passed = correct / total >= passThresholdRatio;
     const status = passed ? ExamStatus.done : ExamStatus.failed;
 
     await this.prisma.examPermission.update({

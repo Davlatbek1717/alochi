@@ -223,6 +223,11 @@ export class UsersService {
       branchId?: string;
       role?: UserRole;
       groupId?: string | null;
+      region?: string | null;
+      school?: string | null;
+      avatarUrl?: string | null;
+      parentTelegramId?: string | null;
+      birthDate?: string | null;
     },
   ) {
     const before = await this.prisma.user.findFirst({
@@ -231,7 +236,19 @@ export class UsersService {
     });
     if (!before) throw new NotFoundException('Foydalanuvchi topilmadi');
 
-    const updated = await this.prisma.user.update({ where: { id }, data });
+    // birthDate arrives as an ISO date string; Prisma needs a Date for
+    // a @db.Date column. Pass undefined when the field wasn't sent so
+    // we don't accidentally clear it.
+    const { birthDate, ...rest } = data;
+    const updateData: Record<string, unknown> = { ...rest };
+    if (birthDate !== undefined) {
+      updateData.birthDate = birthDate ? new Date(birthDate) : null;
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
 
     // Auto-friendship on group join (null → set, or change to a new group)
     const newGroupId = data.groupId ?? null;

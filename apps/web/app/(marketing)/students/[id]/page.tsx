@@ -11,7 +11,6 @@ interface RecentLesson {
   lessonOrder: number;
   sessionCount: number;
   academyCompleted: boolean;
-  completedAt: string;
 }
 
 interface StudentDetail {
@@ -307,9 +306,6 @@ export default async function StudentProfilePage({
                       <div className="mt-0.5 flex flex-wrap items-center gap-3 text-[11px] font-semibold text-[#94a3b8]">
                         <span className="inline-flex items-center gap-1">
                           <Clock size={10} strokeWidth={2.5} />
-                          {formatDate(lesson.completedAt)}
-                        </span>
-                        <span>
                           {lesson.sessionCount} sessiya
                         </span>
                         {lesson.academyCompleted && (

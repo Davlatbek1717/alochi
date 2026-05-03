@@ -123,35 +123,44 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token yaroqsiz');
     }
 
-    // Then look up DB record by hash
-    const stored = await this.prisma.refreshToken.findUnique({
-      where: { token: this.hashToken(token) },
-      include: { user: true },
+    const tokenHash = this.hashToken(token);
+
+    // Atomic rotation: read + delete + create live in one transaction so
+    // two parallel refresh calls (e.g. a double-tap on a slow client)
+    // can't both pass the read, both proceed, and leave the user with
+    // a deleted-then-recreated row whose hash neither client knows.
+    // The interactive form returns a typed result we surface up to the
+    // jwt-signing step below; signing happens outside the transaction
+    // because it is pure CPU and we don't want to hold a row lock for
+    // it.
+    const result = await this.prisma.$transaction(async (tx) => {
+      const stored = await tx.refreshToken.findUnique({
+        where: { token: tokenHash },
+        include: { user: true },
+      });
+      if (!stored || stored.expiresAt < new Date()) {
+        throw new UnauthorizedException('Refresh token yaroqsiz');
+      }
+      // A valid refresh token alone is not enough — the user behind it
+      // must still be active. Without this check, accounts blocked for
+      // warnings / missed payment / manual deactivation could keep
+      // minting fresh 1-hour access tokens until the refresh row
+      // expired naturally, which neutralises every form of block.
+      if (stored.user.status !== UserStatus.active) {
+        // Burn the row inside the same transaction so the client can't
+        // keep hammering /auth/refresh with a now-useless row.
+        await tx.refreshToken.delete({ where: { id: stored.id } });
+        throw new UnauthorizedException('Profilingiz bloklangan');
+      }
+      await tx.refreshToken.delete({ where: { id: stored.id } });
+      return { user: stored.user };
     });
 
-    if (!stored || stored.expiresAt < new Date()) {
-      throw new UnauthorizedException('Refresh token yaroqsiz');
-    }
-
-    // A valid refresh token alone is not enough — the user behind it must
-    // still be active. Without this check, accounts that were blocked
-    // (warnings, missed payment, manual deactivation) keep minting fresh
-    // 1-hour access tokens until their refresh token expires naturally,
-    // which neutralises the block entirely.
-    if (stored.user.status !== UserStatus.active) {
-      // Burn the token alongside the rejection so the client can't keep
-      // hammering /auth/refresh with the same valid-but-now-useless row.
-      await this.prisma.refreshToken.delete({ where: { id: stored.id } });
-      throw new UnauthorizedException('Profilingiz bloklangan');
-    }
-
-    await this.prisma.refreshToken.delete({ where: { id: stored.id } });
-
     const payload = {
-      sub: stored.user.id,
-      role: stored.user.role,
-      tenantId: stored.user.tenantId,
-      branchId: stored.user.branchId,
+      sub: result.user.id,
+      role: result.user.role,
+      tenantId: result.user.tenantId,
+      branchId: result.user.branchId,
     };
 
     const newAccess = this.jwt.sign(payload, { expiresIn: '1h' });
@@ -164,7 +173,7 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 7);
     await this.prisma.refreshToken.create({
       data: {
-        userId: stored.user.id,
+        userId: result.user.id,
         token: this.hashToken(newRefresh),
         expiresAt,
       },
