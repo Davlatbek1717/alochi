@@ -460,9 +460,35 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
       });
       raw = (resp.text ?? '').trim();
     } catch (err) {
-      this.logger.error(`Gemini call failed: ${(err as Error).message}`);
+      const msg = (err as Error).message ?? '';
+      this.logger.error(`Gemini call failed: ${msg}`);
+      // Surface quota / billing problems with a message the operator
+      // can act on. Free tier is 20 RPD on gemini-2.5-flash; once
+      // tripped, every subsequent call returns 429 RESOURCE_EXHAUSTED.
+      // Users see this message verbatim, so it has to be actionable.
+      const isQuota =
+        msg.includes('RESOURCE_EXHAUSTED') ||
+        msg.includes('quota') ||
+        msg.includes('429');
+      if (isQuota) {
+        throw new ServiceUnavailableException(
+          'AI imtihon kunlik chegaraga yetdi. Iltimos, kechroq qayta urinib ' +
+            "ko'ring yoki administratorga GEMINI_API_KEY ni yangilash haqida xabar bering.",
+        );
+      }
+      const isAuth =
+        msg.includes('401') ||
+        msg.includes('403') ||
+        msg.includes('API key') ||
+        msg.includes('PERMISSION_DENIED');
+      if (isAuth) {
+        throw new ServiceUnavailableException(
+          'AI imtihon servisining kaliti yaroqsiz. Administratorga xabar bering.',
+        );
+      }
       throw new ServiceUnavailableException(
-        'AI imtihon servisi vaqtincha ishlamayapti',
+        'AI imtihon servisi vaqtincha ishlamayapti. Birozdan keyin urinib ' +
+          "ko'ring.",
       );
     }
 
