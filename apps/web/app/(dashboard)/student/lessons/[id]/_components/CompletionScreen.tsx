@@ -112,12 +112,12 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
       : 0;
 
   return (
-    <div className="relative min-h-screen bg-[#fffaf0] overflow-hidden">
+    <div className="relative min-h-full bg-[#fffaf0] overflow-hidden">
       {/* Confetti only on the real lesson completion — keeps "session N
           of M" reads as a milestone, not a finale. */}
       {!isSessionOnly && <Confetti count={32} />}
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-10 text-center">
+      <div className="relative z-10 min-h-full flex flex-col items-center justify-center px-6 py-10 text-center">
         <div className="motion-safe:[animation:bounce-in_600ms_ease-out]">
           <Mascot
             expression={isSessionOnly ? 'idle' : 'happy'}

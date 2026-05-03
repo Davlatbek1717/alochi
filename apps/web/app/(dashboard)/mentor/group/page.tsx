@@ -310,7 +310,7 @@ export default function MentorGroupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-5">
           <Skeleton className="h-3 w-16 mb-1" />
           <Skeleton className="h-6 w-24 mb-4" />
@@ -341,7 +341,7 @@ export default function MentorGroupPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-3">
           <p className="text-rose-500 text-sm font-bold">{error}</p>
           <button
@@ -357,7 +357,7 @@ export default function MentorGroupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] pb-32">
+    <div className="min-h-full bg-[#f7f4ef] pb-32">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative overflow-hidden">
         <div

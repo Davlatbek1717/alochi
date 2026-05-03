@@ -34,7 +34,7 @@ export default function TesterCurrentLessonPage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-10 text-center max-w-sm w-full space-y-4">
           <div className="w-20 h-20 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center mx-auto">
             <Trophy size={36} className="text-amber-500" />
@@ -61,7 +61,7 @@ export default function TesterCurrentLessonPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+    <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
       <div className="flex flex-col items-center gap-4">
         <Skeleton theme="light" className="w-16 h-16 rounded-2xl" />
         <div className="space-y-2 w-48">

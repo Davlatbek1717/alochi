@@ -651,7 +651,7 @@ export default function LessonPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#fffaf0]">
+      <div className="min-h-full bg-[#fffaf0]">
         <div className="px-4 pt-5 pb-4 sticky top-0 bg-[#fffaf0] z-30 border-b border-[#f3eedf]">
           <div className="flex items-center gap-3">
             <Skeleton theme="light" className="w-10 h-10 rounded-full shrink-0" />
@@ -669,7 +669,7 @@ export default function LessonPage() {
 
   if (error || !lesson) {
     return (
-      <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center p-4">
+      <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
           <div className="flex justify-center">
             <Mascot expression="sad" size={120} animated />
@@ -789,7 +789,7 @@ export default function LessonPage() {
 
   // ─── Running lesson ───────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#fffaf0]">
+    <div className="min-h-full bg-[#fffaf0]">
       {/* Exit confirmation modal — cream theme to match the page. */}
       <Modal
         open={exitModalOpen}

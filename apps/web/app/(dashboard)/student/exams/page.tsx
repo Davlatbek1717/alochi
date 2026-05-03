@@ -261,7 +261,7 @@ export default function StudentExamsPage() {
   // ─── Loading ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-6">
           <Skeleton className="h-3 w-20 mb-2 rounded" />
           <Skeleton className="h-6 w-32 rounded" />
@@ -278,7 +278,7 @@ export default function StudentExamsPage() {
   if (result) {
     const passed = result.passed;
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-5">
           <div
             className={`w-20 h-20 rounded-full border-4 flex items-center justify-center mx-auto ${
@@ -331,7 +331,7 @@ export default function StudentExamsPage() {
   // ─── Aborted (camera) ─────────────────────────────────────────────────────
   if (examAborted) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
           <div className="w-16 h-16 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center mx-auto">
             <AlertTriangle size={32} className="text-rose-500" />
@@ -358,7 +358,7 @@ export default function StudentExamsPage() {
   // ─── No active exam ───────────────────────────────────────────────────────
   if (!permission) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
           <div
             className="absolute top-0 right-0 w-48 h-48 md:w-72 md:h-72 rounded-full opacity-10"
@@ -391,7 +391,7 @@ export default function StudentExamsPage() {
   // ─── Submitting overlay ───────────────────────────────────────────────────
   if (submitting) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
           <span className="w-10 h-10 border-4 border-[#0d9488]/30 border-t-[#0d9488] rounded-full animate-spin mx-auto block" />
           <p className="text-[#0f172a] font-bold">Topshirilmoqda...</p>
@@ -460,7 +460,7 @@ export default function StudentExamsPage() {
   if (permission.lesson) {
     const allAnswered = legacyAnswers.every((a) => a !== null);
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <ExamHeader
           title={examTitle}
           cameraWarnings={cameraWarnings}
@@ -549,7 +549,7 @@ export default function StudentExamsPage() {
   if (!q) {
     // Edge case: empty question set
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-amber-200 p-8 text-center max-w-sm w-full space-y-4">
           <AlertTriangle size={32} className="text-amber-500 mx-auto" />
           <p className="text-[#0f172a] font-bold">
@@ -569,7 +569,7 @@ export default function StudentExamsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Sticky header: title + question counter + progress bar */}
       <header className="sticky top-0 z-30 bg-[#0f172a] border-b border-white/10">
         <div className="px-4 pt-4 pb-2">
@@ -898,7 +898,7 @@ function CompletedTestExamResult({
   passThreshold: number;
 }) {
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+    <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
       <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-5">
         <div
           className={`w-20 h-20 rounded-full border-4 flex items-center justify-center mx-auto ${

@@ -141,7 +141,7 @@ export default function GroupChatPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
         <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
       </div>
     );
@@ -149,7 +149,7 @@ export default function GroupChatPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-3">
           <p className="text-rose-500 text-sm">{error}</p>
           <button

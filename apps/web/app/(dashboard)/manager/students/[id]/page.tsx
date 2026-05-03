@@ -228,7 +228,7 @@ export default function StudentProfilePage() {
 
   if (studentError) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-4">
           <div className="w-12 h-12 mx-auto rounded-full bg-rose-100 flex items-center justify-center">
             <AlertCircle size={24} className="text-rose-600" />
@@ -247,7 +247,7 @@ export default function StudentProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-[#0f172a] text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
           {toast}

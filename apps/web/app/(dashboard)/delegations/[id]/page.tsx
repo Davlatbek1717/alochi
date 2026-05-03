@@ -118,7 +118,7 @@ export default function DelegationDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
       </div>
     );
@@ -128,7 +128,7 @@ export default function DelegationDetailPage() {
   const statusCfg = STATUS_CONFIG[status] ?? { label: status, className: 'bg-white/10 text-white border-white/20' };
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] print:bg-white">
+    <div className="min-h-full bg-[#f7f4ef] print:bg-white">
       {/* Print-only styles — collapse the dashboard chrome (TopNav,
           dark header, sticky elements) and render a clean white-paper
           audit record. Tailwind ships a `print:` variant for the

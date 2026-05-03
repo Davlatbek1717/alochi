@@ -53,7 +53,7 @@ export default function ManagerCertificatesPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5 space-y-4">
+    <div className="min-h-full bg-[#f7f4ef] p-5 space-y-4">
       <div className="flex items-center gap-2">
         <Award size={20} className="text-amber-500" />
         <h1 className="text-xl font-bold text-[#0f172a]">Sertifikatlar</h1>

@@ -83,7 +83,7 @@ export default function MentorStudentsPage() {
   }, [students, search]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] pb-28">
+    <div className="min-h-full bg-[#f7f4ef] pb-28">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div

@@ -45,7 +45,7 @@ export default function StaffAttendanceHistoryPage() {
   }, [from, to]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5">
+    <div className="min-h-full bg-[#f7f4ef] p-5">
       <div className="flex items-center gap-2 mb-4">
         <CalendarRange size={20} />
         <h1 className="text-xl font-bold text-[#0f172a]">Xodim davomat tarixi</h1>

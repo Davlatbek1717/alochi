@@ -245,7 +245,7 @@ export default function LessonsPathPage() {
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#fffaf0]">
+    <div className="min-h-full bg-[#fffaf0]">
       {/* Sticky top bar with overall progress ribbon */}
       <header className="sticky top-0 z-30 bg-[#fffaf0]/95 backdrop-blur border-b border-[#ede9e1]">
         <div className="max-w-lg mx-auto md:max-w-4xl lg:max-w-5xl px-4 md:px-6 pt-3 pb-2.5">

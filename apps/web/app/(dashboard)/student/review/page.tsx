@@ -49,7 +49,7 @@ export default function ReviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
           <Skeleton className="h-4 w-20 mb-4 rounded" />
           <Skeleton className="h-1.5 w-full rounded-full" />
@@ -63,7 +63,7 @@ export default function ReviewPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
+      <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-sm">
           <EmptyState
             theme="light"
@@ -89,7 +89,7 @@ export default function ReviewPage() {
   if (done) {
     const pct = Math.round((correct / items.length) * 100);
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6 text-center">
         <Trophy size={56} className="text-amber-500 mb-4" />
         <h2 className="text-2xl font-black text-gray-900 mb-1">Barakalla!</h2>
         <p className="text-gray-500 text-sm mb-6">{items.length} ta so&apos;zdan {correct} tasini bildingiz</p>
@@ -119,7 +119,7 @@ export default function ReviewPage() {
   const progress = ((current) / items.length) * 100;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex flex-col">
+    <div className="min-h-full bg-[#f7f4ef] flex flex-col">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
         <div className="flex items-center justify-between mb-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl">

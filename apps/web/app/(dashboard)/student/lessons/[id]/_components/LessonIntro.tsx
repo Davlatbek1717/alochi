@@ -47,7 +47,7 @@ export const LessonIntro: FC<LessonIntroProps> = ({
   const minutes = estimatedMinutes ?? 5;
 
   return (
-    <div className="min-h-screen bg-[#fffaf0] flex flex-col">
+    <div className="min-h-full bg-[#fffaf0] flex flex-col">
       {/* Top bar — just a close button, max breathing room. */}
       <div className="flex items-center px-4 pt-4">
         <button

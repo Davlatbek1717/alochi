@@ -283,7 +283,7 @@ export default function EditLessonPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] p-4 md:p-6 space-y-4">
+      <div className="min-h-full bg-[#f7f4ef] p-4 md:p-6 space-y-4">
         <Skeleton theme="light" className="h-6 w-32" />
         <Skeleton theme="light" className="h-8 w-64" />
         <Skeleton theme="light" className="h-24 w-full rounded-2xl" />
@@ -294,7 +294,7 @@ export default function EditLessonPage() {
 
   if (!lesson || !form) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
         <EmptyState
           theme="light"
           icon={<BookOpen size={28} />}
@@ -309,7 +309,7 @@ export default function EditLessonPage() {
   const ytId = getYoutubeId(form.youtubeUrl);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div

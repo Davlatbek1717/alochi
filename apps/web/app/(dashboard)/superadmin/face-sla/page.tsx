@@ -35,7 +35,7 @@ export default function FaceSlaPage() {
   }, [load]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5">
+    <div className="min-h-full bg-[#f7f4ef] p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <ScanFace size={20} />

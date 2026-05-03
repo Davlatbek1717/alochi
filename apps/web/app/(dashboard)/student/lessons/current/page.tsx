@@ -26,7 +26,7 @@ export default function CurrentLessonPage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-6">
         <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-4 shadow-sm">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-[3px] border-[#fef3c7] flex items-center justify-center mx-auto shadow">
             <Trophy size={36} className="text-white" />
@@ -52,7 +52,7 @@ export default function CurrentLessonPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center p-6">
+    <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-6">
       <div
         className="flex flex-col items-center gap-3 motion-safe:[animation:count-up-fade_500ms_ease-out]"
         role="status"

@@ -183,7 +183,7 @@ export default function FiladminStudentDetailPage() {
 
   if (fatalError) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-4">
           <div className="w-12 h-12 mx-auto rounded-full bg-rose-100 flex items-center justify-center">
             <AlertCircle size={24} className="text-rose-600" />
@@ -206,7 +206,7 @@ export default function FiladminStudentDetailPage() {
   const unpaid = payments.filter((p) => p.status !== 'paid').length;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div

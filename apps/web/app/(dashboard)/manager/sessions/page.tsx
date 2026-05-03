@@ -116,7 +116,7 @@ export default function ManagerSessionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative">
         <div
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"

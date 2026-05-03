@@ -64,7 +64,7 @@ export default function SuperadminBlockedStudentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5">
+    <div className="min-h-full bg-[#f7f4ef] p-5">
       <h1 className="text-xl font-bold text-[#0f172a] mb-4">
         Bloklangan o&apos;quvchilar
       </h1>

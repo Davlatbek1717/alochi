@@ -100,7 +100,7 @@ export default function TesterTasksPage() {
   }, [tasks, search, filter]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] pb-10">
+    <div className="min-h-full bg-[#f7f4ef] pb-10">
       {/* Header — dark navy + amber radial accent (staff theme) */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div

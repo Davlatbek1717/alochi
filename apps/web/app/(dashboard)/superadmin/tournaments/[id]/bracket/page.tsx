@@ -24,7 +24,7 @@ export default function TournamentBracketPage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5">
+    <div className="min-h-full bg-[#f7f4ef] p-5">
       <div className="flex items-center gap-2 mb-4">
         <Trophy size={20} className="text-amber-500" />
         <h1 className="text-xl font-bold text-[#0f172a]">Turnir setkasi</h1>

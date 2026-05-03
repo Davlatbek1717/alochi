@@ -417,7 +417,7 @@ export function OralExamRunner({
   // AI's voice on mount. The "Imtihonni boshlash" CTA is that gesture.
   if (!started && !finalResult) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center px-4 py-8">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center px-4 py-8">
         <div className="max-w-md w-full bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-6 md:p-8 space-y-5 text-center">
           <div className="w-20 h-20 rounded-3xl bg-violet-100 border-2 border-violet-200 flex items-center justify-center mx-auto">
             <Volume2 size={40} className="text-violet-600" />
@@ -493,7 +493,7 @@ export function OralExamRunner({
     const passed = finalResult.passed;
     const a = finalResult.analysis ?? {};
     return (
-      <div className="min-h-screen bg-[#f7f4ef] px-4 md:px-6 py-8 md:py-12">
+      <div className="min-h-full bg-[#f7f4ef] px-4 md:px-6 py-8 md:py-12">
         <div className="max-w-2xl mx-auto space-y-5">
           <div
             className={`rounded-3xl border-[1.5px] p-6 md:p-8 text-center ${
@@ -595,7 +595,7 @@ export function OralExamRunner({
   const overTime = elapsedMin >= maxMinutes;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex flex-col">
+    <div className="min-h-full bg-[#f7f4ef] flex flex-col">
       {/* Header — exam title + timer + finish button */}
       <div className="bg-[#0f172a] px-4 md:px-6 pt-4 pb-4 sticky top-0 z-30 border-b border-white/5">
         <div className="max-w-3xl mx-auto flex items-center gap-3">

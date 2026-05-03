@@ -45,7 +45,7 @@ export default function TournamentDetailPage() {
   const formatHour = formatTime;
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           className="absolute top-0 left-0 w-40 h-40 rounded-full opacity-10"

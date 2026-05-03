@@ -133,7 +133,7 @@ export default function DuelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
         <p className="text-[#64748b]">Yuklanmoqda...</p>
       </div>
     );
@@ -141,7 +141,7 @@ export default function DuelPage() {
 
   if (error || !duel) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-4">
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-4">
         <p className="text-[#e11d48]">{error || 'Duel topilmadi'}</p>
       </div>
     );
@@ -158,7 +158,7 @@ export default function DuelPage() {
   }[duel.status];
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Hero header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-8 md:px-8 md:py-8 relative overflow-hidden">
         <div

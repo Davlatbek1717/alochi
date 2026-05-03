@@ -218,7 +218,7 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-7xl space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
+      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-7xl space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-full">
         <Skeleton theme="light" className="h-32 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
@@ -230,7 +230,7 @@ export default function StudentDashboard() {
   const activeWarnings = warnings.filter((w) => !w.isCancelled);
 
   return (
-    <div className="bg-[#fffaf0] min-h-screen">
+    <div className="bg-[#fffaf0] min-h-full">
       {/* Phone: single-column. Tablet/Desktop: 12-col grid (left 5, right 7). */}
       <div className="max-w-lg mx-auto lg:max-w-7xl pb-28 pt-4 px-4 md:px-6 lg:px-8">
         {/* ── TABLET/DESKTOP 2-column grid ── */}

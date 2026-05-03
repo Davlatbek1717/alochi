@@ -44,7 +44,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-8 relative overflow-hidden">
           <div
             className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
@@ -81,7 +81,7 @@ export default function ProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-6">
           <p className="text-white font-bold text-lg mt-4">Mening Profilim</p>
         </div>
@@ -97,7 +97,7 @@ export default function ProfilePage() {
   const tgLink = telegramDeepLink();
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-8 relative overflow-hidden">
         <div

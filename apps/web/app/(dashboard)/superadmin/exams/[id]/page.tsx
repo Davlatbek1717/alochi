@@ -69,7 +69,7 @@ export default function EditExamPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] p-4 md:p-6 space-y-4">
+      <div className="min-h-full bg-[#f7f4ef] p-4 md:p-6 space-y-4">
         <Skeleton theme="light" className="h-6 w-32" />
         <Skeleton theme="light" className="h-8 w-64" />
         <Skeleton theme="light" className="h-32 w-full rounded-2xl" />
@@ -80,7 +80,7 @@ export default function EditExamPage() {
 
   if (notFound || !initial) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-full bg-[#f7f4ef]">
         <div className="bg-[#0f172a] px-5 pt-5 pb-6">
           <Link
             href="/superadmin/exams"

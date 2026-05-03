@@ -91,7 +91,7 @@ export default function SuperadminTemplatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-full bg-[#f7f4ef]">
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">

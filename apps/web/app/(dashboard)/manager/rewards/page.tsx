@@ -170,7 +170,7 @@ export default function ManagerRewardsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] p-5 space-y-5">
+    <div className="min-h-full bg-[#f7f4ef] p-5 space-y-5">
       <div className="flex items-center gap-2">
         <Gift size={20} className="text-amber-500" />
         <h1 className="text-xl font-bold text-[#0f172a]">Sovgʻa va Kitob</h1>
