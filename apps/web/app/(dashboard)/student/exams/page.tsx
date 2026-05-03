@@ -30,6 +30,7 @@ import type {
 } from '../lessons/[id]/_components/exercise-types';
 import { ProgressBar } from '../lessons/[id]/_components/ProgressBar';
 import { CameraMonitor } from '../lessons/[id]/_components/CameraMonitor';
+import { OralExamRunner } from './_components/OralExamRunner';
 
 import { apiRequest } from '@/lib/api';
 import { Button, Skeleton, EmptyState } from '@/components/ui';
@@ -68,6 +69,10 @@ type ActiveExam = {
     id: string;
     title: string;
     description: string | null;
+    kind: 'test' | 'ai_oral';
+    language: 'uz' | 'en' | null;
+    aiPrompt: string | null;
+    maxMinutes: number | null;
     passThreshold: number;
     timeLimitMinutes: number | null;
     questions: ExamQuestion[];
@@ -380,6 +385,19 @@ export default function StudentExamsPage() {
   // ─── Shared header renderer ───────────────────────────────────────────────
   const examTitle =
     permission.exam?.title ?? permission.lesson?.title ?? 'Imtihon';
+
+  // ─── AI oral exam — separate runner with mic/TTS chat UI ─────────────────
+  if (permission.exam && permission.exam.kind === 'ai_oral') {
+    return (
+      <OralExamRunner
+        permissionId={permission.id}
+        examTitle={examTitle}
+        language={(permission.exam.language ?? 'en') as 'uz' | 'en'}
+        passThreshold={permission.exam.passThreshold}
+        maxMinutes={permission.exam.maxMinutes ?? 10}
+      />
+    );
+  }
 
   // ─── Legacy lesson-anchored MCQ exam ─────────────────────────────────────
   if (permission.lesson) {

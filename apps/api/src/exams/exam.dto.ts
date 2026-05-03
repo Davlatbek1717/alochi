@@ -50,6 +50,12 @@ export class ExamQuestionInputDto {
   orderIndex?: number;
 }
 
+export const EXAM_KINDS = ['test', 'ai_oral'] as const;
+export type ExamKind = (typeof EXAM_KINDS)[number];
+
+export const ORAL_LANGUAGES = ['uz', 'en'] as const;
+export type OralLanguage = (typeof ORAL_LANGUAGES)[number];
+
 export class CreateExamDto {
   @IsString()
   @IsNotEmpty()
@@ -58,6 +64,26 @@ export class CreateExamDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(EXAM_KINDS as unknown as string[])
+  kind?: ExamKind;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(ORAL_LANGUAGES as unknown as string[])
+  language?: OralLanguage;
+
+  @IsString()
+  @IsOptional()
+  aiPrompt?: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(2)
+  @Max(60)
+  maxMinutes?: number;
 
   @IsInt()
   @IsOptional()
@@ -91,6 +117,26 @@ export class UpdateExamDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(EXAM_KINDS as unknown as string[])
+  kind?: ExamKind;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(ORAL_LANGUAGES as unknown as string[])
+  language?: OralLanguage;
+
+  @IsString()
+  @IsOptional()
+  aiPrompt?: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(2)
+  @Max(60)
+  maxMinutes?: number;
 
   @IsInt()
   @IsOptional()

@@ -34,6 +34,15 @@ export interface ExamQuestion {
 export interface ExamPayload {
   title: string;
   description: string;
+  /** "test" — classic 12-exercise question runner (default).
+   *  "ai_oral" — AI-driven oral conversation exam (Gemini). */
+  kind: 'test' | 'ai_oral';
+  /** Required for ai_oral. Ignored for test. */
+  language: 'uz' | 'en';
+  /** AI instructions for the conversation (what to ask, how to grade). */
+  aiPrompt: string;
+  /** Soft cap on conversation length, ai_oral only. */
+  maxMinutes: number;
   passThreshold: number;
   timeLimitMinutes: number | null;
   isPublished: boolean;
@@ -163,21 +172,38 @@ export function ExamEditor({ examId, initial }: Props) {
       toast.error("O'tish foizi 0 dan 100 gacha bo'lsin");
       return;
     }
+    if (form.kind === 'ai_oral' && !form.aiPrompt.trim()) {
+      toast.error("AI imtihon uchun yo'l-yo'riq matnini kiriting");
+      return;
+    }
 
     setSaving(true);
     const token = localStorage.getItem('accessToken') ?? '';
     const body = {
       title: form.title.trim(),
       description: form.description.trim() || undefined,
+      kind: form.kind,
+      // Only send ai-only fields when kind=ai_oral so the server can
+      // null them out when the admin switches a test exam to oral.
+      ...(form.kind === 'ai_oral'
+        ? {
+            language: form.language,
+            aiPrompt: form.aiPrompt.trim(),
+            maxMinutes: form.maxMinutes,
+          }
+        : {}),
       passThreshold: form.passThreshold,
       timeLimitMinutes: form.timeLimitMinutes ?? undefined,
       isPublished: form.isPublished,
-      questions: form.questions.map((q, i) => ({
-        ...(q.id ? { id: q.id } : {}),
-        type: q.type,
-        config: q.config,
-        orderIndex: i,
-      })),
+      questions:
+        form.kind === 'ai_oral'
+          ? []
+          : form.questions.map((q, i) => ({
+              ...(q.id ? { id: q.id } : {}),
+              type: q.type,
+              config: q.config,
+              orderIndex: i,
+            })),
     };
 
     try {
@@ -318,7 +344,130 @@ export function ExamEditor({ examId, initial }: Props) {
           </label>
         </section>
 
-        {/* Questions section */}
+        {/* Imtihon turi tanlovi — Test (klassik) yoki AI og'zaki */}
+        <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5 space-y-4">
+          <p className={fieldLabel}>Imtihon turi</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => patch('kind', 'test')}
+              className={`text-left rounded-xl border-[1.5px] p-4 transition-colors ${
+                form.kind === 'test'
+                  ? 'border-[#0d9488] bg-[#0d9488]/5'
+                  : 'border-[#ede9e1] hover:border-[#0d9488]/40'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">📝</span>
+                <span className="font-extrabold text-sm text-[#0f172a]">Test</span>
+              </div>
+              <p className="text-[11px] font-semibold text-[#64748b] leading-snug">
+                12 turdagi topshiriqlardan tuzilgan klassik imtihon
+                (MCQ, so&apos;z tartibi, tarjima va h.k.)
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => patch('kind', 'ai_oral')}
+              className={`text-left rounded-xl border-[1.5px] p-4 transition-colors ${
+                form.kind === 'ai_oral'
+                  ? 'border-[#7c3aed] bg-[#7c3aed]/5'
+                  : 'border-[#ede9e1] hover:border-[#7c3aed]/40'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">🎙️</span>
+                <span className="font-extrabold text-sm text-[#0f172a]">
+                  AI og&apos;zaki
+                </span>
+              </div>
+              <p className="text-[11px] font-semibold text-[#64748b] leading-snug">
+                AI o&apos;quvchi bilan og&apos;zaki suhbat o&apos;tkazadi va
+                javoblarini tahlil qilib ball beradi.
+              </p>
+            </button>
+          </div>
+
+          {/* AI og'zaki sozlamalari */}
+          {form.kind === 'ai_oral' && (
+            <div className="space-y-4 pt-2 border-t border-[#ede9e1]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={fieldLabel}>
+                    Til <span className="text-[#e11d48]">*</span>
+                  </label>
+                  <select
+                    value={form.language}
+                    onChange={(e) =>
+                      patch('language', e.target.value as 'uz' | 'en')
+                    }
+                    className={fieldInput}
+                  >
+                    <option value="en">Ingliz tili</option>
+                    <option value="uz">O&apos;zbek tili</option>
+                  </select>
+                  <p className="text-[11px] text-[#94a3b8] font-semibold mt-1">
+                    AI shu tilda gapiradi
+                  </p>
+                </div>
+                <div>
+                  <label className={fieldLabel}>
+                    Maks. davomiyligi (daqiqa)
+                  </label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={60}
+                    value={form.maxMinutes}
+                    onChange={(e) =>
+                      patch(
+                        'maxMinutes',
+                        Math.max(
+                          2,
+                          Math.min(60, Number(e.target.value) || 10),
+                        ),
+                      )
+                    }
+                    className={fieldInput}
+                  />
+                  <p className="text-[11px] text-[#94a3b8] font-semibold mt-1">
+                    AI shu vaqt atrofida tugatadi
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label className={fieldLabel}>
+                  AI nimani so&apos;rasin?{' '}
+                  <span className="text-[#e11d48]">*</span>
+                </label>
+                <textarea
+                  value={form.aiPrompt}
+                  onChange={(e) => patch('aiPrompt', e.target.value)}
+                  className={`${fieldInput} min-h-[120px] resize-y`}
+                  placeholder={`Misol: Talabaga sevimli ovqati haqida 2 ta savol ber. Keyin oilasi haqida so'ra. Ohirida bugungi ob-havoni tasvirlashini so'ra. Grammatika, lug'at boyligi va ravonligini 0-100 ball bilan baho.`}
+                />
+                <p className="text-[11px] text-[#94a3b8] font-semibold mt-1">
+                  AI imtihon davomida shu yo&apos;l-yo&apos;riq asosida
+                  savollar beradi va javoblarni baholaydi.
+                </p>
+              </div>
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 flex items-start gap-2">
+                <span className="text-violet-700 shrink-0 mt-0.5">ℹ️</span>
+                <p className="text-[11px] font-bold text-violet-800 leading-snug">
+                  AI og&apos;zaki imtihonda yuqoridagi
+                  &quot;Savollar&quot; bo&apos;limi ishlatilmaydi —
+                  AI prompt asosida AI o&apos;zi savol beradi.
+                  O&apos;quvchi ovozi orqali javob beradi va AI oxirida{' '}
+                  {form.passThreshold}% chegarasi bo&apos;yicha qaror chiqaradi.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Questions section — only for kind=test. AI oral exams are
+            driven by aiPrompt and don't need a question list. */}
+        {form.kind === 'test' && (
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
@@ -446,9 +595,10 @@ export function ExamEditor({ examId, initial }: Props) {
             </>
           )}
         </section>
+        )}
 
-        {/* Validation tip */}
-        {form.questions.length === 0 && (
+        {/* Validation tip — only meaningful for test exams */}
+        {form.kind === 'test' && form.questions.length === 0 && (
           <div className="bg-amber-50 border-[1.5px] border-amber-200 rounded-2xl p-3 flex items-start gap-2">
             <AlertTriangle size={14} className="text-amber-600 shrink-0 mt-0.5" />
             <p className="text-xs font-bold text-amber-800 leading-snug">

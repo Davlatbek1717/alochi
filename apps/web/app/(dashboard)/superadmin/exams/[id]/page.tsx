@@ -11,6 +11,10 @@ interface ExamFromApi {
   id: string;
   title: string;
   description: string | null;
+  kind: 'test' | 'ai_oral';
+  language: 'uz' | 'en' | null;
+  aiPrompt: string | null;
+  maxMinutes: number | null;
   passThreshold: number;
   timeLimitMinutes: number | null;
   isPublished: boolean;
@@ -38,6 +42,10 @@ export default function EditExamPage() {
         setInitial({
           title: exam.title,
           description: exam.description ?? '',
+          kind: (exam.kind ?? 'test') as 'test' | 'ai_oral',
+          language: (exam.language ?? 'en') as 'uz' | 'en',
+          aiPrompt: exam.aiPrompt ?? '',
+          maxMinutes: exam.maxMinutes ?? 10,
           passThreshold: exam.passThreshold,
           timeLimitMinutes: exam.timeLimitMinutes,
           isPublished: exam.isPublished,

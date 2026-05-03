@@ -889,10 +889,11 @@ model ExamPermission {
   grantedAt   DateTime   @default(now()) @map("granted_at")
   completedAt DateTime?  @map("completed_at")
 
-  student User    @relation("ExamStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  lesson  Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  exam    Exam?   @relation(fields: [examId], references: [id], onDelete: Cascade)
-  granter User    @relation("ExamGranter", fields: [grantedBy], references: [id], onDelete: Cascade)
+  student     User             @relation("ExamStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  lesson      Lesson?          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exam        Exam?            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  granter     User             @relation("ExamGranter", fields: [grantedBy], references: [id], onDelete: Cascade)
+  oralSession OralExamSession?
 
   @@unique([studentId, lessonId])
   @@unique([studentId, examId])
@@ -1136,20 +1137,64 @@ model Exam {
   tenantId         String   @map("tenant_id") @db.Uuid
   title            String
   description      String?
+  // "test" — classic 12-exercise question runner (default, back-compat).
+  // "ai_oral" — Gemini-driven oral conversation exam. AI speaks via TTS,
+  // student replies via mic; `aiPrompt` + `language` configure the
+  // session, no ExamQuestion rows are needed.
+  kind             String   @default("test")
+  // Conversation language for ai_oral exams. "uz" or "en". Ignored for
+  // test exams.
+  language         String?
+  // Free-form instructions for the AI conducting the oral exam — what
+  // to ask, what to evaluate, the difficulty level. Required for
+  // ai_oral exams, ignored otherwise.
+  aiPrompt         String?  @map("ai_prompt")
+  // Soft session length cap for ai_oral exams. The AI is told to wrap
+  // up around this mark.
+  maxMinutes       Int?     @default(10) @map("max_minutes")
   // Pass threshold as a percentage (0-100).
   passThreshold    Int      @default(70) @map("pass_threshold")
-  // Optional time budget; null means no enforcement.
+  // Optional time budget for test exams; null means no enforcement.
   timeLimitMinutes Int?     @map("time_limit_minutes")
   isPublished      Boolean  @default(false) @map("is_published")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  tenant      Tenant           @relation("TenantExams", fields: [tenantId], references: [id], onDelete: Cascade)
-  questions   ExamQuestion[]
-  permissions ExamPermission[]
+  tenant       Tenant            @relation("TenantExams", fields: [tenantId], references: [id], onDelete: Cascade)
+  questions    ExamQuestion[]
+  permissions  ExamPermission[]
+  oralSessions OralExamSession[]
 
   @@index([tenantId, isPublished])
   @@map("exams")
+}
+
+// One row per ai_oral exam attempt. Holds the running conversation
+// transcript so the student can reload mid-exam and the AI can evaluate
+// the full session at the end. `examPermissionId` is unique — a student
+// only has one active oral session per granted exam.
+model OralExamSession {
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  examPermissionId String    @unique @map("exam_permission_id") @db.Uuid
+  examId           String    @map("exam_id") @db.Uuid
+  studentId        String    @map("student_id") @db.Uuid
+  // "active" | "completed" | "expired"
+  status           String    @default("active")
+  // [{ role: "ai" | "student", text: string, ts: ISO }]
+  transcript       Json      @default("[]")
+  // { strengths: string[], weaknesses: string[], recommendations: string[], raw?: string }
+  aiAnalysis       Json?     @map("ai_analysis")
+  score            Int?
+  passed           Boolean?
+  startedAt        DateTime  @default(now()) @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+
+  exam       Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  permission ExamPermission @relation(fields: [examPermissionId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, status])
+  @@index([examId])
+  @@map("oral_exam_sessions")
 }
 
 model ExamQuestion {

@@ -1,19 +1,24 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { ExamsController } from './exams.controller';
 import { ExamsService } from './exams.service';
 import { ExamAdminController } from './exam.admin.controller';
 import { ExamService } from './exam.service';
+import { OralExamController } from './oral-exam.controller';
+import { OralExamService } from './oral-exam.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [PrismaModule],
-  // Two controllers, two services here:
+  imports: [PrismaModule, ConfigModule],
+  // Three flows, three controllers:
   //   - ExamsController/Service — legacy student-facing exam permission
   //     flow (mentor grants /exams/my-active, student takes lesson MCQ).
-  //   - ExamAdminController/ExamService — new superadmin CRUD for the
-  //     standalone Exam catalogue introduced in this phase.
-  controllers: [ExamsController, ExamAdminController],
-  providers: [ExamsService, ExamService],
-  exports: [ExamsService, ExamService],
+  //   - ExamAdminController/ExamService — superadmin CRUD for the
+  //     standalone Exam catalogue (kind=test).
+  //   - OralExamController/OralExamService — student-facing AI oral
+  //     exam (kind=ai_oral). Conversation runner backed by Gemini.
+  controllers: [ExamsController, ExamAdminController, OralExamController],
+  providers: [ExamsService, ExamService, OralExamService],
+  exports: [ExamsService, ExamService, OralExamService],
 })
 export class ExamsModule {}

@@ -39,15 +39,25 @@ export class ExamService {
   }
 
   async create(dto: CreateExamDto, tenantId: string) {
+    const kind = dto.kind ?? 'test';
     return this.prisma.exam.create({
       data: {
         tenantId,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
+        kind,
+        language: kind === 'ai_oral' ? (dto.language ?? 'en') : null,
+        aiPrompt: kind === 'ai_oral' ? dto.aiPrompt?.trim() || null : null,
+        maxMinutes: kind === 'ai_oral' ? (dto.maxMinutes ?? 10) : null,
         passThreshold: dto.passThreshold ?? 70,
         timeLimitMinutes: dto.timeLimitMinutes ?? null,
         isPublished: dto.isPublished ?? false,
-        ...(dto.questions && dto.questions.length > 0
+        // Oral exams have no question rows — the AI conducts the
+        // conversation freely guided by `aiPrompt`. We still allow the
+        // questions field through so the editor can switch kinds
+        // without losing previously-authored content; it just gets
+        // ignored when kind=ai_oral.
+        ...(kind === 'test' && dto.questions && dto.questions.length > 0
           ? {
               questions: {
                 create: dto.questions.map((q, idx) => mapQuestion(q, idx)),
@@ -71,6 +81,12 @@ export class ExamService {
       if (dto.title !== undefined) updateData.title = dto.title.trim();
       if (dto.description !== undefined)
         updateData.description = dto.description?.trim() || null;
+      if (dto.kind !== undefined) updateData.kind = dto.kind;
+      if (dto.language !== undefined) updateData.language = dto.language;
+      if (dto.aiPrompt !== undefined)
+        updateData.aiPrompt = dto.aiPrompt?.trim() || null;
+      if (dto.maxMinutes !== undefined)
+        updateData.maxMinutes = dto.maxMinutes ?? null;
       if (dto.passThreshold !== undefined)
         updateData.passThreshold = dto.passThreshold;
       if (dto.timeLimitMinutes !== undefined)

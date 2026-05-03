@@ -64,8 +64,14 @@ export class ExamsService {
     if (!exam) {
       throw new NotFoundException('Imtihon topilmadi yoki nashr qilinmagan');
     }
-    if (exam._count.questions === 0) {
-      throw new BadRequestException('Bu imtihonda savollar yo‘q');
+    // Test-kind exams must have at least one question. AI oral exams
+    // have no question rows — they're driven by `aiPrompt`, which
+    // must be present to be valid.
+    if (exam.kind === 'test' && exam._count.questions === 0) {
+      throw new BadRequestException("Bu imtihonda savollar yo'q");
+    }
+    if (exam.kind === 'ai_oral' && !exam.aiPrompt?.trim()) {
+      throw new BadRequestException('AI imtihonida prompt sozlanmagan');
     }
 
     return this.prisma.examPermission.upsert({
@@ -209,21 +215,29 @@ export class ExamsService {
   }
 
   /**
-   * Catalogue exams the tester can assign — published, non-empty,
-   * scoped to the tester's tenant.
+   * Catalogue exams the tester can assign — published, scoped to the
+   * tester's tenant. Test-kind exams must have at least one question;
+   * ai_oral-kind exams must have a non-empty `aiPrompt`. Both
+   * conditions are OR'd via two top-level filters.
    */
   listAvailableForTester(tenantId: string) {
     return this.prisma.exam.findMany({
       where: {
         tenantId,
         isPublished: true,
-        questions: { some: {} },
+        OR: [
+          { kind: 'test', questions: { some: {} } },
+          { kind: 'ai_oral', NOT: { aiPrompt: null } },
+        ],
       },
       orderBy: { title: 'asc' },
       select: {
         id: true,
         title: true,
         description: true,
+        kind: true,
+        language: true,
+        maxMinutes: true,
         passThreshold: true,
         timeLimitMinutes: true,
         _count: { select: { questions: true } },
