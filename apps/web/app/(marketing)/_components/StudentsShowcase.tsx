@@ -140,13 +140,18 @@ export function StudentsShowcase() {
 
   useEffect(() => {
     let mounted = true;
+    // API responses are wrapped in { success, data } — pull `.data` out.
+    const unwrap = (j: unknown) =>
+      j && typeof j === 'object' && 'data' in (j as Record<string, unknown>)
+        ? (j as { data: unknown }).data
+        : j;
     Promise.all([
-      fetch(`${API_BASE}/marketing/students`).then((r) => r.json()).catch(() => []),
-      fetch(`${API_BASE}/marketing/regions`).then((r) => r.json()).catch(() => []),
+      fetch(`${API_BASE}/marketing/students`).then((r) => r.json()).then(unwrap).catch(() => []),
+      fetch(`${API_BASE}/marketing/regions`).then((r) => r.json()).then(unwrap).catch(() => []),
     ]).then(([s, r]) => {
       if (!mounted) return;
-      setStudents(Array.isArray(s) ? s : []);
-      setRegions(Array.isArray(r) ? r : []);
+      setStudents(Array.isArray(s) ? (s as Student[]) : []);
+      setRegions(Array.isArray(r) ? (r as string[]) : []);
       setLoading(false);
     });
     return () => { mounted = false; };

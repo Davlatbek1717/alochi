@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Calendar, BookOpen, CheckCircle2, Clock, ArrowLeft, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, BookOpen, CheckCircle2, Clock, ArrowLeft, ArrowRight, CalendarDays, Zap } from 'lucide-react';
 import { StudentProfileClient } from './_client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -34,7 +34,11 @@ async function fetchStudent(id: string): Promise<StudentDetail | null> {
     });
     if (res.status === 404) return null;
     if (!res.ok) return null;
-    return res.json();
+    const json = (await res.json()) as { success?: boolean; data?: StudentDetail } | StudentDetail;
+    if (json && typeof json === 'object' && 'data' in json && json.data) {
+      return json.data as StudentDetail;
+    }
+    return json as StudentDetail;
   } catch {
     return null;
   }
@@ -131,6 +135,15 @@ export default async function StudentProfilePage({
 
   const color = initialsGradient(student.name);
   const recent = student.recent?.slice(0, 20) ?? [];
+
+  // Days the student has been on the platform — counted as full days,
+  // floored so "joined today" reads as day 1, not day 0.
+  const joinedAtMs = new Date(student.joinedAt).getTime();
+  const daysSinceJoin = Number.isFinite(joinedAtMs)
+    ? Math.max(1, Math.floor((Date.now() - joinedAtMs) / 86_400_000) + 1)
+    : 1;
+  // Activity intensity per the spec: completed steps × 100 ÷ days.
+  const activityScore = Math.round((student.completedLessons * 100) / daysSinceJoin);
 
   return (
     <>
@@ -238,6 +251,34 @@ export default async function StudentProfilePage({
                 </span>
                 <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#94a3b8]">
                   Jami darslar
+                </span>
+              </div>
+              <div className="bg-white rounded-2xl border-2 border-[#e8e0d0] p-5 flex flex-col gap-1">
+                <span className="grid place-items-center w-9 h-9 rounded-full bg-[#1cb0f6]/12 text-[#1cb0f6] mb-2">
+                  <CalendarDays size={18} strokeWidth={2.5} />
+                </span>
+                <span className="text-3xl font-extrabold text-[#1e1b4b]">
+                  {daysSinceJoin}
+                </span>
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#94a3b8]">
+                  Platformada (kun)
+                </span>
+                <span className="mt-1 text-[10px] font-semibold text-[#94a3b8]">
+                  {formatDate(student.joinedAt)} dan
+                </span>
+              </div>
+              <div className="bg-white rounded-2xl border-2 border-[#e8e0d0] p-5 flex flex-col gap-1">
+                <span className="grid place-items-center w-9 h-9 rounded-full bg-[#f97316]/12 text-[#f97316] mb-2">
+                  <Zap size={18} strokeWidth={2.5} />
+                </span>
+                <span className="text-3xl font-extrabold text-[#1e1b4b]">
+                  {activityScore}
+                </span>
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#94a3b8]">
+                  Faollik darajasi
+                </span>
+                <span className="mt-1 text-[10px] font-semibold text-[#94a3b8]">
+                  qadam × 100 ÷ kun
                 </span>
               </div>
             </div>

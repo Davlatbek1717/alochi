@@ -69,7 +69,11 @@ async function fetchCms(): Promise<LandingCms | null> {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
-    return (await res.json()) as LandingCms;
+    const json = (await res.json()) as { success?: boolean; data?: LandingCms } | LandingCms;
+    if (json && typeof json === 'object' && 'data' in json && json.data) {
+      return json.data as LandingCms;
+    }
+    return json as LandingCms;
   } catch {
     return null;
   }

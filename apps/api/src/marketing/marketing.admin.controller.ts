@@ -48,7 +48,7 @@ export class MarketingAdminController {
 
   // ─── List items (prizes + sponsors) ─────────────────────────────────────
   @Get('items')
-  listItems(@Query('kind') kind: 'prize' | 'sponsor') {
+  listItems(@Query('kind') kind: 'prize' | 'sponsor' | 'milestone') {
     return this.marketing.listItems(kind);
   }
 
@@ -56,7 +56,7 @@ export class MarketingAdminController {
   createItem(
     @Body()
     body: {
-      kind: 'prize' | 'sponsor';
+      kind: 'prize' | 'sponsor' | 'milestone';
       title: string;
       description?: string;
       meta?: Record<string, unknown>;

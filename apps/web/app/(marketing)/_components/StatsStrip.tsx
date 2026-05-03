@@ -31,7 +31,11 @@ export function StatsStrip() {
   useEffect(() => {
     fetch(`${API_BASE}/marketing/stats`)
       .then((r) => r.json())
-      .then((data: MarketingStats) => {
+      .then((json: { success?: boolean; data?: MarketingStats } | MarketingStats) => {
+        const data =
+          json && typeof json === 'object' && 'data' in json && json.data
+            ? (json.data as MarketingStats)
+            : (json as MarketingStats);
         if (data && typeof data === 'object') setStats(data);
       })
       .catch(() => {

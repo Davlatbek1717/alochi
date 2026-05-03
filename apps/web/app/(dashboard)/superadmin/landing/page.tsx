@@ -15,13 +15,15 @@ import { useToast } from '@/components/ui';
 
 interface LandingItem {
   id: string;
-  kind: 'prize' | 'sponsor';
+  kind: 'prize' | 'sponsor' | 'milestone';
   title: string;
   description: string | null;
   meta: Record<string, string> | null;
   orderIndex: number;
   isVisible: boolean;
 }
+
+type MilestoneTier = 'gold' | 'silver' | 'mini';
 
 type Settings = Record<string, string>;
 
@@ -485,6 +487,318 @@ function ItemRow({
   );
 }
 
+// ─── Milestones section ─────────────────────────────────────────────────────
+
+const TIER_LABEL: Record<MilestoneTier, string> = {
+  mini: "Mini (to'q sariq)",
+  silver: 'Silver (binafsha)',
+  gold: 'Gold (oltin)',
+};
+const TIER_DOT_BG: Record<MilestoneTier, string> = {
+  mini: '#f97316',
+  silver: '#6d28d9',
+  gold: '#fbbf24',
+};
+
+function MilestonesSection() {
+  const toast = useToast();
+  const [items, setItems] = useState<LandingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [newRow, setNewRow] = useState<{
+    title: string;
+    step: string;
+    tier: MilestoneTier;
+    orderIndex: string;
+  } | null>(null);
+  const [addSaving, setAddSaving] = useState(false);
+
+  useEffect(() => {
+    const token = getToken();
+    apiRequest<LandingItem[]>('/marketing/admin/items?kind=milestone', {}, token)
+      .then((r) => setItems(r.data))
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Yuklab boʼlmadi'))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function patchItem(id: string, patch: Partial<LandingItem>) {
+    setSaving((p) => ({ ...p, [id]: true }));
+    try {
+      const token = getToken();
+      const res = await apiRequest<LandingItem>(
+        `/marketing/admin/items/${id}`,
+        { method: 'PATCH', body: JSON.stringify(patch) },
+        token,
+      );
+      setItems((prev) => prev.map((it) => (it.id === id ? res.data : it)));
+      toast.success('Saqlandi');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setSaving((p) => ({ ...p, [id]: false }));
+    }
+  }
+
+  async function deleteItem(id: string) {
+    setDeleting((p) => ({ ...p, [id]: true }));
+    try {
+      const token = getToken();
+      await apiRequest(`/marketing/admin/items/${id}`, { method: 'DELETE' }, token);
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      toast.success("Oʼchirildi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setDeleting((p) => ({ ...p, [id]: false }));
+    }
+  }
+
+  async function addItem() {
+    if (!newRow || !newRow.title.trim() || !newRow.step.trim()) return;
+    setAddSaving(true);
+    try {
+      const token = getToken();
+      const body = {
+        kind: 'milestone' as const,
+        title: newRow.title.trim(),
+        meta: { step: newRow.step.trim(), tier: newRow.tier },
+        orderIndex: newRow.orderIndex ? Number(newRow.orderIndex) : undefined,
+      };
+      const res = await apiRequest<LandingItem>(
+        '/marketing/admin/items',
+        { method: 'POST', body: JSON.stringify(body) },
+        token,
+      );
+      setItems((prev) => [...prev, res.data]);
+      setNewRow(null);
+      toast.success("Qoʻshildi");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setAddSaving(false);
+    }
+  }
+
+  const inputCls =
+    'bg-[#f7f4ef] border border-[#ede9e1] rounded-lg px-2.5 py-1.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] w-full transition-colors';
+
+  return (
+    <div className="border-t border-[#ede9e1] pt-5">
+      <p className="text-xs font-extrabold uppercase tracking-widest text-[#64748b] mb-4">
+        Milestone&apos;lar (mukofotli qadamlar)
+      </p>
+
+      {loading ? (
+        <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((item) => (
+            <MilestoneRow
+              key={item.id}
+              item={item}
+              saving={!!saving[item.id]}
+              deleting={!!deleting[item.id]}
+              onSave={(patch) => patchItem(item.id, patch)}
+              onDelete={() => deleteItem(item.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {newRow ? (
+        <div className="mt-4 bg-[#f7f4ef] rounded-xl border border-[#ede9e1] p-4 space-y-3">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-[#64748b]">
+            Yangi milestone
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field
+              label="Nomi (label)"
+              id="new-ms-title"
+              value={newRow.title}
+              onChange={(v) => setNewRow((p) => p && { ...p, title: v })}
+            />
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+                Daraja
+              </label>
+              <select
+                value={newRow.tier}
+                onChange={(e) =>
+                  setNewRow((p) => p && { ...p, tier: e.target.value as MilestoneTier })
+                }
+                className={inputCls}
+              >
+                <option value="mini">{TIER_LABEL.mini}</option>
+                <option value="silver">{TIER_LABEL.silver}</option>
+                <option value="gold">{TIER_LABEL.gold}</option>
+              </select>
+            </div>
+            <Field
+              label="Qadam raqami"
+              id="new-ms-step"
+              value={newRow.step}
+              onChange={(v) => setNewRow((p) => p && { ...p, step: v })}
+            />
+            <Field
+              label="Tartib raqami"
+              id="new-ms-order"
+              value={newRow.orderIndex}
+              onChange={(v) => setNewRow((p) => p && { ...p, orderIndex: v })}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={addItem}
+              disabled={addSaving || !newRow.title.trim() || !newRow.step.trim()}
+              className="inline-flex items-center gap-2 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-[#0f766e] transition-colors"
+            >
+              {addSaving ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Plus size={14} />
+              )}
+              Qo&apos;shish
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewRow(null)}
+              className="px-4 py-2.5 rounded-xl text-sm font-bold text-[#64748b] hover:text-[#0f172a] transition-colors"
+            >
+              Bekor qilish
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() =>
+            setNewRow({ title: '', step: '', tier: 'mini', orderIndex: '' })
+          }
+          className="mt-4 inline-flex items-center gap-2 border-2 border-dashed border-[#ede9e1] hover:border-[#0d9488] text-[#64748b] hover:text-[#0d9488] px-4 py-2.5 rounded-xl text-sm font-bold transition-colors"
+        >
+          <Plus size={14} />
+          Yangi milestone qo&apos;shish
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface MilestoneRowProps {
+  item: LandingItem;
+  saving: boolean;
+  deleting: boolean;
+  onSave: (patch: Partial<LandingItem> & { meta?: Record<string, string> }) => void;
+  onDelete: () => void;
+}
+
+function MilestoneRow({ item, saving, deleting, onSave, onDelete }: MilestoneRowProps) {
+  const initialTier =
+    (item.meta?.tier as MilestoneTier | undefined) ?? 'mini';
+  const [title, setTitle] = useState(item.title);
+  const [step, setStep] = useState(item.meta?.step ?? '');
+  const [tier, setTier] = useState<MilestoneTier>(initialTier);
+  const [orderIndex, setOrderIndex] = useState(String(item.orderIndex));
+  const [isVisible, setIsVisible] = useState(item.isVisible);
+
+  function save() {
+    onSave({
+      title: title.trim() || item.title,
+      meta: { step: step.trim(), tier },
+      orderIndex: orderIndex ? Number(orderIndex) : item.orderIndex,
+      isVisible,
+    });
+  }
+
+  const inputCls =
+    'bg-[#f7f4ef] border border-[#ede9e1] rounded-lg px-2.5 py-1.5 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] w-full transition-colors';
+
+  return (
+    <div className="bg-[#f7f4ef] rounded-xl border border-[#ede9e1] p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span
+          className="w-3.5 h-3.5 rounded-full ring-1 ring-black/10"
+          style={{ backgroundColor: TIER_DOT_BG[tier] }}
+          aria-hidden
+        />
+        <span className="text-xs font-extrabold text-[#0f172a]">{TIER_LABEL[tier]}</span>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="block text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">Nomi</label>
+          <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">Daraja</label>
+          <select
+            className={inputCls}
+            value={tier}
+            onChange={(e) => setTier(e.target.value as MilestoneTier)}
+          >
+            <option value="mini">{TIER_LABEL.mini}</option>
+            <option value="silver">{TIER_LABEL.silver}</option>
+            <option value="gold">{TIER_LABEL.gold}</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="block text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">Qadam raqami</label>
+          <input className={inputCls} type="number" value={step} onChange={(e) => setStep(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-[10px] font-semibold text-[#94a3b8] uppercase tracking-widest">Tartib</label>
+          <input className={inputCls} type="number" value={orderIndex} onChange={(e) => setOrderIndex(e.target.value)} />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setIsVisible((p) => !p)}
+          className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-colors ${
+            isVisible
+              ? 'bg-[#10b981]/10 text-[#10b981] hover:bg-[#10b981]/20'
+              : 'bg-[#94a3b8]/10 text-[#94a3b8] hover:bg-[#94a3b8]/20'
+          }`}
+        >
+          {isVisible ? <Eye size={12} /> : <EyeOff size={12} />}
+          {isVisible ? "Ko'rinadigan" : 'Yashirin'}
+        </button>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 bg-[#0f172a] text-white px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-[#1e293b] transition-colors"
+          >
+            {saving ? (
+              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Save size={11} />
+            )}
+            Saqlash
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleting}
+            className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-500 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-rose-100 transition-colors"
+          >
+            {deleting ? (
+              <span className="w-3 h-3 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
+            ) : (
+              <Trash2 size={11} />
+            )}
+            O&apos;chirish
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SuperadminLandingPage() {
@@ -498,6 +812,7 @@ export default function SuperadminLandingPage() {
   const [savingCert, setSavingCert] = useState(false);
   const [savingPrizesMeta, setSavingPrizesMeta] = useState(false);
   const [savingSponsorsMeta, setSavingSponsorsMeta] = useState(false);
+  const [savingJourney, setSavingJourney] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -538,6 +853,17 @@ export default function SuperadminLandingPage() {
   const CERT_KEYS = ['certificate.title', 'certificate.description'];
   const PRIZES_META_KEYS = ['prizes.title', 'prizes.subtitle'];
   const SPONSORS_META_KEYS = ['travel.title', 'travel.subtitle'];
+  const JOURNEY_KEYS = [
+    'journey.badge',
+    'journey.title',
+    'journey.subtitle',
+    'journey.cta',
+    'journey.totalSteps',
+    'journey.cols',
+    'journey.legend.mini',
+    'journey.legend.silver',
+    'journey.legend.gold',
+  ];
 
   return (
     <div className="min-h-full bg-[#f7f4ef]">
@@ -621,6 +947,36 @@ export default function SuperadminLandingPage() {
               onSettingsSave={() => saveKeys(SPONSORS_META_KEYS, setSavingSponsorsMeta)}
               settingsSaving={savingSponsorsMeta}
             />
+
+            {/* ── Sayohat (Journey) ─────────────────────────────────────── */}
+            <SectionCard title="Sayohat (Journey roadmap)">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label="Badge" id="journey-badge" value={settings['journey.badge'] ?? ''} onChange={(v) => handleChange('journey.badge', v)} />
+                <Field label="Sarlavha" id="journey-title" value={settings['journey.title'] ?? ''} onChange={(v) => handleChange('journey.title', v)} />
+              </div>
+              <div className="mt-4">
+                <Field label="Tavsif" id="journey-subtitle" value={settings['journey.subtitle'] ?? ''} onChange={(v) => handleChange('journey.subtitle', v)} multiline />
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                <Field label="CTA tugma matni" id="journey-cta" value={settings['journey.cta'] ?? ''} onChange={(v) => handleChange('journey.cta', v)} />
+                <Field label="Jami qadamlar (1–1000)" id="journey-total" value={settings['journey.totalSteps'] ?? ''} onChange={(v) => handleChange('journey.totalSteps', v)} />
+                <Field label="Ustunlar (5–60)" id="journey-cols" value={settings['journey.cols'] ?? ''} onChange={(v) => handleChange('journey.cols', v)} />
+              </div>
+              <p className="mt-5 text-xs font-extrabold uppercase tracking-widest text-[#64748b]">
+                Legend (rang izohlari)
+              </p>
+              <div className="grid sm:grid-cols-3 gap-4 mt-2">
+                <Field label="Mini (to'q sariq)" id="journey-legend-mini" value={settings['journey.legend.mini'] ?? ''} onChange={(v) => handleChange('journey.legend.mini', v)} />
+                <Field label="Silver (binafsha)" id="journey-legend-silver" value={settings['journey.legend.silver'] ?? ''} onChange={(v) => handleChange('journey.legend.silver', v)} />
+                <Field label="Gold (oltin)" id="journey-legend-gold" value={settings['journey.legend.gold'] ?? ''} onChange={(v) => handleChange('journey.legend.gold', v)} />
+              </div>
+              <div className="mt-5">
+                <SaveBtn saving={savingJourney} onClick={() => saveKeys(JOURNEY_KEYS, setSavingJourney)} />
+              </div>
+
+              {/* Milestones CRUD */}
+              <MilestonesSection />
+            </SectionCard>
           </>
         )}
       </div>

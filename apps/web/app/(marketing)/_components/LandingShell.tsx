@@ -47,7 +47,7 @@ export function LandingShell({ cms }: Props) {
         <StudentsShowcase />
         <WhyAlochi />
         <Features />
-        <JourneySection onDemoClick={openDemo} />
+        <JourneySection onDemoClick={openDemo} cms={cms?.journey ?? null} />
         <PrizesSection cms={cms?.prizes ?? null} />
         <TravelSection cms={cms?.sponsors ?? null} />
         <CertificateSection cms={cms?.certificate ?? null} />

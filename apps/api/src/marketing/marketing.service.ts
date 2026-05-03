@@ -1,6 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+function clampInt(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
 /**
  * Public-facing data for the marketing landing page. Only exposes
  * fields that are safe to publish (no logins, phones, parent IDs).
@@ -199,7 +210,39 @@ export class MarketingService {
     'travel.subtitle': "Eng zo'r o'quvchilarga ekskursiya yo'llanmalari",
     'prizes.title': 'Mukofotlar',
     'prizes.subtitle': 'Yutuqlar uchun mukofotlar',
+    'journey.badge': 'Gamifikatsiya',
+    'journey.title': '500 Qadamlik Sayohat',
+    'journey.subtitle':
+      'Har bir qadam yangi yutuq, har bir marra yangi imkoniyat!',
+    'journey.cta': 'Hoziroq Boshlash',
+    'journey.totalSteps': '500',
+    'journey.cols': '25',
+    'journey.legend.mini': 'Mini Prize (50 qadam)',
+    'journey.legend.silver': 'Silver Prize (200 qadam)',
+    'journey.legend.gold': 'Gold Prize (400–500 qadam)',
   };
+
+  /**
+   * If the DB has no milestone rows yet (legacy installs), serve this
+   * static fallback so the landing keeps showing the same shape it did
+   * before the journey CMS shipped.
+   */
+  private static DEFAULT_MILESTONES: Array<{
+    step: number;
+    tier: 'gold' | 'silver' | 'mini';
+    label: string;
+  }> = [
+    { step: 50, tier: 'mini', label: 'Mini Prize' },
+    { step: 100, tier: 'mini', label: 'Mini Prize' },
+    { step: 150, tier: 'mini', label: 'Mini Prize' },
+    { step: 200, tier: 'silver', label: 'Silver Prize' },
+    { step: 250, tier: 'silver', label: 'Silver Prize' },
+    { step: 300, tier: 'silver', label: 'Silver Prize' },
+    { step: 350, tier: 'silver', label: 'Silver Prize' },
+    { step: 400, tier: 'gold', label: 'Gold Prize' },
+    { step: 450, tier: 'gold', label: 'Gold Prize' },
+    { step: 500, tier: 'gold', label: 'Gold Prize' },
+  ];
 
   /**
    * Public — returns the FULL landing payload in one call: every
@@ -207,7 +250,7 @@ export class MarketingService {
    * prize and sponsor lists in their author-defined order.
    */
   async getLandingContent() {
-    const [rows, prizes, sponsors] = await Promise.all([
+    const [rows, prizes, sponsors, milestones] = await Promise.all([
       this.prisma.siteSetting.findMany(),
       this.prisma.landingItem.findMany({
         where: { kind: 'prize', isVisible: true },
@@ -215,6 +258,10 @@ export class MarketingService {
       }),
       this.prisma.landingItem.findMany({
         where: { kind: 'sponsor', isVisible: true },
+        orderBy: { orderIndex: 'asc' },
+      }),
+      this.prisma.landingItem.findMany({
+        where: { kind: 'milestone', isVisible: true },
         orderBy: { orderIndex: 'asc' },
       }),
     ]);
@@ -265,6 +312,35 @@ export class MarketingService {
           orderIndex: s.orderIndex,
         })),
       },
+      journey: {
+        badge: settings['journey.badge'] ?? '',
+        title: settings['journey.title'] ?? '',
+        subtitle: settings['journey.subtitle'] ?? '',
+        cta: settings['journey.cta'] ?? '',
+        // Total steps + columns are stored as strings; coerce to numbers
+        // and clamp so a typo can't blow up the layout (max 1000 dots
+        // is plenty and keeps the grid renderable).
+        totalSteps: clampInt(settings['journey.totalSteps'], 500, 1, 1000),
+        cols: clampInt(settings['journey.cols'], 25, 5, 60),
+        legend: {
+          mini: settings['journey.legend.mini'] ?? '',
+          silver: settings['journey.legend.silver'] ?? '',
+          gold: settings['journey.legend.gold'] ?? '',
+        },
+        milestones: (milestones.length > 0
+          ? milestones.map((m) => {
+              const meta = (m.meta as Record<string, unknown>) ?? {};
+              const tierRaw = String(meta.tier ?? 'mini').toLowerCase();
+              const tier: 'gold' | 'silver' | 'mini' =
+                tierRaw === 'gold' || tierRaw === 'silver' ? tierRaw : 'mini';
+              return {
+                step: Number(meta.step) || 0,
+                tier,
+                label: m.title,
+              };
+            })
+          : MarketingService.DEFAULT_MILESTONES),
+      },
     };
   }
 
@@ -298,7 +374,7 @@ export class MarketingService {
     return this.listSettings();
   }
 
-  async listItems(kind: 'prize' | 'sponsor') {
+  async listItems(kind: 'prize' | 'sponsor' | 'milestone') {
     return this.prisma.landingItem.findMany({
       where: { kind },
       orderBy: { orderIndex: 'asc' },
@@ -306,7 +382,7 @@ export class MarketingService {
   }
 
   async createItem(input: {
-    kind: 'prize' | 'sponsor';
+    kind: 'prize' | 'sponsor' | 'milestone';
     title: string;
     description?: string;
     meta?: Record<string, unknown>;
