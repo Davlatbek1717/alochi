@@ -134,25 +134,19 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
       throw new BadRequestException('AI imtihonida prompt sozlanmagan');
     }
 
-    // Resume an existing active session if there is one.
+    // If an active session exists, resume it. If a completed/expired
+    // session exists but the permission was just re-granted (status is
+    // active), drop the stale session so the student can start fresh.
     const existing = await this.prisma.oralExamSession.findUnique({
       where: { examPermissionId },
     });
-    if (existing && existing.status === 'active') {
-      const transcript =
-        (existing.transcript as unknown as ConversationTurn[]) ?? [];
-      const lastAi = [...transcript].reverse().find((t) => t.role === 'ai');
-      return {
-        sessionId: existing.id,
-        transcript,
-        message: lastAi?.text ?? this.firstAiLine(exam.language as 'uz' | 'en'),
-        isFinal: false,
-        language: exam.language,
-        maxMinutes: exam.maxMinutes,
-      };
-    }
-    if (existing && existing.status === 'completed') {
-      throw new BadRequestException('Imtihon allaqachon yakunlangan');
+    if (existing) {
+      if (existing.status === 'active') {
+        return this.resumePayload(existing, exam);
+      }
+      // Permission is active but the prior session is completed —
+      // tester re-granted. Wipe the stale row so we can create fresh.
+      await this.prisma.oralExamSession.delete({ where: { id: existing.id } });
     }
 
     // Fresh session — ask Gemini for the opening line.
@@ -174,20 +168,56 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
       { role: 'ai', text: opener.message, ts: new Date().toISOString() },
     ];
 
-    const session = await this.prisma.oralExamSession.create({
-      data: {
-        examPermissionId,
-        examId: exam.id,
-        studentId,
-        status: 'active',
-        transcript: transcript as unknown as object,
-      },
-    });
+    // Race-safe create: in dev (HMR + React strict mode), `start()`
+    // can be invoked twice in parallel before either persists. The
+    // unique constraint on examPermissionId then fails the loser. If
+    // that happens, refetch the winner's row and resume from it
+    // instead of bubbling the 500 to the student.
+    try {
+      const session = await this.prisma.oralExamSession.create({
+        data: {
+          examPermissionId,
+          examId: exam.id,
+          studentId,
+          status: 'active',
+          transcript: transcript as unknown as object,
+        },
+      });
+      return {
+        sessionId: session.id,
+        transcript,
+        message: opener.message,
+        isFinal: false,
+        language: exam.language,
+        maxMinutes: exam.maxMinutes,
+      };
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === 'P2002') {
+        const winner = await this.prisma.oralExamSession.findUnique({
+          where: { examPermissionId },
+        });
+        if (winner) return this.resumePayload(winner, exam);
+      }
+      throw err;
+    }
+  }
 
+  /**
+   * Build a "resume" response from an existing session row. Used when
+   * the student reloads mid-exam OR when a parallel `start()` call lost
+   * the create race and we recover by reading the winner's session.
+   */
+  private resumePayload(
+    existing: { id: string; transcript: unknown },
+    exam: { language: string | null; maxMinutes: number | null },
+  ) {
+    const transcript = (existing.transcript as ConversationTurn[]) ?? [];
+    const lastAi = [...transcript].reverse().find((t) => t.role === 'ai');
     return {
-      sessionId: session.id,
+      sessionId: existing.id,
       transcript,
-      message: opener.message,
+      message: lastAi?.text ?? this.firstAiLine(exam.language as 'uz' | 'en'),
       isFinal: false,
       language: exam.language,
       maxMinutes: exam.maxMinutes,

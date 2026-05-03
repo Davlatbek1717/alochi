@@ -90,8 +90,16 @@ export function OralExamRunner({
   maxMinutes,
 }: Props) {
   const router = useRouter();
+  // Two-phase init:
+  //   `started=false` — pre-flight screen. Browsers block speech
+  //                    synthesis until a user gesture, so we render a
+  //                    "Imtihonni boshlash" CTA. The student tap also
+  //                    primes the audio context.
+  //   `started=true`  — fetched /start, AI is talking, conversation
+  //                    is live.
+  const [started, setStarted] = useState(false);
   const [transcript, setTranscript] = useState<ConversationTurn[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [listening, setListening] = useState(false);
   const [interim, setInterim] = useState('');
@@ -145,32 +153,11 @@ export function OralExamRunner({
     setTranscript((prev) => [...prev, turn]);
   }
 
-  // ── Mount: detect STT, start session, kick off AI greeting ───────────────
+  // Detect STT capability + cleanup on unmount. Session start is
+  // gated behind the user's "Boshlash" tap (see beginExam below) so
+  // SpeechSynthesis has the gesture it needs to play the AI's voice.
   useEffect(() => {
     setSttSupported(getSpeechCapabilities().stt);
-    const token = localStorage.getItem('accessToken') ?? '';
-    apiRequest<StartResponse>(
-      `/exams/oral/${permissionId}/start`,
-      { method: 'POST', body: JSON.stringify({}) },
-      token,
-    )
-      .then((res) => {
-        const data = res.data;
-        setTranscript(data.transcript ?? []);
-        startedAtRef.current = Date.now();
-        // Speak the latest AI turn so the student hears the greeting
-        // even when resuming a session.
-        const lastAi = [...(data.transcript ?? [])]
-          .reverse()
-          .find((t) => t.role === 'ai');
-        if (lastAi?.text) speakAi(lastAi.text);
-      })
-      .catch((e) => {
-        setError(e instanceof Error ? e.message : 'Sessiya boshlanmadi');
-      })
-      .finally(() => setLoading(false));
-
-    // Cleanup: stop any ongoing TTS / STT when the component unmounts.
     return () => {
       try {
         listenHandleRef.current?.stop();
@@ -181,8 +168,51 @@ export function OralExamRunner({
         window.speechSynthesis.cancel();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissionId]);
+  }, []);
+
+  /**
+   * Student tapped "Imtihonni boshlash". This counts as the audio
+   * gesture, so we can also kick off /start and immediately speak the
+   * AI's opening line. Calling speechSynthesis here (synchronously
+   * inside the click handler) primes the engine even though we'll
+   * actually call it later when the response lands.
+   */
+  async function beginExam() {
+    if (started || loading) return;
+    // Pre-flight: a no-op utterance to unlock SpeechSynthesis on
+    // browsers that throttle it without a recent user gesture.
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        const warm = new SpeechSynthesisUtterance(' ');
+        warm.volume = 0;
+        window.speechSynthesis.speak(warm);
+      } catch {
+        /* ignore */
+      }
+    }
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const res = await apiRequest<StartResponse>(
+        `/exams/oral/${permissionId}/start`,
+        { method: 'POST', body: JSON.stringify({}) },
+        token,
+      );
+      const data = res.data;
+      setTranscript(data.transcript ?? []);
+      startedAtRef.current = Date.now();
+      setStarted(true);
+      const lastAi = [...(data.transcript ?? [])]
+        .reverse()
+        .find((t) => t.role === 'ai');
+      if (lastAi?.text) speakAi(lastAi.text);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sessiya boshlanmadi');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // ── Elapsed timer ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -322,7 +352,74 @@ export function OralExamRunner({
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (loading) {
+
+  // Pre-flight intro. Browsers (Chrome/Safari) block SpeechSynthesis
+  // until the page sees a user gesture, so we MUST not auto-fire the
+  // AI's voice on mount. The "Imtihonni boshlash" CTA is that gesture.
+  if (!started && !finalResult) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-6 md:p-8 space-y-5 text-center">
+          <div className="w-20 h-20 rounded-3xl bg-violet-100 border-2 border-violet-200 flex items-center justify-center mx-auto">
+            <Volume2 size={40} className="text-violet-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-extrabold text-[#0f172a]">
+              {language === 'uz' ? "Og'zaki imtihon" : 'Oral exam'}
+            </p>
+            <p className="text-sm font-bold text-[#64748b] mt-1.5 leading-snug">
+              {examTitle}
+            </p>
+          </div>
+          <ul className="text-left text-xs font-semibold text-[#64748b] space-y-2 bg-[#f7f4ef] rounded-2xl p-4">
+            <li className="flex items-start gap-2">
+              <Volume2 size={14} className="text-violet-600 shrink-0 mt-0.5" />
+              <span>
+                AI siz bilan{' '}
+                {language === 'uz' ? "o'zbek tilida" : 'inglizcha'}{' '}
+                gapiradi va savollar beradi
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Mic size={14} className="text-rose-600 shrink-0 mt-0.5" />
+              <span>Mikrofon orqali ovoz bilan javob bering</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Sparkles size={14} className="text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                Maks. {maxMinutes} daqiqa · O&apos;tish uchun {passThreshold}%
+              </span>
+            </li>
+          </ul>
+          {error && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2 text-left">
+              <AlertTriangle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-xs font-bold text-rose-800 leading-snug">
+                {error}
+              </p>
+            </div>
+          )}
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={loading}
+            disabled={loading}
+            className="!bg-violet-600 hover:!bg-violet-700 !border-violet-700 !rounded-xl !py-4"
+            onClick={beginExam}
+          >
+            {loading ? '...' : "Imtihonni boshlash"}
+          </Button>
+          <p className="text-[11px] text-[#94a3b8] font-semibold">
+            Boshlaganingizdan so&apos;ng AI darhol gapira boshlaydi.
+            Mikrofon ruxsatini bering.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && started) {
     return (
       <div className="px-4 py-6 max-w-3xl mx-auto space-y-3">
         <Skeleton theme="light" className="h-16 w-full rounded-2xl" />
