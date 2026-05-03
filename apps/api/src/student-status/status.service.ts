@@ -35,12 +35,17 @@ export class StatusService {
   /**
    * Mentor sets the PERSONAL status colour for a student.
    *
-   * Auto-yellow logic (spec §5.2):
+   * Auto-green logic (product rule, 2026-05):
    *   if new personalStatus === 'yashil'
-   *   AND today's englishStatus === 'yashil'
    *   AND prior criticalStatus !== 'yashil'
    *   → criticalStatus is auto-set to 'yashil' and a notification is
    *     emitted to the student's branch manager.
+   *
+   * Earlier this rule also required today's englishStatus to be
+   * 'yashil', but the product owner inverted it: a strong personal-
+   * development signal alone is now sufficient to clear the
+   * critical-status flag, since mentor evaluation is the most
+   * trustworthy holistic read on the student.
    */
   async setPersonalStatus(actor: ActorContext, dto: SetPersonalStatusDto) {
     const dateObj = dto.date ? new Date(dto.date) : startOfToday();
@@ -49,7 +54,6 @@ export class StatusService {
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },
     });
 
-    const englishToday = existing?.englishStatus ?? null;
     const previousCritical = existing?.criticalStatus ?? null;
     const oldColor = existing
       ? worstStatusColor([
@@ -60,9 +64,7 @@ export class StatusService {
       : null;
 
     const autoGreen =
-      dto.color === 'yashil' &&
-      englishToday === 'yashil' &&
-      previousCritical !== 'yashil';
+      dto.color === 'yashil' && previousCritical !== 'yashil';
 
     const result = await this.prisma.studentStatus.upsert({
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },

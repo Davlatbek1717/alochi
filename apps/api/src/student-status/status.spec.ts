@@ -75,7 +75,10 @@ describe('StatusService', () => {
       );
     });
 
-    it('does NOT auto-set critical when only personal=yashil (english≠yashil)', async () => {
+    it('AUTO-flips critical to yashil when personal=yashil alone (english≠yashil)', async () => {
+      // Product rule (2026-05): a green personal status is enough on
+      // its own to clear the critical flag. English status is no
+      // longer a precondition.
       mockPrisma.studentStatus.findUnique.mockResolvedValue({
         englishStatus: 'sariq',
         criticalStatus: 'sariq',
@@ -84,8 +87,13 @@ describe('StatusService', () => {
         studentId: 'u1',
         personalStatus: 'yashil',
         englishStatus: 'sariq',
-        criticalStatus: 'sariq',
+        criticalStatus: 'yashil',
       });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        branchId: 'b1',
+        tenantId: 't1',
+      });
+      mockPrisma.user.findFirst.mockResolvedValue({ id: 'manager1' });
 
       await service.setPersonalStatus(actor, {
         studentId: 'u1',
@@ -93,12 +101,15 @@ describe('StatusService', () => {
       });
 
       const upsertArg = mockPrisma.studentStatus.upsert.mock.calls[0][0];
-      expect(upsertArg.update.criticalStatus).toBeUndefined();
-      // No notification.new emitted because no auto-flip occurred.
+      expect(upsertArg.update.criticalStatus).toBe('yashil');
       const notifCalls = mockEvents.emit.mock.calls.filter(
         (c) => c[0] === 'notification.new',
       );
-      expect(notifCalls).toHaveLength(0);
+      expect(notifCalls).toHaveLength(1);
+      expect(notifCalls[0][1]).toMatchObject({
+        userId: 'manager1',
+        type: 'status.auto_green',
+      });
     });
 
     it('AUTO-flips critical to yashil when personal+english both yashil and prior critical≠yashil', async () => {
