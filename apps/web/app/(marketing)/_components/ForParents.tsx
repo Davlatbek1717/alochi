@@ -1,4 +1,4 @@
-import { Check, Star, Award } from 'lucide-react';
+import { Check, Award } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
 
 const BENEFITS = [
@@ -6,7 +6,6 @@ const BENEFITS = [
   'Telegram orqali kunlik hisobot olasiz',
   'AI har o’quvchiga shaxsiy yondashadi',
   'Multi-rol tizim — markaz xodimlari va siz hamkorlikda',
-  'Geymifikatsiya bolani jalb qiladi (XP, streak, do’stlar)',
 ];
 
 export function ForParents() {
@@ -29,34 +28,34 @@ export function ForParents() {
               <Mascot expression="idle" size={220} animated />
             </div>
 
-            {/* XP tile */}
+            {/* Telegram report tile */}
             <div
-              className="drift-a absolute top-4 left-2 sm:left-6 -rotate-2 bg-white rounded-2xl border-2 border-[#10b981]/25 px-4 py-3 shadow-lg"
+              className="drift-a absolute top-4 left-2 sm:left-6 -rotate-2 bg-white rounded-2xl border-2 border-[#1cb0f6]/30 px-4 py-3 shadow-lg flex items-center gap-2"
               aria-hidden
             >
-              <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
-                Bu hafta
-              </div>
-              <div className="mt-0.5 flex items-baseline gap-1">
-                <span className="text-2xl font-extrabold text-[#10b981]">+820</span>
-                <span className="text-xs font-extrabold text-[#10b981]/85">XP</span>
+              <span className="text-2xl">📊</span>
+              <div>
+                <div className="text-sm font-extrabold text-[#0369a1] leading-tight">
+                  Telegram
+                </div>
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
+                  Kunlik hisobot
+                </div>
               </div>
             </div>
 
-            {/* Streak tile */}
+            {/* Camera control tile */}
             <div
-              className="drift-b absolute bottom-12 right-2 sm:right-6 rotate-2 bg-white rounded-2xl border-2 border-[#f97316]/30 px-4 py-3 shadow-lg"
+              className="drift-b absolute bottom-12 right-2 sm:right-6 rotate-2 bg-white rounded-2xl border-2 border-[#10b981]/25 px-4 py-3 shadow-lg flex items-center gap-2"
               aria-hidden
             >
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🔥</span>
-                <div>
-                  <div className="text-2xl font-extrabold text-[#f97316] leading-none">
-                    14
-                  </div>
-                  <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
-                    Kunlik streak
-                  </div>
+              <span className="text-2xl">🎥</span>
+              <div>
+                <div className="text-sm font-extrabold text-[#0f766e] leading-tight">
+                  Kamera
+                </div>
+                <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
+                  Mustaqil ishlash
                 </div>
               </div>
             </div>
@@ -77,15 +76,6 @@ export function ForParents() {
                   Olindi
                 </div>
               </div>
-            </div>
-
-            {/* Star tile */}
-            <div
-              className="drift-a absolute bottom-0 left-1/3 -rotate-3 bg-white rounded-2xl border-2 border-[#6d28d9]/20 px-3 py-2 shadow-lg flex items-center gap-1.5"
-              aria-hidden
-            >
-              <Star size={14} strokeWidth={2.5} className="text-[#fbbf24]" fill="#fbbf24" />
-              <span className="text-xs font-extrabold text-[#1e1b4b]">3-daraja</span>
             </div>
           </div>
 

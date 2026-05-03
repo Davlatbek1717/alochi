@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight, Play, Check, Lock, Star } from 'lucide-react';
+import { ArrowRight, Play, Check, Lock } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
 import type { LandingCms } from './cms-types';
 
@@ -13,7 +13,7 @@ export function Hero({ onDemoClick, cms }: Props) {
   const title = cms?.title || "Bolangizning muvaffaqiyat yoʻli shu yerdan boshlanadi.";
   const subtitle =
     cms?.subtitle ||
-    "3–7 sinf oʻquvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni oʻreatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, gamifikatsiya va ota-onalar uchun Telegram hisobotlar.";
+    "3–7 sinf oʻquvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni oʻrgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati va ota-onalar uchun Telegram hisobotlar.";
   const cta = cms?.cta || "Markaz sifatida ulanish";
 
   return (
@@ -91,37 +91,37 @@ export function Hero({ onDemoClick, cms }: Props) {
               <Mascot expression="happy" size={260} animated />
             </div>
 
-            {/* Floating: +30 XP card (top-right) */}
+            {/* Floating: AI tutor card (top-right) */}
             <div
-              className="drift-a absolute top-6 right-2 sm:right-6 rotate-3 bg-white rounded-2xl border-2 border-[#10b981]/25 px-4 py-3 shadow-[0_12px_30px_-12px_rgba(16,185,129,0.45)]"
+              className="drift-a absolute top-6 right-2 sm:right-6 rotate-3 bg-white rounded-2xl border-2 border-[#6d28d9]/20 px-4 py-3 shadow-[0_12px_30px_-12px_rgba(109,40,217,0.4)]"
               role="presentation"
               aria-hidden
             >
               <div className="flex items-center gap-2">
-                <span className="grid place-items-center w-9 h-9 rounded-full bg-[#10b981] text-white font-extrabold">
-                  <Star size={18} strokeWidth={2.75} fill="currentColor" />
+                <span className="grid place-items-center w-9 h-9 rounded-full bg-[#6d28d9] text-white">
+                  <Check size={18} strokeWidth={3} />
                 </span>
                 <div className="leading-tight">
-                  <div className="text-[#10b981] font-extrabold text-lg">+30 XP</div>
+                  <div className="text-[#1e1b4b] font-extrabold text-sm">AI tutor</div>
                   <div className="text-[#64748b] text-[11px] font-bold uppercase tracking-wider">
-                    Dars yakuni
+                    Shaxsiy yondashuv
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Floating: 7-day streak (bottom-left) */}
+            {/* Floating: parent report (bottom-left) */}
             <div
-              className="drift-b absolute bottom-10 left-0 sm:left-2 -rotate-3 bg-white rounded-2xl border-2 border-[#f97316]/30 px-4 py-3 shadow-[0_12px_30px_-12px_rgba(249,115,22,0.45)]"
+              className="drift-b absolute bottom-10 left-0 sm:left-2 -rotate-3 bg-white rounded-2xl border-2 border-[#1cb0f6]/30 px-4 py-3 shadow-[0_12px_30px_-12px_rgba(28,176,246,0.4)]"
               role="presentation"
               aria-hidden
             >
               <div className="flex items-center gap-2">
-                <span className="text-2xl motion-safe:[animation:flame-flicker_2s_ease-in-out_infinite] origin-bottom">🔥</span>
+                <span className="text-2xl">📊</span>
                 <div className="leading-tight">
-                  <div className="text-[#f97316] font-extrabold text-lg">7 kun</div>
+                  <div className="text-[#0369a1] font-extrabold text-sm">Telegram</div>
                   <div className="text-[#64748b] text-[11px] font-bold uppercase tracking-wider">
-                    Streak
+                    Ota-ona hisoboti
                   </div>
                 </div>
               </div>
@@ -138,7 +138,7 @@ export function Hero({ onDemoClick, cms }: Props) {
               </div>
               <div className="flex flex-col items-center gap-2">
                 {/* Completed */}
-                <span className="grid place-items-center w-10 h-10 rounded-full bg-[#fbbf24] text-white shadow-[0_4px_0_0_#d97706]">
+                <span className="grid place-items-center w-10 h-10 rounded-full bg-[#10b981] text-white shadow-[0_4px_0_0_#059669]">
                   <Check size={18} strokeWidth={3.5} />
                 </span>
                 {/* Current */}
@@ -147,7 +147,7 @@ export function Hero({ onDemoClick, cms }: Props) {
                     className="absolute inset-0 rounded-full bg-[#6d28d9]/40 motion-safe:[animation:pulse-ring_1.6s_ease-out_infinite]"
                     aria-hidden
                   />
-                  <Star size={18} strokeWidth={3} fill="currentColor" />
+                  <Check size={20} strokeWidth={3} />
                 </span>
                 {/* Locked */}
                 <span className="grid place-items-center w-9 h-9 rounded-full bg-[#e8e0d0] text-[#94a3b8] shadow-inner">

@@ -6,9 +6,7 @@ import { StatsStrip } from './StatsStrip';
 import { StudentsShowcase } from './StudentsShowcase';
 import { WhyAlochi } from './WhyAlochi';
 import { Features } from './Features';
-import { JourneySection } from './JourneySection';
 import { PrizesSection } from './PrizesSection';
-import { TravelSection } from './TravelSection';
 import { CertificateSection } from './CertificateSection';
 import { Roles } from './Roles';
 import { HowItWorks } from './HowItWorks';
@@ -26,8 +24,8 @@ interface Props {
 
 /**
  * Client shell that owns the DemoForm modal state. The modal is shared
- * across Header, Hero, Pricing, CTA, JourneySection — putting the state
- * in one place keeps every "Demo so'rash" trigger in sync.
+ * across Header, Hero, Pricing, CTA — putting the state in one place
+ * keeps every "Demo so'rash" trigger in sync.
  *
  * `cms` is fetched server-side in page.tsx and passed down here.
  * When null (fetch failed / API down) every component falls back
@@ -47,9 +45,7 @@ export function LandingShell({ cms }: Props) {
         <StudentsShowcase />
         <WhyAlochi />
         <Features />
-        <JourneySection onDemoClick={openDemo} cms={cms?.journey ?? null} />
         <PrizesSection cms={cms?.prizes ?? null} />
-        <TravelSection cms={cms?.sponsors ?? null} />
         <CertificateSection cms={cms?.certificate ?? null} />
         <Roles />
         <HowItWorks />

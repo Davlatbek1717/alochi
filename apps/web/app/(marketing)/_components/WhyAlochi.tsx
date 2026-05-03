@@ -1,4 +1,4 @@
-import { Brain, ScanFace, Sparkles } from 'lucide-react';
+import { Brain, ScanFace, Send } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 interface Card {
@@ -25,11 +25,11 @@ const CARDS: Card[] = [
     ring: 'ring-[#f97316]/20',
   },
   {
-    title: 'Gamifikatsiya',
-    body: '250 darslik zigzag yo’l xarita, XP, streak, 36 harf kolleksiyasi va virtual shahar — bola o’zi xohlab kuniga kiradi. O’yin ichida o’qitish — A’lochining o’zagidir.',
-    icon: <Sparkles size={26} strokeWidth={2.5} />,
-    bg: 'bg-[#fbbf24]',
-    ring: 'ring-[#fbbf24]/30',
+    title: 'Ota-onalar uchun Telegram hisobot',
+    body: 'Kunlik faollik, dars natijalari va davomat haqida ota-onaga avtomatik Telegram xabarnoma — bola maktabda yoki uyda nima qilayotgani har kuni shaffof.',
+    icon: <Send size={26} strokeWidth={2.5} />,
+    bg: 'bg-[#1cb0f6]',
+    ring: 'ring-[#1cb0f6]/30',
   },
 ];
 

@@ -3,7 +3,7 @@ import { LandingShell } from './_components/LandingShell';
 import type { LandingCms } from './_components/cms-types';
 
 const SITE_DESCRIPTION =
-  "3-7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, gamifikatsiya, ota-onalar uchun Telegram hisobotlar.";
+  "3-7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, ota-onalar uchun Telegram hisobotlar.";
 
 export const metadata: Metadata = {
   title: "A'lochi — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
@@ -18,7 +18,6 @@ export const metadata: Metadata = {
     "ingliz tili",
     'AI lessons',
     'Claude',
-    'gamification',
     'PWA',
   ],
   openGraph: {

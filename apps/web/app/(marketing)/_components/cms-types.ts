@@ -10,14 +10,6 @@ export interface LandingItem {
   isVisible: boolean;
 }
 
-export type MilestoneTier = 'gold' | 'silver' | 'mini';
-
-export interface JourneyMilestone {
-  step: number;
-  tier: MilestoneTier;
-  label: string;
-}
-
 export interface LandingCms {
   hero: {
     badge: string;
@@ -41,20 +33,5 @@ export interface LandingCms {
     title: string;
     subtitle: string;
     items: LandingItem[];
-  };
-  sponsors: {
-    title: string;
-    subtitle: string;
-    items: LandingItem[];
-  };
-  journey: {
-    badge: string;
-    title: string;
-    subtitle: string;
-    cta: string;
-    totalSteps: number;
-    cols: number;
-    legend: { mini: string; silver: string; gold: string };
-    milestones: JourneyMilestone[];
   };
 }

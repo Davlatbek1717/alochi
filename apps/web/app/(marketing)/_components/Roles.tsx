@@ -42,7 +42,7 @@ const ROLES: Role[] = [
     name: "O'quvchi",
     color: '#fbbf24',
     blurb: 'Duolingo darajasidagi shaxsiy panel.',
-    bullets: ['Yo’l xaritasi', 'XP, streak, badge', 'Do’stlar, duel', 'Sertifikatlar'],
+    bullets: ['Yo’l xaritasi', 'AI suhbat', 'Do’stlar, duel', 'Sertifikatlar'],
   },
 ];
 
