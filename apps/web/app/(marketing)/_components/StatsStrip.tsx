@@ -1,29 +1,67 @@
-import { Target, Users2, Bot, Send } from 'lucide-react';
+'use client';
+import { useEffect, useState } from 'react';
+import { Users2, School, BookOpen, TrendingUp } from 'lucide-react';
 
-const STATS = [
-  {
-    icon: <Target size={22} strokeWidth={2.5} />,
-    value: '250+',
-    label: 'Darslar',
-  },
-  {
-    icon: <Users2 size={22} strokeWidth={2.5} />,
-    value: '6 ta',
-    label: 'Foydalanuvchi roli',
-  },
-  {
-    icon: <Bot size={22} strokeWidth={2.5} />,
-    value: 'AI',
-    label: 'Savol-javob (Claude)',
-  },
-  {
-    icon: <Send size={22} strokeWidth={2.5} />,
-    value: 'Telegram',
-    label: 'Bot integratsiyasi',
-  },
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+interface MarketingStats {
+  totalStudents: number;
+  totalSchools: number;
+  totalLessons: number;
+  completedSessions: number;
+  avgProgress: number;
+}
+
+const ZERO: MarketingStats = {
+  totalStudents: 0,
+  totalSchools: 0,
+  totalLessons: 0,
+  completedSessions: 0,
+  avgProgress: 0,
+};
+
+function fmt(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`.replace('.0k', 'k');
+  return String(n);
+}
 
 export function StatsStrip() {
+  const [stats, setStats] = useState<MarketingStats>(ZERO);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/marketing/stats`)
+      .then((r) => r.json())
+      .then((data: MarketingStats) => {
+        if (data && typeof data === 'object') setStats(data);
+      })
+      .catch(() => {
+        /* graceful fallback — keep zeros */
+      });
+  }, []);
+
+  const ITEMS = [
+    {
+      icon: <Users2 size={22} strokeWidth={2.5} />,
+      value: fmt(stats.totalStudents),
+      label: "Jami o'quvchilar",
+    },
+    {
+      icon: <School size={22} strokeWidth={2.5} />,
+      value: fmt(stats.totalSchools),
+      label: 'Jami maktablar',
+    },
+    {
+      icon: <BookOpen size={22} strokeWidth={2.5} />,
+      value: fmt(stats.totalLessons),
+      label: 'Tugatilgan darslar',
+    },
+    {
+      icon: <TrendingUp size={22} strokeWidth={2.5} />,
+      value: `${stats.avgProgress}%`,
+      label: "O'rtacha progress",
+    },
+  ];
+
   return (
     <section
       aria-labelledby="stats-h2"
@@ -45,7 +83,7 @@ export function StatsStrip() {
 
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
         <ul className="grid grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6 lg:gap-x-10">
-          {STATS.map((stat, i) => (
+          {ITEMS.map((stat, i) => (
             <li
               key={stat.label}
               className="flex flex-col items-start motion-safe:[animation:count-up-fade_550ms_ease-out_both]"

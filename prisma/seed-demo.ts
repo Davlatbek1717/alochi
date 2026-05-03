@@ -168,6 +168,21 @@ async function main() {
   // Ages 9-13 for grades 3-7
   const studentAges = [10, 11, 9, 12, 13, 10, 11, 12, 9, 13, 10, 11, 12, 9, 13, 11];
 
+  // Public-showcase metadata: regions + schools so the marketing
+  // landing's "Bizning O'quvchilarimiz" grid has realistic chips.
+  const regions = [
+    'Toshkent', 'Samarqand', 'Buxoro', 'Andijon',
+    'Farg‘ona', 'Namangan', 'Surxondaryo', 'Sirdaryo',
+    'Qashqadaryo', 'Xorazm', 'Toshkent', 'Samarqand',
+    'Buxoro', 'Andijon', 'Farg‘ona', 'Namangan',
+  ];
+  const schools = [
+    '14-maktab',  '47-maktab',     '12-maktab',    '21-litsey',
+    '5-maktab',   '63-maktab',     '8-maktab',     '102-maktab',
+    '34-maktab',  '17-litsey',     '19-maktab',    '88-maktab',
+    '7-litsey',   '41-maktab',     '95-maktab',    '24-maktab',
+  ];
+
   // Assignment: 4 groups of 4 students
   // branch1: students 1-8; branch2: students 9-16
   const branchForStudent = (idx: number) => idx < 8 ? branch1.id : branch2.id;
@@ -188,6 +203,8 @@ async function main() {
         status: 'active',
         birthDate: birthDate(studentAges[i]),
         telegramId: null,
+        region: regions[i],
+        school: schools[i],
       },
     });
     students.push({ id: u.id, branchId: u.branchId!, groupId: u.groupId! });

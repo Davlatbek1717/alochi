@@ -45,6 +45,7 @@ import { ManagerRewardsModule } from './manager-rewards/manager-rewards.module';
 import { TechIssuesModule } from './tech-issues/tech-issues.module';
 import { ExamQueueModule } from './exams/exam-queue.module';
 import { ContactRequestsModule } from './contact-requests/contact-requests.module';
+import { MarketingModule } from './marketing/marketing.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -95,6 +96,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     TechIssuesModule,
     ExamQueueModule,
     ContactRequestsModule,
+    MarketingModule,
   ],
   providers: [
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },

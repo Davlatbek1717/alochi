@@ -35,7 +35,7 @@ export function Header({ onDemoClick }: Props) {
           : 'bg-transparent border-b border-transparent',
       ].join(' ')}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center gap-6">
+      <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-6 transition-all ${scrolled ? 'h-14' : 'h-16'}`}>
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0 group" aria-label="A'lochi bosh sahifa">
           <Image

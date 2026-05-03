@@ -79,6 +79,13 @@ model User {
   telegramId       BigInt?    @map("telegram_id")
   birthDate        DateTime?  @map("birth_date")
   parentTelegramId String?    @map("parent_telegram_id")
+  // Public-facing student showcase fields used by the marketing
+  // landing page. Region is the Uzbek viloyat (Toshkent, Samarqand,
+  // …) — used for the regional filter chips. School is the student's
+  // physical school name. avatarUrl is an optional photo URL.
+  region           String?
+  school           String?
+  avatarUrl        String?    @map("avatar_url")
   createdAt        DateTime   @default(now()) @map("created_at")
 
   tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -32,8 +32,8 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'Markazlar uchun',
     links: [
-      { label: 'Demo so’rash', href: '#pricing' },
-      { label: 'Bog’lanish', href: 'mailto:hello@alochi.uz' },
+      { label: "Demo so'rash", href: '#pricing' },
+      { label: "Bog'lanish", href: 'mailto:hello@alochi.uz' },
       { label: 'Hujjatlar', href: '#faq' },
     ],
   },
@@ -48,9 +48,11 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'Aloqa',
     links: [
-      { label: '@alochi_bot', href: 'https://t.me/alochi_bot' },
-      { label: 'hello@alochi.uz', href: 'mailto:hello@alochi.uz' },
-      { label: 'Toshkent, O’zbekiston', href: '#' },
+      { label: '@alochibolajon', href: 'https://t.me/alochibolajon' },
+      { label: '@Javohir_UH', href: 'https://t.me/Javohir_UH' },
+      { label: 'javohir.uh@gmail.com', href: 'mailto:javohir.uh@gmail.com' },
+      { label: '+998 88 081 81 88', href: 'tel:+998880818188' },
+      { label: "Buxoro vil., G'ijduvon tumani", href: '#' },
     ],
   },
 ];

@@ -3,8 +3,13 @@ import { useState } from 'react';
 import { Header } from './Header';
 import { Hero } from './Hero';
 import { StatsStrip } from './StatsStrip';
+import { StudentsShowcase } from './StudentsShowcase';
 import { WhyAlochi } from './WhyAlochi';
 import { Features } from './Features';
+import { JourneySection } from './JourneySection';
+import { PrizesSection } from './PrizesSection';
+import { TravelSection } from './TravelSection';
+import { CertificateSection } from './CertificateSection';
 import { Roles } from './Roles';
 import { HowItWorks } from './HowItWorks';
 import { ForParents } from './ForParents';
@@ -16,14 +21,8 @@ import { DemoForm } from './DemoForm';
 
 /**
  * Client shell that owns the DemoForm modal state. The modal is shared
- * across Header, Hero, Pricing, and CTA — putting the state in one place
- * keeps every "Demo so'rash" trigger in sync without prop-drilling.
- *
- * Section components remain server components where possible; only the
- * three interactive ones (Header, Pricing, CTA, Hero) need 'use client'
- * — and only Header/Hero/Pricing/CTA actually call onDemoClick. Everything
- * else (StatsStrip, WhyAlochi, Features, Roles, HowItWorks, ForParents,
- * FAQ, Footer) is server-rendered.
+ * across Header, Hero, Pricing, CTA, JourneySection — putting the state
+ * in one place keeps every "Demo so'rash" trigger in sync.
  */
 export function LandingShell() {
   const [demoOpen, setDemoOpen] = useState(false);
@@ -36,8 +35,13 @@ export function LandingShell() {
       <main id="main">
         <Hero onDemoClick={openDemo} />
         <StatsStrip />
+        <StudentsShowcase />
         <WhyAlochi />
         <Features />
+        <JourneySection onDemoClick={openDemo} />
+        <PrizesSection />
+        <TravelSection />
+        <CertificateSection />
         <Roles />
         <HowItWorks />
         <ForParents />
