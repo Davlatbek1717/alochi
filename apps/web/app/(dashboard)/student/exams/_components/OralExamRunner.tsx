@@ -61,12 +61,27 @@ interface FinalizeResponse {
   isFinal: true;
 }
 
+interface InitialResult {
+  score: number;
+  passed: boolean;
+  message: string;
+  analysis: {
+    strengths?: string[];
+    weaknesses?: string[];
+    recommendations?: string[];
+  } | null;
+}
+
 interface Props {
   permissionId: string;
   examTitle: string;
   language: 'uz' | 'en';
   passThreshold: number;
   maxMinutes: number;
+  /** When the student already completed this exam, the parent passes
+   *  the saved result so we can rehydrate the result screen on
+   *  refresh instead of restarting the conversation. */
+  initialResult?: InitialResult | null;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -88,6 +103,7 @@ export function OralExamRunner({
   language,
   passThreshold,
   maxMinutes,
+  initialResult,
 }: Props) {
   const router = useRouter();
   // Two-phase init:
@@ -97,6 +113,9 @@ export function OralExamRunner({
   //                    primes the audio context.
   //   `started=true`  — fetched /start, AI is talking, conversation
   //                    is live.
+  // If the parent supplied an `initialResult`, we skip both phases
+  // and jump to the result screen — that's the saved-state path used
+  // when the student lands here after an exam they already finished.
   const [started, setStarted] = useState(false);
   const [transcript, setTranscript] = useState<ConversationTurn[]>([]);
   const [loading, setLoading] = useState(false);
@@ -107,7 +126,18 @@ export function OralExamRunner({
   const [submitting, setSubmitting] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [finalResult, setFinalResult] = useState<FinalizeResponse | null>(null);
+  const [finalResult, setFinalResult] = useState<FinalizeResponse | null>(
+    initialResult
+      ? {
+          sessionId: '',
+          score: initialResult.score,
+          passed: initialResult.passed,
+          analysis: initialResult.analysis,
+          message: initialResult.message,
+          isFinal: true,
+        }
+      : null,
+  );
   const [sttSupported, setSttSupported] = useState(true);
   const [elapsedSec, setElapsedSec] = useState(0);
 

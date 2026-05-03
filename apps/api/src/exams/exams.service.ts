@@ -94,20 +94,42 @@ export class ExamsService {
   }
 
   async getMyActive(studentId: string) {
-    const permission = await this.prisma.examPermission.findFirst({
-      where: { studentId, status: ExamStatus.active },
-      include: {
-        // Both relations included so the controller can serialise
-        // either source in a single response without a second query.
-        lesson: {
-          include: { components_data: { where: { type: 'mcq' } } },
-        },
-        exam: {
-          include: { questions: { orderBy: { orderIndex: 'asc' } } },
-        },
+    const includeShape = {
+      // Both lesson + exam relations are included so the controller
+      // can serialise whichever source the permission targets in a
+      // single response. `oralSession` carries the saved transcript +
+      // score for ai_oral exams, so the frontend can rehydrate the
+      // result screen on refresh without another round trip.
+      lesson: {
+        include: { components_data: { where: { type: 'mcq' } } },
       },
+      exam: {
+        include: { questions: { orderBy: { orderIndex: 'asc' } } },
+      },
+      oralSession: true,
+    } as const;
+
+    const active = await this.prisma.examPermission.findFirst({
+      where: { studentId, status: ExamStatus.active },
+      include: includeShape,
     });
-    return permission ?? null;
+    if (active) return active;
+
+    // No active exam — surface the MOST RECENT completed/failed exam
+    // within the last 24 hours so a student who just finished can
+    // refresh the page and still see their score + AI analysis.
+    // Older results stay accessible only via history pages (future).
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await this.prisma.examPermission.findFirst({
+      where: {
+        studentId,
+        status: { in: [ExamStatus.done, ExamStatus.failed] },
+        completedAt: { gte: dayAgo },
+      },
+      orderBy: { completedAt: 'desc' },
+      include: includeShape,
+    });
+    return recent ?? null;
   }
 
   async submit(

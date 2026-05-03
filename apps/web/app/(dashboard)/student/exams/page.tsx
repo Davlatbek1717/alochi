@@ -59,7 +59,10 @@ type ActiveExam = {
   id: string;
   lessonId: string | null;
   examId: string | null;
-  status: string;
+  status: 'active' | 'done' | 'failed';
+  score: number | null;
+  passed: boolean | null;
+  completedAt: string | null;
   lesson: {
     id: string;
     title: string;
@@ -76,6 +79,21 @@ type ActiveExam = {
     passThreshold: number;
     timeLimitMinutes: number | null;
     questions: ExamQuestion[];
+  } | null;
+  // Saved oral-exam state. Present (via getMyActive include) for any
+  // catalogue exam of kind=ai_oral the student has started; null for
+  // legacy/test exams.
+  oralSession: {
+    id: string;
+    status: 'active' | 'completed' | 'expired';
+    score: number | null;
+    passed: boolean | null;
+    aiAnalysis: {
+      strengths?: string[];
+      weaknesses?: string[];
+      recommendations?: string[];
+    } | null;
+    completedAt: string | null;
   } | null;
 };
 
@@ -388,6 +406,23 @@ export default function StudentExamsPage() {
 
   // ─── AI oral exam — separate runner with mic/TTS chat UI ─────────────────
   if (permission.exam && permission.exam.kind === 'ai_oral') {
+    // Pass the saved oral-session state (if any) so a refresh after
+    // completion lands on the result screen instead of restarting.
+    const saved = permission.oralSession;
+    const initialResult =
+      saved && saved.status === 'completed' && typeof saved.score === 'number'
+        ? {
+            score: saved.score,
+            passed: !!saved.passed,
+            analysis: saved.aiAnalysis,
+            // No closing line is stored separately — derive a default
+            // so the result card has something to show.
+            message:
+              permission.exam.language === 'uz'
+                ? 'Imtihon yakunlandi.'
+                : 'Exam ended.',
+          }
+        : null;
     return (
       <OralExamRunner
         permissionId={permission.id}
@@ -395,6 +430,28 @@ export default function StudentExamsPage() {
         language={(permission.exam.language ?? 'en') as 'uz' | 'en'}
         passThreshold={permission.exam.passThreshold}
         maxMinutes={permission.exam.maxMinutes ?? 10}
+        initialResult={initialResult}
+      />
+    );
+  }
+
+  // ─── Catalogue test exam — already-completed result rehydration ──────────
+  // For test-kind catalogue exams that the student already finished,
+  // ExamPermission carries score + passed but no per-question history.
+  // Render a compact result card so the score doesn't disappear on
+  // refresh either.
+  if (
+    permission.exam &&
+    permission.exam.kind === 'test' &&
+    permission.status !== 'active' &&
+    typeof permission.score === 'number'
+  ) {
+    return (
+      <CompletedTestExamResult
+        title={examTitle}
+        score={permission.score}
+        passed={!!permission.passed}
+        passThreshold={permission.exam.passThreshold}
       />
     );
   }
@@ -825,6 +882,54 @@ function UnsupportedQuestion({ onSkip }: { onSkip: () => void }) {
       <Button variant="duo" size="md" onClick={onSkip}>
         Keyingisi
       </Button>
+    </div>
+  );
+}
+
+function CompletedTestExamResult({
+  title,
+  score,
+  passed,
+  passThreshold,
+}: {
+  title: string;
+  score: number;
+  passed: boolean;
+  passThreshold: number;
+}) {
+  return (
+    <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center p-6">
+      <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-5">
+        <div
+          className={`w-20 h-20 rounded-full border-4 flex items-center justify-center mx-auto ${
+            passed
+              ? 'border-emerald-200 bg-emerald-50'
+              : 'border-rose-200 bg-rose-50'
+          }`}
+        >
+          {passed ? (
+            <CheckCircle2 size={40} className="text-emerald-500" />
+          ) : (
+            <XCircle size={40} className="text-rose-500" />
+          )}
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#94a3b8]">
+            {title}
+          </p>
+          <p className="text-2xl font-black text-[#0f172a] mt-1">
+            {passed ? "O'tdingiz!" : "O'ta olmadingiz"}
+          </p>
+          <p className="text-[#64748b] text-sm mt-1">
+            {score} / 100{' '}
+            <span className="text-xs">({passThreshold}% kerak)</span>
+          </p>
+        </div>
+        <p className="text-[11px] text-[#94a3b8] font-semibold leading-snug">
+          Imtihon natijasi 24 soat saqlanadi. Yangi imtihon uchun testerga
+          murojaat qiling.
+        </p>
+      </div>
     </div>
   );
 }
