@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Award,
-  Flame,
   GraduationCap,
   Send,
   ScanFace,
@@ -20,6 +19,7 @@ import {
   Volume2,
   Mic,
 } from 'lucide-react';
+import { StreakFlame } from '../_components/StreakFlame';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Modal, Skeleton, Switch, useToast } from '@/components/ui';
 import { isSoundEnabled, setSoundEnabled } from '@/lib/sound';
@@ -289,7 +289,7 @@ export default function StudentProfilePage() {
     achievements.push({
       id: 'streak-7',
       title: '7 kun streak',
-      icon: <Flame size={22} />,
+      icon: <StreakFlame streak={streak?.streak ?? 0} size={22} showLabel={false} />,
       rarity: (streak?.streak ?? 0) >= 30 ? 'legendary' : 'rare',
     });
   }
@@ -421,7 +421,14 @@ export default function StudentProfilePage() {
         {/* Compact stat grid */}
         <div className="grid grid-cols-3 gap-2 md:gap-3">
           <StatCard
-            icon={<Flame size={18} className="text-[#ef4444]" />}
+            icon={
+              <StreakFlame
+                streak={streak?.streak ?? 0}
+                hasShield={streak?.hasShield ?? false}
+                size={18}
+                showLabel={false}
+              />
+            }
             value={streak?.streak ?? 0}
             label="Streak"
           />
@@ -605,8 +612,20 @@ export default function StudentProfilePage() {
               value={parentTg}
               onChange={(e) => setParentTg(e.target.value)}
               placeholder="@username yoki raqam"
-              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#46a302]"
+              className={`w-full bg-[#fffaf0] border-[1.5px] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none transition-colors ${
+                parentTg && !/^(@[a-zA-Z0-9_]{4,}|\d{5,})$/.test(parentTg.trim())
+                  ? 'border-rose-400 focus:border-rose-500'
+                  : 'border-[#ede9e1] focus:border-[#46a302]'
+              }`}
             />
+            <p className="mt-1 text-[11px] text-[#94a3b8] font-semibold">
+              Format: @username (kamida 4 harf) yoki raqamli ID (kamida 5 ta raqam)
+            </p>
+            {parentTg && !/^(@[a-zA-Z0-9_]{4,}|\d{5,})$/.test(parentTg.trim()) && (
+              <p className="mt-0.5 text-[11px] text-rose-500 font-semibold">
+                Noto&apos;g&apos;ri format. Masalan: @dadasi yoki 123456789
+              </p>
+            )}
           </div>
           <div>
             <label

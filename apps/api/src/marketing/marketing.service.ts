@@ -40,38 +40,31 @@ export class MarketingService {
   async listStudents(opts: { limit?: number; skip?: number } = {}) {
     const limit = Math.max(1, Math.min(100, opts.limit ?? 50));
     const skip = Math.max(0, opts.skip ?? 0);
-    const students = await this.prisma.user.findMany({
-      where: { role: 'student', status: 'active' },
-      select: {
-        id: true,
-        name: true,
-        region: true,
-        school: true,
-        avatarUrl: true,
-        createdAt: true,
-        studentProgress: {
-          select: { sessionCount: true, academyCompleted: true },
+    const [students, totalLessons] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { role: 'student', status: 'active' },
+        select: {
+          id: true,
+          name: true,
+          region: true,
+          school: true,
+          avatarUrl: true,
+          createdAt: true,
+          _count: {
+            select: {
+              studentProgress: { where: { academyCompleted: true } },
+            },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip,
-    });
-
-    // Total lesson rows are needed to compute a percentage. We grab
-    // the count once and divide per student.
-    const totalLessons = await this.prisma.lesson.count({
-      where: { isPublished: true },
-    });
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      this.prisma.lesson.count({ where: { isPublished: true } }),
+    ]);
 
     return students.map((s) => {
-      const completed = s.studentProgress.filter(
-        (p) => p.academyCompleted,
-      ).length;
-      const sessions = s.studentProgress.reduce(
-        (sum, p) => sum + p.sessionCount,
-        0,
-      );
+      const completed = s._count.studentProgress;
       const progressPct =
         totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
       return {
@@ -82,7 +75,7 @@ export class MarketingService {
         avatarUrl: s.avatarUrl,
         completedLessons: completed,
         totalLessons,
-        sessions,
+        sessions: 0,
         progress: progressPct,
         joinedAt: s.createdAt,
       };
@@ -222,7 +215,13 @@ export class MarketingService {
     return rows
       .map((r) => r.region)
       .filter((r): r is string => !!r)
-      .sort((a, b) => a.localeCompare(b, 'uz'));
+      .sort((a, b) => {
+        try {
+          return a.localeCompare(b, 'uz');
+        } catch {
+          return a.localeCompare(b);
+        }
+      });
   }
 
   // ─── CMS — singleton settings ────────────────────────────────────────────
@@ -383,8 +382,18 @@ export class MarketingService {
                 const tierRaw = String(meta.tier ?? 'mini').toLowerCase();
                 const tier: 'gold' | 'silver' | 'mini' =
                   tierRaw === 'gold' || tierRaw === 'silver' ? tierRaw : 'mini';
+                const totalSteps = clampInt(
+                  settings['journey.totalSteps'],
+                  500,
+                  1,
+                  1000,
+                );
+                const rawStep = Number(meta.step);
+                const step = Number.isFinite(rawStep)
+                  ? Math.max(1, Math.min(totalSteps, Math.round(rawStep)))
+                  : 1;
                 return {
-                  step: Number(meta.step) || 0,
+                  step,
                   tier,
                   label: m.title,
                 };
@@ -431,17 +440,19 @@ export class MarketingService {
       );
     }
 
-    const ops = filtered.map(([key, value]) => {
-      if (value === '' || value === undefined || value === null) {
-        return this.prisma.siteSetting.deleteMany({ where: { key } });
+    await this.prisma.$transaction(async (tx) => {
+      for (const [key, value] of filtered) {
+        if (value === '' || value === undefined || value === null) {
+          await tx.siteSetting.deleteMany({ where: { key } });
+        } else {
+          await tx.siteSetting.upsert({
+            where: { key },
+            create: { key, value },
+            update: { value },
+          });
+        }
       }
-      return this.prisma.siteSetting.upsert({
-        where: { key },
-        create: { key, value },
-        update: { value },
-      });
     });
-    await this.prisma.$transaction(ops);
     return this.listSettings();
   }
 

@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Globe,
   Save,
   Plus,
   Trash2,
@@ -145,6 +144,7 @@ function ItemsSection({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [deleting, setDeleting] = useState<Record<string, boolean>>({});
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [newRow, setNewRow] = useState<{
     title: string;
     description: string;
@@ -161,9 +161,14 @@ function ItemsSection({
 
   useEffect(() => {
     const token = getToken();
+    setFetchError(null);
     apiRequest<LandingItem[]>(`/marketing/admin/items?kind=${kind}`, {}, token)
       .then((r) => setItems(r.data))
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Yuklab boʼlmadi'))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : 'Yuklab boʼlmadi';
+        setFetchError(msg);
+        toast.error(msg);
+      })
       .finally(() => setLoading(false));
   }, [kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -186,6 +191,7 @@ function ItemsSection({
   }
 
   async function deleteItem(id: string) {
+    if (!window.confirm("Bu elementni o'chirishni tasdiqlaysizmi?")) return;
     setDeleting((p) => ({ ...p, [id]: true }));
     try {
       const token = getToken();
@@ -256,6 +262,11 @@ function ItemsSection({
           Elementlar
         </p>
 
+        {fetchError && (
+          <div className="mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl px-4 py-3 text-sm font-semibold">
+            {fetchError}
+          </div>
+        )}
         {loading ? (
           <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
         ) : (
@@ -540,23 +551,6 @@ export default function SuperadminLandingPage() {
 
   return (
     <div className="min-h-full bg-[#f7f4ef]">
-      {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
-            <Globe size={18} className="text-violet-300" />
-          </div>
-          <div>
-            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Superadmin</p>
-            <p className="text-white font-bold text-lg">Landing CMS</p>
-          </div>
-        </div>
-      </div>
-
       <div className="px-4 pt-5 pb-10 space-y-5 max-w-3xl">
         {loading ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">

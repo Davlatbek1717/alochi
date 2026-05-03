@@ -732,7 +732,6 @@ export default function LessonPage() {
         orderNumber={lesson.orderNumber}
         subtitle={lesson.description}
         estimatedMinutes={lesson.estimatedMinutes}
-        xpReward={lesson.xpReward}
         onStart={startLesson}
         onClose={() => router.push('/student/lessons')}
       />

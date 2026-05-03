@@ -11,8 +11,6 @@ interface LessonIntroProps {
   subtitle?: string;
   /** Estimated minutes. Falls back to 5. */
   estimatedMinutes?: number;
-  /** XP awarded on completion. Falls back to 30. */
-  xpReward?: number;
   /** Fired when user taps "BOSHLASH" — parent advances to first real step. */
   onStart: () => void;
   /** Fired when user taps the close ✕. */

@@ -346,10 +346,9 @@ export default function MentorDashboard() {
                   <p className="text-[#0f172a] text-sm font-extrabold truncate">
                     {card.title}
                   </p>
-                  <p
-                    className="text-[11px] font-semibold text-[#64748b] mt-0.5 truncate"
-                    dangerouslySetInnerHTML={{ __html: card.desc }}
-                  />
+                  <p className="text-[11px] font-semibold text-[#64748b] mt-0.5 truncate">
+                    {card.desc}
+                  </p>
                 </div>
                 <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
               </button>

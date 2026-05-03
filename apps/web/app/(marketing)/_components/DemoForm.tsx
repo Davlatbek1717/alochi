@@ -273,7 +273,11 @@ export function DemoForm({ open, onClose }: Props) {
             </button>
 
             <p className="mt-3 text-[11px] font-semibold text-[#94a3b8] text-center">
-              Yuborib, siz maxfiylik siyosatimiz bilan rozisiz.
+              Yuborib, siz{' '}
+              <a href="/privacy" className="underline hover:text-[#64748b] transition-colors">
+                maxfiylik siyosatimiz
+              </a>{' '}
+              bilan rozisiz.
             </p>
           </form>
         )}

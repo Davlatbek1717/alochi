@@ -12,21 +12,13 @@ interface MarketingStats {
   avgProgress: number;
 }
 
-const ZERO: MarketingStats = {
-  totalStudents: 0,
-  totalSchools: 0,
-  totalLessons: 0,
-  completedSessions: 0,
-  avgProgress: 0,
-};
-
 function fmt(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`.replace('.0k', 'k');
   return String(n);
 }
 
 export function StatsStrip() {
-  const [stats, setStats] = useState<MarketingStats>(ZERO);
+  const [stats, setStats] = useState<MarketingStats | null>(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/marketing/stats`)
@@ -39,9 +31,21 @@ export function StatsStrip() {
         if (data && typeof data === 'object') setStats(data);
       })
       .catch(() => {
-        /* graceful fallback — keep zeros */
+        /* graceful fallback — strip stays hidden */
       });
   }, []);
+
+  // Hide entirely when data hasn't loaded or every counter is zero
+  // so we never show "0 o'quvchilar / 0 maktablar" on the landing.
+  if (
+    !stats ||
+    (stats.totalStudents === 0 &&
+      stats.totalSchools === 0 &&
+      stats.totalLessons === 0 &&
+      stats.completedSessions === 0)
+  ) {
+    return null;
+  }
 
   const ITEMS = [
     {

@@ -92,7 +92,7 @@ export function CertificateSection({ cms }: Props) {
                       Berilgan sana
                     </p>
                     <p className="text-sm font-extrabold text-[#1e1b4b]">
-                      2026-01-15
+                      Bugun
                     </p>
                   </div>
                   {/* QR code icon placeholder */}

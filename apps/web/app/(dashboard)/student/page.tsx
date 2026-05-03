@@ -451,8 +451,41 @@ function ContinueLessonCard({
   session: { count: number; total: number } | null;
   lessonNumber: number;
 }) {
-  const title = nextLesson?.title ?? 'Keyingi dars sizni kutmoqda';
-  const minutes = nextLesson?.estimatedMinutes ?? 5;
+  // "All caught up" state — no next lesson available
+  if (!nextLesson) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
+        <div className="bg-gradient-to-br from-[#1cb0f6] via-[#0ea5e9] to-[#0284c7] p-5 md:p-6 text-white relative">
+          <div
+            aria-hidden
+            className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
+            }}
+          />
+          <div className="relative z-10 text-center">
+            <p className="text-4xl mb-3" aria-hidden>🎉</p>
+            <p className="text-xl md:text-2xl font-extrabold leading-tight">
+              Barcha darslar tugatildi!
+            </p>
+            <p className="mt-1.5 text-sm font-bold text-white/80">
+              Zo&apos;r ish — siz hammani yengdingiz!
+            </p>
+            <Link
+              href="/student/lessons"
+              className="mt-4 block bg-white text-[#0284c7] py-3 md:py-3.5 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#bae6fd] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105 min-h-[44px] flex items-center justify-center"
+              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+            >
+              Darslarni ko&apos;rish
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const title = nextLesson.title ?? 'Keyingi dars sizni kutmoqda';
+  const minutes = nextLesson.estimatedMinutes ?? 5;
   const showSession = session && session.total > 1;
 
   return (
