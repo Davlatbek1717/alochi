@@ -117,7 +117,7 @@ export default function StudentDuelsPage() {
   }, [duels, myId]);
 
   return (
-    <div className="min-h-full bg-[#fffaf0] pb-28">
+    <div className="min-h-full bg-[#fffaf0] pb-4">
       {/* Sticky cream header */}
       <header className="sticky top-0 z-10 bg-[#fffaf0]/95 backdrop-blur border-b-[1.5px] border-[#ede9e1] px-4 py-3">
         <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl flex items-center gap-3">

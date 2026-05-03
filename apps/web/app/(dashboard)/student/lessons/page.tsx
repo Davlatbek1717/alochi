@@ -287,7 +287,7 @@ export default function LessonsPathPage() {
       </header>
 
       {/* Tablet: path + sticky side progress chip */}
-      <div className="max-w-lg mx-auto md:max-w-4xl lg:max-w-5xl px-4 md:px-6 pt-4 pb-24 md:flex md:gap-6 lg:gap-8 md:items-start">
+      <div className="max-w-lg mx-auto md:max-w-4xl lg:max-w-5xl px-4 md:px-6 pt-4 pb-4 md:flex md:gap-6 lg:gap-8 md:items-start">
 
         {/* Path column (takes ~70% on md+) */}
         <main className="md:flex-1 min-w-0">

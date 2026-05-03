@@ -357,7 +357,7 @@ export default function MentorGroupPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] pb-32">
+    <div className="min-h-full bg-[#f7f4ef] pb-4">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative overflow-hidden">
         <div

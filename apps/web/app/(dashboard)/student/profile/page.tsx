@@ -307,7 +307,7 @@ export default function StudentProfilePage() {
   }
 
   return (
-    <div className="min-h-full bg-[#fffaf0] pb-28">
+    <div className="min-h-full bg-[#fffaf0] pb-4">
       {/* Hero banner — full width */}
       <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 md:px-8 md:py-8 relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl">
