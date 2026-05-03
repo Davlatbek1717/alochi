@@ -18,13 +18,22 @@ import { FAQ } from './FAQ';
 import { CTA } from './CTA';
 import { Footer } from './Footer';
 import { DemoForm } from './DemoForm';
+import type { LandingCms } from './cms-types';
+
+interface Props {
+  cms: LandingCms | null;
+}
 
 /**
  * Client shell that owns the DemoForm modal state. The modal is shared
  * across Header, Hero, Pricing, CTA, JourneySection — putting the state
  * in one place keeps every "Demo so'rash" trigger in sync.
+ *
+ * `cms` is fetched server-side in page.tsx and passed down here.
+ * When null (fetch failed / API down) every component falls back
+ * to its own hardcoded copy.
  */
-export function LandingShell() {
+export function LandingShell({ cms }: Props) {
   const [demoOpen, setDemoOpen] = useState(false);
   const openDemo = () => setDemoOpen(true);
   const closeDemo = () => setDemoOpen(false);
@@ -33,15 +42,15 @@ export function LandingShell() {
     <>
       <Header onDemoClick={openDemo} />
       <main id="main">
-        <Hero onDemoClick={openDemo} />
+        <Hero onDemoClick={openDemo} cms={cms?.hero ?? null} />
         <StatsStrip />
         <StudentsShowcase />
         <WhyAlochi />
         <Features />
         <JourneySection onDemoClick={openDemo} />
-        <PrizesSection />
-        <TravelSection />
-        <CertificateSection />
+        <PrizesSection cms={cms?.prizes ?? null} />
+        <TravelSection cms={cms?.sponsors ?? null} />
+        <CertificateSection cms={cms?.certificate ?? null} />
         <Roles />
         <HowItWorks />
         <ForParents />
@@ -49,7 +58,7 @@ export function LandingShell() {
         <FAQ />
         <CTA onDemoClick={openDemo} />
       </main>
-      <Footer />
+      <Footer cms={cms?.contact ?? null} />
       <DemoForm open={demoOpen} onClose={closeDemo} />
     </>
   );

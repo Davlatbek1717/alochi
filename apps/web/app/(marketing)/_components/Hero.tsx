@@ -1,12 +1,21 @@
 'use client';
 import { ArrowRight, Play, Check, Lock, Star } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
+import type { LandingCms } from './cms-types';
 
 interface Props {
   onDemoClick: () => void;
+  cms: LandingCms['hero'] | null;
 }
 
-export function Hero({ onDemoClick }: Props) {
+export function Hero({ onDemoClick, cms }: Props) {
+  const badge = cms?.badge || "Oʻzbekiston taʻlim platformasi";
+  const title = cms?.title || "Bolangizning muvaffaqiyat yoʻli shu yerdan boshlanadi.";
+  const subtitle =
+    cms?.subtitle ||
+    "3–7 sinf oʻquvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni oʻreatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, gamifikatsiya va ota-onalar uchun Telegram hisobotlar.";
+  const cta = cms?.cta || "Markaz sifatida ulanish";
+
   return (
     <section
       aria-labelledby="hero-h1"
@@ -21,38 +30,18 @@ export function Hero({ onDemoClick }: Props) {
           <div className="lg:col-span-3 motion-safe:[animation:bounce-in_550ms_ease-out]">
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#6d28d9]/10 border border-[#6d28d9]/20 text-[#6d28d9] text-xs font-extrabold uppercase tracking-widest">
               <span aria-hidden>🇺🇿</span>
-              O&apos;zbekiston ta&apos;lim platformasi
+              {badge}
             </span>
 
             <h1
               id="hero-h1"
               className="mt-5 text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-[#1e1b4b] leading-[1.05] tracking-tight"
             >
-              Bolangizning{' '}
-              <span className="relative inline-block">
-                <span className="relative z-10 text-[#6d28d9]">muvaffaqiyat yo&apos;li</span>
-                <svg
-                  aria-hidden
-                  viewBox="0 0 320 18"
-                  className="absolute left-0 -bottom-1 w-full h-3"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M2 11 Q 80 2, 160 9 T 318 7"
-                    stroke="#f97316"
-                    strokeWidth="5"
-                    fill="none"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>{' '}
-              shu yerdan boshlanadi.
+              {title}
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-[#475569] font-semibold max-w-[560px] leading-relaxed">
-              3–7 sinf o&apos;quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni
-              o&apos;rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati,
-              gamifikatsiya va ota-onalar uchun Telegram hisobotlar.
+              {subtitle}
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -61,7 +50,7 @@ export function Hero({ onDemoClick }: Props) {
                 onClick={onDemoClick}
                 className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-4 rounded-2xl shadow-[0_8px_0_0_#4c1d95] active:translate-y-[3px] active:shadow-[0_3px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
               >
-                Markaz sifatida ulanish
+                {cta}
                 <ArrowRight size={18} strokeWidth={2.75} />
               </button>
               <a

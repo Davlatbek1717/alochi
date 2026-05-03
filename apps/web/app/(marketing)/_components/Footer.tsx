@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { Send } from 'lucide-react';
+import type { LandingCms } from './cms-types';
 
 // Brand icons aren't in our lucide-react version (1.11.0) — use compact
 // inline SVGs to keep the footer self-contained without adding deps.
@@ -19,7 +20,7 @@ const YoutubeIcon = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-const COLS: { title: string; links: { label: string; href: string }[] }[] = [
+const STATIC_COLS: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'Mahsulot',
     links: [
@@ -45,19 +46,33 @@ const COLS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: 'Xodim qoidalari', href: '#faq' },
     ],
   },
-  {
-    title: 'Aloqa',
-    links: [
-      { label: '@alochibolajon', href: 'https://t.me/alochibolajon' },
-      { label: '@Javohir_UH', href: 'https://t.me/Javohir_UH' },
-      { label: 'javohir.uh@gmail.com', href: 'mailto:javohir.uh@gmail.com' },
-      { label: '+998 88 081 81 88', href: 'tel:+998880818188' },
-      { label: "Buxoro vil., G'ijduvon tumani", href: '#' },
-    ],
-  },
 ];
 
-export function Footer() {
+interface FooterProps {
+  cms?: LandingCms['contact'] | null;
+}
+
+export function Footer({ cms }: FooterProps) {
+  const phone = cms?.phone || '+998 88 081 81 88';
+  const email = cms?.email || 'javohir.uh@gmail.com';
+  const address = cms?.address || "Buxoro vil., G'ijduvon tumani";
+  const telegram = cms?.telegram || 'https://t.me/alochibolajon';
+  const personal = cms?.personal || 'https://t.me/Javohir_UH';
+
+  // Build contact column from CMS values
+  const contactLinks = [
+    { label: telegram.replace('https://t.me/', '@'), href: telegram },
+    { label: personal.replace('https://t.me/', '@'), href: personal },
+    { label: email, href: `mailto:${email}` },
+    { label: phone, href: `tel:${phone.replace(/\s/g, '')}` },
+    { label: address, href: '#' },
+  ];
+
+  const COLS = [
+    ...STATIC_COLS,
+    { title: 'Aloqa', links: contactLinks },
+  ];
+
   return (
     <footer className="bg-[#0f172a] text-slate-300 border-t border-[#0a0f1f]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">

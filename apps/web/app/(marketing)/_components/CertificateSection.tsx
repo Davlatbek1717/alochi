@@ -1,6 +1,16 @@
 import { QrCode, Award } from 'lucide-react';
+import type { LandingCms } from './cms-types';
 
-export function CertificateSection() {
+interface Props {
+  cms: LandingCms['certificate'] | null;
+}
+
+export function CertificateSection({ cms }: Props) {
+  const title = cms?.title || 'Sertifikat';
+  const description =
+    cms?.description ||
+    "Har bir boʿlimni tugatgan oʿquvchi rasmiy Aʿlochi sertifikatini oladi. Sertifikat QR-kod orqali tekshiriladi va ota-onalarga Telegram orqali yuboriladi.";
+
   return (
     <section
       id="certificate"
@@ -18,12 +28,10 @@ export function CertificateSection() {
               id="cert-h2"
               className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1e1b4b] tracking-tight"
             >
-              Sertifikat
+              {title}
             </h2>
             <p className="mt-5 text-base sm:text-lg font-semibold text-[#475569] leading-relaxed max-w-md">
-              Har bir bo&apos;limni tugatgan o&apos;quvchi rasmiy A&apos;lochi sertifikatini oladi.
-              Sertifikat QR-kod orqali tekshiriladi va ota-onalarga Telegram orqali
-              yuboriladi.
+              {description}
             </p>
             <div className="mt-8 space-y-3">
               {[

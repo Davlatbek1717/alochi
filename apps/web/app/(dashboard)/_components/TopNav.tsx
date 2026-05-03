@@ -28,6 +28,7 @@ import {
   CheckCircle,
   PiggyBank,
   Calendar,
+  Globe,
 } from 'lucide-react';
 
 interface SubItem {
@@ -107,6 +108,7 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/superadmin/keywords', icon: <ShieldOff size={14} />, label: "Taqiqlangan so'zlar" },
         { href: '/superadmin/video-guides', icon: <Video size={14} />, label: "Video qo'llanmalar" },
         { href: '/superadmin/templates', icon: <Bell size={14} />, label: 'Bildirishnoma shablonlari' },
+        { href: '/superadmin/landing', icon: <Globe size={14} />, label: 'Landing CMS' },
       ],
     },
   ],

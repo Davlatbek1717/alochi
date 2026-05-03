@@ -1277,6 +1277,21 @@ async function main() {
   }
   console.log(`  Created ${analyticsCount} analytics events.`);
 
+  // ── Landing CMS — prize tiers and travel sponsors ─────────────────────────────
+  console.log('\n[N] Seeding landing CMS items...');
+  await prisma.landingItem.createMany({
+    data: [
+      { kind: 'prize',   title: 'Mini Prize',      description: '50 ta darsni tugatganlar uchun maxsus sovg\'alar', meta: { lessonCount: 50,  icon: '🎁' }, orderIndex: 0, isVisible: true },
+      { kind: 'prize',   title: 'Silver Prize',    description: '200 ta darsni tugatganlar uchun yillik abonement', meta: { lessonCount: 200, icon: '🥈' }, orderIndex: 1, isVisible: true },
+      { kind: 'prize',   title: 'Good Prize',      description: '500 ta darsni tugatganlar uchun ekskursiya yo\'llanmasi', meta: { lessonCount: 500, icon: '🏆' }, orderIndex: 2, isVisible: true },
+      { kind: 'sponsor', title: 'Buxoro Travel',   description: 'Buxoro shahri bo\'yicha sayohatlar', meta: { city: 'Buxoro',    emoji: '🕌' }, orderIndex: 0, isVisible: true },
+      { kind: 'sponsor', title: 'Samarqand Travel',description: 'Samarqand bo\'yicha sayohatlar',     meta: { city: 'Samarqand', emoji: '🏛️' }, orderIndex: 1, isVisible: true },
+      { kind: 'sponsor', title: 'Xiva Travel',     description: 'Xiva bo\'yicha sayohatlar',          meta: { city: 'Xiva',      emoji: '🌅' }, orderIndex: 2, isVisible: true },
+    ],
+    skipDuplicates: true,
+  });
+  console.log('  Seeded 3 prize tiers + 3 travel sponsors.');
+
   // ── Summary ───────────────────────────────────────────────────────────────────
   console.log('\n=== SEED SUMMARY ===');
 

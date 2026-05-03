@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { LandingShell } from './_components/LandingShell';
+import type { LandingCms } from './_components/cms-types';
 
 const SITE_DESCRIPTION =
   "3-7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, gamifikatsiya, ota-onalar uchun Telegram hisobotlar.";
@@ -60,14 +61,30 @@ const ORG_LD = {
   ],
 };
 
-export default function MarketingHome() {
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+async function fetchCms(): Promise<LandingCms | null> {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/landing`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LandingCms;
+  } catch {
+    return null;
+  }
+}
+
+export default async function MarketingHome() {
+  const cms = await fetchCms();
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ORG_LD) }}
       />
-      <LandingShell />
+      <LandingShell cms={cms} />
     </>
   );
 }

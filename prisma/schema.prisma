@@ -1337,3 +1337,43 @@ model StudentBuilding {
   @@index([studentId])
   @@map("student_buildings")
 }
+
+// ---- LANDING / MARKETING CMS ----
+//
+// Two tables back the public-facing landing page so the superadmin can
+// edit copy without a deploy:
+//
+//   * `SiteSetting` is a flat key/value store for SINGLETON copy —
+//     hero text, contact details, certificate description. The key is
+//     a dotted namespace ("hero.title", "contact.phone", …); the
+//     value is a free-form string (or JSON-encoded blob when the
+//     field is structured, e.g. an array of telegram links).
+//
+//   * `LandingItem` holds LIST content — prize tiers and travel
+//     sponsors. Discriminated by `kind`. orderIndex controls render
+//     order; isVisible toggles per-row publishing without delete.
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model LandingItem {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  kind        String   // "prize" | "sponsor"
+  title       String
+  description String?
+  // Free-form per-kind metadata: prize uses { lessonCount, icon },
+  // sponsor uses { city, emoji }. JSON keeps the schema honest while
+  // accommodating future kinds without migrations.
+  meta        Json?
+  orderIndex  Int      @default(0) @map("order_index")
+  isVisible   Boolean  @default(true) @map("is_visible")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([kind, isVisible, orderIndex])
+  @@map("landing_items")
+}
