@@ -133,6 +133,18 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token yaroqsiz');
     }
 
+    // A valid refresh token alone is not enough — the user behind it must
+    // still be active. Without this check, accounts that were blocked
+    // (warnings, missed payment, manual deactivation) keep minting fresh
+    // 1-hour access tokens until their refresh token expires naturally,
+    // which neutralises the block entirely.
+    if (stored.user.status !== UserStatus.active) {
+      // Burn the token alongside the rejection so the client can't keep
+      // hammering /auth/refresh with the same valid-but-now-useless row.
+      await this.prisma.refreshToken.delete({ where: { id: stored.id } });
+      throw new UnauthorizedException('Profilingiz bloklangan');
+    }
+
     await this.prisma.refreshToken.delete({ where: { id: stored.id } });
 
     const payload = {

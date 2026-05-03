@@ -1,6 +1,23 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { MarketingService } from './marketing.service';
+
+/**
+ * Coerce a query-string number with a sane default and cap. The
+ * service also clamps, but we sanitise here too so we never pass
+ * NaN or absurd values into the data layer.
+ */
+function clampQueryNumber(
+  raw: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  if (raw === undefined) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
 
 /**
  * Public landing-page endpoints. NO auth guard — intentionally open
@@ -13,8 +30,11 @@ export class MarketingController {
   constructor(private marketing: MarketingService) {}
 
   @Get('students')
-  list() {
-    return this.marketing.listStudents();
+  list(@Query('limit') limit?: string, @Query('skip') skip?: string) {
+    return this.marketing.listStudents({
+      limit: clampQueryNumber(limit, 50, 1, 100),
+      skip: clampQueryNumber(skip, 0, 0, 10_000),
+    });
   }
 
   @Get('students/:id')

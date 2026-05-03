@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 function clampInt(
@@ -26,8 +30,16 @@ export class MarketingService {
    * Featured students grid. Active student users with at least one
    * lesson session, sorted by completed-lesson count desc so the
    * landing's "Bizning O'quvchilarimiz" leads with top performers.
+   *
+   * Hard limit: this endpoint is unauthenticated, so a missing limit
+   * meant the entire active-student table was returned in one request
+   * — both a leak and a DoS vector. We cap each page to 100 rows and
+   * accept a `skip` offset for the rare case the showcase wants to
+   * page through.
    */
-  async listStudents() {
+  async listStudents(opts: { limit?: number; skip?: number } = {}) {
+    const limit = Math.max(1, Math.min(100, opts.limit ?? 50));
+    const skip = Math.max(0, opts.skip ?? 0);
     const students = await this.prisma.user.findMany({
       where: { role: 'student', status: 'active' },
       select: {
@@ -42,6 +54,8 @@ export class MarketingService {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
     });
 
     // Total lesson rows are needed to compute a percentage. We grab
@@ -266,10 +280,19 @@ export class MarketingService {
       }),
     ]);
 
-    const settings: Record<string, string> = {
-      ...MarketingService.DEFAULT_SETTINGS,
-    };
-    for (const r of rows) settings[r.key] = r.value;
+    // Build the lookup on a null-prototype object so a malicious DB row
+    // (e.g. key="__proto__") can't poison Object.prototype when copied
+    // into the merged map. We then only read keys that exist in
+    // DEFAULT_SETTINGS so even if pollution slipped past upsertSettings,
+    // it can't escape into the response.
+    const settings: Record<string, string> = Object.assign(
+      Object.create(null) as Record<string, string>,
+      MarketingService.DEFAULT_SETTINGS,
+    );
+    const allowedKeys = new Set(Object.keys(MarketingService.DEFAULT_SETTINGS));
+    for (const r of rows) {
+      if (allowedKeys.has(r.key)) settings[r.key] = r.value;
+    }
 
     return {
       hero: {
@@ -327,19 +350,20 @@ export class MarketingService {
           silver: settings['journey.legend.silver'] ?? '',
           gold: settings['journey.legend.gold'] ?? '',
         },
-        milestones: (milestones.length > 0
-          ? milestones.map((m) => {
-              const meta = (m.meta as Record<string, unknown>) ?? {};
-              const tierRaw = String(meta.tier ?? 'mini').toLowerCase();
-              const tier: 'gold' | 'silver' | 'mini' =
-                tierRaw === 'gold' || tierRaw === 'silver' ? tierRaw : 'mini';
-              return {
-                step: Number(meta.step) || 0,
-                tier,
-                label: m.title,
-              };
-            })
-          : MarketingService.DEFAULT_MILESTONES),
+        milestones:
+          milestones.length > 0
+            ? milestones.map((m) => {
+                const meta = (m.meta as Record<string, unknown>) ?? {};
+                const tierRaw = String(meta.tier ?? 'mini').toLowerCase();
+                const tier: 'gold' | 'silver' | 'mini' =
+                  tierRaw === 'gold' || tierRaw === 'silver' ? tierRaw : 'mini';
+                return {
+                  step: Number(meta.step) || 0,
+                  tier,
+                  label: m.title,
+                };
+              })
+            : MarketingService.DEFAULT_MILESTONES,
       },
     };
   }
@@ -348,19 +372,40 @@ export class MarketingService {
 
   async listSettings() {
     const rows = await this.prisma.siteSetting.findMany();
-    const map: Record<string, string> = {
-      ...MarketingService.DEFAULT_SETTINGS,
-    };
-    for (const r of rows) map[r.key] = r.value;
+    const map: Record<string, string> = Object.assign(
+      Object.create(null) as Record<string, string>,
+      MarketingService.DEFAULT_SETTINGS,
+    );
+    const allowedKeys = new Set(Object.keys(MarketingService.DEFAULT_SETTINGS));
+    for (const r of rows) {
+      if (allowedKeys.has(r.key)) map[r.key] = r.value;
+    }
     return map;
   }
 
   /**
    * Bulk upsert — admin pages send the whole edited form back at once.
    * Empty values delete the row so the fallback default takes over.
+   *
+   * Hard guard: only keys present in DEFAULT_SETTINGS are written. This
+   * prevents a compromised superadmin (or a malicious request body) from
+   * planting prototype-pollution keys like `__proto__` / `constructor`,
+   * and keeps the schema closed so callers can't drift the CMS contract
+   * by squatting random keys.
    */
   async upsertSettings(updates: Record<string, string>) {
-    const ops = Object.entries(updates).map(([key, value]) => {
+    const allowedKeys = new Set(Object.keys(MarketingService.DEFAULT_SETTINGS));
+    const filtered = Object.entries(updates).filter(([key]) =>
+      allowedKeys.has(key),
+    );
+    const rejected = Object.keys(updates).filter((k) => !allowedKeys.has(k));
+    if (rejected.length > 0) {
+      throw new BadRequestException(
+        `Noma'lum sozlama kalitlari: ${rejected.join(', ')}`,
+      );
+    }
+
+    const ops = filtered.map(([key, value]) => {
       if (value === '' || value === undefined || value === null) {
         return this.prisma.siteSetting.deleteMany({ where: { key } });
       }
