@@ -356,7 +356,7 @@ export default function LessonsPathPage() {
               </div>
               <div className="flex items-center gap-1.5 text-sm font-extrabold text-[#46a302]">
                 <Sparkles size={14} className="text-[#fbbf24]" />
-                <span>{todayXp} XP bugun</span>
+                <span>Bugun faolsiz!</span>
               </div>
             </div>
           </aside>
@@ -496,7 +496,7 @@ function TreasureChestNode() {
         <span className="relative" aria-hidden>🎁</span>
       </div>
       <p className="text-xs font-extrabold uppercase tracking-wider text-[#d97706]">
-        Bo&apos;lim tugadi · +50 XP
+        Bo&apos;lim tugadi
       </p>
     </div>
   );

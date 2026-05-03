@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Award,
-  Star,
   Flame,
   GraduationCap,
   Send,
@@ -263,14 +262,6 @@ export default function StudentProfilePage() {
       rarity: (streak?.streak ?? 0) >= 30 ? 'legendary' : 'rare',
     });
   }
-  if (totalXp >= 1000) {
-    achievements.push({
-      id: 'xp-1k',
-      title: '1000 XP',
-      icon: <Star size={22} />,
-      rarity: totalXp >= 5000 ? 'legendary' : 'rare',
-    });
-  }
   if (lessonsCompleted >= 10) {
     achievements.push({
       id: 'lessons-10',
@@ -375,12 +366,6 @@ export default function StudentProfilePage() {
                   {league.label}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
-                  Daraja
-                </p>
-                <p className="text-xl font-extrabold">{xp?.level ?? '—'}</p>
-              </div>
             </div>
             {nextLeague ? (
               <>
@@ -391,7 +376,7 @@ export default function StudentProfilePage() {
                   />
                 </div>
                 <p className="text-[11px] font-bold opacity-90">
-                  {nextLeague.minXp - totalXp} XP — {nextLeague.label} ligasiga
+                  {nextLeague.label} ligasiga ko&apos;tarilish uchun davom eting
                 </p>
               </>
             ) : (
@@ -403,12 +388,7 @@ export default function StudentProfilePage() {
         </div>
 
         {/* Compact stat grid */}
-        <div className="grid grid-cols-4 gap-2 md:gap-3">
-          <StatCard
-            icon={<Star size={18} className="text-[#fbbf24]" />}
-            value={totalXp}
-            label="XP"
-          />
+        <div className="grid grid-cols-3 gap-2 md:gap-3">
           <StatCard
             icon={<Flame size={18} className="text-[#ef4444]" />}
             value={streak?.streak ?? 0}

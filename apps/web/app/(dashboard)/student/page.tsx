@@ -10,7 +10,6 @@ import {
   PlayCircle,
   Sparkles,
   BookOpen,
-  Star,
   Newspaper,
   Mail,
   Users,
@@ -244,7 +243,6 @@ export default function StudentDashboard() {
               streak={streak}
               hasShield={hasShield}
               currentStep={lessonProgress + 1}
-              level={xpData.level}
             />
 
             {/* 2. Active warnings — only when present */}
@@ -298,13 +296,11 @@ function GreetingHero({
   streak,
   hasShield,
   currentStep,
-  level,
 }: {
   firstName: string;
   streak: number;
   hasShield: boolean;
   currentStep: number;
-  level: string;
 }) {
   const greeting = firstName ? `Salom, ${firstName}!` : 'Salom, do‘stim!';
   const subtitle = pickGreetingSubtitle(streak, currentStep);
@@ -351,8 +347,8 @@ function GreetingHero({
           </Link>
         </div>
 
-        {/* Stat strip — Streak | Qadam | Daraja */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* Stat strip — Streak | Qadam */}
+        <div className="grid grid-cols-2 gap-2">
           <HeroStat
             icon={
               <StreakFlame
@@ -370,11 +366,6 @@ function GreetingHero({
             value={`#${currentStep}`}
             label="Qadam"
             highlight
-          />
-          <HeroStat
-            icon={<Star size={16} className="text-[#fbbf24]" />}
-            value={level}
-            label="Daraja"
           />
         </div>
       </div>

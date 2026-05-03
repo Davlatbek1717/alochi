@@ -39,7 +39,7 @@ export function DailyQuests({ quests }: { quests: Quest[] }) {
               </p>
             </div>
           </div>
-          <span className="text-indigo-600 text-sm font-medium">+{q.xpReward} XP</span>
+          {q.completed && <span className="text-emerald-600 text-sm font-medium">✓</span>}
         </div>
       ))}
     </div>

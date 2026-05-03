@@ -75,7 +75,7 @@ export function Podium({ entries, myId }: PodiumProps) {
               {entry ? entry.name : '—'}
             </p>
             <p className="text-[10px] text-[#f59e0b] font-mono font-extrabold tabular-nums">
-              {entry ? `${entry.xp} XP` : ''}
+              {entry ? `#${entry.rank}` : ''}
             </p>
 
             {/* Pillar */}

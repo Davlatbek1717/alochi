@@ -203,14 +203,14 @@ export default function GroupChatPage() {
               <span className="text-[#94a3b8] text-xs">{daysLeft} kun</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-white font-mono w-14 text-right">{myXp} XP</span>
+              <span className="text-white font-mono w-14 text-right">{myXp}</span>
               <div className="flex-1 h-1.5 bg-[#0f172a] rounded-full overflow-hidden">
                 <div
                   className="h-full bg-[#0d9488] rounded-full transition-all"
                   style={{ width: `${(myXp / total) * 100}%` }}
                 />
               </div>
-              <span className="text-[#94a3b8] font-mono w-14">{theirXp} XP</span>
+              <span className="text-[#94a3b8] font-mono w-14">{theirXp}</span>
             </div>
             <div className="flex justify-between text-[10px]">
               <span className="text-[#0d9488]">Sizning guruh</span>

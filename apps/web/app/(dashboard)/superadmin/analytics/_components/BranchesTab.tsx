@@ -33,7 +33,7 @@ const columns: Column<BranchStat>[] = [
   },
   {
     key: 'avgXp',
-    label: "O'rt. XP",
+    label: "O'rt. ball",
     align: 'center',
     sortable: true,
     render: (row) => <span className="text-purple-400">{row.avgXp}</span>,

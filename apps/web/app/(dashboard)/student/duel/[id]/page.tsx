@@ -300,11 +300,6 @@ export default function DuelPage() {
                 <p className="text-xs text-[#64748b] mt-1">{duel.challengedName}</p>
               </div>
             </div>
-            {duel.xpEarned !== undefined && (
-              <div className="bg-[#f59e0b]/10 border border-[#f59e0b]/30 rounded-xl p-3">
-                <p className="text-[#f59e0b] font-bold">+{duel.xpEarned} XP qo&apos;shildi!</p>
-              </div>
-            )}
           </div>
         )}
       </div>

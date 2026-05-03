@@ -314,14 +314,14 @@ function MyRankHero({
             accent: 'bg-rose-300/30',
             label: 'Pasayish xavfi',
             icon: <ArrowDown size={14} />,
-            hint: 'Yana XP toplang — pastga tushib ketmang',
+            hint: 'Ko\'proq dars tugatib, pastga tushib ketmang',
           }
         : {
             bg: 'from-[#0f172a] to-[#1e293b]',
             accent: 'bg-amber-300/20',
             label: "O'rta zona",
             icon: <Trophy size={14} />,
-            hint: "Yuqorilash zonasiga chiqish uchun XP toplang",
+            hint: "Yuqorilash zonasiga chiqish uchun ko'proq dars tugating",
           };
 
   return (
@@ -353,15 +353,7 @@ function MyRankHero({
             {tone.label}
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <div className="bg-white/10 backdrop-blur rounded-xl px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wider opacity-80 font-extrabold">
-              XP
-            </p>
-            <p className="text-base font-extrabold tabular-nums">
-              {entry.totalXp.toLocaleString()}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-2 pt-1">
           <div className="bg-white/10 backdrop-blur rounded-xl px-3 py-2 flex items-center gap-2">
             <Flame size={14} />
             <div>
@@ -374,9 +366,6 @@ function MyRankHero({
             </div>
           </div>
         </div>
-        <p className="text-[11px] opacity-90 font-bold leading-snug">
-          {tone.hint}
-        </p>
       </div>
     </div>
   );
@@ -518,10 +507,7 @@ function RankRow({
       </div>
       <div className="text-right">
         <p className="text-[#fbbf24] font-extrabold text-base font-mono tabular-nums">
-          {xp.toLocaleString()}
-        </p>
-        <p className="text-[#94a3b8] text-[10px] uppercase tracking-wider font-bold">
-          XP
+          #{rank}
         </p>
       </div>
     </div>

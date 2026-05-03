@@ -227,7 +227,7 @@ export default function StudentDuelsPage() {
                 Birinchi duelingizga tayyormisiz?
               </p>
               <p className="text-[#64748b] text-sm font-semibold mt-1 leading-snug">
-                Doʻstingizni tanlang va 30 daqiqada kim ko‘proq XP toplaydi —
+                Doʻstingizni tanlang va 30 daqiqada bilimingizni sinab ko’ring —
                 bilim musobaqasi
               </p>
             </div>
@@ -383,7 +383,7 @@ function DuelRow({ duel, myId }: { duel: Duel; myId: string }) {
         >
           {outcome === 'won' && (
             <span className="inline-flex items-center gap-1.5">
-              <Crown size={12} fill="currentColor" /> Gʻolibsiz · +{duel.xpEarned ?? 0} XP
+              <Crown size={12} fill="currentColor" /> G&apos;olibsiz!
             </span>
           )}
           {outcome === 'lost' && 'Magʻlubiyat — qayta uriniб ko‘ring'}

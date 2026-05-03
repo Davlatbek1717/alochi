@@ -1091,7 +1091,7 @@ export default function LessonPage() {
               className="text-[#3c3c3c] font-extrabold text-base text-center"
               style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
             >
-              XP qo&apos;shilmoqda...
+              Saqlanmoqda...
             </p>
             <span className="w-5 h-5 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
           </div>

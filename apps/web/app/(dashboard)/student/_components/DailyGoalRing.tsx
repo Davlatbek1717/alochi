@@ -72,7 +72,7 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
       aria-valuenow={safeXp}
       aria-valuemin={0}
       aria-valuemax={safeGoal}
-      aria-label={`Bugungi maqsad: ${safeXp} XP / ${safeGoal} XP`}
+      aria-label={`Bugungi maqsad: ${safeXp} / ${safeGoal}`}
     >
       <svg width={size} height={size} className="-rotate-90">
         <circle
@@ -104,7 +104,7 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
           {safeXp}
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#777] mt-1">
-          / {safeGoal} XP
+          / {safeGoal}
         </span>
         {reached && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mt-0.5">

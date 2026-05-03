@@ -144,7 +144,7 @@ export const StudentDailyQuests: FC<StudentDailyQuestsProps> = ({ quests }) => {
                     aria-hidden
                     className="absolute left-1/2 -translate-x-1/2 -top-2 text-xs font-extrabold text-[#ce82ff] motion-safe:animate-[float-up_1s_ease-out_forwards]"
                   >
-                    +{q.xpReward} XP
+                    ✓
                   </span>
                 )}
               </div>
@@ -162,15 +162,13 @@ export const StudentDailyQuests: FC<StudentDailyQuestsProps> = ({ quests }) => {
                   </p>
                 )}
               </div>
-              <span
-                className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
-                  q.completed
-                    ? 'bg-amber-100 text-amber-700 border border-amber-300'
-                    : 'bg-[#f3eedf] text-[#7a6d55] border border-[#e8e0d0]'
-                }`}
-              >
-                +{q.xpReward} XP
-              </span>
+              {q.completed && (
+                <span
+                  className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-300"
+                >
+                  Bajarildi
+                </span>
+              )}
             </div>
           );
         })}

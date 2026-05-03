@@ -112,7 +112,7 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
             <Trophy size={18} className={result.won ? 'text-yellow-300' : 'text-slate-400'} />
             <p className="font-bold">{result.won ? "G'alaba!" : "Mag'lubiyat"}</p>
           </div>
-          <p className="text-sm opacity-80">+{result.xpEarned} XP · {result.score}</p>
+          <p className="text-sm opacity-80">Ball: {result.score}</p>
         </div>
       )}
     </>
