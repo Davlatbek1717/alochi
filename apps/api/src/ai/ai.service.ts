@@ -137,10 +137,19 @@ export class AiService {
           text || 'Kechirasiz, hozir javob bera olmayman. Yana savol bering.',
       };
     } catch (err) {
+      // Log server-side so an oncall sees the real cause (invalid API
+      // key, quota exhausted, network), but don't 503 the student —
+      // their lesson chat shouldn't pop a red error toast every time
+      // a key flakes. Return the same soft fallback the empty-response
+      // branch above uses; client treats this as a normal turn.
       this.logger.error(
         `askTutor: Gemini fallback also failed. ${(err as Error).message}`,
       );
-      throw new ServiceUnavailableException('AI servis vaqtincha ishlamayapti');
+      return {
+        answer:
+          "Kechirasiz, AI yordamchi hozir bandh ekan. Bir-ikki daqiqadan so'ng yana urinib ko'ring.",
+        degraded: true,
+      };
     }
   }
 
