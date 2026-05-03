@@ -112,12 +112,12 @@ export default function LeaderboardPage() {
             <Link
               href="/student"
               aria-label="Orqaga"
-              className="w-9 h-9 rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors"
+              className="w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors"
             >
               <ArrowLeft size={18} />
             </Link>
             <div className="flex-1 min-w-0">
-              <h1 className="text-[#0f172a] text-lg font-extrabold leading-tight flex items-center gap-2">
+              <h1 className="text-[#0f172a] text-lg md:text-xl font-extrabold leading-tight flex items-center gap-2">
                 <Trophy size={18} className="text-[#fbbf24]" />
                 Reyting
               </h1>
@@ -133,7 +133,7 @@ export default function LeaderboardPage() {
           <div className="flex gap-2">
             <button
               onClick={() => setTab('branch')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-extrabold transition-all border-[1.5px] ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 md:py-2.5 min-h-[44px] rounded-xl text-sm font-extrabold transition-all border-[1.5px] ${
                 tab === 'branch'
                   ? 'bg-[#0f172a] text-white border-[#0f172a]'
                   : 'bg-white text-[#64748b] border-[#ede9e1]'
@@ -143,7 +143,7 @@ export default function LeaderboardPage() {
             </button>
             <button
               onClick={() => setTab('national')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-extrabold transition-all border-[1.5px] ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 md:py-2.5 min-h-[44px] rounded-xl text-sm font-extrabold transition-all border-[1.5px] ${
                 tab === 'national'
                   ? 'bg-[#0f172a] text-white border-[#0f172a]'
                   : 'bg-white text-[#64748b] border-[#ede9e1]'
@@ -155,7 +155,7 @@ export default function LeaderboardPage() {
         </div>
       </header>
 
-      <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+      <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl md:space-y-5">
         {tab === 'national' && (
           <div className="flex gap-2">
             {(['weekly', 'monthly'] as const).map((p) => (

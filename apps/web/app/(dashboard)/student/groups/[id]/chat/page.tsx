@@ -221,7 +221,7 @@ export default function GroupChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 md:px-6 py-3 md:py-4 space-y-3 md:space-y-4">
         {messages.length === 0 ? (
           <p className="text-center text-[#94a3b8] text-sm mt-10">Hali xabarlar yo&apos;q</p>
         ) : (
@@ -332,8 +332,22 @@ export default function GroupChatPage() {
       </div>
       </div>{/* end main chat column */}
 
-      {/* Desktop sidebar placeholder — graceful empty space */}
-      <div className="hidden lg:block lg:flex-1 bg-[#f0ede8] border-l border-[#ede9e1]" aria-hidden />
+      {/* Tablet/Desktop sidebar — participant list placeholder */}
+      <div className="hidden md:flex md:flex-col md:w-64 lg:flex-1 bg-[#f0ede8] border-l border-[#ede9e1] p-5">
+        <p className="text-xs font-extrabold uppercase tracking-widest text-[#64748b] mb-3">
+          Ishtirokchilar
+        </p>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-full bg-[#e2ddd5] mx-auto flex items-center justify-center">
+              <span className="text-2xl" aria-hidden>👥</span>
+            </div>
+            <p className="text-xs font-semibold text-[#94a3b8] leading-snug">
+              Ishtirokchilar ro&apos;yxati<br />tez orada
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

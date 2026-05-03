@@ -94,9 +94,12 @@ export default function StudentLentaPage() {
         </div>
       </header>
 
-      <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-        {/* Friends summary card. Hidden until the count loads so the page
-            doesn't flash a "0 do'st" state while the request is in-flight. */}
+      <div className="px-4 md:px-6 pt-4 pb-6 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+        {/* Tablet: 2-column layout — feed events left, friend activity sidebar right */}
+        <div className="md:flex md:gap-6 lg:gap-8 md:items-start">
+          {/* Main feed column */}
+          <div className="md:flex-1 min-w-0 space-y-4">
+        {/* Friends summary card */}
         {friendCount !== null && (
           <div
             className={`rounded-3xl p-4 flex items-center gap-3 border-[1.5px] ${
@@ -140,6 +143,40 @@ export default function StudentLentaPage() {
         )}
 
         <SocialFeed />
+          </div>{/* end main feed column */}
+
+          {/* Right sidebar — friend activity — only on tablet+ */}
+          <aside className="hidden md:block md:w-64 lg:w-72 shrink-0 md:sticky md:top-20">
+            <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5 shadow-sm">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#7a5e2c] mb-3">
+                Do&apos;stlar faoliyati
+              </p>
+              {friendCount !== null && friendCount > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-[#3c3c3c]">
+                    {friendCount} ta do&apos;st faol
+                  </p>
+                  <p className="text-xs text-[#64748b] font-semibold leading-snug">
+                    Do&apos;stlaringizning so&apos;nggi yutuqlari lentada ko&apos;rinadi.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm font-bold text-[#3c3c3c]">Do&apos;st yo&apos;q</p>
+                  <p className="text-xs text-[#64748b] leading-snug">
+                    Do&apos;st qo&apos;shing — ularning yutuqlarini shu yerda ko&apos;rasiz.
+                  </p>
+                  <Link
+                    href="/student/friends"
+                    className="mt-2 block text-center text-xs font-extrabold text-white bg-[#1cb0f6] border-b-[3px] border-[#0a7ea8] rounded-xl py-2 hover:brightness-105 transition-all"
+                  >
+                    Do&apos;st qo&apos;shish
+                  </Link>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>{/* end 2-col flex */}
       </div>
     </div>
   );

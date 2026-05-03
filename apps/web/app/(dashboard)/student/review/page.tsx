@@ -143,15 +143,15 @@ export default function ReviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <button
           onClick={() => setFlipped((f) => !f)}
-          className="w-full max-w-sm md:max-w-md focus:outline-none"
+          className="w-full max-w-sm md:max-w-lg focus:outline-none"
         >
-          <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 text-center transition-all duration-200 ${
+          <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 md:p-14 text-center transition-all duration-200 ${
             flipped ? 'bg-indigo-50 border-indigo-200' : 'border-[#ede9e1]'
           }`}>
             {!flipped ? (
               <>
-                <p className="text-4xl font-black text-[#0f172a] mb-3">{item.word}</p>
-                <p className="text-[#94a3b8] text-sm">Tarjimasini bilsangiz kartani aylantiring</p>
+                <p className="text-4xl md:text-5xl lg:text-6xl font-black text-[#0f172a] mb-3">{item.word}</p>
+                <p className="text-[#94a3b8] text-sm md:text-base">Tarjimasini bilsangiz kartani aylantiring</p>
                 <div className="mt-4 text-xs text-[#94a3b8] bg-[#f7f4ef] rounded-xl px-3 py-1.5 inline-block">
                   Bosing
                 </div>
@@ -167,7 +167,7 @@ export default function ReviewPage() {
         </button>
 
         {flipped && (
-          <div className="flex gap-4 mt-6 w-full max-w-sm md:max-w-md">
+          <div className="flex gap-4 mt-6 w-full max-w-sm md:max-w-lg">
             <Button
               variant="danger"
               size="lg"

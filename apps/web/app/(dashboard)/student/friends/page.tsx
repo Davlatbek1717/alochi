@@ -120,7 +120,7 @@ export default function FriendsPage() {
         <div className="relative z-10 flex items-end justify-between max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
           <div>
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
-            <p className="text-white text-xl font-bold">Do&apos;stlar</p>
+            <p className="text-white text-xl md:text-2xl font-bold">Do&apos;stlar</p>
           </div>
           <Button
             variant="primary"

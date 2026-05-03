@@ -40,7 +40,7 @@ export default function ErrorAnalysisPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-        <button onClick={() => router.push('/student')} className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10">
+        <button onClick={() => router.push('/student')} className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 min-h-[44px]">
           <ArrowLeft size={16} /> Bosh sahifaga
         </button>
         <div className="relative z-10">
@@ -53,7 +53,7 @@ export default function ErrorAnalysisPage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl md:space-y-5">
         {/* AI Recommendation */}
         <div className="bg-gradient-to-br from-[#1e1b4b] to-[#1e293b] rounded-[18px] p-4 border border-purple-900/30 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-20"
@@ -90,7 +90,7 @@ export default function ErrorAnalysisPage() {
                 const c = severityColor(i);
                 return (
                   <div key={topic}>
-                    <div className="bg-white rounded-[14px] px-4 py-3 flex items-center gap-3 border-[1.5px] border-[#ede9e1]">
+                    <div className="bg-white rounded-[14px] px-4 py-3 md:py-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] md:hover:-translate-y-0.5 md:hover:shadow-md transition-all">
                       <div className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
                       <p className="flex-1 text-[#0f172a] text-sm font-semibold">{topic}</p>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${c.badge}`}>

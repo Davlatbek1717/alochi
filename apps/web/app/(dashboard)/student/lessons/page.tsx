@@ -248,21 +248,21 @@ export default function LessonsPathPage() {
     <div className="min-h-screen bg-[#fffaf0]">
       {/* Sticky top bar with overall progress ribbon */}
       <header className="sticky top-0 z-30 bg-[#fffaf0]/95 backdrop-blur border-b border-[#ede9e1]">
-        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl px-4 md:px-6 pt-3 pb-2.5">
+        <div className="max-w-lg mx-auto md:max-w-4xl lg:max-w-5xl px-4 md:px-6 pt-3 pb-2.5">
           <div className="flex items-center gap-3">
             <Link
               href="/student"
               aria-label="Ortga"
-              className="w-9 h-9 rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors shrink-0"
+              className="w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors shrink-0"
             >
               <ArrowLeft size={18} />
             </Link>
             <div className="flex-1 min-w-0 text-center">
-              <h1 className="text-base font-extrabold text-[#3c3c3c] leading-tight">
+              <h1 className="text-base md:text-lg font-extrabold text-[#3c3c3c] leading-tight">
                 Sayohat xaritasi
               </h1>
               {totalCount > 0 && (
-                <p className="text-[11px] font-bold text-[#777] leading-snug">
+                <p className="text-[11px] md:text-xs font-bold text-[#777] leading-snug">
                   {completedCount} / {totalCount} dars · {progressPct}%
                 </p>
               )}
@@ -274,11 +274,9 @@ export default function LessonsPathPage() {
               </span>
             </div>
           </div>
-          {/* Progress ribbon — slim duo-green track that fills as the
-              student completes lessons. Only rendered once we have data so
-              it doesn't flash empty during load. */}
+          {/* Progress ribbon */}
           {totalCount > 0 && (
-            <div className="mt-2 h-1.5 bg-[#e8e0d0] rounded-full overflow-hidden">
+            <div className="mt-2 h-1.5 md:h-2 bg-[#e8e0d0] rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[#58cc02] to-[#46a302] rounded-full transition-all duration-500"
                 style={{ width: `${progressPct}%` }}
@@ -288,7 +286,11 @@ export default function LessonsPathPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl px-4 md:px-6 pt-4 pb-24">
+      {/* Tablet: path + sticky side progress chip */}
+      <div className="max-w-lg mx-auto md:max-w-4xl lg:max-w-5xl px-4 md:px-6 pt-4 pb-24 md:flex md:gap-6 lg:gap-8 md:items-start">
+
+        {/* Path column (takes ~70% on md+) */}
+        <main className="md:flex-1 min-w-0">
         {error && (
           <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-2xl text-sm mb-4">
             {error}
@@ -300,7 +302,7 @@ export default function LessonsPathPage() {
         ) : lessons.length === 0 ? (
           <EmptyPath />
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8 lg:space-y-10">
             {units.map((unit, unitIdx) => (
               <UnitBlock
                 key={unitIdx}
@@ -319,7 +321,48 @@ export default function LessonsPathPage() {
             <EndOfPathTile completedAll={currentIndex >= lessons.length - 1 && lessonStates[lessonStates.length - 1] === 'completed'} />
           </div>
         )}
-      </main>
+        </main>
+
+        {/* Side progress chip — only on tablet+ */}
+        {!loading && totalCount > 0 && (
+          <aside className="hidden md:block md:w-[30%] lg:w-72 shrink-0 md:sticky md:top-20 space-y-3">
+            <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5 shadow-sm">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#7a5e2c] mb-3">
+                Umumiy jarayon
+              </p>
+              <div className="flex items-end gap-2 mb-3">
+                <p className="text-4xl font-extrabold text-[#3c3c3c] leading-none tabular-nums">
+                  {progressPct}
+                </p>
+                <p className="text-lg font-bold text-[#777] mb-1">%</p>
+              </div>
+              <div className="h-2.5 bg-[#e8e0d0] rounded-full overflow-hidden mb-2">
+                <div
+                  className="h-full bg-gradient-to-r from-[#58cc02] to-[#46a302] rounded-full transition-all duration-700"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <p className="text-xs font-bold text-[#777]">
+                {completedCount} / {totalCount} dars bajarildi
+              </p>
+            </div>
+
+            <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5 shadow-sm space-y-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#7a5e2c]">
+                Bugungi faollik
+              </p>
+              <div className="flex items-center gap-2">
+                <StreakFlame streak={streak} hasShield={hasShield} size={28} showLabel />
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-extrabold text-[#46a302]">
+                <Sparkles size={14} className="text-[#fbbf24]" />
+                <span>{todayXp} XP bugun</span>
+              </div>
+            </div>
+          </aside>
+        )}
+
+      </div>
 
       {/* Floating "back to current" button — appears only when the
           current node is off-screen so it never overlaps the path while

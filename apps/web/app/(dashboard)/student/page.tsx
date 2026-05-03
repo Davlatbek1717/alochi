@@ -218,7 +218,7 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
+      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-7xl space-y-4 pb-28 pt-4 px-4 bg-[#fffaf0] min-h-screen">
         <Skeleton theme="light" className="h-32 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
@@ -231,49 +231,59 @@ export default function StudentDashboard() {
 
   return (
     <div className="bg-[#fffaf0] min-h-screen">
-      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl pb-28 pt-4 px-4 md:px-6 space-y-5">
-        {/* 1. Compact greeting hero — mascot + name + streak/step */}
-        <GreetingHero
-          firstName={firstName}
-          streak={streak}
-          hasShield={hasShield}
-          currentStep={lessonProgress + 1}
-          level={xpData.level}
-        />
+      {/* Phone: single-column. Tablet/Desktop: 12-col grid (left 5, right 7). */}
+      <div className="max-w-lg mx-auto lg:max-w-7xl pb-28 pt-4 px-4 md:px-6 lg:px-8">
+        {/* ── TABLET/DESKTOP 2-column grid ── */}
+        <div className="md:grid md:grid-cols-12 md:gap-5 lg:gap-8 md:items-start">
 
-        {/* 2. Active warnings — only when present, never a perma-banner. */}
-        {activeWarnings.length > 0 && (
-          <WarningBanner warnings={activeWarnings} />
-        )}
+          {/* ── LEFT column (sticky on md+) ── */}
+          <div className="md:col-span-5 md:sticky md:top-20 space-y-4 md:space-y-5 mb-4 md:mb-0">
+            {/* 1. Greeting hero */}
+            <GreetingHero
+              firstName={firstName}
+              streak={streak}
+              hasShield={hasShield}
+              currentStep={lessonProgress + 1}
+              level={xpData.level}
+            />
 
-        {/* 3. Primary CTA — promoted to second-from-top so opening the
-            app means seeing "Davom etish" within thumb's reach. */}
-        <ContinueLessonCard
-          nextLesson={nextLesson}
-          session={nextLessonSession}
-          lessonNumber={lessonProgress + 1}
-        />
+            {/* 2. Active warnings — only when present */}
+            {activeWarnings.length > 0 && (
+              <WarningBanner warnings={activeWarnings} />
+            )}
 
-        {/* 4. Three-discipline status block — the mentor-managed colour
-            indicator for English / Personal Development / Critical Thinking. */}
-        <StatusBlock data={statusData} />
+            {/* 3. Primary CTA */}
+            <ContinueLessonCard
+              nextLesson={nextLesson}
+              session={nextLessonSession}
+              lessonNumber={lessonProgress + 1}
+            />
 
-        {/* 5. Daily review — spaced-repetition list, only when items exist. */}
-        {reviewItems.length > 0 && <DailyReviewCard items={reviewItems} />}
+            {/* 4. Status block */}
+            <StatusBlock data={statusData} />
+          </div>
 
-        {/* 6. Lesson path peek. */}
-        <LessonPathPreview />
+          {/* ── RIGHT column ── */}
+          <div className="md:col-span-7 space-y-4 md:space-y-5">
+            {/* 5. Daily review */}
+            {reviewItems.length > 0 && <DailyReviewCard items={reviewItems} />}
 
-        {/* 7. Certificates — surface only when earned, max 2 inline. */}
-        {certificates.length > 0 && (
-          <CertificatesCard certificates={certificates} />
-        )}
+            {/* 6. Lesson path peek */}
+            <LessonPathPreview />
 
-        {/* 8. Browse more — destinations not in the bottom nav. */}
-        <BrowseMoreGrid />
+            {/* 7. Certificates */}
+            {certificates.length > 0 && (
+              <CertificatesCard certificates={certificates} />
+            )}
 
-        {/* 9. Friends activity. */}
-        <SocialFeed />
+            {/* 8. Browse more */}
+            <BrowseMoreGrid />
+
+            {/* 9. Friends activity */}
+            <SocialFeed />
+          </div>
+
+        </div>
       </div>
     </div>
   );
@@ -316,19 +326,19 @@ function GreetingHero({
             'radial-gradient(circle, rgba(251,191,36,0.55) 0%, transparent 70%)',
         }}
       />
-      <div className="relative z-10 p-5 md:px-8 md:py-8 space-y-4">
+      <div className="relative z-10 p-5 md:p-7 space-y-4">
         <div className="flex items-start gap-4">
           <div className="shrink-0">
-            <Mascot expression={mood} size={88} animated />
+            <Mascot expression={mood} size={88} className="md:!w-[120px] md:!h-[120px] lg:!w-[140px] lg:!h-[140px]" animated />
           </div>
           <div className="min-w-0 flex-1">
             <h1
-              className="text-2xl font-extrabold leading-tight text-[#3c3c3c] truncate"
+              className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight text-[#3c3c3c] truncate"
               style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
             >
               {greeting}
             </h1>
-            <p className="mt-1 text-sm font-bold text-[#7a5e2c] leading-snug">
+            <p className="mt-1 text-sm md:text-base font-bold text-[#7a5e2c] leading-snug">
               {subtitle}
             </p>
           </div>
@@ -384,16 +394,16 @@ function HeroStat({
   highlight?: boolean;
 }) {
   return (
-    <div className="bg-white/70 backdrop-blur rounded-2xl border border-[#f3e8c7] px-3 py-2.5 flex flex-col items-center gap-1">
-      <div className="h-5 flex items-center justify-center">{icon}</div>
+    <div className="bg-white/70 backdrop-blur rounded-2xl border border-[#f3e8c7] px-3 py-2.5 md:py-3 flex flex-col items-center gap-1 md:gap-1.5 md:hover:-translate-y-0.5 md:hover:shadow-md transition-all">
+      <div className="h-5 md:h-6 flex items-center justify-center">{icon}</div>
       <p
-        className={`text-base font-extrabold leading-none truncate max-w-full ${
+        className={`text-base md:text-lg font-extrabold leading-none truncate max-w-full ${
           highlight ? 'text-[#46a302]' : 'text-[#3c3c3c]'
         }`}
       >
         {value}
       </p>
-      <p className="text-[10px] font-bold uppercase tracking-wider text-[#7a5e2c]">
+      <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-[#7a5e2c]">
         {label}
       </p>
     </div>
@@ -415,7 +425,7 @@ function ContinueLessonCard({
 
   return (
     <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
-      <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] p-5 text-white relative">
+      <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] p-5 md:p-6 text-white relative">
         <div
           aria-hidden
           className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
@@ -433,7 +443,7 @@ function ContinueLessonCard({
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <PlayCircle size={18} className="text-white/95" />
-            <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/90">
+            <p className="text-[11px] md:text-xs font-extrabold uppercase tracking-widest text-white/90">
               Davom etamiz
             </p>
             {showSession && (
@@ -442,8 +452,8 @@ function ContinueLessonCard({
               </span>
             )}
           </div>
-          <p className="text-2xl font-extrabold leading-tight">{title}</p>
-          <div className="mt-2.5 flex items-center gap-3 text-[11px] font-bold text-white/90 flex-wrap">
+          <p className="text-2xl md:text-3xl font-extrabold leading-tight">{title}</p>
+          <div className="mt-2.5 flex items-center gap-3 text-[11px] md:text-xs font-bold text-white/90 flex-wrap">
             <span className="inline-flex items-center gap-1">
               <BookOpen size={12} /> Dars {lessonNumber}
             </span>
@@ -453,7 +463,7 @@ function ContinueLessonCard({
           </div>
           <Link
             href="/student/lessons/current"
-            className="mt-4 block bg-white text-[#46a302] py-3 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105"
+            className="mt-4 block bg-white text-[#46a302] py-3 md:py-3.5 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105 min-h-[44px] flex items-center justify-center"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
             Davom etish
@@ -474,9 +484,9 @@ function StatusBlock({ data }: { data: StatusData | null }) {
     { field: 'criticalStatus', label: 'Tanqidiy', icon: <Lightbulb size={16} /> },
   ];
   return (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] space-y-3">
+    <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-[#ede9e1] space-y-3 md:space-y-4">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c]">
+        <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#7a5e2c]">
           Sizning holatingiz
         </p>
         <span
@@ -493,11 +503,11 @@ function StatusBlock({ data }: { data: StatusData | null }) {
           return (
             <div
               key={it.field}
-              className={`rounded-2xl p-3 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 text-center`}
+              className={`rounded-2xl p-3 md:p-4 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 md:gap-1.5 text-center md:hover:-translate-y-0.5 md:hover:shadow-md transition-all`}
             >
               <div className={`relative ${v.text}`}>{it.icon}</div>
-              <p className={`text-sm font-extrabold ${v.text}`}>{v.label}</p>
-              <p className="text-[10px] text-[#777] font-bold uppercase tracking-wider">
+              <p className={`text-sm md:text-base font-extrabold ${v.text}`}>{v.label}</p>
+              <p className="text-[10px] md:text-[11px] text-[#777] font-bold uppercase tracking-wider">
                 {it.label}
               </p>
               <span
@@ -546,10 +556,10 @@ function WarningBanner({ warnings }: { warnings: Warning[] }) {
 
 function DailyReviewCard({ items }: { items: ReviewItem[] }) {
   return (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1] space-y-3">
+    <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-[#ede9e1] space-y-3 md:space-y-4">
       <div className="flex items-center gap-2">
         <RefreshCw size={18} className="text-[#46a302]" />
-        <h2 className="font-extrabold text-[#3c3c3c]">Kunlik takrorlash</h2>
+        <h2 className="font-extrabold text-[#3c3c3c] md:text-lg">Kunlik takrorlash</h2>
         <span className="ml-auto text-xs font-bold text-[#777]">
           {items.length} ta so&apos;z
         </span>
@@ -684,23 +694,23 @@ function BrowseMoreGrid() {
       <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c] px-1">
         Yana
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-3">
         {items.map((it) => (
           <Link
             key={it.href}
             href={it.href}
-            className="bg-white rounded-2xl p-3.5 shadow-sm border border-[#ede9e1] flex items-center gap-3 hover:border-[#58cc02]/40 hover:shadow-md transition-all"
+            className="bg-white rounded-2xl p-3.5 md:p-4 shadow-sm border border-[#ede9e1] flex items-center gap-3 hover:border-[#58cc02]/40 hover:shadow-md md:hover:-translate-y-0.5 transition-all"
           >
             <div
-              className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${it.tint}`}
+              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center shrink-0 ${it.tint}`}
             >
               {it.icon}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-extrabold text-sm text-[#3c3c3c] truncate">
+              <p className="font-extrabold text-sm md:text-base text-[#3c3c3c] truncate">
                 {it.title}
               </p>
-              <p className="text-[11px] text-[#777] font-semibold truncate">
+              <p className="text-[11px] md:text-xs text-[#777] font-semibold truncate">
                 {it.sub}
               </p>
             </div>

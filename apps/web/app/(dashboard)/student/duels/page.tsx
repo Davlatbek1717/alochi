@@ -140,7 +140,7 @@ export default function StudentDuelsPage() {
         </div>
       </header>
 
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+      <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl md:space-y-6">
         {error && (
           <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
             {error}

@@ -391,7 +391,7 @@ export default function StudentExamsPage() {
           cameraWarnings={cameraWarnings}
           onLookAway={handleLookAway}
         />
-        <div className="px-4 md:px-6 pt-5 pb-8 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl">
+        <div className="px-4 md:px-6 pt-5 pb-8 space-y-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl md:space-y-5">
           {legacyQuestions.length > 0 && (
             <div className="space-y-4">
               {legacyQuestions.map((q, qi) => (
@@ -418,7 +418,7 @@ export default function StudentExamsPage() {
                               return n;
                             })
                           }
-                          className={`w-full text-left px-4 py-3 rounded-xl border-[1.5px] text-sm font-medium transition-all duration-150 flex items-center gap-3 ${
+                          className={`w-full text-left px-4 py-3 md:py-4 min-h-[44px] rounded-xl border-[1.5px] text-sm md:text-base font-medium transition-all duration-150 flex items-center gap-3 ${
                             selected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                               : 'border-[#ede9e1] bg-[#f7f4ef] text-[#0f172a] hover:border-[#0f172a]/40 hover:bg-white'
@@ -529,7 +529,7 @@ export default function StudentExamsPage() {
         </div>
       </header>
 
-      <main className="px-4 pt-4 pb-10 space-y-4 max-w-md mx-auto md:max-w-3xl lg:max-w-4xl">
+      <main className="px-4 pt-4 pb-10 space-y-4 max-w-md mx-auto md:max-w-2xl lg:max-w-3xl md:space-y-5">
         {/* Camera monitor */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
           <div className="flex items-center gap-2 mb-3">

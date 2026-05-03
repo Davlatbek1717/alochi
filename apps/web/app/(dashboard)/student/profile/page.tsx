@@ -308,53 +308,57 @@ export default function StudentProfilePage() {
 
   return (
     <div className="min-h-full bg-[#fffaf0] pb-28">
-      {/* Hero card — avatar + name + branch + Aloqush */}
+      {/* Hero banner — full width */}
       <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 md:px-8 md:py-8 relative overflow-hidden">
-        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl">
           <div
-            className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${league.color} border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl shrink-0`}
+            className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br ${league.color} border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl md:text-4xl shrink-0`}
             aria-hidden
           >
             {profile.name.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <h1
-              className="text-[#0f172a] text-2xl font-extrabold truncate"
+              className="text-[#0f172a] text-2xl md:text-3xl font-extrabold truncate"
               style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
             >
               {profile.name}
             </h1>
-            <p className="text-[#64748b] text-xs truncate font-semibold">
+            <p className="text-[#64748b] text-xs md:text-sm truncate font-semibold">
               @{profile.login}
             </p>
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
               {profile.branch?.name && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#64748b] bg-[#fffaf0] border border-[#ede9e1] rounded-full px-2 py-0.5 font-bold">
+                <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-[#64748b] bg-[#fffaf0] border border-[#ede9e1] rounded-full px-2 py-0.5 font-bold">
                   <GraduationCap size={11} /> {profile.branch.name}
                 </span>
               )}
               {profile.group?.name && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-[#46a302] bg-[#dcfce7] border border-[#bbf7d0] rounded-full px-2 py-0.5 font-bold">
+                <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-[#46a302] bg-[#dcfce7] border border-[#bbf7d0] rounded-full px-2 py-0.5 font-bold">
                   {profile.group.name}
                 </span>
               )}
               {profile.createdAt && formatMember(profile.createdAt) && (
-                <span className="text-[10px] text-[#94a3b8] uppercase tracking-wider font-bold">
+                <span className="text-[10px] md:text-xs text-[#94a3b8] uppercase tracking-wider font-bold">
                   {formatMember(profile.createdAt)} dan
                 </span>
               )}
             </div>
           </div>
           <div className="hidden sm:block shrink-0">
-            <Mascot expression="happy" size={72} />
+            <Mascot expression="happy" size={72} className="md:!w-[96px] md:!h-[96px]" />
           </div>
         </div>
       </div>
 
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
+      {/* Tablet: left sticky (avatar stats) + right (details) */}
+      <div className="max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl px-4 md:px-6 pt-5 pb-6 md:flex md:gap-6 lg:gap-8 md:items-start">
+
+        {/* LEFT column — sticky on md+: league + stats */}
+        <div className="md:w-72 lg:w-80 shrink-0 md:sticky md:top-20 space-y-5 mb-5 md:mb-0">
         {/* League card with progress to next */}
         <div
-          className={`relative rounded-3xl p-4 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden`}
+          className={`relative rounded-3xl p-4 md:p-5 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden md:hover:-translate-y-0.5 transition-all`}
         >
           <div
             aria-hidden
@@ -398,8 +402,8 @@ export default function StudentProfilePage() {
           </div>
         </div>
 
-        {/* Compact stat grid — 4 most-loved metrics, no awkward "Keyingi" */}
-        <div className="grid grid-cols-4 md:grid-cols-4 gap-2 md:gap-3">
+        {/* Compact stat grid */}
+        <div className="grid grid-cols-4 gap-2 md:gap-3">
           <StatCard
             icon={<Star size={18} className="text-[#fbbf24]" />}
             value={totalXp}
@@ -422,7 +426,7 @@ export default function StudentProfilePage() {
           />
         </div>
 
-        {/* Achievements — only when at least one is unlocked */}
+        {/* Achievements */}
         {achievements.length > 0 && (
           <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-4">
             <div className="flex items-center justify-between mb-3">
@@ -436,7 +440,10 @@ export default function StudentProfilePage() {
             <AchievementCarousel items={achievements.slice(0, 6)} />
           </section>
         )}
+        </div>{/* end LEFT column */}
 
+        {/* RIGHT column — details, settings, links */}
+        <div className="flex-1 min-w-0 space-y-5">
         {/* Profile fields with edit button */}
         <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5">
           <div className="flex items-center justify-between mb-3">
@@ -445,7 +452,7 @@ export default function StudentProfilePage() {
             </p>
             <button
               onClick={() => setEditing(true)}
-              className="flex items-center gap-1 text-xs font-bold text-[#46a302] hover:underline"
+              className="flex items-center gap-1 text-xs font-bold text-[#46a302] hover:underline min-h-[44px] px-2"
             >
               <Pencil size={12} /> Tahrirlash
             </button>
@@ -453,14 +460,14 @@ export default function StudentProfilePage() {
           <div className="space-y-3">
             <Field
               label="Ota-ona Telegram"
-              value={profile.parentTelegramId || 'Bogʻlanmagan'}
+              value={profile.parentTelegramId || "Bogʻlanmagan"}
             />
             <Field
               label="Tugʻilgan sana"
               value={
                 profile.birthDate
                   ? profile.birthDate.slice(0, 10)
-                  : 'Belgilanmagan'
+                  : "Belgilanmagan"
               }
             />
             {tgLink && !profile.parentTelegramLinked && (
@@ -516,7 +523,7 @@ export default function StudentProfilePage() {
             href="/student/letters"
             icon={<Mail size={18} className="text-[#10b981]" />}
             title="Harflar kolleksiyasi"
-            sub={`${lettersOwned} ta to‘plangan`}
+            sub={`${lettersOwned} ta to'plangan`}
           />
           <AccountRow
             href="/student/groups"
@@ -534,19 +541,20 @@ export default function StudentProfilePage() {
                 }
               />
             }
-            title={profile.faceEnrolled ? 'Yuz ID — faol' : "Yuz ID ro‘yxat"}
-            sub={profile.faceEnrolled ? 'Davomatga ulangan' : "Bir martalik ro‘yxatdan o‘tish"}
+            title={profile.faceEnrolled ? "Yuz ID — faol" : "Yuz ID ro'yxat"}
+            sub={profile.faceEnrolled ? "Davomatga ulangan" : "Bir martalik ro'yxatdan o'tish"}
           />
         </section>
 
         {/* Logout */}
         <button
           onClick={() => setLogoutOpen(true)}
-          className="w-full bg-white rounded-3xl border-[1.5px] border-[#fecaca] p-4 flex items-center justify-center gap-2 text-sm font-extrabold text-[#dc2626] hover:bg-rose-50 transition-colors"
+          className="w-full bg-white rounded-3xl border-[1.5px] border-[#fecaca] p-4 flex items-center justify-center gap-2 text-sm font-extrabold text-[#dc2626] hover:bg-rose-50 transition-colors min-h-[44px]"
         >
           <LogOut size={16} /> Profildan chiqish
         </button>
-      </div>
+        </div>{/* end RIGHT column */}
+      </div>{/* end 2-col flex */}
 
       {/* Edit profile modal */}
       <Modal
@@ -632,7 +640,7 @@ export default function StudentProfilePage() {
         }
       >
         <p className="text-sm text-[#64748b] font-semibold leading-relaxed">
-          Qayta kirish uchun login va parolingizni kiritishingiz kerak bo‘ladi.
+          Qayta kirish uchun login va parolingizni kiritishingiz kerak bo&apos;ladi.
         </p>
       </Modal>
     </div>

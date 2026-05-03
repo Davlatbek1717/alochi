@@ -101,22 +101,22 @@ export default function StudentLettersPage() {
           <Link
             href="/student"
             aria-label="Orqaga"
-            className="w-9 h-9 rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors"
+            className="w-9 h-9 min-h-[44px] min-w-[44px] rounded-full bg-white border border-[#ede9e1] flex items-center justify-center text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors"
           >
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[#0f172a] font-extrabold text-lg leading-tight flex items-center gap-2">
+            <h1 className="text-[#0f172a] font-extrabold text-lg md:text-xl leading-tight flex items-center gap-2">
               <Sparkles size={16} className="text-[#fbbf24]" />
               Kolleksiya
             </h1>
-            <p className="text-[11px] text-[#64748b] font-semibold">
+            <p className="text-[11px] md:text-xs text-[#64748b] font-semibold">
               {owned} / {total} ta harf · {pct}%
             </p>
           </div>
         </div>
         {/* Progress bar */}
-        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mt-2.5 h-2 bg-white border border-[#ede9e1] rounded-full overflow-hidden">
+        <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mt-2.5 h-2 md:h-2.5 bg-white border border-[#ede9e1] rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-[#fbbf24] via-[#f59e0b] to-[#d97706] rounded-full transition-all duration-500"
             style={{ width: `${pct}%` }}
@@ -297,7 +297,7 @@ function LetterCard({
       type="button"
       onClick={onClick}
       title={letter.owned ? letter.char : 'Yopiq'}
-      className={`relative aspect-square rounded-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 motion-safe:[animation:count-up-fade_400ms_ease-out] ${
+      className={`relative aspect-square rounded-2xl flex items-center justify-center transition-all hover:scale-105 md:hover:-translate-y-1 md:hover:shadow-lg active:scale-95 motion-safe:[animation:count-up-fade_400ms_ease-out] ${
         letter.owned
           ? isLegendary
             ? 'bg-gradient-to-br from-[#fffbeb] via-[#fde68a] to-[#fbbf24] border-[2px] border-[#fbbf24] shadow-md'
@@ -328,7 +328,7 @@ function LetterCard({
       )}
       {letter.owned ? (
         <span
-          className={`font-extrabold text-2xl ${
+          className={`font-extrabold text-2xl md:text-3xl ${
             isLegendary
               ? 'text-[#92400e]'
               : isRare
@@ -340,7 +340,7 @@ function LetterCard({
         </span>
       ) : (
         <>
-          <span className="absolute inset-0 flex items-center justify-center text-[#475569] font-extrabold text-xl select-none">
+          <span className="absolute inset-0 flex items-center justify-center text-[#475569] font-extrabold text-xl md:text-2xl select-none">
             ?
           </span>
           <Lock size={12} className="absolute bottom-1 right-1 text-[#94a3b8]" />

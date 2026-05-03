@@ -62,7 +62,7 @@ export default function StudentTournamentsPage() {
         />
         <button
           onClick={() => router.push('/student')}
-          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 hover:text-white transition-colors"
+          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 hover:text-white transition-colors min-h-[44px]"
         >
           <ArrowLeft size={16} /> Bosh sahifaga
         </button>
@@ -71,8 +71,8 @@ export default function StudentTournamentsPage() {
             <Trophy size={16} className="text-[#f59e0b]" />
             <span className="text-[#f59e0b] text-xs font-semibold uppercase tracking-wider">Musobaqalar</span>
           </div>
-          <p className="text-white text-xl font-bold">Turnirlar</p>
-          <p className="text-[#94a3b8] text-xs mt-1">Qatnashish uchun ro&apos;yxatdan o&apos;ting</p>
+          <p className="text-white text-xl md:text-2xl font-bold">Turnirlar</p>
+          <p className="text-[#94a3b8] text-xs md:text-sm mt-1">Qatnashish uchun ro&apos;yxatdan o&apos;ting</p>
         </div>
       </div>
 

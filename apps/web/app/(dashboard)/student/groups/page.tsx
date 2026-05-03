@@ -83,7 +83,7 @@ export default function StudentGroupsPage() {
           <>
             <Link
               href={`/student/groups/${groupId}/chat`}
-              className="block bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4 hover:border-[#10b981] hover:scale-[1.01] transition-all shadow-sm"
+              className="block bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4 md:p-5 hover:border-[#10b981] md:hover:-translate-y-0.5 hover:shadow-md transition-all shadow-sm"
             >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10b981] to-[#047857] flex items-center justify-center text-white shrink-0 shadow">
@@ -116,23 +116,23 @@ export default function StudentGroupsPage() {
 
             {/* Avatar strip */}
             {members.length > 0 && (
-              <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4">
+              <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-4 md:p-5">
                 <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-3">
-                  Guruh aʼzolari
+                  Guruh aʼzolari · {memberCount} ta
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {members.slice(0, 12).map((m) => (
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  {members.slice(0, 18).map((m) => (
                     <div
                       key={m.id}
-                      className="w-10 h-10 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-2 border-white shadow flex items-center justify-center text-white font-extrabold text-sm"
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-[#fbbf24] to-[#d97706] border-2 border-white shadow flex items-center justify-center text-white font-extrabold text-sm md:text-base"
                       title={m.name ?? ''}
                     >
                       {(m.name ?? '?').charAt(0).toUpperCase()}
                     </div>
                   ))}
-                  {members.length > 12 && (
-                    <div className="w-10 h-10 rounded-full bg-[#fffaf0] border-2 border-[#ede9e1] flex items-center justify-center text-[#64748b] font-extrabold text-xs">
-                      +{members.length - 12}
+                  {members.length > 18 && (
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#fffaf0] border-2 border-[#ede9e1] flex items-center justify-center text-[#64748b] font-extrabold text-xs">
+                      +{members.length - 18}
                     </div>
                   )}
                 </div>
