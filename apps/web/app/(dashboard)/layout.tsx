@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import BottomNav from './_components/BottomNav';
 import TopNav from './_components/TopNav';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
@@ -10,12 +10,40 @@ import { ToastProvider, Button } from '@/components/ui';
 
 interface UserInfo { id: string; name: string; role: string; tenantId: string; }
 
+/**
+ * Role → URL-prefix mapping. Used by the layout to redirect a user
+ * whose stored role doesn't match the prefix they're trying to visit
+ * — otherwise they'd hit a 403 on every API call from the wrong-role
+ * page and have no idea why.
+ */
+const ROLE_PREFIX: Record<string, string> = {
+  superadmin: '/superadmin',
+  filadmin: '/filadmin',
+  manager: '/manager',
+  mentor: '/mentor',
+  tester: '/tester',
+  student: '/student',
+};
+
+const ROLE_HOME: Record<string, string> = {
+  superadmin: '/superadmin',
+  filadmin: '/filadmin',
+  manager: '/manager',
+  mentor: '/mentor',
+  tester: '/tester',
+  student: '/student',
+};
+
+/** Routes that don't belong to any one role (e.g. delegations). */
+const SHARED_PREFIXES = ['/delegations'];
+
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname() ?? '';
   const [user, setUser] = useState<UserInfo | null>(null);
 
   useEffect(() => {
@@ -31,6 +59,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     } catch { /* ignore */ }
   }, [router]);
+
+  // Role-based redirect. If the stored user has a role but they're
+  // visiting a path under a different role's prefix (e.g. a tester on
+  // /superadmin/...), bounce them to their own home. Without this,
+  // every API call on the wrong page returns 403 and the user has no
+  // visible explanation. Shared paths (/delegations) bypass the check.
+  useEffect(() => {
+    if (!user || !pathname) return;
+    const expectedPrefix = ROLE_PREFIX[user.role];
+    if (!expectedPrefix) return;
+    if (SHARED_PREFIXES.some((p) => pathname.startsWith(p))) return;
+    // Match prefix WITH a slash boundary so /student also covers
+    // /student/lessons but /studentpolice (hypothetical) wouldn't
+    // sneak through.
+    if (pathname === expectedPrefix) return;
+    if (pathname.startsWith(`${expectedPrefix}/`)) return;
+    // Wrong-role URL — pivot to the user's actual role home.
+    const home = ROLE_HOME[user.role] ?? '/';
+    router.replace(home);
+  }, [user, pathname, router]);
 
   function handleLogout() {
     localStorage.clear();
