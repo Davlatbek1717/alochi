@@ -358,7 +358,7 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     const transcript =
       (session.transcript as unknown as ConversationTurn[]) ?? [];
     const exam = session.exam;
-    const ai = await this.askGemini(
+    let ai = await this.askGemini(
       this.buildSystemPrompt({
         language: (exam.language as 'uz' | 'en') ?? 'en',
         aiPrompt: exam.aiPrompt ?? '',
@@ -366,12 +366,50 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         passThreshold: exam.passThreshold,
       }),
       transcript,
-      // Force-finalize directive. The model knows the JSON shape from
-      // its system prompt; this just tells it the conversation is over.
-      '[END NOW] The student has indicated they are done. Finalize the exam: return your JSON with isFinal=true, a score 0-100, and the analysis breakdown.',
+      // Force-finalize directive — stronger wording so the model
+      // doesn't slip back into conversation mode and skip the verdict.
+      'STOP. Do NOT continue the conversation. The student is finished. ' +
+        'Return ONLY the final-grade JSON with isFinal=true, an integer ' +
+        '"score" between 0 and 100 (per the rubric), and the analysis ' +
+        'object. Do not greet, do not ask another question.',
     );
 
-    const score = typeof ai.score === 'number' ? ai.score : 0;
+    // If the model didn't deliver a score (truncated, ignored the
+    // STOP), one tighter retry asking only for the verdict JSON.
+    if (typeof ai.score !== 'number') {
+      this.logger.warn(
+        'Finalize first attempt missing score — retrying with strict prompt.',
+      );
+      try {
+        const retry = await this.askGemini(
+          this.buildSystemPrompt({
+            language: (exam.language as 'uz' | 'en') ?? 'en',
+            aiPrompt: exam.aiPrompt ?? '',
+            maxMinutes: exam.maxMinutes ?? 10,
+            passThreshold: exam.passThreshold,
+          }),
+          transcript,
+          'EVALUATE NOW. Output ONLY this JSON shape and nothing else: ' +
+            '{"message":"<one-line closing in ' +
+            (exam.language === 'uz' ? 'Uzbek' : 'English') +
+            '>","isFinal":true,"score":<integer 0-100>,' +
+            '"analysis":{"strengths":[],"weaknesses":[],"recommendations":[]}}',
+        );
+        if (typeof retry.score === 'number') {
+          ai = retry;
+        }
+      } catch (err) {
+        this.logger.warn(`Finalize retry failed: ${(err as Error).message}`);
+      }
+    }
+
+    // Final guardrail: if the score still isn't a number, give the
+    // student the benefit of the doubt and award the pass threshold
+    // (so a flaky LLM turn doesn't auto-fail them).
+    const score =
+      typeof ai.score === 'number'
+        ? Math.max(0, Math.min(100, Math.round(ai.score)))
+        : exam.passThreshold;
     transcript.push({
       role: 'ai',
       text:
@@ -490,7 +528,11 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
           config: {
             systemInstruction,
             temperature: 0.6,
-            maxOutputTokens: 600,
+            // 1500 leaves enough room for the full final JSON
+            // (message + 3-5 strengths + weaknesses + recommendations)
+            // without truncation. The previous 600 cap chopped final
+            // verdicts halfway and fell into the raw-text fallback.
+            maxOutputTokens: 1500,
             // Hint Gemini to return JSON. Some models honor strictly.
             responseMimeType: 'application/json',
           },
@@ -543,8 +585,19 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     );
   }
 
+  /**
+   * Robust JSON extractor for Gemini's `application/json` responses.
+   * Handles three failure modes seen in production:
+   *
+   *   1. Markdown fences ```json ... ``` — strip them.
+   *   2. Surrounding prose (model added a preamble) — find the first
+   *      balanced {...} substring.
+   *   3. Truncated JSON (output token cap clipped mid-string) — try to
+   *      regex-extract the message + score from the partial text and
+   *      synthesize a usable response so the student never sees raw
+   *      JSON in the result screen.
+   */
   private parseAiResponse(raw: string): AiTurnResponse {
-    // Strip ``` fences the model might add despite responseMimeType.
     let text = raw.trim();
     if (text.startsWith('```')) {
       text = text
@@ -553,11 +606,58 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         .trim();
     }
 
+    // Strategy 1 — direct parse of the whole text.
+    const direct = this.tryParseJson(text);
+    if (direct) return direct;
+
+    // Strategy 2 — find the first balanced {...} substring. Helpful
+    // when the model wrote a preamble before the JSON.
+    const slice = this.extractBalancedJsonObject(text);
+    if (slice) {
+      const parsed = this.tryParseJson(slice);
+      if (parsed) return parsed;
+    }
+
+    // Strategy 3 — the JSON was likely truncated. Salvage what we can
+    // via regex: a `"message": "..."` substring and a `"score": N`
+    // substring. Better to surface a plausible message than to dump
+    // raw JSON onto the result screen.
+    const messageMatch = /"message"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(text);
+    const scoreMatch = /"score"\s*:\s*(\d+)/.exec(text);
+    const isFinalMatch = /"isFinal"\s*:\s*(true|false)/.exec(text);
+    const fallbackMessage = messageMatch?.[1]
+      ? this.unescapeJsonString(messageMatch[1])
+      : '';
+    const fallbackScore = scoreMatch ? Number(scoreMatch[1]) : undefined;
+    const fallbackIsFinal = isFinalMatch?.[1] === 'true';
+
+    if (fallbackMessage || typeof fallbackScore === 'number') {
+      this.logger.warn(
+        `Gemini JSON truncated/malformed; salvaged via regex. Raw: ${raw.slice(0, 200)}`,
+      );
+      return {
+        message: fallbackMessage || '...',
+        isFinal: fallbackIsFinal,
+        score: fallbackScore,
+      };
+    }
+
+    // Strategy 4 — give up on parsing; treat the entire response as a
+    // plain conversational message and keep the exam going. Don't
+    // declare it final, don't dump JSON to the user.
+    this.logger.warn(
+      `Gemini JSON parse failed entirely. Raw: ${raw.slice(0, 200)}`,
+    );
+    return {
+      message: text.replace(/[{}"]+/g, '').trim() || '...',
+      isFinal: false,
+    };
+  }
+
+  private tryParseJson(text: string): AiTurnResponse | null {
     try {
       const parsed = JSON.parse(text) as AiTurnResponse;
-      if (typeof parsed?.message !== 'string') {
-        throw new Error('missing message');
-      }
+      if (typeof parsed?.message !== 'string') return null;
       return {
         message: parsed.message,
         isFinal: Boolean(parsed.isFinal),
@@ -565,16 +665,51 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         analysis: parsed.analysis ?? undefined,
       };
     } catch {
-      // Fallback: treat the whole text as a continuation message. The
-      // exam keeps going and the student can always tap "Tugatdim" to
-      // force a final score later.
-      this.logger.warn(
-        `Gemini JSON parse failed, treating as plain message. Raw: ${raw.slice(0, 200)}`,
-      );
-      return {
-        message: text || '...',
-        isFinal: false,
-      };
+      return null;
     }
+  }
+
+  /**
+   * Find the first balanced `{...}` substring in `text`, respecting
+   * string escapes so quotes inside string values don't confuse the
+   * brace counter. Returns null if no balanced object is found.
+   */
+  private extractBalancedJsonObject(text: string): string | null {
+    const start = text.indexOf('{');
+    if (start === -1) return null;
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) return text.slice(start, i + 1);
+      }
+    }
+    return null;
+  }
+
+  /** Decode a partial JSON-escaped string captured by the salvage regex. */
+  private unescapeJsonString(s: string): string {
+    return s
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, '\t')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
   }
 }
