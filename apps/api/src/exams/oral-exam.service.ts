@@ -44,15 +44,41 @@ export interface AiTurnResponse {
 @Injectable()
 export class OralExamService {
   private readonly logger = new Logger(OralExamService.name);
-  private genai: GoogleGenAI;
+  /**
+   * Pool of Gemini API keys. The free tier is 20 RPD per project, so
+   * a single key is easy to exhaust during testing or a busy exam day.
+   * `GEMINI_API_KEY` accepts a comma-separated list — every key gets
+   * its own quota bucket and we rotate through them as each hits its
+   * limit. With 3 free-tier keys you get 60 RPD; with 5, 100; etc.
+   * Set them up at https://aistudio.google.com/apikey on different
+   * Google accounts (or paid keys, which raises the per-key cap).
+   */
+  private apiKeys: string[];
+  /** Last key that succeeded — start the next call there to keep
+   *  warm responses on the same project. */
+  private lastGoodIdx = 0;
 
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    this.genai = new GoogleGenAI({
-      apiKey: this.config.get('GEMINI_API_KEY', ''),
-    });
+    const raw = this.config.get<string>('GEMINI_API_KEY', '') ?? '';
+    this.apiKeys = raw
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+    if (this.apiKeys.length === 0) {
+      this.logger.warn(
+        'GEMINI_API_KEY is empty — oral exam start will return 503 until set.',
+      );
+      // Keep one empty entry so the rest of the code path is uniform;
+      // it'll fail with a clear "no key" error when a request comes in.
+      this.apiKeys = [''];
+    } else {
+      this.logger.log(
+        `Oral exam Gemini pool configured with ${this.apiKeys.length} key(s).`,
+      );
+    }
   }
 
   /**
@@ -445,54 +471,76 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     }
     contents.push({ role: 'user', parts: [{ text: userTurn }] });
 
-    let raw: string;
-    try {
-      const resp = await this.genai.models.generateContent({
-        model: GEMINI_MODEL,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.6,
-          maxOutputTokens: 600,
-          // Hint Gemini to return JSON. Some models honor this strictly.
-          responseMimeType: 'application/json',
-        },
-      });
-      raw = (resp.text ?? '').trim();
-    } catch (err) {
-      const msg = (err as Error).message ?? '';
-      this.logger.error(`Gemini call failed: ${msg}`);
-      // Surface quota / billing problems with a message the operator
-      // can act on. Free tier is 20 RPD on gemini-2.5-flash; once
-      // tripped, every subsequent call returns 429 RESOURCE_EXHAUSTED.
-      // Users see this message verbatim, so it has to be actionable.
-      const isQuota =
-        msg.includes('RESOURCE_EXHAUSTED') ||
-        msg.includes('quota') ||
-        msg.includes('429');
-      if (isQuota) {
+    // Try every configured key in rotation, starting from the last
+    // one that worked. The first key whose call doesn't trip a quota
+    // wins; we remember it so the next request starts there too.
+    const errors: string[] = [];
+    for (let attempt = 0; attempt < this.apiKeys.length; attempt++) {
+      const idx = (this.lastGoodIdx + attempt) % this.apiKeys.length;
+      const key = this.apiKeys[idx];
+      if (!key) {
+        errors.push(`key#${idx}: empty`);
+        continue;
+      }
+      try {
+        const genai = new GoogleGenAI({ apiKey: key });
+        const resp = await genai.models.generateContent({
+          model: GEMINI_MODEL,
+          contents,
+          config: {
+            systemInstruction,
+            temperature: 0.6,
+            maxOutputTokens: 600,
+            // Hint Gemini to return JSON. Some models honor strictly.
+            responseMimeType: 'application/json',
+          },
+        });
+        const raw = (resp.text ?? '').trim();
+        this.lastGoodIdx = idx;
+        return this.parseAiResponse(raw);
+      } catch (err) {
+        const msg = (err as Error).message ?? '';
+        const isQuota =
+          msg.includes('RESOURCE_EXHAUSTED') ||
+          msg.includes('quota') ||
+          msg.includes('429');
+        const isAuth =
+          msg.includes('401') ||
+          msg.includes('403') ||
+          msg.includes('API key') ||
+          msg.includes('PERMISSION_DENIED');
+
+        // Quota / auth on this key → try the next one. Other failures
+        // (network, parse) bubble out — retrying probably won't help
+        // and we don't want to burn extra keys on a 5xx that hits
+        // every project alike.
+        if (isQuota || isAuth) {
+          this.logger.warn(
+            `Gemini key#${idx} ${isQuota ? 'quota' : 'auth'} fail — trying next.`,
+          );
+          errors.push(
+            `key#${idx}: ${isQuota ? 'quota' : 'auth'} (${msg.slice(0, 80)})`,
+          );
+          continue;
+        }
+        this.logger.error(`Gemini call failed (non-rotating): ${msg}`);
         throw new ServiceUnavailableException(
-          'AI imtihon kunlik chegaraga yetdi. Iltimos, kechroq qayta urinib ' +
-            "ko'ring yoki administratorga GEMINI_API_KEY ni yangilash haqida xabar bering.",
+          'AI imtihon servisi vaqtincha ishlamayapti. Birozdan keyin urinib ' +
+            "ko'ring.",
         );
       }
-      const isAuth =
-        msg.includes('401') ||
-        msg.includes('403') ||
-        msg.includes('API key') ||
-        msg.includes('PERMISSION_DENIED');
-      if (isAuth) {
-        throw new ServiceUnavailableException(
-          'AI imtihon servisining kaliti yaroqsiz. Administratorga xabar bering.',
-        );
-      }
-      throw new ServiceUnavailableException(
-        'AI imtihon servisi vaqtincha ishlamayapti. Birozdan keyin urinib ' +
-          "ko'ring.",
-      );
     }
 
-    return this.parseAiResponse(raw);
+    // All keys tripped quota or auth.
+    this.logger.error(
+      `All ${this.apiKeys.length} Gemini key(s) exhausted: ${errors.join('; ')}`,
+    );
+    const allQuota = errors.every((e) => e.includes('quota'));
+    throw new ServiceUnavailableException(
+      allQuota
+        ? "AI imtihon barcha API kalitlar kunlik chegaraga yetgan. Administratorga GEMINI_API_KEY ga yana bir kalit qo'shish haqida xabar bering."
+        : 'AI imtihon servisining kalitlari yaroqsiz. Administratorga xabar bering.',
+    );
   }
 
   private parseAiResponse(raw: string): AiTurnResponse {
