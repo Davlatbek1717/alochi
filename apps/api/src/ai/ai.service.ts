@@ -104,7 +104,8 @@ export class AiService {
     // appropriate for 3-7 graders and stays within the lesson context so
     // the tutor doesn't drift off-topic. Gemini's chat format uses
     // role: 'model' for assistant turns (not 'assistant').
-    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] = [];
+    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] =
+      [];
     for (const turn of history) {
       if (!turn.content) continue;
       const role: 'user' | 'model' =
