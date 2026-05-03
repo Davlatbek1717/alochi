@@ -227,6 +227,23 @@ export function OralExamRunner({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [transcript, finalResult]);
 
+  // Auto-mute the mic while the AI is speaking — otherwise the speech
+  // engine picks up the AI's voice through the device speakers and
+  // transcribes it as the student's response. This was the cause of
+  // the "huge auto-typed paragraph" bug on first oral-exam test.
+  useEffect(() => {
+    if (aiSpeaking && listening) {
+      try {
+        listenHandleRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+      setListening(false);
+      // Drop any in-flight interim that was definitely the AI talking.
+      setInterim('');
+    }
+  }, [aiSpeaking, listening]);
+
   // ── Mic toggle ────────────────────────────────────────────────────────────
   function toggleMic() {
     if (listening) {
@@ -238,16 +255,28 @@ export function OralExamRunner({
       setListening(false);
       return;
     }
+    // Don't even open the mic while AI is speaking — would just
+    // capture echo. The button is disabled in this state, but guard
+    // here too in case state changes between render and click.
     if (aiSpeaking) {
       stopAiSpeech();
     }
     try {
+      // Cache draft prefix at start: the lib's `listen()` emits the
+      // CUMULATIVE finalised transcript for the current session each
+      // time, so we treat each onResult as a REPLACEMENT of the
+      // session's contribution — not an append. The user's prior draft
+      // (typed or from a previous mic session that was stopped) lives
+      // in `prefix`; the live transcript is appended to it.
+      const prefix = studentDraft.trim();
       const handle = listen({
         lang: langTag,
         continuous: true,
-        onInterim: (txt) => setInterim(txt),
+        onInterim: (txt) => {
+          setInterim(prefix ? `${prefix} ${txt}`.trim() : txt);
+        },
         onResult: (txt) => {
-          setStudentDraft((prev) => (prev ? `${prev} ${txt}`.trim() : txt));
+          setStudentDraft(prefix ? `${prefix} ${txt}`.trim() : txt);
           setInterim('');
         },
         onError: (err) => {
@@ -648,13 +677,20 @@ export function OralExamRunner({
               <button
                 type="button"
                 onClick={toggleMic}
-                disabled={submitting || finalizing}
-                aria-label={listening ? 'To\'xtatish' : 'Mikrofonni yoqish'}
+                disabled={submitting || finalizing || aiSpeaking}
+                aria-label={listening ? "To'xtatish" : 'Mikrofonni yoqish'}
+                title={
+                  aiSpeaking
+                    ? 'AI gapirib bo\'lguniga qadar kuting'
+                    : listening
+                      ? "To'xtatish"
+                      : 'Mikrofonni yoqish'
+                }
                 className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 transition-all ${
                   listening
                     ? 'bg-rose-600 motion-safe:animate-pulse'
                     : 'bg-violet-600 hover:bg-violet-700'
-                } disabled:opacity-50`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {listening ? <Square size={18} fill="currentColor" /> : <Mic size={20} />}
               </button>
