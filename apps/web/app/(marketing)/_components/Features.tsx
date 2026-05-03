@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
   },
   {
     title: 'Yo’l xaritasi',
-    body: '250 dars zigzag yo’l shaklida — sayohat metaforasi, har qadam mukofotli.',
+    body: '250 dars darajama-daraja tartibda — har bir bosqich avvalgisi ustiga quriladi.',
     icon: <Map size={22} strokeWidth={2.5} />,
     tone: 'orange',
   },

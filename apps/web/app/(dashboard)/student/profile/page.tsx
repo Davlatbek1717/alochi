@@ -81,6 +81,22 @@ function pickLeague(totalXp: number): {
   return { current, next };
 }
 
+/**
+ * Render the parent Telegram link as something a child can read at a
+ * glance. Numeric IDs become "Ulangan" (with the raw ID hidden in the
+ * tooltip for support), `@username` strings render as-is, and a missing
+ * value renders as "Bogʻlanmagan".
+ */
+function formatParentTelegram(value: string | null | undefined): string {
+  if (!value) return 'Bogʻlanmagan';
+  const trimmed = value.trim();
+  if (!trimmed) return 'Bogʻlanmagan';
+  if (trimmed.startsWith('@')) return trimmed;
+  // All-digit Telegram numeric IDs are useless to a child reader.
+  if (/^\d+$/.test(trimmed)) return 'Ulangan';
+  return trimmed;
+}
+
 function formatMember(date?: string | null): string {
   if (!date) return '';
   try {
@@ -233,6 +249,21 @@ export default function StudentProfilePage() {
           <Mascot expression="sad" size={120} className="mx-auto" />
           <p className="text-[#0f172a] font-bold text-lg">Profilni yuklab boʻlmadi</p>
           <p className="text-[#64748b] text-sm">{error || 'Xato yuz berdi'}</p>
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-4 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+            >
+              Qayta urinish
+            </button>
+            <Link
+              href="/student"
+              className="flex-1 inline-flex items-center justify-center gap-2 bg-white text-[#0f172a] font-extrabold text-sm px-4 py-2.5 rounded-xl border-[1.5px] border-[#ede9e1] hover:bg-[#fffaf0] transition-colors min-h-[44px]"
+            >
+              Bosh sahifaga
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -440,7 +471,7 @@ export default function StudentProfilePage() {
           <div className="space-y-3">
             <Field
               label="Ota-ona Telegram"
-              value={profile.parentTelegramId || "Bogʻlanmagan"}
+              value={formatParentTelegram(profile.parentTelegramId)}
             />
             <Field
               label="Tugʻilgan sana"

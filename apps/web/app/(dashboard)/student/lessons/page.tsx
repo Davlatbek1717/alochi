@@ -59,6 +59,13 @@ export default function LessonsPathPage() {
   const [todayXp, setTodayXp] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Bumping reloadKey re-runs the load effect — used by the retry button.
+  const [reloadKey, setReloadKey] = useState(0);
+  const retryLoad = () => {
+    setError('');
+    setLoading(true);
+    setReloadKey((k) => k + 1);
+  };
 
   // Bottom-sheet state.
   const [sheetLesson, setSheetLesson] = useState<SheetLesson | null>(null);
@@ -119,7 +126,7 @@ export default function LessonsPathPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   // Compute per-lesson state + the index of the "current" lesson.
   //
@@ -292,8 +299,15 @@ export default function LessonsPathPage() {
         {/* Path column (takes ~70% on md+) */}
         <main className="md:flex-1 min-w-0">
         {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-2xl text-sm mb-4">
-            {error}
+          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-2xl text-sm mb-4 flex items-center justify-between gap-3 flex-wrap">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={retryLoad}
+              className="inline-flex items-center justify-center gap-1.5 bg-white text-[#e11d48] font-extrabold text-xs px-3 py-1.5 rounded-lg border border-[#e11d48]/30 hover:bg-[#e11d48]/5 transition-colors min-h-[36px]"
+            >
+              Qayta urinish
+            </button>
           </div>
         )}
 
@@ -354,9 +368,16 @@ export default function LessonsPathPage() {
               <div className="flex items-center gap-2">
                 <StreakFlame streak={streak} hasShield={hasShield} size={28} showLabel />
               </div>
-              <div className="flex items-center gap-1.5 text-sm font-extrabold text-[#46a302]">
-                <Sparkles size={14} className="text-[#fbbf24]" />
-                <span>Bugun faolsiz!</span>
+              <div
+                className={`flex items-center gap-1.5 text-sm font-extrabold ${
+                  todayXp > 0 ? 'text-[#46a302]' : 'text-[#94a3b8]'
+                }`}
+              >
+                <Sparkles
+                  size={14}
+                  className={todayXp > 0 ? 'text-[#fbbf24]' : 'text-[#cbd5e1]'}
+                />
+                <span>{todayXp > 0 ? 'Bugun faol!' : 'Bugun faolsiz'}</span>
               </div>
             </div>
           </aside>
@@ -578,6 +599,12 @@ function EmptyPath() {
       <p className="text-sm text-[#777] font-semibold mt-1">
         Darslar tez orada qo&apos;shiladi
       </p>
+      <Link
+        href="/student"
+        className="mt-5 inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+      >
+        Bosh sahifaga qaytish
+      </Link>
     </div>
   );
 }

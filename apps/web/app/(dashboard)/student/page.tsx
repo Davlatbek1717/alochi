@@ -134,12 +134,38 @@ export default function StudentDashboard() {
   const [nextLesson, setNextLesson] = useState<LessonInfo | null>(null);
   const [nextLessonSession, setNextLessonSession] = useState<{ count: number; total: number } | null>(null);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
+  // Initial-load failure surface. Background refreshes (focus, visibility)
+  // intentionally don't update this so a brief flake on a tab switch
+  // doesn't tear down a working dashboard. Retry bumps reloadKey which
+  // re-runs the effect.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retryLoad = () => {
+    setLoadError(null);
+    setLoading(true);
+    setReloadKey((k) => k + 1);
+  };
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken') ?? '';
     let cancelled = false;
+    fetchData(true);
+
+    function onFocus() {
+      fetchData(false);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') fetchData(false);
+    }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
 
     async function fetchData(initial = false) {
+      const token = localStorage.getItem('accessToken') ?? '';
       try {
         const [
           profileRes,
@@ -185,29 +211,21 @@ export default function StudentDashboard() {
         } else {
           setNextLessonSession(null);
         }
-      } catch {
-        // keep defaults on error
+        // Successful refresh clears any stale error from a previous attempt.
+        if (!cancelled) setLoadError(null);
+      } catch (err) {
+        // Only surface errors on the initial load. A flake during a
+        // focus/visibility refresh shouldn't blow away a working page.
+        if (initial && !cancelled) {
+          setLoadError(
+            err instanceof Error ? err.message : 'Maʼlumotlar yuklanmadi',
+          );
+        }
       } finally {
         if (initial && !cancelled) setLoading(false);
       }
     }
-
-    fetchData(true);
-
-    function onFocus() {
-      fetchData(false);
-    }
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') fetchData(false);
-    }
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, []);
+  }, [reloadKey]);
 
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();
@@ -222,6 +240,29 @@ export default function StudentDashboard() {
         <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
         <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
         <SkeletonCard theme="light" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-[#fffaf0] min-h-full flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-4">
+          <p className="text-5xl" aria-hidden>
+            😕
+          </p>
+          <p className="text-[#0f172a] font-extrabold text-lg">
+            Maʼlumotlar yuklanmadi
+          </p>
+          <p className="text-[#64748b] text-sm font-semibold">{loadError}</p>
+          <button
+            type="button"
+            onClick={retryLoad}
+            className="inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+          >
+            Qayta urinish
+          </button>
+        </div>
       </div>
     );
   }

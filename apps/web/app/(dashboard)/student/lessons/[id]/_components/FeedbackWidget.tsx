@@ -44,18 +44,28 @@ export function FeedbackWidget({ lessonId, onDone }: Props) {
   if (submitted) return null;
 
   return (
-    <div className="mt-4 p-4 bg-slate-800/60 border border-slate-700 rounded-xl">
-      <p className="text-sm text-slate-400 mb-3 text-center">Bu dars qanday bo&apos;ldi?</p>
-      <div className="flex justify-center gap-4">
+    <div className="mt-4 p-4 bg-white border-[1.5px] border-[#ede9e1] rounded-2xl shadow-sm">
+      <p className="text-sm font-extrabold text-[#0f172a] mb-3 text-center">
+        Bu dars qanday bo&apos;ldi?
+      </p>
+      <div className="flex justify-center gap-2 sm:gap-4">
         {RATINGS.map((r) => (
-          <button key={r.value} onClick={() => submit(r.value)} disabled={submitting}
-            className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-slate-700 transition-colors disabled:opacity-50">
+          <button
+            key={r.value}
+            onClick={() => submit(r.value)}
+            disabled={submitting}
+            className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-[#fffaf0] transition-colors disabled:opacity-50 min-h-[44px]"
+          >
             <span className="text-3xl">{r.emoji}</span>
-            <span className="text-xs text-slate-400">{r.label}</span>
+            <span className="text-xs font-bold text-[#64748b]">{r.label}</span>
           </button>
         ))}
       </div>
-      {error && <p className="text-xs text-red-400 text-center mt-2">Yuborishda xato. Qaytadan urinib ko&apos;ring.</p>}
+      {error && (
+        <p className="text-xs text-rose-500 font-bold text-center mt-2">
+          Yuborishda xato. Qaytadan urinib ko&apos;ring.
+        </p>
+      )}
     </div>
   );
 }
