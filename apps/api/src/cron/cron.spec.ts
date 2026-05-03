@@ -52,11 +52,20 @@ const mockPrisma = {
   branch: {
     findUnique: jest.fn(),
   },
+  attendanceStudent: {
+    count: jest.fn().mockResolvedValue(0),
+  },
+  warning: {
+    count: jest.fn().mockResolvedValue(0),
+  },
 };
 
 const mockKpi = {
   award: jest.fn(),
   hasAwardInRange: jest.fn(),
+  computeMentorDaily: jest
+    .fn()
+    .mockReturnValue({ totalScore: 5, cappedStudents: 10 }),
 };
 
 const mockTelegram = {
@@ -204,13 +213,18 @@ describe('CronService', () => {
   });
 
   describe('runMentorKpiCalc', () => {
-    it('awards 5 points to mentors who checked in today and have not been awarded yet', async () => {
+    it('awards computed KPI points to mentors who checked in today and have not been awarded yet', async () => {
+      // groupId is required — mentors without a group are skipped.
       mockPrisma.user.findMany.mockResolvedValue([
-        { id: 'm1', tenantId: 't1', branchId: 'b1' },
-        { id: 'm2', tenantId: 't1', branchId: 'b1' },
+        { id: 'm1', tenantId: 't1', branchId: 'b1', groupId: 'g1' },
+        { id: 'm2', tenantId: 't1', branchId: 'b1', groupId: 'g1' },
       ]);
       mockKpi.hasAwardInRange.mockResolvedValue(false);
       mockPrisma.attendanceStaff.findFirst.mockResolvedValue({ id: 'a1' });
+      mockPrisma.attendanceStudent.count.mockResolvedValue(10);
+      mockPrisma.studentStatus.count.mockResolvedValue(5);
+      mockPrisma.warning.count.mockResolvedValue(1);
+      // computeMentorDaily returns { totalScore: 5 } from the top-level mock.
 
       await service.runMentorKpiCalc();
 
@@ -219,7 +233,6 @@ describe('CronService', () => {
         expect.objectContaining({
           userId: 'm1',
           tenantId: 't1',
-          score: 5,
           reason: 'auto_mentor_daily',
         }),
       );
@@ -227,7 +240,7 @@ describe('CronService', () => {
 
     it('skips mentors who already received auto_mentor_daily today (idempotent)', async () => {
       mockPrisma.user.findMany.mockResolvedValue([
-        { id: 'm1', tenantId: 't1', branchId: 'b1' },
+        { id: 'm1', tenantId: 't1', branchId: 'b1', groupId: 'g1' },
       ]);
       mockKpi.hasAwardInRange.mockResolvedValue(true);
 
@@ -239,10 +252,22 @@ describe('CronService', () => {
 
     it('skips mentors who did NOT check in today', async () => {
       mockPrisma.user.findMany.mockResolvedValue([
-        { id: 'm1', tenantId: 't1', branchId: 'b1' },
+        { id: 'm1', tenantId: 't1', branchId: 'b1', groupId: 'g1' },
       ]);
       mockKpi.hasAwardInRange.mockResolvedValue(false);
       mockPrisma.attendanceStaff.findFirst.mockResolvedValue(null);
+
+      await service.runMentorKpiCalc();
+
+      expect(mockKpi.award).not.toHaveBeenCalled();
+    });
+
+    it('skips mentors without a groupId (cannot measure lesson quality)', async () => {
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: 'm1', tenantId: 't1', branchId: 'b1', groupId: null },
+      ]);
+      mockKpi.hasAwardInRange.mockResolvedValue(false);
+      mockPrisma.attendanceStaff.findFirst.mockResolvedValue({ id: 'a1' });
 
       await service.runMentorKpiCalc();
 

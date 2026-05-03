@@ -39,8 +39,48 @@ const withPWA = withPWAInit({
   },
 });
 
+/**
+ * Headers applied to every HTTP response served by Next. The browser
+ * enforces these regardless of the route, so they're our defence
+ * against clickjacking, MIME-sniffing, and a future CSP rollout.
+ *
+ * NOTE on Content-Security-Policy: Next 15 + the AI tutor + Mediapipe
+ * face SDK currently rely on `unsafe-inline` styles and `wasm-unsafe-eval`,
+ * so a strict CSP would break the lesson runner. We ship a permissive
+ * scaffold here so the headers are present and tunable, and leave
+ * tightening it (nonce-based scripts, hashed inline styles) as Phase 28.
+ */
+const SECURITY_HEADERS = [
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(self), microphone=(self), geolocation=()',
+  },
+  // HSTS only makes sense in production. Hosts behind localhost would
+  // otherwise force every dev session into HTTPS-only mode.
+  ...(process.env.NODE_ENV === 'production'
+    ? [
+        {
+          key: 'Strict-Transport-Security',
+          value: 'max-age=31536000; includeSubDomains',
+        },
+      ]
+    : []),
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+  poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: SECURITY_HEADERS,
+      },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);

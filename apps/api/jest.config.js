@@ -13,6 +13,13 @@ module.exports = {
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },
+  // isomorphic-dompurify → jsdom → html-encoding-sniffer → @exodus/bytes
+  // ships as ESM which ts-jest cannot transform. Stub it out in tests:
+  // chat.service sanitises user input at runtime; unit tests only need the
+  // mock to exist so the module graph resolves.
+  moduleNameMapper: {
+    '^isomorphic-dompurify$': '<rootDir>/__mocks__/isomorphic-dompurify.js',
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.spec.ts',

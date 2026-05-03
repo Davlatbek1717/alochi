@@ -69,9 +69,9 @@ async function refreshAccessToken(): Promise<string | null> {
         body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) {
-        // Refresh itself failed — clear creds; caller will redirect to /login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
+        bounceToLogin();
         return null;
       }
       const json = (await res.json()) as
@@ -85,6 +85,7 @@ async function refreshAccessToken(): Promise<string | null> {
     } catch {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      bounceToLogin();
       return null;
     } finally {
       refreshInFlight = null;
@@ -135,14 +136,13 @@ export async function apiRequest<T>(
       activeToken = refreshed;
       const retry = await doFetch<T>(path, options, activeToken);
       if (retry.kind === 'success') return retry.envelope;
-      // Retry also rejected. If still 401, fall through to the bounce
-      // below. Otherwise surface the new error to the caller.
+      // Retry also rejected. If still 401, fall through to throw below.
+      // bounceToLogin() was already called inside refreshAccessToken if
+      // the refresh itself failed; we do NOT call it again here.
       if (retry.kind !== 'unauthorized') throw retry.error;
     }
-    // Refresh missing or failed (or retry still 401) — tokens are dead.
-    // Bounce to /login so the user gets a working page instead of a
-    // dashboard full of red 401 errors.
-    bounceToLogin();
+    // refreshed is null (bounce already triggered inside refreshAccessToken)
+    // or retry returned another 401 — tokens are definitively dead.
     throw result.error;
   }
 

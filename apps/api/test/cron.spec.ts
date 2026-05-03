@@ -1,6 +1,17 @@
 import { Test } from '@nestjs/testing';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CronService } from '../src/cron/cron.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { TelegramService } from '../src/telegram/telegram.service';
+import { NotificationsService } from '../src/notifications/notifications.service';
+import { NotificationTemplatesService } from '../src/notification-templates/notification-templates.service';
+import { AdaptiveService } from '../src/adaptive/adaptive.service';
+import { ChurnService } from '../src/churn/churn.service';
+import { ClickHouseService } from '../src/clickhouse/clickhouse.service';
+import { KpiService } from '../src/kpi/kpi.service';
+import { XpService } from '../src/gamification/xp.service';
 
 const mockPrisma = {
   paymentSetting: {
@@ -10,12 +21,58 @@ const mockPrisma = {
     findMany: jest.fn(),
   },
   user: {
+    findMany: jest.fn(),
     updateMany: jest.fn(),
+    count: jest.fn(),
   },
   delegation: {
     updateMany: jest.fn(),
+    findMany: jest.fn(),
+  },
+  attendanceStaff: {
+    findFirst: jest.fn(),
+    count: jest.fn(),
+  },
+  studentStatus: {
+    count: jest.fn(),
+  },
+  spacedRepetitionItem: {
+    findMany: jest.fn(),
+  },
+  task: {
+    findMany: jest.fn(),
+  },
+  groupMessage: {
+    deleteMany: jest.fn(),
+  },
+  groupChallenge: {
+    findMany: jest.fn(),
+    update: jest.fn(),
+  },
+  branch: {
+    findUnique: jest.fn(),
   },
 };
+
+const mockTelegram = {
+  sendMessage: jest.fn(),
+  sendToParent: jest.fn(),
+  sendTemplate: jest.fn(),
+  formatPaymentReminder: jest.fn().mockReturnValue(''),
+};
+const mockNotifications = { send: jest.fn() };
+const mockXp = { award: jest.fn() };
+const mockTemplates = {};
+const mockAdaptive = { runNightlyAdaptation: jest.fn() };
+const mockChurn = { runDailyScoring: jest.fn() };
+const mockClickhouse = {
+  isReady: jest.fn(() => false),
+  insertEvent: jest.fn(),
+};
+const mockHttp = { post: jest.fn() };
+const mockConfig = { get: jest.fn() };
+const mockEvents = { emit: jest.fn() };
+const mockKpi = { award: jest.fn(), hasAwardInRange: jest.fn() };
 
 describe('CronService', () => {
   let service: CronService;
@@ -25,6 +82,17 @@ describe('CronService', () => {
       providers: [
         CronService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: TelegramService, useValue: mockTelegram },
+        { provide: NotificationsService, useValue: mockNotifications },
+        { provide: NotificationTemplatesService, useValue: mockTemplates },
+        { provide: AdaptiveService, useValue: mockAdaptive },
+        { provide: ChurnService, useValue: mockChurn },
+        { provide: ClickHouseService, useValue: mockClickhouse },
+        { provide: HttpService, useValue: mockHttp },
+        { provide: ConfigService, useValue: mockConfig },
+        { provide: EventEmitter2, useValue: mockEvents },
+        { provide: KpiService, useValue: mockKpi },
+        { provide: XpService, useValue: mockXp },
       ],
     }).compile();
     service = module.get(CronService);
@@ -103,6 +171,8 @@ describe('CronService', () => {
 
   describe('runDelegationComplete', () => {
     it('completes active delegations whose endsAt has passed', async () => {
+      // findMany is called first to fetch ids for event emission.
+      mockPrisma.delegation.findMany.mockResolvedValue([]);
       mockPrisma.delegation.updateMany.mockResolvedValue({ count: 2 });
 
       await service.runDelegationComplete();
