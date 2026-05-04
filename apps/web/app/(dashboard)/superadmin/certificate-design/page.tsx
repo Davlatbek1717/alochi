@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Save, Award, QrCode } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { useToast } from '@/components/ui';
 
 type Template = {
   primaryColor: string;
@@ -9,6 +10,13 @@ type Template = {
   font: string;
   signatureName: string;
   showQr: boolean;
+};
+
+type CertLevel = {
+  level: 'bronze' | 'silver' | 'gold' | 'diamond';
+  label: string;
+  emoji: string;
+  minLessons: number;
 };
 
 const DEFAULT: Template = {
@@ -19,25 +27,65 @@ const DEFAULT: Template = {
   showQr: true,
 };
 
+function getToken() {
+  return typeof window !== 'undefined' ? (localStorage.getItem('accessToken') ?? '') : '';
+}
+
 export default function CertificateDesignPage() {
+  const toast = useToast();
   const [tpl, setTpl] = useState<Template>(DEFAULT);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Milestone levels
+  const [levels, setLevels] = useState<CertLevel[]>([]);
+  const [levelInputs, setLevelInputs] = useState<Record<string, string>>({});
+  const [savingLevels, setSavingLevels] = useState(false);
+
   useEffect(() => {
-    const token = localStorage.getItem('accessToken') ?? '';
-    apiRequest<{ certTemplate: Template | null }>(
-      '/tenants/me/cert-template',
-      {},
-      token,
-    )
+    const token = getToken();
+    apiRequest<{ certTemplate: Template | null }>('/tenants/me/cert-template', {}, token)
       .then((res) => {
-        if (res.data?.certTemplate) {
-          setTpl({ ...DEFAULT, ...res.data.certTemplate });
-        }
+        if (res.data?.certTemplate) setTpl({ ...DEFAULT, ...res.data.certTemplate });
+      })
+      .catch(() => {});
+
+    apiRequest<CertLevel[]>('/gamification/certificate-levels', {}, token)
+      .then((res) => {
+        const sorted = [...(res.data ?? [])].sort((a, b) => a.minLessons - b.minLessons);
+        setLevels(sorted);
+        const inputs: Record<string, string> = {};
+        for (const l of sorted) inputs[l.level] = String(l.minLessons);
+        setLevelInputs(inputs);
       })
       .catch(() => {});
   }, []);
+
+  async function saveLevels() {
+    setSavingLevels(true);
+    try {
+      const body: Record<string, number> = {};
+      for (const [k, v] of Object.entries(levelInputs)) {
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) body[k] = n;
+      }
+      const res = await apiRequest<CertLevel[]>(
+        '/gamification/certificate-levels',
+        { method: 'PUT', body: JSON.stringify(body) },
+        getToken(),
+      );
+      const sorted = [...(res.data ?? [])].sort((a, b) => a.minLessons - b.minLessons);
+      setLevels(sorted);
+      const inputs: Record<string, string> = {};
+      for (const l of sorted) inputs[l.level] = String(l.minLessons);
+      setLevelInputs(inputs);
+      toast.success('Milestone chegaralari saqlandi');
+    } catch {
+      toast.error('Saqlashda xatolik');
+    } finally {
+      setSavingLevels(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -199,6 +247,76 @@ export default function CertificateDesignPage() {
           </p>
         </div>
       </div>
+
+      {/* ── Milestone chegaralari ─────────────────────────────────── */}
+      {levels.length > 0 && (
+        <div className="mt-4 bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-extrabold text-[#0f172a] uppercase tracking-widest">
+                Sertifikat milestone chegaralari
+              </h2>
+              <p className="text-xs text-[#64748b] mt-0.5">
+                O&apos;quvchi nechta dars tugatganda qaysi sertifikat berilishini sozlang
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={saveLevels}
+              disabled={savingLevels}
+              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-40"
+            >
+              {savingLevels
+                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                : <Save size={14} />
+              }
+              Saqlash
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {levels.map((lvl) => (
+              <div
+                key={lvl.level}
+                className="bg-[#f7f4ef] rounded-xl border border-[#ede9e1] p-4 space-y-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{lvl.emoji}</span>
+                  <span className="text-sm font-extrabold text-[#0f172a]">{lvl.label}</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold text-[#64748b] uppercase tracking-widest">
+                    Minimal darslar soni
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={9999}
+                    value={levelInputs[lvl.level] ?? ''}
+                    onChange={(e) =>
+                      setLevelInputs((p) => ({ ...p, [lvl.level]: e.target.value }))
+                    }
+                    className="w-full bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm font-bold text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+                  />
+                </div>
+                <p className="text-[10px] text-[#94a3b8]">
+                  Hozir: {lvl.minLessons} ta dars
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 p-3 bg-[#fffaf0] rounded-xl border border-[#ede9e1]">
+            <p className="text-xs text-[#64748b] font-semibold">
+              💡 <strong>Eslatma:</strong> Milestone o&apos;zgarganda allaqachon olgan sertifikatlar bekor bo&apos;lmaydi.
+              Yangi chegara keyingi o&apos;quvchilarga tatbiq etiladi.
+              <br />
+              ⚠️ Misolda: Bronza 50 → 30 ga o&apos;zgarsa, 30-40 dars oralig&apos;idagi o&apos;quvchilar
+              keyingi dars tugatganda avtomatik sertifikat oladi.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Query,
   Res,
@@ -48,6 +50,28 @@ export class GamificationController {
   @Get('certificates')
   getMyCertificates(@Request() req: any) {
     return this.certificates.getStudentCertificates(req.user.userId);
+  }
+
+  /** Returns configured milestone thresholds (bronze/silver/gold/diamond). */
+  @Get('certificate-levels')
+  getCertLevels() {
+    return this.certificates.getLevels();
+  }
+
+  /** Returns the student's lesson count + progress toward every level. */
+  @Get('certificate-progress')
+  @Roles(UserRole.student)
+  getCertProgress(@Request() req: any) {
+    return this.certificates.getCertificateProgress(req.user.userId);
+  }
+
+  /** Superadmin can override the threshold for each level. */
+  @Put('certificate-levels')
+  @Roles(UserRole.superadmin)
+  saveCertLevels(
+    @Body() body: { bronze?: number; silver?: number; gold?: number; diamond?: number },
+  ) {
+    return this.certificates.saveLevels(body);
   }
 
   @Get('certificates/by-branch/:branchId')

@@ -4,17 +4,34 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import * as QRCode from 'qrcode';
 
-const CERTIFICATE_LEVELS = [
-  { level: 'diamond', minLessons: 500 },
-  { level: 'gold', minLessons: 250 },
-  { level: 'silver', minLessons: 100 },
-  { level: 'bronze', minLessons: 50 },
-] as const;
+export interface CertLevel {
+  level: 'bronze' | 'silver' | 'gold' | 'diamond';
+  minLessons: number;
+  label: string;
+  emoji: string;
+}
+
+// Defaults — used when no SiteSetting override is present.
+// Stored in descending order so `find()` picks the highest eligible level.
+const DEFAULT_CERT_LEVELS: CertLevel[] = [
+  { level: 'diamond', minLessons: 500, label: "Olmos A'lochi", emoji: '💎' },
+  { level: 'gold',    minLessons: 250, label: "Oltin A'lochi",  emoji: '🥇' },
+  { level: 'silver',  minLessons: 100, label: "Kumush A'lochi", emoji: '🥈' },
+  { level: 'bronze',  minLessons: 50,  label: "Bronza A'lochi", emoji: '🥉' },
+];
+
+// SiteSetting keys where superadmin can override the thresholds.
+const LEVEL_SETTING_KEYS: Record<CertLevel['level'], string> = {
+  bronze:  'cert.bronze.minLessons',
+  silver:  'cert.silver.minLessons',
+  gold:    'cert.gold.minLessons',
+  diamond: 'cert.diamond.minLessons',
+};
 
 const CERT_NAMES: Record<string, string> = {
-  bronze: "🥉 Bronze A'lochi",
-  silver: "🥈 Silver A'lochi",
-  gold: "🥇 Gold A'lochi",
+  bronze:  "🥉 Bronze A'lochi",
+  silver:  "🥈 Silver A'lochi",
+  gold:    "🥇 Gold A'lochi",
   diamond: "💎 Diamond A'lochi",
 };
 
@@ -28,14 +45,92 @@ export class CertificatesService {
     private feedEvent?: FeedEventService,
   ) {}
 
-  async checkAndAward(studentId: string, tenantId: string) {
-    const completedCount = await this.prisma.studentProgress.count({
-      where: { studentId, academyCompleted: true },
+  /** Returns the configured cert levels (DB overrides > defaults), high → low. */
+  async getLevels(): Promise<CertLevel[]> {
+    const rows = await this.prisma.siteSetting.findMany({
+      where: { key: { in: Object.values(LEVEL_SETTING_KEYS) } },
     });
+    const override = new Map(rows.map((r) => [r.key, r.value]));
 
-    const eligible = CERTIFICATE_LEVELS.find(
-      (l) => completedCount >= l.minLessons,
-    );
+    return DEFAULT_CERT_LEVELS.map((def) => {
+      const raw = override.get(LEVEL_SETTING_KEYS[def.level]);
+      const minLessons =
+        raw !== undefined && Number.isFinite(Number(raw)) && Number(raw) > 0
+          ? Number(raw)
+          : def.minLessons;
+      return { ...def, minLessons };
+    });
+  }
+
+  /** Saves custom thresholds to SiteSettings (superadmin only). */
+  async saveLevels(updates: Partial<Record<CertLevel['level'], number>>) {
+    await this.prisma.$transaction(async (tx) => {
+      for (const [level, value] of Object.entries(updates)) {
+        const key = LEVEL_SETTING_KEYS[level as CertLevel['level']];
+        if (!key || !Number.isFinite(value) || (value as number) < 1) continue;
+        await tx.siteSetting.upsert({
+          where: { key },
+          create: { key, value: String(value) },
+          update: { value: String(value) },
+        });
+      }
+    });
+    return this.getLevels();
+  }
+
+  /**
+   * Returns the student's completed lesson count plus their progress
+   * toward every certificate level.
+   */
+  async getCertificateProgress(studentId: string) {
+    const [completedCount, earnedCerts, levels] = await Promise.all([
+      this.prisma.studentProgress.count({
+        where: { studentId, academyCompleted: true },
+      }),
+      this.prisma.certificate.findMany({
+        where: { studentId },
+        select: { level: true },
+      }),
+      this.getLevels(),
+    ]);
+
+    const earned = new Set(earnedCerts.map((c) => c.level));
+    // Sort ascending so the roadmap renders low → high
+    const sorted = [...levels].sort((a, b) => a.minLessons - b.minLessons);
+
+    const milestones = sorted.map((lvl) => ({
+      ...lvl,
+      completed: completedCount >= lvl.minLessons,
+      earned: earned.has(lvl.level),
+      progress: Math.min(1, completedCount / lvl.minLessons),
+    }));
+
+    const next = milestones.find((m) => !m.completed) ?? null;
+
+    return {
+      completedLessons: completedCount,
+      milestones,
+      next: next
+        ? {
+            level: next.level,
+            label: next.label,
+            emoji: next.emoji,
+            minLessons: next.minLessons,
+            remaining: next.minLessons - completedCount,
+          }
+        : null,
+    };
+  }
+
+  async checkAndAward(studentId: string, tenantId: string) {
+    const [completedCount, levels] = await Promise.all([
+      this.prisma.studentProgress.count({
+        where: { studentId, academyCompleted: true },
+      }),
+      this.getLevels(),
+    ]);
+
+    const eligible = levels.find((l) => completedCount >= l.minLessons);
     if (!eligible) return null;
 
     const existing = await this.prisma.certificate.findFirst({
