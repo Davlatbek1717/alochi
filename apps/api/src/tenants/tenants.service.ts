@@ -56,6 +56,30 @@ export class TenantsService {
   }
 
   /**
+   * Public branding lookup by slug — no auth required.
+   * Used by the login page to render per-tenant logo/colour before
+   * the user has a JWT.  Only safe-to-publish fields are returned.
+   */
+  async getBrandingBySlug(slug: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        brandName: true,
+        logoUrl: true,
+        faviconUrl: true,
+        primaryColor: true,
+        isActive: true,
+      },
+    });
+    if (!tenant || !tenant.isActive)
+      throw new NotFoundException('Tenant topilmadi');
+    return tenant;
+  }
+
+  /**
    * Update mutable tenant-level settings (Phase 5: warningBlockLimit).
    * Returns the updated tenant row.
    */
@@ -66,18 +90,26 @@ export class TenantsService {
     });
     if (!exists) throw new NotFoundException('Tenant topilmadi');
 
+    const data: Record<string, unknown> = {};
+    if (dto.warningBlockLimit !== undefined)
+      data.warningBlockLimit = dto.warningBlockLimit;
+    if (dto.brandName !== undefined) data.brandName = dto.brandName;
+    if (dto.logoUrl !== undefined) data.logoUrl = dto.logoUrl;
+    if (dto.faviconUrl !== undefined) data.faviconUrl = dto.faviconUrl;
+    if (dto.primaryColor !== undefined) data.primaryColor = dto.primaryColor;
+
     return this.prisma.tenant.update({
       where: { id: tenantId },
-      data: {
-        ...(dto.warningBlockLimit !== undefined
-          ? { warningBlockLimit: dto.warningBlockLimit }
-          : {}),
-      },
+      data,
       select: {
         id: true,
         name: true,
         slug: true,
         warningBlockLimit: true,
+        brandName: true,
+        logoUrl: true,
+        faviconUrl: true,
+        primaryColor: true,
       },
     });
   }

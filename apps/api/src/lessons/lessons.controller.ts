@@ -45,6 +45,30 @@ export class LessonsController {
     return this.lessons.findByTenant(req.user.tenantId);
   }
 
+  /**
+   * GET /lessons/templates — list all superadmin-created template lessons.
+   * Any authenticated role can browse templates; importing is restricted to
+   * superadmin and filadmin via the import endpoint below.
+   */
+  @Get('templates')
+  findTemplates() {
+    return this.lessons.findTemplates();
+  }
+
+  /**
+   * POST /lessons/import/:templateId — deep-copy a template lesson into
+   * the caller's tenant. The copy is unpublished so the filadmin can
+   * review and adapt it before students see it.
+   */
+  @Post('import/:templateId')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  importTemplate(
+    @Param('templateId') templateId: string,
+    @Request() req: any,
+  ) {
+    return this.lessons.importFromTemplate(templateId, req.user.tenantId);
+  }
+
   @Get('next')
   @Roles(UserRole.student, UserRole.tester)
   getNext(@Request() req: any) {

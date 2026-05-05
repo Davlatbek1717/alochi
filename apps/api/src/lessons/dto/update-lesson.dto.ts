@@ -75,4 +75,9 @@ export class UpdateLessonDto {
   @IsString()
   @IsOptional()
   aiTutorContext?: string;
+
+  /** Superadmin only — marks/unmarks a lesson as a global template. */
+  @IsBoolean()
+  @IsOptional()
+  isTemplate?: boolean;
 }

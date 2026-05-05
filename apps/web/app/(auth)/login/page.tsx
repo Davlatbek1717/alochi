@@ -1,5 +1,7 @@
+import { Suspense } from 'react';
 import { LoginForm } from './_components/LoginForm';
-import { GraduationCap, Zap, Trophy, BarChart2 } from 'lucide-react';
+import { TenantBrandingLogo, LoginCardTitle } from './_components/TenantBrandingHeader';
+import { Zap, Trophy, BarChart2 } from 'lucide-react';
 
 export const metadata = {
   title: 'Kirish — Adouptivo',
@@ -23,12 +25,14 @@ export default function LoginPage() {
           style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)' }} />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <GraduationCap size={20} className="text-white" />
+          <Suspense fallback={
+            <div className="flex items-center gap-3 mb-16">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center opacity-50" />
+              <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
             </div>
-            <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
-          </div>
+          }>
+            <TenantBrandingLogo />
+          </Suspense>
 
           <h1 className="text-4xl font-black text-white leading-tight mb-4">
             O&apos;rganish —<br />
@@ -59,19 +63,25 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-6 py-14 lg:bg-[#f7f4ef]">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <GraduationCap size={20} className="text-white" />
+          <Suspense fallback={
+            <div className="flex items-center gap-3 mb-10 lg:hidden">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center opacity-50" />
+              <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
             </div>
-            <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
-          </div>
+          }>
+            <TenantBrandingLogo mobile />
+          </Suspense>
 
-          <div className="mb-8">
-            <h2 className="text-[#0f172a] text-2xl font-black lg:block hidden">Xush kelibsiz</h2>
-            <h2 className="text-white text-2xl font-black lg:hidden">Xush kelibsiz</h2>
-            <p className="text-[#64748b] text-sm mt-1 lg:block hidden">Hisobingizga kiring</p>
-            <p className="text-[#94a3b8] text-sm mt-1 lg:hidden">Hisobingizga kiring</p>
-          </div>
+          <Suspense fallback={
+            <div className="mb-8">
+              <h2 className="text-[#0f172a] text-2xl font-black lg:block hidden">Xush kelibsiz</h2>
+              <h2 className="text-white text-2xl font-black lg:hidden">Xush kelibsiz</h2>
+              <p className="text-[#64748b] text-sm mt-1 lg:block hidden">Hisobingizga kiring</p>
+              <p className="text-[#94a3b8] text-sm mt-1 lg:hidden">Hisobingizga kiring</p>
+            </div>
+          }>
+            <LoginCardTitle />
+          </Suspense>
 
           <div className="bg-white rounded-[24px] p-6 shadow-sm border border-[#ede9e1]">
             <LoginForm />

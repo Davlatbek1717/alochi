@@ -7,8 +7,11 @@ import { DuelNotificationProvider } from './_components/DuelNotificationProvider
 import { NotificationBell } from './_components/NotificationBell';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { ToastProvider, Button } from '@/components/ui';
+import { apiRequest } from '@/lib/api';
 
 interface UserInfo { id: string; name: string; role: string; tenantId: string; }
+
+interface TenantBranding { brandName?: string | null; }
 
 /**
  * Role → URL-prefix mapping. Used by the layout to redirect a user
@@ -45,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname() ?? '';
   const [user, setUser] = useState<UserInfo | null>(null);
+  const [brandName, setBrandName] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -54,7 +58,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (raw) {
         const parsed = JSON.parse(raw) as Record<string, unknown>;
         if (parsed && typeof parsed.id === 'string' && typeof parsed.role === 'string') {
-          setUser(parsed as unknown as UserInfo);
+          const userInfo = parsed as unknown as UserInfo;
+          setUser(userInfo);
+          // Fetch tenant branding if tenantId is available
+          if (userInfo.tenantId) {
+            apiRequest<TenantBranding>(`/tenants/${userInfo.tenantId}`, {}, token)
+              .then((res) => {
+                if (res.data.brandName) setBrandName(res.data.brandName);
+              })
+              .catch(() => { /* silently ignore — fallback to 'Adouptivo' */ });
+          }
         }
       }
     } catch { /* ignore */ }
@@ -109,9 +122,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shrink-0">
               {user?.name ? getInitials(user.name) : '…'}
             </div>
-            <p className="text-sm font-semibold text-white truncate min-w-0">
-              {user?.name ?? '…'}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-white truncate leading-tight">
+                {user?.name ?? '…'}
+              </p>
+              <p className="text-[10px] text-[#94a3b8] truncate leading-tight">
+                {brandName ?? 'Adouptivo'}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             <NotificationBell />

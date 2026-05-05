@@ -60,6 +60,76 @@ export class LessonsService {
     });
   }
 
+  /**
+   * Returns all template lessons created by superadmin.
+   * Templates are global (no tenant scope) and serve as starter
+   * curriculum that any filadmin can import into their tenant.
+   */
+  async findTemplates() {
+    return this.prisma.lesson.findMany({
+      where: { isTemplate: true, isPublished: true },
+      orderBy: { orderNumber: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        orderNumber: true,
+        subcategory: true,
+        youtubeUrl: true,
+        nRepetitions: true,
+        aiTutorContext: true,
+        cameraEnabled: true,
+        components: true,
+        isTemplate: true,
+        _count: { select: { components_data: true } },
+      },
+    });
+  }
+
+  /**
+   * Deep-copy a template lesson (and all its LessonComponent rows) into
+   * the caller's tenant. orderNumber is placed after the last existing
+   * lesson in that tenant so it doesn't conflict.
+   */
+  async importFromTemplate(templateId: string, tenantId: string) {
+    const template = await this.prisma.lesson.findFirst({
+      where: { id: templateId, isTemplate: true },
+      include: { components_data: true },
+    });
+    if (!template) throw new NotFoundException('Shablon topilmadi');
+
+    const maxOrder = await this.prisma.lesson.aggregate({
+      where: { tenantId },
+      _max: { orderNumber: true },
+    });
+    const nextOrder = (maxOrder._max.orderNumber ?? 0) + 1;
+
+    return this.prisma.lesson.create({
+      data: {
+        tenantId,
+        title: template.title,
+        type: template.type,
+        orderNumber: nextOrder,
+        youtubeUrl: template.youtubeUrl,
+        nRepetitions: template.nRepetitions,
+        maxNOverride: template.maxNOverride,
+        hasExam: template.hasExam,
+        cameraEnabled: template.cameraEnabled,
+        aiTutorContext: template.aiTutorContext,
+        subcategory: template.subcategory,
+        components: template.components as object,
+        isPublished: false,  // imported lessons start unpublished
+        isTemplate: false,
+        components_data: {
+          create: template.components_data.map((c) => ({
+            type: c.type,
+            config: c.config as object,
+          })),
+        },
+      },
+    });
+  }
+
   async findById(id: string, tenantId: string) {
     const lesson = await this.prisma.lesson.findFirst({
       where: { id, tenantId },

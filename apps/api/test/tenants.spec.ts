@@ -204,6 +204,10 @@ describe('TenantsService — onboardTenant', () => {
           name: true,
           slug: true,
           warningBlockLimit: true,
+          brandName: true,
+          logoUrl: true,
+          faviconUrl: true,
+          primaryColor: true,
         },
       });
       expect(result.warningBlockLimit).toBe(5);

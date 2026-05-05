@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Building2, Save, ShieldOff, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Building2, Save, ShieldOff, AlertTriangle, Palette } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal, useToast, Skeleton } from '@/components/ui';
 
@@ -10,7 +10,13 @@ interface TenantDetail {
   name: string;
   slug: string;
   isActive: boolean;
+  brandName?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  primaryColor?: string;
 }
+
+const HEX_RE = /^#[0-9a-fA-F]{3,6}$/;
 
 export default function EditTenantPage() {
   const router = useRouter();
@@ -22,8 +28,15 @@ export default function EditTenantPage() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingBranding, setSavingBranding] = useState(false);
   const [disabling, setDisabling] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Branding fields
+  const [brandName, setBrandName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [faviconUrl, setFaviconUrl] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('');
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
@@ -37,6 +50,10 @@ export default function EditTenantPage() {
         if (!cancelled) {
           setTenant(res.data);
           setName(res.data.name);
+          setBrandName(res.data.brandName ?? '');
+          setLogoUrl(res.data.logoUrl ?? '');
+          setFaviconUrl(res.data.faviconUrl ?? '');
+          setPrimaryColor(res.data.primaryColor ?? '');
         }
       } catch (err) {
         if (!cancelled) toast.error(err instanceof Error ? err.message : 'Xatolik');
@@ -54,7 +71,7 @@ export default function EditTenantPage() {
     if (!id) return;
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      toast.error('Nom kamida 2 ta belgidan iborat bo‘lishi kerak');
+      toast.error("Nom kamida 2 ta belgidan iborat bo’lishi kerak");
       return;
     }
     setSaving(true);
@@ -70,6 +87,31 @@ export default function EditTenantPage() {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onSaveBranding() {
+    if (!id) return;
+    setSavingBranding(true);
+    try {
+      await apiRequest(
+        `/tenants/${id}/settings`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            brandName: brandName.trim() || null,
+            logoUrl: logoUrl.trim() || null,
+            faviconUrl: faviconUrl.trim() || null,
+            primaryColor: primaryColor.trim() || null,
+          }),
+        },
+        token(),
+      );
+      toast.success('Brending sozlamalari saqlandi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setSavingBranding(false);
     }
   }
 
@@ -155,6 +197,107 @@ export default function EditTenantPage() {
                 >
                   <Save size={14} />
                   {saving ? 'Saqlanmoqda…' : 'Saqlash'}
+                </button>
+              </div>
+            </div>
+
+            {/* Branding (Whitelabel) */}
+            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+                  <Palette size={16} className="text-violet-600" />
+                </div>
+                <h2 className="font-bold text-[#0f172a] text-base">Brending (Whitelabel)</h2>
+              </div>
+              <p className="text-xs text-[#64748b] mb-4">
+                Markaz o&apos;z logotipi, rangi va nomini ko&apos;rsatishi uchun sozlamalar.
+              </p>
+
+              {/* brandName */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+                  Markaz nomi (brend)
+                </label>
+                <input
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  maxLength={120}
+                  className="w-full bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm text-[#0f172a] focus:border-violet-500 outline-none"
+                  placeholder="Masalan: Smart English Academy"
+                />
+                <p className="text-[11px] text-[#94a3b8] mt-1">
+                  Login va dashboard&apos;da ko&apos;rinadigan nom. Bo&apos;sh qoldirsa platforma nomi ko&apos;rinadi.
+                </p>
+              </div>
+
+              {/* logoUrl */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+                  Logo URL
+                </label>
+                <input
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  maxLength={500}
+                  className="w-full bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm text-[#0f172a] focus:border-violet-500 outline-none"
+                  placeholder="https://example.com/logo.svg"
+                />
+                <p className="text-[11px] text-[#94a3b8] mt-1">
+                  SVG yoki PNG havola. Dashboard sarlavhasida 32–48px balandlikda ko&apos;rsatiladi.
+                </p>
+              </div>
+
+              {/* faviconUrl */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+                  Favicon URL
+                </label>
+                <input
+                  value={faviconUrl}
+                  onChange={(e) => setFaviconUrl(e.target.value)}
+                  maxLength={500}
+                  className="w-full bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm text-[#0f172a] focus:border-violet-500 outline-none"
+                  placeholder="https://example.com/favicon.ico"
+                />
+                <p className="text-[11px] text-[#94a3b8] mt-1">
+                  32×32 PNG yoki .ico havola.
+                </p>
+              </div>
+
+              {/* primaryColor */}
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-[#475569] mb-1.5">
+                  Asosiy rang (hex)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    maxLength={7}
+                    className="flex-1 bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm text-[#0f172a] focus:border-violet-500 outline-none font-mono"
+                    placeholder="#6d28d9"
+                  />
+                  {HEX_RE.test(primaryColor) && (
+                    <div
+                      className="w-5 h-5 rounded-md border border-[#ede9e1] shrink-0"
+                      style={{ backgroundColor: primaryColor }}
+                    />
+                  )}
+                </div>
+                <p className="text-[11px] text-[#94a3b8] mt-1">
+                  Hex format: #6d28d9. Bo&apos;sh qoldirsa standart rang ishlatiladi.
+                </p>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={onSaveBranding}
+                  disabled={savingBranding}
+                  className="bg-violet-600 hover:bg-violet-500 text-white rounded-lg px-4 py-2 text-sm font-bold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save size={14} />
+                  {savingBranding ? 'Saqlanmoqda…' : 'Brendni saqlash'}
                 </button>
               </div>
             </div>

@@ -33,6 +33,12 @@ model Tenant {
   isActive          Boolean  @default(true) @map("is_active")
   warningBlockLimit Int      @default(3) @map("warning_block_limit")
   certTemplate      Json?    @map("cert_template")
+  // Whitelabel branding — each tenant can display their own name, logo
+  // and accent colour instead of the platform defaults.
+  brandName         String?  @map("brand_name")
+  logoUrl           String?  @map("logo_url")
+  faviconUrl        String?  @map("favicon_url")
+  primaryColor      String?  @map("primary_color")
   createdAt         DateTime @default(now()) @map("created_at")
 
   branches                 Branch[]
@@ -178,6 +184,9 @@ model Lesson {
   cameraEnabled      Boolean    @default(true) @map("camera_enabled")
   aiTutorContext     String?    @map("ai_tutor_context")
   isPublished        Boolean    @default(false) @map("is_published")
+  // Template lessons are created by superadmin and serve as a starter
+  // library that filadmins can import (deep-copy) into their own tenant.
+  isTemplate         Boolean    @default(false) @map("is_template")
   createdAt          DateTime   @default(now()) @map("created_at")
   updatedAt          DateTime   @updatedAt @map("updated_at")
 
