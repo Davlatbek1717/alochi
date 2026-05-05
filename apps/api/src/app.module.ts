@@ -49,6 +49,7 @@ import { ExamQueueModule } from './exams/exam-queue.module';
 import { ContactRequestsModule } from './contact-requests/contact-requests.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { I18nModule } from './i18n/i18n.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -117,6 +118,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ContactRequestsModule,
     MarketingModule,
     SubscriptionsModule,
+    I18nModule,
   ],
   providers: [
     // Throttler applied globally — individual controllers can override
