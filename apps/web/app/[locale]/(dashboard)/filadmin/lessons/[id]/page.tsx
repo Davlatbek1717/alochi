@@ -24,12 +24,12 @@ import {
   COMPONENT_BADGE_STYLES,
   COMPONENT_ICONS,
   type ConfigComponent,
-} from '@/app/(dashboard)/superadmin/lessons/[id]/_components/ComponentsList';
+} from '@/app/[locale]/(dashboard)/superadmin/lessons/[id]/_components/ComponentsList';
 import {
   ComponentConfigurator,
   ALL_TYPES,
   type ComponentTypeKey,
-} from '@/app/(dashboard)/superadmin/lessons/[id]/_components/ComponentConfigurator';
+} from '@/app/[locale]/(dashboard)/superadmin/lessons/[id]/_components/ComponentConfigurator';
 
 interface Lesson {
   id: string;
@@ -458,14 +458,14 @@ export default function FiladminEditLessonPage() {
         theme="light"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {ALL_TYPES.map((t) => {
+          {(ALL_TYPES as string[]).map((t) => {
             const Icon = COMPONENT_ICONS[t];
             const badge = COMPONENT_BADGE_STYLES[t] ?? '';
             return (
               <button
                 key={t}
                 type="button"
-                onClick={() => pickType(t)}
+                onClick={() => pickType(t as Parameters<typeof pickType>[0])}
                 className="text-left px-3 py-2.5 rounded-xl border-[1.5px] border-[#ede9e1] hover:border-[#0d9488] hover:bg-[#f7f4ef] transition-colors flex items-center gap-3"
               >
                 <div
