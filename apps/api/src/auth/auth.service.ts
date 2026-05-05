@@ -8,6 +8,7 @@ import { createHash } from 'crypto';
 import { LoginDto } from './dto/login.dto';
 import { TenantsService } from '../tenants/tenants.service';
 import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
+import { I18nService } from '../i18n/i18n.service';
 
 @Injectable()
 export class AuthService {
@@ -16,13 +17,14 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private tenantsService: TenantsService,
+    private i18n: I18nService,
   ) {}
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async login(dto: LoginDto, tenantSlug?: string) {
+  async login(dto: LoginDto, tenantSlug?: string, locale = 'uz') {
     // Resolution rules:
     //   - If the caller passed an x-tenant-slug header, scope the lookup
     //     to that tenant and accept any role (mentor / manager / student
@@ -56,27 +58,21 @@ export class AuthService {
         if (matches.length === 1) {
           user = matches[0];
         } else if (matches.length > 1) {
-          throw new UnauthorizedException(
-            'Bir xil login bir nechta markazda topildi. Iltimos, markaz nomini kiriting.',
-          );
+          throw new UnauthorizedException(this.i18n.t('multiple_tenants', locale));
         }
       }
     }
 
-    if (!user) throw new UnauthorizedException("Login yoki parol noto'g'ri");
+    if (!user) throw new UnauthorizedException(this.i18n.t('login_failed', locale));
     if (user.status === UserStatus.blocked_warning)
-      throw new UnauthorizedException(
-        "Profilingiz 3 ta ogohlantirish sababli bloklangan. Filadmin bilan bog'laning.",
-      );
+      throw new UnauthorizedException(this.i18n.t('blocked_warning', locale));
     if (user.status === UserStatus.blocked_payment)
-      throw new UnauthorizedException(
-        "To'lov amalga oshirilmagan. Iltimos, to'lovni to'lang.",
-      );
+      throw new UnauthorizedException(this.i18n.t('blocked_payment', locale));
     if (user.status !== UserStatus.active)
-      throw new UnauthorizedException('Profilingiz bloklangan');
+      throw new UnauthorizedException(this.i18n.t('profile_blocked', locale));
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!match) throw new UnauthorizedException("Login yoki parol noto'g'ri");
+    if (!match) throw new UnauthorizedException(this.i18n.t('login_failed', locale));
 
     const payload = {
       sub: user.id,
@@ -123,7 +119,7 @@ export class AuthService {
         secret: this.config.get<string>('JWT_REFRESH_SECRET'),
       });
     } catch {
-      throw new UnauthorizedException('Refresh token yaroqsiz');
+      throw new UnauthorizedException(this.i18n.t('refresh_invalid'));
     }
 
     const tokenHash = this.hashToken(token);
@@ -142,7 +138,7 @@ export class AuthService {
         include: { user: true },
       });
       if (!stored || stored.expiresAt < new Date()) {
-        throw new UnauthorizedException('Refresh token yaroqsiz');
+        throw new UnauthorizedException(this.i18n.t('refresh_invalid'));
       }
       // A valid refresh token alone is not enough — the user behind it
       // must still be active. Without this check, accounts blocked for
@@ -153,7 +149,7 @@ export class AuthService {
         // Burn the row inside the same transaction so the client can't
         // keep hammering /auth/refresh with a now-useless row.
         await tx.refreshToken.delete({ where: { id: stored.id } });
-        throw new UnauthorizedException('Profilingiz bloklangan');
+        throw new UnauthorizedException(this.i18n.t('profile_blocked'));
       }
       await tx.refreshToken.delete({ where: { id: stored.id } });
       return { user: stored.user };

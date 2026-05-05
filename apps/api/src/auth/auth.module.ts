@@ -7,12 +7,14 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
 import { TenantsModule } from '../tenants/tenants.module';
+import { I18nModule } from '../i18n/i18n.module';
 
 @Module({
   imports: [
     PassportModule,
     PrismaModule,
     TenantsModule,
+    I18nModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
