@@ -2,7 +2,7 @@ import { LoginForm } from './_components/LoginForm';
 import { GraduationCap, Zap, Trophy, BarChart2 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Kirish — Alochi',
+  title: 'Kirish — Adouptivo',
 };
 
 const FEATURES = [
@@ -27,7 +27,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <GraduationCap size={20} className="text-white" />
             </div>
-            <span className="text-white text-xl font-black tracking-tight">A&apos;lochi</span>
+            <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
           </div>
 
           <h1 className="text-4xl font-black text-white leading-tight mb-4">
@@ -52,7 +52,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-[#475569] text-xs relative z-10">© 2025 A&apos;lochi. Barcha huquqlar himoyalangan.</p>
+        <p className="text-[#475569] text-xs relative z-10">© 2025 Adouptivo. Barcha huquqlar himoyalangan.</p>
       </div>
 
       {/* Right panel — login form */}
@@ -63,7 +63,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
               <GraduationCap size={20} className="text-white" />
             </div>
-            <span className="text-white text-xl font-black tracking-tight">A&apos;lochi</span>
+            <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
           </div>
 
           <div className="mb-8">

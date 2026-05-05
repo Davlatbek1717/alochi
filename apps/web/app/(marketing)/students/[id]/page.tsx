@@ -50,9 +50,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const student = await fetchStudent(id);
-  if (!student) return { title: "O'quvchi topilmadi | A'lochi" };
+  if (!student) return { title: "O'quvchi topilmadi | Adouptivo" };
   return {
-    title: `${student.name} | A'lochi`,
+    title: `${student.name} | Adouptivo`,
     description: `${student.name} — ${student.school}, ${student.region}. ${student.progress}% progress.`,
   };
 }

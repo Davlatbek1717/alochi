@@ -4,7 +4,7 @@ import { OnboardForm } from './_components/OnboardForm';
 import { PageHeader } from '@/components/ui';
 
 export const metadata = {
-  title: 'Yangi Markaz — Alochi',
+  title: 'Yangi Markaz — Adouptivo',
 };
 
 export default function NewTenantPage() {

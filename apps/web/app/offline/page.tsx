@@ -2,7 +2,7 @@ import { WifiOff } from 'lucide-react';
 import { RetryButton } from './_components/RetryButton';
 
 export const metadata = {
-  title: 'Offline — Alochi',
+  title: 'Offline — Adouptivo',
 };
 
 export default function OfflinePage() {

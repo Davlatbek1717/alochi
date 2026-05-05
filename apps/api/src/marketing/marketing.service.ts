@@ -232,7 +232,7 @@ export class MarketingService {
   // strings or JSON strings (the consumer parses where needed).
   private static DEFAULT_SETTINGS: Record<string, string> = {
     'hero.badge': "Premium Ta'lim Platformasi",
-    'hero.title': "A'LOCHI",
+    'hero.title': "ADOUPTIVO",
     'hero.tagline': 'revolyutsiya',
     'hero.subtitle':
       "3-7 sinf o'quvchilari uchun zamonaviy ta'lim platformasi — AI suhbatlar, kamera nazorati va ota-onalar uchun Telegram hisobotlar.",
@@ -244,7 +244,7 @@ export class MarketingService {
     'contact.personal': 'https://t.me/Javohir_UH',
     'certificate.title': 'Sertifikat',
     'certificate.description':
-      "Har bir bo'limni tugatgan o'quvchi rasmiy A'lochi sertifikatini oladi.",
+      "Har bir bo'limni tugatgan o'quvchi rasmiy Adouptivo sertifikatini oladi.",
     'travel.title': 'Sayohat homiylari',
     'travel.subtitle': "Eng zo'r o'quvchilarga ekskursiya yo'llanmalari",
     'prizes.title': 'Mukofotlar',

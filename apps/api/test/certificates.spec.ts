@@ -9,6 +9,11 @@ describe('CertificatesService', () => {
       create: jest.fn().mockResolvedValue({ id: 'cert-1', level: 'bronze' }),
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    // CertificatesService.getLevels() reads siteSetting for DB overrides.
+    // Return empty array so all tests use the DEFAULT_CERT_LEVELS fallback.
+    siteSetting: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
 
   const service = new CertificatesService(mockPrisma as any);
