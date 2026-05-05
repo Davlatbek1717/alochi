@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { JwtAuthGuard } from './auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -21,6 +22,12 @@ export class AuthController {
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {
     return this.authService.refresh(dto.refreshToken);
+  }
+
+  @ApiOperation({ summary: 'Self-service tenant registration (14-day trial)' })
+  @Post('register')
+  registerTenant(@Body() dto: OnboardTenantDto) {
+    return this.authService.registerTenant(dto);
   }
 
   @ApiBearerAuth()

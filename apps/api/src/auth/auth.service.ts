@@ -6,6 +6,8 @@ import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { LoginDto } from './dto/login.dto';
+import { TenantsService } from '../tenants/tenants.service';
+import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
 
 @Injectable()
 export class AuthService {
@@ -13,6 +15,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private tenantsService: TenantsService,
   ) {}
 
   private hashToken(token: string): string {
@@ -185,5 +188,19 @@ export class AuthService {
   async logout(userId: string) {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
     return { message: 'Chiqildi' };
+  }
+
+  async registerTenant(dto: OnboardTenantDto) {
+    // Delegate to TenantsService.onboardTenant (same logic as superadmin flow)
+    // but set trialEndsAt = 14 days from now on the created tenant.
+    const result = await this.tenantsService.onboardTenant(dto, undefined);
+    // Set trial period
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 14);
+    await this.prisma.tenant.update({
+      where: { id: result.tenant.id },
+      data: { trialEndsAt },
+    });
+    return { ...result, trialEndsAt };
   }
 }

@@ -45,21 +45,21 @@ export function Hero({ onDemoClick, cms }: Props) {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <a
+                href="/register"
+                className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-4 rounded-2xl shadow-[0_8px_0_0_#4c1d95] active:translate-y-[3px] active:shadow-[0_3px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
+              >
+                Bepul boshlash
+                <ArrowRight size={18} strokeWidth={2.75} />
+              </a>
               <button
                 type="button"
                 onClick={onDemoClick}
-                className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-4 rounded-2xl shadow-[0_8px_0_0_#4c1d95] active:translate-y-[3px] active:shadow-[0_3px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
-              >
-                {cta}
-                <ArrowRight size={18} strokeWidth={2.75} />
-              </button>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-white/80 text-[#1e1b4b] font-extrabold text-base px-6 py-4 rounded-2xl border-2 border-[#1e1b4b]/12 hover:border-[#6d28d9]/30 shadow-sm transition-all"
+                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-white/80 text-[#1e1b4b] font-extrabold text-base px-6 py-4 rounded-2xl border-2 border-[#1e1b4b]/12 hover:border-[#6d28d9]/30 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d28d9] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
               >
                 <Play size={18} strokeWidth={2.75} className="text-[#6d28d9] fill-[#6d28d9]" />
-                Demo ko&apos;rish (5 daq)
-              </a>
+                {cta}
+              </button>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm font-bold text-[#64748b]">
