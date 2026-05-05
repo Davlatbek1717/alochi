@@ -1,6 +1,7 @@
 'use client';
 import { Link } from '@/i18n/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   RefreshCw,
   BarChart2,
@@ -451,6 +452,7 @@ function ContinueLessonCard({
   session: { count: number; total: number } | null;
   lessonNumber: number;
 }) {
+  const t = useTranslations('student.dashboard');
   // "All caught up" state — no next lesson available
   if (!nextLesson) {
     return (
@@ -466,7 +468,7 @@ function ContinueLessonCard({
           <div className="relative z-10 text-center">
             <p className="text-4xl mb-3" aria-hidden>🎉</p>
             <p className="text-xl md:text-2xl font-extrabold leading-tight">
-              Barcha darslar tugatildi!
+              {t('all_done')}
             </p>
             <p className="mt-1.5 text-sm font-bold text-white/80">
               Zo&apos;r ish — siz hammani yengdingiz!
@@ -531,7 +533,7 @@ function ContinueLessonCard({
             className="mt-4 block bg-white text-[#46a302] py-3 md:py-3.5 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105 min-h-[44px] flex items-center justify-center"
             style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
           >
-            Davom etish
+            {t('continue')}
           </Link>
         </div>
       </div>
@@ -540,19 +542,20 @@ function ContinueLessonCard({
 }
 
 function StatusBlock({ data }: { data: StatusData | null }) {
+  const t = useTranslations('student.dashboard');
   // Per-discipline mentor-managed status colour. The whole block is
   // shown even before the first lesson finishes (with "—" placeholders)
   // so the student knows where the slots will surface their grades.
   const items: { field: keyof StatusData; label: string; icon: React.ReactNode }[] = [
-    { field: 'englishStatus', label: 'Ingliz tili', icon: <BookOpen size={16} /> },
-    { field: 'personalStatus', label: 'Shaxsiy', icon: <Brain size={16} /> },
-    { field: 'criticalStatus', label: 'Tanqidiy', icon: <Lightbulb size={16} /> },
+    { field: 'englishStatus', label: t('english_status'), icon: <BookOpen size={16} /> },
+    { field: 'personalStatus', label: t('personal_status'), icon: <Brain size={16} /> },
+    { field: 'criticalStatus', label: t('critical_status'), icon: <Lightbulb size={16} /> },
   ];
   return (
     <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-[#ede9e1] space-y-3 md:space-y-4">
       <div className="flex items-center gap-2">
         <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#7a5e2c]">
-          Sizning holatingiz
+          {t('status_title')}
         </p>
         <span
           className="text-[#94a3b8]"

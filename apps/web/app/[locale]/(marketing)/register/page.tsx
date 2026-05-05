@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { ArrowRight, ArrowLeft, Check, Building2, User, ClipboardList } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -28,11 +29,11 @@ function slugify(value: string): string {
     .slice(0, 50);
 }
 
-function ProgressBar({ step }: { step: Step }) {
+function ProgressBar({ step, labels }: { step: Step; labels: [string, string, string] }) {
   const steps = [
-    { num: 1, label: "Markaz", icon: Building2 },
-    { num: 2, label: "Admin", icon: User },
-    { num: 3, label: "Tasdiqlash", icon: ClipboardList },
+    { num: 1, label: labels[0], icon: Building2 },
+    { num: 2, label: labels[1], icon: User },
+    { num: 3, label: labels[2], icon: ClipboardList },
   ] as const;
 
   return (
@@ -136,6 +137,7 @@ function InputField({
 }
 
 export default function RegisterPage() {
+  const t = useTranslations('marketing.register');
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({
     tenantName: '',
@@ -246,7 +248,7 @@ export default function RegisterPage() {
               <Check size={32} strokeWidth={3} className="text-white" />
             </div>
             <h2 className="text-2xl font-extrabold text-[#1e1b4b] mb-2">
-              Muvaffaqiyatli ro&apos;yxatdan o&apos;tdingiz!
+              {t('success_title')}
             </h2>
             <p className="text-[#64748b] font-semibold mb-1">
               14 kunlik bepul sinov davri boshlandi.
@@ -261,7 +263,7 @@ export default function RegisterPage() {
               href={`/${registeredSlug}/login`}
               className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-3 rounded-2xl shadow-[0_4px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95] transition-all w-full"
             >
-              Kirishga o&apos;tish
+              {t('go_to_login')}
               <ArrowRight size={18} strokeWidth={2.75} />
             </a>
           </div>
@@ -281,16 +283,16 @@ export default function RegisterPage() {
           <span className="text-[#1e1b4b] text-xl font-black tracking-tight">Adouptivo</span>
         </Link>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1e1b4b] leading-tight">
-          Markazingizni ro&apos;yxatdan o&apos;tkazing
+          {t('title')}
         </h1>
         <p className="mt-2 text-[#64748b] font-semibold">
-          14 kun bepul sinov &mdash; kredit karta shart emas
+          {t('trial_note')}
         </p>
       </div>
 
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl border border-[#ede9e1] p-8 shadow-sm">
-          <ProgressBar step={step} />
+          <ProgressBar step={step} labels={[t('step1'), t('step2'), t('step3')]} />
 
           {/* Step 1 — Markaz ma'lumotlari */}
           {step === 1 && (
@@ -459,7 +461,7 @@ export default function RegisterPage() {
                   </>
                 ) : (
                   <>
-                    Ro&apos;yxatdan o&apos;tish
+                    {t('submit')}
                     <Check size={18} strokeWidth={2.75} />
                   </>
                 )}
@@ -469,9 +471,9 @@ export default function RegisterPage() {
         </div>
 
         <p className="mt-6 text-center text-sm font-semibold text-[#64748b]">
-          Allaqachon hisobingiz bormi?{' '}
+          {t('has_account')}{' '}
           <Link href="/login" className="text-[#6d28d9] font-extrabold hover:underline">
-            Kirish
+            {t('sign_in')}
           </Link>
         </p>
       </div>

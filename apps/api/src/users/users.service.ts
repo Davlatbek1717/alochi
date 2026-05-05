@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -21,6 +22,7 @@ export class UsersService {
   constructor(
     private prisma: PrismaService,
     private events: EventEmitter2,
+    private i18n: I18nService,
   ) {}
 
   async create(
@@ -30,7 +32,7 @@ export class UsersService {
     const exists = await this.prisma.user.findFirst({
       where: { tenantId: dto.tenantId, login: dto.login },
     });
-    if (exists) throw new ConflictException('Bu login allaqachon mavjud');
+    if (exists) throw new ConflictException(this.i18n.t('duplicate_login'));
 
     const { password, ...data } = dto;
     const passwordHash = await bcrypt.hash(password, 12);
@@ -115,7 +117,7 @@ export class UsersService {
         login: true,
       },
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
     return user;
   }
 
@@ -234,7 +236,7 @@ export class UsersService {
       where: { id, tenantId },
       select: { id: true, role: true, groupId: true },
     });
-    if (!before) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!before) throw new NotFoundException(this.i18n.t('user_not_found'));
 
     // birthDate arrives as an ISO date string; Prisma needs a Date for
     // a @db.Date column. Pass undefined when the field wasn't sent so
@@ -343,7 +345,7 @@ export class UsersService {
       where: { id, tenantId },
       select: { id: true, status: true },
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
 
     const isBlocked =
       user.status === 'blocked_warning' || user.status === 'blocked_payment';
@@ -418,7 +420,7 @@ export class UsersService {
       where: { id, tenantId },
       select: { id: true, status: true },
     });
-    if (!user) throw new NotFoundException('Foydalanuvchi topilmadi');
+    if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
 
     if (
       user.status !== 'blocked_warning' &&

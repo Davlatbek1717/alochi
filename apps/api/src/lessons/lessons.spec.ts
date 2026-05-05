@@ -2,6 +2,10 @@ import { Test } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { LessonsService } from './lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
+import { translateError } from '../i18n/errors';
+
+const mockI18n = { t: (key: string) => translateError(key as any) };
 
 const mockPrisma = {
   lesson: {
@@ -23,6 +27,7 @@ describe('LessonsService', () => {
       providers: [
         LessonsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();
     service = module.get(LessonsService);

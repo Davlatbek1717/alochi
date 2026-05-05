@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
 
 function clampInt(
   value: string | undefined,
@@ -24,7 +25,10 @@ function clampInt(
  */
 @Injectable()
 export class MarketingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private i18n: I18nService,
+  ) {}
 
   /**
    * Featured students grid. Active student users with at least one
@@ -110,7 +114,7 @@ export class MarketingService {
         },
       },
     });
-    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+    if (!student) throw new NotFoundException(this.i18n.t('user_not_found'));
 
     const totalLessons = await this.prisma.lesson.count({
       where: { isPublished: true },

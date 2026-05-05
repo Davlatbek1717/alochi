@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
 import { ExamStatus } from '@prisma/client';
 
 const LEGACY_PASS_THRESHOLD = 0.7;
@@ -16,7 +17,10 @@ interface GrantTarget {
 
 @Injectable()
 export class ExamsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private i18n: I18nService,
+  ) {}
 
   async grant(grantedBy: string, studentId: string, target: GrantTarget) {
     const { lessonId, examId } = target;
@@ -33,7 +37,7 @@ export class ExamsService {
       const lesson = await this.prisma.lesson.findFirst({
         where: { id: lessonId },
       });
-      if (!lesson) throw new NotFoundException('Dars topilmadi');
+      if (!lesson) throw new NotFoundException(this.i18n.t('lesson_not_found'));
       if (!lesson.hasExam)
         throw new BadRequestException('Bu darsda imtihon mavjud emas');
 
@@ -62,7 +66,7 @@ export class ExamsService {
       include: { _count: { select: { questions: true } } },
     });
     if (!exam) {
-      throw new NotFoundException('Imtihon topilmadi yoki nashr qilinmagan');
+      throw new NotFoundException(this.i18n.t('exam_not_found'));
     }
     // Test-kind exams must have at least one question. AI oral exams
     // have no question rows — they're driven by `aiPrompt`, which
@@ -146,10 +150,10 @@ export class ExamsService {
         },
       },
     });
-    if (!permission) throw new NotFoundException('Imtihon topilmadi');
+    if (!permission) throw new NotFoundException(this.i18n.t('exam_not_found'));
     if (permission.studentId !== studentId) throw new ForbiddenException();
     if (permission.status !== ExamStatus.active)
-      throw new BadRequestException('Imtihon allaqachon yakunlangan');
+      throw new BadRequestException(this.i18n.t('exam_already_done'));
 
     // Two grading paths:
     //   - Catalogue exam → client sends `results: boolean[]` because
@@ -187,9 +191,7 @@ export class ExamsService {
     // lesson that happens to have no MCQ components — the student
     // would auto-complete the lesson without answering anything.
     if (total === 0) {
-      throw new BadRequestException(
-        'Bu darsda yoki imtihonda baholanadigan savollar mavjud emas',
-      );
+      throw new BadRequestException(this.i18n.t('no_questions'));
     }
     const score = Math.round((correct / total) * 100);
     const passed = correct / total >= passThresholdRatio;

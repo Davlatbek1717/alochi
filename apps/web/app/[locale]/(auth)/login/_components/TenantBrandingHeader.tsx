@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { GraduationCap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface BrandingData {
   brandName?: string | null;
@@ -86,17 +87,18 @@ export function TenantBrandingLogo({ mobile = false }: { mobile?: boolean }) {
 export function LoginCardTitle() {
   const branding = useTenantBranding();
   const displayName = branding?.brandName;
+  const t = useTranslations('auth');
 
   return (
     <div className="mb-8">
       <h2 className="text-[#0f172a] text-2xl font-black lg:block hidden">
-        {displayName ? `${displayName}ga xush kelibsiz` : 'Xush kelibsiz'}
+        {displayName ? `${displayName}ga ${t('login_title').toLowerCase()}` : t('login_title')}
       </h2>
       <h2 className="text-white text-2xl font-black lg:hidden">
-        {displayName ? `${displayName}ga xush kelibsiz` : 'Xush kelibsiz'}
+        {displayName ? `${displayName}ga ${t('login_title').toLowerCase()}` : t('login_title')}
       </h2>
-      <p className="text-[#64748b] text-sm mt-1 lg:block hidden">Hisobingizga kiring</p>
-      <p className="text-[#94a3b8] text-sm mt-1 lg:hidden">Hisobingizga kiring</p>
+      <p className="text-[#64748b] text-sm mt-1 lg:block hidden">{t('login_subtitle')}</p>
+      <p className="text-[#94a3b8] text-sm mt-1 lg:hidden">{t('login_subtitle')}</p>
     </div>
   );
 }

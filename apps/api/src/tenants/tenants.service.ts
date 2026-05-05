@@ -7,6 +7,7 @@ import {
 import { ContactRequestStatus, Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { OnboardTenantDto } from './dto/onboard-tenant.dto';
 import { UpdateTenantSettingsDto } from './dto/update-tenant-settings.dto';
@@ -17,7 +18,10 @@ const SLUG_TAKEN_MESSAGE = 'Bu slug band, boshqasini tanlang';
 export class TenantsService {
   private readonly logger = new Logger(TenantsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private i18n: I18nService,
+  ) {}
 
   async create(dto: CreateTenantDto) {
     const exists = await this.prisma.tenant.findUnique({
@@ -51,7 +55,7 @@ export class TenantsService {
 
   async findById(id: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-    if (!tenant) throw new NotFoundException('Tenant topilmadi');
+    if (!tenant) throw new NotFoundException(this.i18n.t('tenant_not_found'));
     return tenant;
   }
 
@@ -75,7 +79,7 @@ export class TenantsService {
       },
     });
     if (!tenant || !tenant.isActive)
-      throw new NotFoundException('Tenant topilmadi');
+      throw new NotFoundException(this.i18n.t('tenant_not_found'));
     return tenant;
   }
 
@@ -88,7 +92,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    if (!exists) throw new NotFoundException(this.i18n.t('tenant_not_found'));
 
     const data: Record<string, unknown> = {};
     if (dto.warningBlockLimit !== undefined)
@@ -120,7 +124,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { certTemplate: true },
     });
-    if (!tenant) throw new NotFoundException('Tenant topilmadi');
+    if (!tenant) throw new NotFoundException(this.i18n.t('tenant_not_found'));
     return { certTemplate: tenant.certTemplate };
   }
 
@@ -130,7 +134,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    if (!exists) throw new NotFoundException(this.i18n.t('tenant_not_found'));
     return this.prisma.tenant.update({
       where: { id: tenantId },
       data: { certTemplate: certTemplate as Prisma.InputJsonValue },
@@ -146,7 +150,7 @@ export class TenantsService {
       where: { id },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    if (!exists) throw new NotFoundException(this.i18n.t('tenant_not_found'));
     return this.prisma.tenant.update({ where: { id }, data: { name } });
   }
 
@@ -159,7 +163,7 @@ export class TenantsService {
       where: { id },
       select: { id: true },
     });
-    if (!exists) throw new NotFoundException('Tenant topilmadi');
+    if (!exists) throw new NotFoundException(this.i18n.t('tenant_not_found'));
 
     return this.prisma.$transaction([
       this.prisma.tenant.update({

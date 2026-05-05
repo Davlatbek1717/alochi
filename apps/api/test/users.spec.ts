@@ -1,5 +1,8 @@
 import { UsersService } from '../src/users/users.service';
 import { UserRole } from '@prisma/client';
+import { translateError } from '../src/i18n/errors';
+
+const mockI18n = { t: (key: string) => translateError(key as any) };
 
 describe('UsersService', () => {
   const mockPrisma = {
@@ -28,7 +31,7 @@ describe('UsersService', () => {
     mockPrisma.user.create.mockResolvedValue({ id: 'uuid', role: 'mentor' });
 
     const mockEvents = { emit: jest.fn() };
-    const service = new UsersService(mockPrisma as any, mockEvents as any);
+    const service = new UsersService(mockPrisma as any, mockEvents as any, mockI18n as any);
     await service.create({
       tenantId: 'tenant-id',
       branchId: 'branch-id',
@@ -50,7 +53,7 @@ describe('UsersService', () => {
     mockPrisma.user.findFirst.mockResolvedValue({ id: 'existing' });
 
     const mockEvents = { emit: jest.fn() };
-    const service = new UsersService(mockPrisma as any, mockEvents as any);
+    const service = new UsersService(mockPrisma as any, mockEvents as any, mockI18n as any);
     await expect(
       service.create({
         tenantId: 'tenant-id',
@@ -71,6 +74,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
 
       const res = await service.getBlockStatus('u1', 't1');
@@ -93,6 +97,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
       const res = await service.getBlockStatus('u1', 't1');
       expect(res.isBlocked).toBe(true);
@@ -115,6 +120,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
       const res = await service.getBlockStatus('u1', 't1');
       expect(res.isBlocked).toBe(true);
@@ -129,6 +135,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
 
       await service.findAll('t1', 'other-branch', undefined, {
@@ -146,6 +153,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
 
       await service.findAll('t1', 'b-X', undefined, {
@@ -162,6 +170,7 @@ describe('UsersService', () => {
       const service = new UsersService(
         mockPrisma as any,
         { emit: jest.fn() } as any,
+        mockI18n as any,
       );
 
       await service.findAll('t1', undefined, undefined, {
@@ -182,7 +191,7 @@ describe('UsersService', () => {
       });
       mockPrisma.user.update.mockResolvedValue({ id: 'u1', status: 'active' });
       const events = { emit: jest.fn() };
-      const service = new UsersService(mockPrisma as any, events as any);
+      const service = new UsersService(mockPrisma as any, events as any, mockI18n as any);
 
       const res = await service.unblock('u1', 't1', 'admin1', 'Mistake');
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -210,7 +219,7 @@ describe('UsersService', () => {
         status: 'active',
       });
       const events = { emit: jest.fn() };
-      const service = new UsersService(mockPrisma as any, events as any);
+      const service = new UsersService(mockPrisma as any, events as any, mockI18n as any);
 
       await service.unblock('u1', 't1', 'admin1');
       expect(mockPrisma.user.update).not.toHaveBeenCalled();

@@ -2,6 +2,10 @@ import { Test } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { I18nService } from '../i18n/i18n.service';
+import { translateError } from '../i18n/errors';
+
+const mockI18n = { t: (key: string) => translateError(key as any) };
 
 const mockPrisma = {
   user: {
@@ -35,6 +39,7 @@ describe('UsersService', () => {
         UsersService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: EventEmitter2, useValue: mockEvents },
+        { provide: I18nService, useValue: mockI18n },
       ],
     }).compile();
     service = module.get(UsersService);

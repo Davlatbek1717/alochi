@@ -13,6 +13,7 @@ export const API_ERRORS = {
   multiple_tenants:      { uz: "Bir xil login bir nechta markazda topildi. Iltimos, markaz nomini kiriting.", en: "Login found in multiple organizations. Please specify your center.", ru: "Логин найден в нескольких организациях. Укажите центр." },
   tenant_not_found:      { uz: "Tenant topilmadi",                             en: "Organization not found",              ru: "Организация не найдена" },
   user_not_found:        { uz: "Foydalanuvchi topilmadi",                      en: "User not found",                      ru: "Пользователь не найден" },
+  duplicate_login:       { uz: "Bu login allaqachon mavjud",                   en: "This login is already taken",         ru: "Этот логин уже занят" },
   lesson_not_found:      { uz: "Dars topilmadi",                               en: "Lesson not found",                    ru: "Урок не найден" },
   exam_not_found:        { uz: "Imtihon topilmadi",                            en: "Exam not found",                      ru: "Экзамен не найден" },
   template_not_found:    { uz: "Shablon topilmadi",                            en: "Template not found",                  ru: "Шаблон не найден" },

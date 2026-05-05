@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
+import { useTranslations } from 'next-intl';
 
 interface LoginResponse {
   accessToken: string;
@@ -34,6 +35,7 @@ const ROLE_ROUTES: Record<string, string> = {
 export function LoginForm() {
   const router = useRouter();
   const toast = useToast();
+  const t = useTranslations('auth');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -62,7 +64,7 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
-          Login
+          {t('username')}
         </label>
         <input
           type="text"
@@ -78,7 +80,7 @@ export function LoginForm() {
 
       <div>
         <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1.5">
-          Parol
+          {t('password')}
         </label>
         <div className="relative">
           <input
@@ -110,7 +112,7 @@ export function LoginForm() {
         ) : (
           <LogIn size={16} />
         )}
-        {loading ? 'Kirish...' : 'Kirish'}
+        {loading ? t('submit') + '...' : t('submit')}
       </button>
     </form>
   );

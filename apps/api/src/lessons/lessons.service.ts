@@ -4,12 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { I18nService } from '../i18n/i18n.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 
 @Injectable()
 export class LessonsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private i18n: I18nService,
+  ) {}
 
   /**
    * Create a new lesson scoped to `tenantId`.
@@ -22,9 +26,7 @@ export class LessonsService {
       where: { tenantId, orderNumber: dto.orderNumber },
     });
     if (existing)
-      throw new ConflictException(
-        `${dto.orderNumber} tartib raqami allaqachon mavjud`,
-      );
+      throw new ConflictException(this.i18n.t('order_conflict'));
 
     const {
       mcqEnabled,
@@ -96,7 +98,7 @@ export class LessonsService {
       where: { id: templateId, isTemplate: true },
       include: { components_data: true },
     });
-    if (!template) throw new NotFoundException('Shablon topilmadi');
+    if (!template) throw new NotFoundException(this.i18n.t('template_not_found'));
 
     const maxOrder = await this.prisma.lesson.aggregate({
       where: { tenantId },
@@ -135,7 +137,7 @@ export class LessonsService {
       where: { id, tenantId },
       include: { components_data: true },
     });
-    if (!lesson) throw new NotFoundException('Dars topilmadi');
+    if (!lesson) throw new NotFoundException(this.i18n.t('lesson_not_found'));
     return lesson;
   }
 
@@ -199,9 +201,7 @@ export class LessonsService {
       where: { lessonId: id },
     });
     if (progressCount > 0) {
-      throw new ConflictException(
-        `Darsda ${progressCount} o'quvchi progressi bor. O'chirib bo'lmaydi.`,
-      );
+      throw new ConflictException(this.i18n.t('progress_exists'));
     }
     return this.prisma.lesson.delete({ where: { id } });
   }

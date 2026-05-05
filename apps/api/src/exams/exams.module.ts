@@ -7,9 +7,10 @@ import { ExamService } from './exam.service';
 import { OralExamController } from './oral-exam.controller';
 import { OralExamService } from './oral-exam.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { I18nModule } from '../i18n/i18n.module';
 
 @Module({
-  imports: [PrismaModule, ConfigModule],
+  imports: [PrismaModule, ConfigModule, I18nModule],
   // Three flows, three controllers:
   //   - ExamsController/Service — legacy student-facing exam permission
   //     flow (mentor grants /exams/my-active, student takes lesson MCQ).

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Award,
   GraduationCap,
@@ -114,6 +115,7 @@ function formatMember(date?: string | null): string {
 export default function StudentProfilePage() {
   const router = useRouter();
   const toast = useToast();
+  const t = useTranslations('student.profile');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [xp, setXp] = useState<XpData | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
@@ -477,15 +479,15 @@ export default function StudentProfilePage() {
           </div>
           <div className="space-y-3">
             <Field
-              label="Ota-ona Telegram"
+              label={t('telegram')}
               value={formatParentTelegram(profile.parentTelegramId)}
             />
             <Field
-              label="Tugʻilgan sana"
+              label={t('birth_date')}
               value={
                 profile.birthDate
                   ? profile.birthDate.slice(0, 10)
-                  : "Belgilanmagan"
+                  : t('not_set')
               }
             />
             {tgLink && !profile.parentTelegramLinked && (
@@ -559,7 +561,7 @@ export default function StudentProfilePage() {
                 }
               />
             }
-            title={profile.faceEnrolled ? "Yuz ID — faol" : "Yuz ID ro'yxat"}
+            title={profile.faceEnrolled ? t('face_enrolled') : t('face_not_enrolled')}
             sub={profile.faceEnrolled ? "Davomatga ulangan" : "Bir martalik ro'yxatdan o'tish"}
           />
         </section>
@@ -569,7 +571,7 @@ export default function StudentProfilePage() {
           onClick={() => setLogoutOpen(true)}
           className="w-full bg-white rounded-3xl border-[1.5px] border-[#fecaca] p-4 flex items-center justify-center gap-2 text-sm font-extrabold text-[#dc2626] hover:bg-rose-50 transition-colors min-h-[44px]"
         >
-          <LogOut size={16} /> Profildan chiqish
+          <LogOut size={16} /> {t('logout')}
         </button>
         </div>{/* end RIGHT column */}
       </div>{/* end 2-col flex */}

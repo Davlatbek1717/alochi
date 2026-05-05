@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft, Sparkles, Target } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton } from '@/components/ui';
@@ -52,6 +53,7 @@ const UNIT_SIZE = 5;
 
 export default function LessonsPathPage() {
   const router = useRouter();
+  const t = useTranslations('student.lessons');
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [progress, setProgress] = useState<Record<string, Progress>>({});
   const [streak, setStreak] = useState(0);
@@ -266,7 +268,7 @@ export default function LessonsPathPage() {
             </Link>
             <div className="flex-1 min-w-0 text-center">
               <h1 className="text-base md:text-lg font-extrabold text-[#3c3c3c] leading-tight">
-                Sayohat xaritasi
+                {t('title')}
               </h1>
               {totalCount > 0 && (
                 <p className="text-[11px] md:text-xs font-bold text-[#777] leading-snug">
@@ -377,7 +379,7 @@ export default function LessonsPathPage() {
                   size={14}
                   className={todayXp > 0 ? 'text-[#fbbf24]' : 'text-[#cbd5e1]'}
                 />
-                <span>{todayXp > 0 ? 'Bugun faol!' : 'Bugun faolsiz'}</span>
+                <span>{todayXp > 0 ? t('today_active') : t('today_inactive')}</span>
               </div>
             </div>
           </aside>
@@ -590,20 +592,21 @@ function PathSkeleton() {
 }
 
 function EmptyPath() {
+  const t = useTranslations('student.lessons');
   return (
     <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-8 flex flex-col items-center text-center">
       <Mascot expression="sleeping" size={120} animated />
       <h2 className="text-lg font-extrabold text-[#3c3c3c] mt-4">
-        Hali darslar qo&apos;shilmagan
+        {t('not_found')}
       </h2>
       <p className="text-sm text-[#777] font-semibold mt-1">
-        Darslar tez orada qo&apos;shiladi
+        {t('coming_soon')}
       </p>
       <Link
         href="/student"
         className="mt-5 inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
       >
-        Bosh sahifaga qaytish
+        {t('back_home')}
       </Link>
     </div>
   );
