@@ -7,7 +7,7 @@ import json
 CLAUDE_MODEL = "claude-haiku-4-5"
 CLAUDE_SONNET = "claude-sonnet-4-5"
 
-SYSTEM_PROMPT_TEMPLATE = """Siz A'lochi o'quv platformasining AI Tutor assistentiningsiz.
+SYSTEM_PROMPT_TEMPLATE = """Siz Adouptivo o'quv platformasining AI Tutor assistentiningsiz.
 Sizning vazifangiz: o'quvchilarga ingliz tili darslarini o'zbek tilida tushuntirish.
 
 Qoidalar:

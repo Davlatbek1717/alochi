@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react';
 import './marketing.css';
+import { routing } from '@/i18n/routing';
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 /**
  * Marketing route group — public, anonymous-accessible layout.
