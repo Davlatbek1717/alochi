@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="uz">
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
         <DevServiceWorkerCleanup />
         <ToastProvider>
