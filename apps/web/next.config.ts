@@ -1,9 +1,8 @@
 import type { NextConfig } from 'next';
 import withPWAInit from '@ducanh2912/next-pwa';
-// next-intl plugin wires the server-side getRequestConfig.
-// Uncomment once pages are migrated to [locale] folder structure (Phase 6b).
-// import createNextIntlPlugin from 'next-intl/plugin';
-// const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -87,5 +86,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// withNextIntl wrapping deferred until [locale] folder migration (Phase 6b).
-export default withPWA(nextConfig);
+export default withPWA(withNextIntl(nextConfig));
