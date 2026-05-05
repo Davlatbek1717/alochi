@@ -5,6 +5,41 @@
 
 ---
 
+## Bajarilgan phasalar (2026-05)
+
+| Phase | Commit | Holat |
+|---|---|---|
+| Phase 1 — Brand rename (A'lochi → Adouptivo) | d0d0c71 | ✅ |
+| Phase 2 — Filadmin tenant content (lessons CRUD + UI) | c28bc36 | ✅ |
+| Phase 3 — Tenant branding (logo, color, brandName) | d8da090 | ✅ |
+| Phase 4 — Template lesson library | d8da090 | ✅ |
+| Phase 5 — Self-service onboarding (/register + trial) | eb950bb | ✅ |
+| Phase 6 — i18n infrastructure (uz/en/ru) | 43ed337 | ✅ (infra ready, pages deferred) |
+| Phase 7 — Payment integration (Stripe/Payme/Click scaffold) | 4347fb7 | ✅ |
+| Phase 8 — Subdomain/custom domain middleware | 43ed337 | ✅ |
+| Phase 9 — GDPR (/privacy + /terms pages) | eb950bb | ✅ |
+| Phase 10 — Mobile PWA manifest | 4347fb7 | ✅ |
+| Phase 11 — Rate limiting (@nestjs/throttler) | 43ed337 | ✅ |
+| Phase 12 — Sentry monitoring | 43ed337 | ✅ |
+| Phase 13 — Security audit log (schema + UI + migration) | 4347fb7 | ✅ |
+
+**411/411 tests pass. Build clean.**
+
+---
+
+## Keyingi sprint uchun qolganlar (Phase 6b, 7b, 13b...)
+
+- **Phase 6b** — `[locale]` folder migration: landing + dashboard pages `withNextIntl` plugin bilan
+- **Phase 7b** — Real gateway integration: Stripe HMAC verify, Payme test key, Click production
+- **Phase 13b** — 2FA (TOTP authenticator), IP allowlist superadmin uchun, SystemAuditLog yozish (login/logout/user.create)
+- **Phase 11b** — Redis caching, DB indexes `EXPLAIN ANALYZE` bilan
+- **Phase 14** — AI content generation (filadmin uchun dars yaratish assistenti)
+- **Phase 15** — Lesson marketplace (markazlar darslarni sotsin/sotib olsin)
+
+---
+
+---
+
 ## PHASE 1 — Brand Rename: A'lochi → Adouptivo
 **Maqsad:** Har bir kod qatoridagi "A'lochi" ni olib tashlab "Adouptivo" qo'yish.
 
