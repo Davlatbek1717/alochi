@@ -1,15 +1,35 @@
 {
-  "name": "Alochi — O'qish platformasi",
-  "short_name": "Alochi",
-  "description": "Online o'qish va boshqaruv platformasi",
+  "name": "Adouptivo — Ta'lim Platformasi",
+  "short_name": "Adouptivo",
+  "description": "O'quv markazlari uchun AI ta'lim platformasi — darslar, imtihonlar, ota-ona hisobotlar",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1e293b",
-  "orientation": "portrait",
+  "background_color": "#fffaf0",
+  "theme_color": "#6d28d9",
+  "orientation": "portrait-primary",
+  "lang": "uz",
+  "categories": ["education", "productivity"],
+  "screenshots": [],
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Darslar",
+      "short_name": "Darslar",
+      "description": "Dars yo'l xaritasini ochish",
+      "url": "/student/lessons",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Bosh sahifa",
+      "description": "Bosh sahifaga o'tish",
+      "url": "/student",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
   ]
 }

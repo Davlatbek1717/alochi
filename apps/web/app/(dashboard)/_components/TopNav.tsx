@@ -30,6 +30,7 @@ import {
   PiggyBank,
   Calendar,
   Globe,
+  Shield,
 } from 'lucide-react';
 
 interface SubItem {
@@ -110,6 +111,7 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/superadmin/video-guides', icon: <Video size={14} />, label: "Video qo'llanmalar" },
         { href: '/superadmin/templates', icon: <Bell size={14} />, label: 'Bildirishnoma shablonlari' },
         { href: '/superadmin/landing', icon: <Globe size={14} />, label: 'Landing CMS' },
+        { href: '/superadmin/audit-log', icon: <Shield size={14} />, label: 'Audit Log' },
       ],
     },
   ],
@@ -177,6 +179,7 @@ const NAV: Record<string, NavEntry[]> = {
       items: [
         { href: '/filadmin/payments', icon: <CreditCard size={14} />, label: "To'lovlar" },
         { href: '/filadmin/promotion-report', icon: <BarChart2 size={14} />, label: 'Promo hisobot' },
+        { href: '/filadmin/billing', icon: <CreditCard size={14} />, label: "To'lov" },
       ],
     },
     {

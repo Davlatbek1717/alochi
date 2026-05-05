@@ -50,8 +50,29 @@ model Tenant {
   adaptiveDifficultyConfig AdaptiveDifficultyConfig?
   churnScores              ChurnScore[]              @relation("ChurnTenant")
   exams                    Exam[]                    @relation("TenantExams")
+  subscription             TenantSubscription?
 
   @@map("tenants")
+}
+
+model TenantSubscription {
+  id                   String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId             String   @unique @map("tenant_id") @db.Uuid
+  plan                 String   @default("starter")  // "starter" | "pro" | "enterprise"
+  status               String   @default("trialing")  // "trialing" | "active" | "past_due" | "canceled"
+  // Payment gateway that manages this subscription
+  gateway              String?  // "stripe" | "payme" | "click" | "manual"
+  // Gateway-specific subscription / order ID for webhook correlation
+  gatewaySubscriptionId String? @unique @map("gateway_subscription_id")
+  currentPeriodStart   DateTime? @map("current_period_start")
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_subscriptions")
 }
 
 model Branch {
@@ -1386,4 +1407,23 @@ model LandingItem {
 
   @@index([kind, isVisible, orderIndex])
   @@map("landing_items")
+}
+
+// System-level security audit log — append-only record of significant
+// admin actions (logins, role changes, user creation, tenant changes).
+model SystemAuditLog {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorRole  String?  @map("actor_role")
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  action     String
+  targetId   String?  @map("target_id")
+  meta       Json?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("system_audit_log")
 }

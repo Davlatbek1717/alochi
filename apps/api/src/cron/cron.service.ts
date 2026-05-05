@@ -605,6 +605,53 @@ export class CronService {
   }
 
   /**
+   * Trial expiry check — 2am daily.
+   *
+   * Finds all tenants where `trialEndsAt` has passed AND the tenant does not
+   * yet have an active subscription (no row in tenant_subscriptions with
+   * status='active'). Sets `isActive = false` on those tenants so they are
+   * effectively locked out until they subscribe.
+   */
+  @Cron('0 2 * * *', { name: 'trial_expiry_check' })
+  async checkTrialExpiries() {
+    this.logger.log('Cron: trial_expiry_check.start');
+    try {
+      const now = new Date();
+
+      // Find tenants whose trial has ended and have no active subscription.
+      const expiredTenants = await this.prisma.tenant.findMany({
+        where: {
+          isActive: true,
+          trialEndsAt: { lt: now },
+          // Either no subscription row at all, or subscription status is not 'active'
+          OR: [
+            { subscription: null },
+            { subscription: { status: { not: 'active' } } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (expiredTenants.length === 0) {
+        this.logger.log('trial_expiry_check.done expired=0');
+        return;
+      }
+
+      const ids = expiredTenants.map((t) => t.id);
+      const result = await this.prisma.tenant.updateMany({
+        where: { id: { in: ids } },
+        data: { isActive: false },
+      });
+
+      this.logger.log(
+        `trial_expiry_check.done expired=${result.count} tenantIds=${ids.join(',')}`,
+      );
+    } catch (err) {
+      this.logger.error(`trial_expiry_check.failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
    * Notify the parent of a student who has been absent for 2 consecutive
    * days (no `attendance_students` row in the last 2 days). Runs once daily
    * at 18:00 — late enough that today's attendance has been logged.
