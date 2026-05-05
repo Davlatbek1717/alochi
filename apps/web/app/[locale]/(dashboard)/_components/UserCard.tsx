@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ChevronRight } from 'lucide-react';
 
 export type UserStatusColor = 'yashil' | 'sariq' | 'qizil' | '';

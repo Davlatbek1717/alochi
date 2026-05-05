@@ -1,4 +1,5 @@
 'use client';
+import { Link } from '@/i18n/navigation';
 import { ArrowRight, Play, Check, Lock } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
 import type { LandingCms } from './cms-types';
@@ -45,13 +46,13 @@ export function Hero({ onDemoClick, cms }: Props) {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <a
+              <Link
                 href="/register"
                 className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-4 rounded-2xl shadow-[0_8px_0_0_#4c1d95] active:translate-y-[3px] active:shadow-[0_3px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
               >
                 Bepul boshlash
                 <ArrowRight size={18} strokeWidth={2.75} />
-              </a>
+              </Link>
               <button
                 type="button"
                 onClick={onDemoClick}

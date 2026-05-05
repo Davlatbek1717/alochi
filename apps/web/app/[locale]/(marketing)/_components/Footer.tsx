@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Send } from 'lucide-react';
 import type { LandingCms } from './cms-types';
 

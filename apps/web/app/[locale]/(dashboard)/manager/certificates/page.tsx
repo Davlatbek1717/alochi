@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton } from '@/components/ui';

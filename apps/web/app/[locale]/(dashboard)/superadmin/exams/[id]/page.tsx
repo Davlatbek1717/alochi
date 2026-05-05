@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowLeft, GraduationCap } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, EmptyState, useToast } from '@/components/ui';

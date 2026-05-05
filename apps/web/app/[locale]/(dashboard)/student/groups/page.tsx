@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { GraduationCap, MessageCircle, ChevronRight, Users } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton } from '@/components/ui';

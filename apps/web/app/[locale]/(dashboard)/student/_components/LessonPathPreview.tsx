@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { useEffect, useState, type FC, type ReactNode } from 'react';
 import { Lock, Check, ArrowRight } from 'lucide-react';
 import { apiRequest } from '@/lib/api';

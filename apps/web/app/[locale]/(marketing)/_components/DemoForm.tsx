@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { Link } from '@/i18n/navigation';
 import { X, Check, ArrowRight } from 'lucide-react';
 import { apiRequest, ApiError } from '@/lib/api';
 
@@ -274,9 +275,9 @@ export function DemoForm({ open, onClose }: Props) {
 
             <p className="mt-3 text-[11px] font-semibold text-[#94a3b8] text-center">
               Yuborib, siz{' '}
-              <a href="/privacy" className="underline hover:text-[#64748b] transition-colors">
+              <Link href="/privacy" className="underline hover:text-[#64748b] transition-colors">
                 maxfiylik siyosatimiz
-              </a>{' '}
+              </Link>{' '}
               bilan rozisiz.
             </p>
           </form>

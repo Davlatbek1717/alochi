@@ -7,7 +7,7 @@ import {
   Trash2,
   AlertTriangle,
 } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
 import {

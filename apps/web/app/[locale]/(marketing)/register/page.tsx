@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import { ArrowRight, ArrowLeft, Check, Building2, User, ClipboardList } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -470,9 +470,9 @@ export default function RegisterPage() {
 
         <p className="mt-6 text-center text-sm font-semibold text-[#64748b]">
           Allaqachon hisobingiz bormi?{' '}
-          <a href="/login" className="text-[#6d28d9] font-extrabold hover:underline">
+          <Link href="/login" className="text-[#6d28d9] font-extrabold hover:underline">
             Kirish
-          </a>
+          </Link>
         </p>
       </div>
     </div>
