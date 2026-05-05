@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import {
   Home,
   BookOpen,
@@ -258,8 +259,9 @@ export default function TopNav({ role }: Props) {
               isActive={entry === activeEntry}
             />
           ))}
-          <div className="ml-auto inline-flex items-center text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] gap-1 shrink-0 px-2">
-            <span>{role}</span>
+          <div className="ml-auto inline-flex items-center gap-3 shrink-0 px-2">
+            <LanguageSwitcher />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">{role}</span>
           </div>
         </ul>
 

@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "features": "Imkoniyatlar",
+    "roles": "Rollar",
+    "pricing": "Narxlar",
+    "faq": "Savollar",
+    "login": "Kirish",
+    "demo": "Demo so'rash",
+    "register": "Bepul boshlash"
+  },
+  "hero": {
+    "badge": "O'zbekiston ta'lim platformasi",
+    "title": "Bolangizning muvaffaqiyat yo'li shu yerdan boshlanadi.",
+    "subtitle": "3–7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma.",
+    "cta_primary": "Bepul boshlash",
+    "cta_secondary": "Demo so'rash"
+  },
+  "register": {
+    "title": "Markazingizni ro'yxatdan o'tkazing",
+    "step1": "Markaz",
+    "step2": "Admin",
+    "step3": "Tasdiqlash",
+    "center_name": "Markaz nomi",
+    "slug": "URL (slug)",
+    "admin_name": "To'liq ism",
+    "login": "Login",
+    "password": "Parol",
+    "phone": "Telefon",
+    "trial_note": "14 kun bepul sinov — kredit karta talab qilinmaydi",
+    "submit": "Ro'yxatdan o'tish",
+    "success_title": "Muvaffaqiyatli ro'yxatdan o'tdingiz!",
+    "go_to_login": "Kirishga o'tish"
+  },
+  "common": {
+    "next": "Keyingi",
+    "back": "Orqaga",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "loading": "Yuklanmoqda...",
+    "error": "Xatolik yuz berdi"
+  },
+  "login": {
+    "title": "Xush kelibsiz",
+    "subtitle": "Akkauntingizga kiring",
+    "username": "Login",
+    "password": "Parol",
+    "submit": "Kirish",
+    "forgot": "Parolni unutdingiz?",
+    "no_account": "Akkaunt yo'qmi?",
+    "register_link": "Bepul ro'yxatdan o'ting"
+  }
+}

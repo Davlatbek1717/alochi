@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -53,6 +55,22 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Rate limiting: 60 req/min on most endpoints, 10 req/min on auth
+    // endpoints (configured per-route with @Throttle decorator).
+    // The store defaults to in-memory which is fine for single-node;
+    // swap to ThrottlerStorageRedisService when scaling horizontally.
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,  // 1 minute window
+        limit: 120,   // 120 req/min per IP (generous for SaaS dashboard)
+      },
+      {
+        name: 'auth',
+        ttl: 60_000,
+        limit: 10,    // 10 attempts/min for login/register
+      },
+    ]),
     LoggerModule.forRoot(loggerConfig),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
@@ -99,6 +117,9 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     MarketingModule,
   ],
   providers: [
+    // Throttler applied globally — individual controllers can override
+    // with @Throttle({ auth: { ttl: 60_000, limit: 5 } }) etc.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_INTERCEPTOR, useClass: DelegationContextInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

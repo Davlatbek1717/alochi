@@ -1,0 +1,52 @@
+{
+  "nav": {
+    "features": "Features",
+    "roles": "Roles",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "login": "Log in",
+    "demo": "Request Demo",
+    "register": "Start Free"
+  },
+  "hero": {
+    "badge": "Uzbekistan's Education Platform",
+    "title": "Your child's path to success starts here.",
+    "subtitle": "A modern SaaS platform teaching English, personal development, and critical thinking for grades 3–7.",
+    "cta_primary": "Start Free",
+    "cta_secondary": "Request Demo"
+  },
+  "register": {
+    "title": "Register Your Center",
+    "step1": "Center",
+    "step2": "Admin",
+    "step3": "Confirm",
+    "center_name": "Center Name",
+    "slug": "URL (slug)",
+    "admin_name": "Full Name",
+    "login": "Username",
+    "password": "Password",
+    "phone": "Phone",
+    "trial_note": "14-day free trial — no credit card required",
+    "submit": "Register",
+    "success_title": "Registration successful!",
+    "go_to_login": "Go to Login"
+  },
+  "common": {
+    "next": "Next",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Sign in to your account",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "forgot": "Forgot password?",
+    "no_account": "No account?",
+    "register_link": "Register for free"
+  }
+}
