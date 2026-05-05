@@ -8,13 +8,14 @@ import {
   Min,
   Max,
   IsNotEmpty,
-  IsUUID,
 } from 'class-validator';
 
+/**
+ * tenantId is intentionally absent — the controller always injects it
+ * from req.user.tenantId so neither superadmin nor filadmin can create
+ * a lesson inside a tenant that isn't their own.
+ */
 export class CreateLessonDto {
-  @IsUUID()
-  tenantId: string;
-
   @IsString()
   @IsNotEmpty()
   title: string;
@@ -32,12 +33,14 @@ export class CreateLessonDto {
   orderNumber: number;
 
   @IsUrl()
-  youtubeUrl: string;
+  @IsOptional()
+  youtubeUrl?: string;
 
   @IsInt()
   @Min(1)
   @Max(10)
-  nRepetitions: number;
+  @IsOptional()
+  nRepetitions?: number;
 
   @IsInt()
   @IsOptional()
@@ -72,4 +75,8 @@ export class CreateLessonDto {
   @IsString()
   @IsOptional()
   aiTutorContext?: string;
+
+  @IsString()
+  @IsOptional()
+  subcategory?: string;
 }

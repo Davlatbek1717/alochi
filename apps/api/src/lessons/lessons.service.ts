@@ -11,9 +11,15 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 export class LessonsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateLessonDto) {
+  /**
+   * Create a new lesson scoped to `tenantId`.
+   * The tenantId is injected by the controller from the caller's JWT so the
+   * DTO body never needs to carry it — this prevents a filadmin from creating
+   * a lesson inside a different tenant by spoofing the field.
+   */
+  async create(dto: CreateLessonDto, tenantId: string) {
     const existing = await this.prisma.lesson.findFirst({
-      where: { tenantId: dto.tenantId, orderNumber: dto.orderNumber },
+      where: { tenantId, orderNumber: dto.orderNumber },
     });
     if (existing)
       throw new ConflictException(
@@ -27,11 +33,14 @@ export class LessonsService {
       aiTutorEnabled,
       hasExam,
       type,
-      ...data
+      ...rest
     } = dto;
     return this.prisma.lesson.create({
       data: {
-        ...data,
+        ...rest,
+        tenantId,
+        youtubeUrl: rest.youtubeUrl ?? '',
+        nRepetitions: rest.nRepetitions ?? 3,
         type: type as any,
         hasExam: hasExam ?? false,
         components: {

@@ -47,7 +47,7 @@ describe('LessonsService', () => {
         ...baseDto,
       });
 
-      const result = await service.create(baseDto);
+      const result = await service.create(baseDto, 'tenant-test');
 
       expect(mockPrisma.lesson.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -60,7 +60,7 @@ describe('LessonsService', () => {
     it('throws ConflictException when orderNumber already exists in tenant', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'existing' });
 
-      await expect(service.create(baseDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(baseDto, 'tenant-test')).rejects.toThrow(ConflictException);
     });
 
     it('stores component flags derived from dto booleans', async () => {
@@ -71,7 +71,7 @@ describe('LessonsService', () => {
         ...baseDto,
         mcqEnabled: true,
         wordOrderEnabled: true,
-      });
+      }, 'tenant-test');
 
       const callArg = mockPrisma.lesson.create.mock.calls[0][0];
       expect(callArg.data.components.mcq).toBe(true);
@@ -83,7 +83,7 @@ describe('LessonsService', () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
       mockPrisma.lesson.create.mockResolvedValue({ id: 'lesson-3' });
 
-      await service.create({ ...baseDto, aiTutorEnabled: true });
+      await service.create({ ...baseDto, aiTutorEnabled: true }, 'tenant-test');
 
       const callArg = mockPrisma.lesson.create.mock.calls[0][0];
       expect(callArg.data.components.ai_tutor).toBe(true);

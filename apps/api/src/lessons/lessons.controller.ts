@@ -29,10 +29,15 @@ export class LessonsController {
     private components: ComponentsService,
   ) {}
 
+  /**
+   * Create a lesson. Accessible to superadmin and filadmin.
+   * tenantId is always taken from the caller's JWT so a filadmin can
+   * only ever create inside their own tenant.
+   */
   @Post()
-  @Roles(UserRole.superadmin)
-  create(@Body() dto: CreateLessonDto) {
-    return this.lessons.create(dto);
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  create(@Body() dto: CreateLessonDto, @Request() req: any) {
+    return this.lessons.create(dto, req.user.tenantId);
   }
 
   @Get()
@@ -52,13 +57,13 @@ export class LessonsController {
   }
 
   @Patch(':id/publish')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   publish(@Param('id') id: string, @Request() req: any) {
     return this.lessons.publish(id, req.user.tenantId);
   }
 
   @Patch(':id')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateLessonDto,
@@ -68,25 +73,25 @@ export class LessonsController {
   }
 
   @Delete(':id')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   delete(@Param('id') id: string, @Request() req: any) {
     return this.lessons.delete(id, req.user.tenantId);
   }
 
   @Post(':id/mcq')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   setMcq(@Param('id') id: string, @Body('questions') questions: any[]) {
     return this.components.setMcq(id, questions);
   }
 
   @Post(':id/word-order')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   setWordOrder(@Param('id') id: string, @Body('sentences') sentences: any[]) {
     return this.components.setWordOrder(id, sentences);
   }
 
   @Post(':id/vocabulary')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.filadmin)
   setVocabulary(@Param('id') id: string, @Body('words') words: any[]) {
     return this.components.setVocabulary(id, words);
   }

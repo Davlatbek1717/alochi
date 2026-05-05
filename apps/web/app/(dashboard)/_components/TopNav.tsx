@@ -189,6 +189,13 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/filadmin/video-guides', icon: <Video size={14} />, label: "Qo'llanmalar" },
       ],
     },
+    {
+      label: "Ta'lim",
+      icon: <BookOpen size={15} />,
+      items: [
+        { href: '/filadmin/lessons', icon: <BookOpen size={14} />, label: 'Darslar' },
+      ],
+    },
   ],
 
   tester: [
