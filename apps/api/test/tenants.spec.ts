@@ -4,6 +4,7 @@ import { Prisma, UserRole } from '@prisma/client';
 import { translateError } from '../src/i18n/errors';
 
 const mockI18n = { t: (key: string) => translateError(key as any) };
+const mockCache = { get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
 
 describe('TenantsService — onboardTenant', () => {
   function makeMockPrisma() {
@@ -43,7 +44,7 @@ describe('TenantsService — onboardTenant', () => {
       login: 'akmal',
     });
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     const result = await service.onboardTenant({
       tenant: { name: 'Markaz', slug: 'markaz' },
       admin: { name: 'Akmal', login: 'akmal', password: 'secret123' },
@@ -85,7 +86,7 @@ describe('TenantsService — onboardTenant', () => {
       login: 'b',
     });
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     const result = await service.onboardTenant({
       tenant: { name: 'M2', slug: 'm2' },
       admin: { name: 'B', login: 'b', password: 'secret123' },
@@ -104,7 +105,7 @@ describe('TenantsService — onboardTenant', () => {
       slug: 'taken',
     });
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     await expect(
       service.onboardTenant({
         tenant: { name: 'X', slug: 'taken' },
@@ -125,7 +126,7 @@ describe('TenantsService — onboardTenant', () => {
     });
     mockPrisma.branch.create.mockRejectedValue(new Error('DB error'));
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     await expect(
       service.onboardTenant({
         tenant: { name: 'M3', slug: 'm3' },
@@ -158,7 +159,7 @@ describe('TenantsService — onboardTenant', () => {
       },
     };
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     const result = await service.listAllWithCounts();
 
     // Verify select shape includes _count for both relations + ordering
@@ -195,7 +196,7 @@ describe('TenantsService — onboardTenant', () => {
           }),
         },
       };
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       const result = await service.updateSettings('t1', {
         warningBlockLimit: 5,
       });
@@ -223,7 +224,7 @@ describe('TenantsService — onboardTenant', () => {
           update: jest.fn(),
         },
       };
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       await expect(
         service.updateSettings('missing', { warningBlockLimit: 5 }),
       ).rejects.toThrow('Tenant topilmadi');
@@ -250,7 +251,7 @@ describe('TenantsService — onboardTenant', () => {
         ),
       };
 
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       await service.disable('t1');
 
       // Both writes were enqueued via $transaction (atomic)
@@ -274,7 +275,7 @@ describe('TenantsService — onboardTenant', () => {
         user: { updateMany: jest.fn() },
         $transaction: jest.fn(),
       };
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       await expect(service.disable('missing')).rejects.toThrow(
         'Tenant topilmadi',
       );
@@ -291,7 +292,7 @@ describe('TenantsService — onboardTenant', () => {
           update: jest.fn().mockResolvedValue({ id: 't1', name: 'New Name' }),
         },
       };
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       const result = await service.updateName('t1', 'New Name');
       expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
         where: { id: 't1' },
@@ -307,7 +308,7 @@ describe('TenantsService — onboardTenant', () => {
           update: jest.fn(),
         },
       };
-      const service = new TenantsService(mockPrisma as never, mockI18n as any);
+      const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
       await expect(service.updateName('missing', 'X')).rejects.toThrow(
         'Tenant topilmadi',
       );
@@ -325,7 +326,7 @@ describe('TenantsService — onboardTenant', () => {
     );
     mockPrisma.tenant.create.mockRejectedValue(p2002);
 
-    const service = new TenantsService(mockPrisma as never, mockI18n as any);
+    const service = new TenantsService(mockPrisma as never, mockI18n as any, mockCache as any);
     await expect(
       service.onboardTenant({
         tenant: { name: 'X', slug: 'race' },

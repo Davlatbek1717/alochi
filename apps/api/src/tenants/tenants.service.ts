@@ -1,9 +1,11 @@
 import {
+  Inject,
   Injectable,
   ConflictException,
   NotFoundException,
   Logger,
 } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ContactRequestStatus, Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,6 +23,7 @@ export class TenantsService {
   constructor(
     private prisma: PrismaService,
     private i18n: I18nService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
   async create(dto: CreateTenantDto) {
@@ -65,6 +68,10 @@ export class TenantsService {
    * the user has a JWT.  Only safe-to-publish fields are returned.
    */
   async getBrandingBySlug(slug: string) {
+    const KEY = `mc:branding:${slug}`;
+    const cached = await this.cache.get<unknown>(KEY).catch(() => undefined);
+    if (cached) return cached;
+
     const tenant = await this.prisma.tenant.findUnique({
       where: { slug },
       select: {
@@ -80,6 +87,8 @@ export class TenantsService {
     });
     if (!tenant || !tenant.isActive)
       throw new NotFoundException(this.i18n.t('tenant_not_found'));
+
+    await this.cache.set(KEY, tenant, 120_000).catch(() => undefined);
     return tenant;
   }
 
