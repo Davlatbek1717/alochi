@@ -1,8 +1,10 @@
 import {
+  Inject,
   Injectable,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
@@ -13,7 +15,12 @@ export class LessonsService {
   constructor(
     private prisma: PrismaService,
     private i18n: I18nService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
+
+  private delCache(key: string) {
+    return this.cache.del(key).catch(() => undefined);
+  }
 
   /**
    * Create a new lesson scoped to `tenantId`.
@@ -37,7 +44,7 @@ export class LessonsService {
       type,
       ...rest
     } = dto;
-    return this.prisma.lesson.create({
+    const lesson = await this.prisma.lesson.create({
       data: {
         ...rest,
         tenantId,
@@ -53,13 +60,21 @@ export class LessonsService {
         },
       },
     });
+    await this.delCache(`mc:lessons:${tenantId}`);
+    return lesson;
   }
 
   async findByTenant(tenantId: string) {
-    return this.prisma.lesson.findMany({
+    const KEY = `mc:lessons:${tenantId}`;
+    const val = await this.cache.get<unknown[]>(KEY).catch(() => undefined);
+    const cached = val ?? null;
+    if (cached) return cached;
+    const result = await this.prisma.lesson.findMany({
       where: { tenantId },
       orderBy: { orderNumber: 'asc' },
     });
+    await this.cache.set(KEY, result, 30_000).catch(() => undefined);
+    return result;
   }
 
   /**
@@ -143,10 +158,12 @@ export class LessonsService {
 
   async publish(id: string, tenantId: string) {
     await this.findById(id, tenantId);
-    return this.prisma.lesson.update({
+    const result = await this.prisma.lesson.update({
       where: { id },
       data: { isPublished: true },
     });
+    await this.delCache(`mc:lessons:${tenantId}`);
+    return result;
   }
 
   /**
@@ -187,7 +204,9 @@ export class LessonsService {
       data.components = merged;
     }
 
-    return this.prisma.lesson.update({ where: { id }, data });
+    const result = await this.prisma.lesson.update({ where: { id }, data });
+    await this.delCache(`mc:lessons:${tenantId}`);
+    return result;
   }
 
   /**
@@ -203,7 +222,9 @@ export class LessonsService {
     if (progressCount > 0) {
       throw new ConflictException(this.i18n.t('progress_exists'));
     }
-    return this.prisma.lesson.delete({ where: { id } });
+    const result = await this.prisma.lesson.delete({ where: { id } });
+    await this.delCache(`mc:lessons:${tenantId}`);
+    return result;
   }
 
   async getNextLesson(studentId: string, tenantId: string) {

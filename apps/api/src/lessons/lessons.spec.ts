@@ -1,11 +1,13 @@
 import { Test } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { LessonsService } from './lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 import { translateError } from '../i18n/errors';
 
 const mockI18n = { t: (key: string) => translateError(key as any) };
+const mockCache = { get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
 
 const mockPrisma = {
   lesson: {
@@ -28,6 +30,7 @@ describe('LessonsService', () => {
         LessonsService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: I18nService, useValue: mockI18n },
+        { provide: CACHE_MANAGER, useValue: mockCache },
       ],
     }).compile();
     service = module.get(LessonsService);
