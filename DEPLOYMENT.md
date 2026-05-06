@@ -13,6 +13,7 @@ every box in it is ticked.
 | Node.js | 20 LTS | Both API and web compile against the same major. |
 | pnpm | 9.x | Repo uses pnpm workspaces. |
 | Postgres | 14+ | Needs the `uuid-ossp` extension (auto-installed by 001 migration). |
+| **Redis** | **7.x** | **Optional in dev; strongly recommended in production for caching. Set `REDIS_URL` or leave blank for in-memory fallback.** |
 | ClickHouse | 24.x | Optional but events/analytics rely on it. |
 | Telegram Bot | created via BotFather | Required for parent reports. |
 | Reverse proxy | nginx / Caddy | Terminates TLS; forwards to the Nest app. |
