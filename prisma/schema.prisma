@@ -116,10 +116,6 @@ model User {
   region           String?
   school           String?
   avatarUrl        String?    @map("avatar_url")
-  // 2FA TOTP fields — only set when user enables two-factor authentication.
-  totpSecret       String?    @map("totp_secret")        // AES-256-GCM encrypted
-  totpEnabled      Boolean    @default(false) @map("totp_enabled")
-  totpBackupCodes  String?    @map("totp_backup_codes")  // JSON: bcrypt-hashed codes
   createdAt        DateTime   @default(now()) @map("created_at")
 
   tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)

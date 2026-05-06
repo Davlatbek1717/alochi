@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Settings, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
-import { TwoFactorSection } from '../../_components/TwoFactorSection';
 
 interface TenantSettings {
   id: string;
@@ -166,8 +165,6 @@ export default function SuperadminSettingsPage() {
             </button>
           </div>
         ) : null}
-
-        <TwoFactorSection />
       </div>
     </div>
   );

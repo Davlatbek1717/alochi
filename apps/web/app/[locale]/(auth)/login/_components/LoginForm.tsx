@@ -7,13 +7,9 @@ import { useToast } from '@/components/ui';
 import { useTranslations } from 'next-intl';
 
 interface LoginResponse {
-  // Normal login response
-  accessToken?: string;
-  refreshToken?: string;
-  user?: { role: string; id: string; name: string; tenantId: string };
-  // 2FA challenge response
-  status?: '2fa_required';
-  tempToken?: string;
+  accessToken: string;
+  refreshToken: string;
+  user: { role: string; id: string; name: string; tenantId: string };
 }
 
 const ROLE_ROUTES: Record<string, string> = {
@@ -44,10 +40,6 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [twoFaRequired, setTwoFaRequired] = useState(false);
-  const [tempToken, setTempToken] = useState('');
-  const [twoFaCode, setTwoFaCode] = useState('');
-  const [twoFaLoading, setTwoFaLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,80 +49,15 @@ export function LoginForm() {
         method: 'POST',
         body: JSON.stringify({ login, password }),
       });
-      // Check for 2FA challenge
-      if (res.data.status === '2fa_required' && res.data.tempToken) {
-        setTempToken(res.data.tempToken);
-        setTwoFaRequired(true);
-        setLoading(false);
-        return;
-      }
-      localStorage.setItem('accessToken', res.data.accessToken!);
-      localStorage.setItem('refreshToken', res.data.refreshToken!);
+      localStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.setItem('refreshToken', res.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      router.push(ROLE_ROUTES[res.data.user!.role] ?? '/');
+      router.push(ROLE_ROUTES[res.data.user.role] ?? '/');
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login yoki parol noto'g'ri");
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleVerify2fa(e: React.FormEvent) {
-    e.preventDefault();
-    setTwoFaLoading(true);
-    try {
-      const res = await apiRequest<LoginResponse>('/auth/verify-2fa', {
-        method: 'POST',
-        body: JSON.stringify({ tempToken, code: twoFaCode }),
-      });
-      localStorage.setItem('accessToken', res.data.accessToken!);
-      localStorage.setItem('refreshToken', res.data.refreshToken!);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      router.replace(ROLE_ROUTES[res.data.user!.role] ?? '/');
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Kod noto'g'ri");
-    } finally {
-      setTwoFaLoading(false);
-    }
-  }
-
-  if (twoFaRequired) {
-    return (
-      <form onSubmit={handleVerify2fa} className="flex flex-col gap-4">
-        <div className="text-center mb-2">
-          <p className="text-sm font-extrabold text-[#1e1b4b]">
-            Ikki bosqichli tasdiqlash
-          </p>
-          <p className="text-xs text-[#64748b] mt-1">
-            Telefon ilovasidagi 6 ta raqamni yoki backup kodni kiriting
-          </p>
-        </div>
-        <input
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          placeholder="000000 yoki XXXX-XXXX"
-          value={twoFaCode}
-          onChange={(e) => setTwoFaCode(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl border-2 border-[#e8e0d0] bg-white text-[#1e1b4b] font-bold text-center text-xl tracking-widest focus:border-[#6d28d9] focus:outline-none"
-          autoFocus
-        />
-        <button
-          type="submit"
-          disabled={twoFaLoading || twoFaCode.length < 6}
-          className="w-full py-3 rounded-xl bg-[#6d28d9] text-white font-extrabold disabled:opacity-50 hover:bg-[#5b21b6] transition-colors"
-        >
-          {twoFaLoading ? 'Tekshirilmoqda...' : 'Tasdiqlash'}
-        </button>
-        <button
-          type="button"
-          onClick={() => { setTwoFaRequired(false); setTwoFaCode(''); setTempToken(''); }}
-          className="text-xs text-[#64748b] text-center hover:underline"
-        >
-          Orqaga qaytish
-        </button>
-      </form>
-    );
   }
 
   return (

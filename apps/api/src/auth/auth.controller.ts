@@ -5,7 +5,6 @@ import {
   UseGuards,
   Request,
   Headers,
-  Get,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { localeFromHeader } from '../i18n/errors';
@@ -15,9 +14,6 @@ import { RefreshDto } from './dto/refresh.dto';
 import { JwtAuthGuard } from './auth.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
-import { RolesGuard } from './roles.guard';
-import { Roles } from './roles.decorator';
-import { UserRole } from '@prisma/client';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -48,47 +44,6 @@ export class AuthController {
   @Post('register')
   registerTenant(@Body() dto: OnboardTenantDto) {
     return this.authService.registerTenant(dto);
-  }
-
-  @Post('verify-2fa')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  verify2fa(@Body() body: { tempToken: string; code: string }) {
-    return this.authService.verifyTwoFactor(body.tempToken, body.code);
-  }
-
-  @Get('2fa/setup')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.superadmin, UserRole.filadmin)
-  setup2fa(@Request() req: any) {
-    return this.authService.initTwoFactorSetup(req.user.userId);
-  }
-
-  @Post('2fa/enable')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.superadmin, UserRole.filadmin)
-  enable2fa(
-    @Body() body: { code: string; secret: string },
-    @Request() req: any,
-  ) {
-    return this.authService.enableTwoFactor(
-      req.user.userId,
-      body.code,
-      body.secret,
-    );
-  }
-
-  @Post('2fa/disable')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.superadmin, UserRole.filadmin)
-  disable2fa(@Body() body: { code: string }, @Request() req: any) {
-    return this.authService.disableTwoFactor(req.user.userId, body.code);
-  }
-
-  @Post('2fa/backup-codes/regenerate')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.superadmin, UserRole.filadmin)
-  regenerateBackupCodes(@Body() body: { code: string }, @Request() req: any) {
-    return this.authService.regenerateBackupCodes(req.user.userId, body.code);
   }
 
   @ApiBearerAuth()
