@@ -179,7 +179,6 @@ const NAV: Record<string, NavEntry[]> = {
       items: [
         { href: '/filadmin/payments', icon: <CreditCard size={14} />, label: "To'lovlar" },
         { href: '/filadmin/promotion-report', icon: <BarChart2 size={14} />, label: 'Promo hisobot' },
-        { href: '/filadmin/billing', icon: <CreditCard size={14} />, label: "To'lov" },
       ],
     },
     {
