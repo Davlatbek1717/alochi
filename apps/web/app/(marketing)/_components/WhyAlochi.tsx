@@ -42,7 +42,7 @@ export function WhyAlochi() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
         <div className="max-w-2xl">
           <span className="text-xs uppercase tracking-widest font-extrabold text-[#f97316]">
-            Nega Adouptivo?
+            Nega A&apos;lochi?
           </span>
           <h2
             id="why-h2"
@@ -51,7 +51,7 @@ export function WhyAlochi() {
             Boshqa platformalar bera olmaydigan uchta narsa.
           </h2>
           <p className="mt-4 text-lg text-[#475569] font-semibold">
-            Boshqa LMS&apos;lar darslarni shunchaki video qilib qo&apos;yadi. Adouptivo —
+            Boshqa LMS&apos;lar darslarni shunchaki video qilib qo&apos;yadi. A&apos;lochi —
             bola jalb qiluvchi, AI tushuntiruvchi, ota-ona xabardor bo&apos;lgan tirik tizim.
           </p>
         </div>

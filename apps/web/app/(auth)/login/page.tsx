@@ -4,7 +4,7 @@ import { TenantBrandingLogo, LoginCardTitle } from './_components/TenantBranding
 import { Zap, Trophy, BarChart2 } from 'lucide-react';
 
 export const metadata = {
-  title: 'Kirish — Adouptivo',
+  title: "Kirish — A'lochi",
 };
 
 const FEATURES = [
@@ -28,7 +28,7 @@ export default function LoginPage() {
           <Suspense fallback={
             <div className="flex items-center gap-3 mb-16">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center opacity-50" />
-              <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
+              <span className="text-white text-xl font-black tracking-tight">A&apos;lochi</span>
             </div>
           }>
             <TenantBrandingLogo />
@@ -56,7 +56,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-[#475569] text-xs relative z-10">© 2025 Adouptivo. Barcha huquqlar himoyalangan.</p>
+        <p className="text-[#475569] text-xs relative z-10">© 2025 A&apos;lochi. Barcha huquqlar himoyalangan.</p>
       </div>
 
       {/* Right panel — login form */}
@@ -66,7 +66,7 @@ export default function LoginPage() {
           <Suspense fallback={
             <div className="flex items-center gap-3 mb-10 lg:hidden">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center opacity-50" />
-              <span className="text-white text-xl font-black tracking-tight">Adouptivo</span>
+              <span className="text-white text-xl font-black tracking-tight">A&apos;lochi</span>
             </div>
           }>
             <TenantBrandingLogo mobile />

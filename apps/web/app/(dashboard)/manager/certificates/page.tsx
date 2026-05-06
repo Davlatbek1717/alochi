@@ -15,10 +15,10 @@ type Certificate = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  bronze: "🥉 Bronze Adouptivo",
-  silver: "🥈 Silver Adouptivo",
-  gold: "🥇 Gold Adouptivo",
-  diamond: "💎 Diamond Adouptivo",
+  bronze: "🥉 Bronze A'lochi",
+  silver: "🥈 Silver A'lochi",
+  gold: "🥇 Gold A'lochi",
+  diamond: "💎 Diamond A'lochi",
 };
 
 export default function ManagerCertificatesPage() {

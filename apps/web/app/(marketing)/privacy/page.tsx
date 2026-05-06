@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: "Maxfiylik siyosati — Adouptivo",
-  description: "Adouptivo maxfiylik siyosati — shaxsiy ma'lumotlaringizni qanday yig'ishimiz, ishlatishimiz va himoya qilishimiz.",
+  title: "Maxfiylik siyosati — A'lochi",
+  description: "A'lochi maxfiylik siyosati — shaxsiy ma'lumotlaringizni qanday yig'ishimiz, ishlatishimiz va himoya qilishimiz.",
 };
 
 export default function PrivacyPage() {
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">1. Biz kim?</h2>
             <p className="text-[#475569] leading-relaxed">
-              Adouptivo (ilgari "A'lochi") — o'quv markazlari uchun SaaS ta'lim platformasi.
+              A'lochi (ilgari "A'lochi") — o'quv markazlari uchun SaaS ta'lim platformasi.
               Buxoro viloyati, G'ijduvon tumani, O'zbekiston.
               Aloqa: <a href="mailto:javohir.uh@gmail.com" className="text-[#6d28d9] hover:underline">javohir.uh@gmail.com</a>
             </p>

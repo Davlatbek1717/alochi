@@ -6,10 +6,10 @@ const SITE_DESCRIPTION =
   "3-7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati, ota-onalar uchun Telegram hisobotlar.";
 
 export const metadata: Metadata = {
-  title: "Adouptivo — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
+  title: "A'lochi — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
   description: SITE_DESCRIPTION,
   keywords: [
-    "Adouptivo",
+    "A'lochi",
     "ta'lim platformasi",
     "SaaS",
     "O'zbekiston",
@@ -21,29 +21,29 @@ export const metadata: Metadata = {
     'PWA',
   ],
   openGraph: {
-    title: "Adouptivo — Bolangizning muvaffaqiyat yo'li",
+    title: "A'lochi — Bolangizning muvaffaqiyat yo'li",
     description: SITE_DESCRIPTION,
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
     locale: 'uz_UZ',
     type: 'website',
-    siteName: "Adouptivo",
+    siteName: "A'lochi",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Adouptivo",
+    title: "A'lochi",
     description: SITE_DESCRIPTION,
     images: ['/og-image.png'],
   },
-  alternates: { canonical: 'https://adouptivo.com/' },
+  alternates: { canonical: 'https://alochi.com/' },
 };
 
 const ORG_LD = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: "Adouptivo",
+  name: "A'lochi",
   description: SITE_DESCRIPTION,
-  url: 'https://adouptivo.com',
-  logo: 'https://adouptivo.com/logo.svg',
+  url: 'https://alochi.com',
+  logo: 'https://alochi.com/logo.svg',
   sameAs: [
     'https://t.me/alochi_bot',
     'https://instagram.com/alochi.uz',
@@ -53,7 +53,7 @@ const ORG_LD = {
     {
       '@type': 'ContactPoint',
       contactType: 'sales',
-      email: 'hello@adouptivo.com',
+      email: 'hello@alochi.com',
       areaServed: 'UZ',
       availableLanguage: ['uz', 'ru'],
     },

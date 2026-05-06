@@ -1,4 +1,4 @@
-# Adouptivo — World-Class SaaS Roadmap
+# A'lochi — World-Class SaaS Roadmap
 
 > Har bir phase quality gates (typecheck + lint + build + tests) dan o'tgandan
 > keyin commit qilinadi. Hech bir phase yarim holda qoldirilmaydi.
@@ -9,7 +9,7 @@
 
 | Phase | Commit | Holat |
 |---|---|---|
-| Phase 1 — Brand rename (A'lochi → Adouptivo) | d0d0c71 | ✅ |
+| Phase 1 — Brand rename (A'lochi → A'lochi) | d0d0c71 | ✅ |
 | Phase 2 — Filadmin tenant content (lessons CRUD + UI) | c28bc36 | ✅ |
 | Phase 3 — Tenant branding (logo, color, brandName) | d8da090 | ✅ |
 | Phase 4 — Template lesson library | d8da090 | ✅ |
@@ -40,8 +40,8 @@
 
 ---
 
-## PHASE 1 — Brand Rename: A'lochi → Adouptivo
-**Maqsad:** Har bir kod qatoridagi "A'lochi" ni olib tashlab "Adouptivo" qo'yish.
+## PHASE 1 — Brand Rename: A'lochi → A'lochi
+**Maqsad:** Har bir kod qatoridagi "A'lochi" ni olib tashlab "A'lochi" qo'yish.
 
 - [ ] `apps/api/src/main.ts` — Swagger title, logger nomi
 - [ ] `apps/web/next.config.ts` — siteName, metadata
@@ -151,13 +151,13 @@
 ---
 
 ## PHASE 8 — Custom Domain / Subdomain
-**Maqsad:** `abc-english.adouptivo.com` yoki `abc.uz` — har markaz o'z URL'i.
+**Maqsad:** `abc-english.alochi.com` yoki `abc.uz` — har markaz o'z URL'i.
 
 - [ ] `Tenant` modeli — `subdomain`, `customDomain` maydonlari
 - [ ] DB migration `0043_tenant_domains`
 - [ ] Next.js middleware — `Host` header bo'yicha tenant aniqlash
 - [ ] `tenantContext` server-side props injection
-- [ ] Login sahifasi — subdomainsiz `login.adouptivo.com` universal
+- [ ] Login sahifasi — subdomainsiz `login.alochi.com` universal
 - [ ] `/superadmin/tenants/[id]/edit` — subdomain va custom domain sozlash
 - [ ] DNS yo'riqnomasi hujjati
 - [ ] SSL wildcard sertifikat ko'rsatma (Caddy/nginx)
@@ -188,7 +188,7 @@
 - [ ] Mobile-specific touch gestures (swipe to next component)
 - [ ] Kamera full-screen mobile rejimi
 - [ ] iOS Safari audio unlock (talaffuz komponentlari uchun)
-- [ ] `manifest.json` — Adouptivo nomi, ikonlar, rang
+- [ ] `manifest.json` — A'lochi nomi, ikonlar, rang
 - [ ] Lighthouse score ≥ 90 barcha kategoriyada
 
 ---

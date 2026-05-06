@@ -254,7 +254,7 @@ export default function RegisterPage() {
               Kirish uchun:
             </p>
             <div className="bg-[#f8f5ef] rounded-xl px-4 py-3 mb-6 font-mono text-sm font-bold text-[#6d28d9] border border-[#6d28d9]/20">
-              adouptivo.com/{registeredSlug}/login
+              alochi.com/{registeredSlug}/login
             </div>
             <a
               href={`/${registeredSlug}/login`}
@@ -277,7 +277,7 @@ export default function RegisterPage() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
             <span className="text-white font-extrabold text-sm">A</span>
           </div>
-          <span className="text-[#1e1b4b] text-xl font-black tracking-tight">Adouptivo</span>
+          <span className="text-[#1e1b4b] text-xl font-black tracking-tight">A'lochi</span>
         </Link>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1e1b4b] leading-tight">
           {'Markazingizni ro\'yxatdan o\'tkazing'}
@@ -320,7 +320,7 @@ export default function RegisterPage() {
                 />
                 {form.slug && !errors.slug && (
                   <div className="mt-2 bg-[#f8f5ef] rounded-lg px-3 py-2 text-xs font-bold text-[#6d28d9] border border-[#6d28d9]/15">
-                    Kirish manzili: adouptivo.com/<strong>{form.slug}</strong>/login
+                    Kirish manzili: alochi.com/<strong>{form.slug}</strong>/login
                   </div>
                 )}
               </div>
@@ -387,7 +387,7 @@ export default function RegisterPage() {
                   <p className="text-xs font-extrabold uppercase tracking-widest text-[#94a3b8] mb-2">Markaz</p>
                   <p className="font-extrabold text-[#1e1b4b]">{form.tenantName}</p>
                   <p className="text-sm font-bold text-[#6d28d9] mt-0.5">
-                    adouptivo.com/{form.slug}/login
+                    alochi.com/{form.slug}/login
                   </p>
                 </div>
 

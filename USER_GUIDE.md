@@ -1,4 +1,4 @@
-# Adouptivo — To'liq Foydalanish Qo'llanmasi
+# A'lochi — To'liq Foydalanish Qo'llanmasi
 
 Ushbu qo'llanma loyihani noldan o'rnatish va har bir rolda kunlik
 foydalanishni qamrab oladi.

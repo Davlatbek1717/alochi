@@ -168,7 +168,7 @@ Barcha tenantlardagi bloklangan o'quvchilar ro'yxati.
 
 ### 🌐 Landing CMS (`/superadmin/landing`)
 
-**Vazifa:** `adouptivo.com` (public landing) sahifasining barcha matnlarini boshqarish.
+**Vazifa:** `alochi.com` (public landing) sahifasining barcha matnlarini boshqarish.
 
 **Bo'limlar:**
 

@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: "Foydalanish shartlari — Adouptivo",
-  description: "Adouptivo platformasidan foydalanish shartlari va qoidalari.",
+  title: "Foydalanish shartlari — A'lochi",
+  description: "A'lochi platformasidan foydalanish shartlari va qoidalari.",
 };
 
 export default function TermsPage() {
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">1. Umumiy qoidalar</h2>
             <p className="text-[#475569] leading-relaxed">
-              Adouptivo platformasidan foydalanish ushbu shartlarga rozilikni bildiradi.
+              A'lochi platformasidan foydalanish ushbu shartlarga rozilikni bildiradi.
               Agar siz ushbu shartlarga rozi bo'lmasangiz, platformadan foydalanmang.
             </p>
           </section>
@@ -38,7 +38,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">2. Xizmat tavsifi</h2>
             <p className="text-[#475569] leading-relaxed">
-              Adouptivo — o'quv markazlari uchun multi-tenant SaaS ta'lim platformasi.
+              A'lochi — o'quv markazlari uchun multi-tenant SaaS ta'lim platformasi.
               Platforma o'qituvchi-o'quvchi interaksiyasini, imtihon o'tkazishni, davomat
               nazoratini va ota-onalar bilan aloqani avtomatlashtiradi.
             </p>
@@ -67,7 +67,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">5. Ma'lumotlar egaligi</h2>
             <p className="text-[#475569] leading-relaxed">
               Siz platformaga kiritgan ma'lumotlar (o'quvchilar, darslar, natijalar) —
-              sizning mulkingiz. Adouptivo ushbu ma'lumotlarni faqat xizmat ko'rsatish
+              sizning mulkingiz. A'lochi ushbu ma'lumotlarni faqat xizmat ko'rsatish
               maqsadida ishlatadi va uchinchi shaxslarga sotmaydi.
             </p>
           </section>
@@ -75,7 +75,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">6. Xizmat to'xtatilishi</h2>
             <p className="text-[#475569] leading-relaxed">
-              Adouptivo quyidagi holatlarda markaz akkauntini to'xtatish huquqini saqlaydi:
+              A'lochi quyidagi holatlarda markaz akkauntini to'xtatish huquqini saqlaydi:
               shartlar buzilishi, to'lov amalga oshirilmaganda, qonuniy talablar asosida.
               To'xtatishdan kamida 7 kun oldin xabar beriladi (favqulodda hollar bundan mustasno).
             </p>
@@ -84,7 +84,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-extrabold text-[#1e1b4b] mb-3">7. Mas'uliyat chegarasi</h2>
             <p className="text-[#475569] leading-relaxed">
-              Adouptivo internet uzilishlari, server nosozliklari yoki fors-major holatlari
+              A'lochi internet uzilishlari, server nosozliklari yoki fors-major holatlari
               tufayli yuzaga keladigan yo'qotishlar uchun javobgar emas.
             </p>
           </section>

@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               .then((res) => {
                 if (res.data.brandName) setBrandName(res.data.brandName);
               })
-              .catch(() => { /* silently ignore — fallback to 'Adouptivo' */ });
+              .catch(() => { /* silently ignore — fallback to "A'lochi" */ });
           }
         }
       }
@@ -127,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {user?.name ?? '…'}
               </p>
               <p className="text-[10px] text-[#94a3b8] truncate leading-tight">
-                {brandName ?? 'Adouptivo'}
+                {brandName ?? "A'lochi"}
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-export const metadata = { title: "Adouptivo — Kirish", robots: 'noindex' };
+export const metadata = { title: "A'lochi — Kirish", robots: 'noindex' };
 
 export default function KioskLayout({ children }: { children: React.ReactNode }) {
   return (

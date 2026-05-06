@@ -72,7 +72,7 @@ export function InstallPrompt() {
           <Download size={20} className="text-white" />
         </div>
         <div className="flex-1 pr-4">
-          <h3 className="text-sm font-semibold text-white mb-1">Adouptivo&apos;ni o&apos;rnatish</h3>
+          <h3 className="text-sm font-semibold text-white mb-1">A&apos;lochi&apos;ni o&apos;rnatish</h3>
           {showIOSHint ? (
             <div className="text-xs text-slate-400 space-y-2">
               <p>iPhone&apos;da o&apos;rnatish:</p>

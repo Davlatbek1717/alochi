@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 const QA = [
   {
     q: 'Tizim qaysi qurilmalarda ishlaydi?',
-    a: 'Adouptivo PWA sifatida har qanday smartfon (iOS, Android), planshet va kompyuterda ishlaydi. Bola asosan telefonidan kiradi — tezda yuklanadi va offline rejimda ham asosiy darslarni ochadi.',
+    a: "A'lochi PWA sifatida har qanday smartfon (iOS, Android), planshet va kompyuterda ishlaydi. Bola asosan telefonidan kiradi — tezda yuklanadi va offline rejimda ham asosiy darslarni ochadi.",
   },
   {
     q: 'O’quvchining ma’lumotlari xavfsizmi?',

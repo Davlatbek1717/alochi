@@ -27,7 +27,7 @@
 
 # **3 yilda — 5 ta davlat. 10,000+ markaz. 1M+ o'quvchi.**
 
-Adouptivo: Markaziy Osiyodagi nomdoshchi (vertical) ed-tech SaaS bo'lish.
+A'lochi: Markaziy Osiyodagi nomdoshchi (vertical) ed-tech SaaS bo'lish.
 
 Birinchi qadam — **O'zbekiston ingliz tili markazlari**.
 Ikkinchi qadam — **Tojikiston, Qozog'iston, Qirg'iziston**.
@@ -91,7 +91,7 @@ SOM (Serviceable Obtainable Market — 3 yil)
 
 ## Slayd 5 — Solution
 
-### Adouptivo — markaz egasi uchun yagona platforma:
+### A'lochi — markaz egasi uchun yagona platforma:
 
 🤖 **AI o'qituvchi** (Google Gemini)
    Har bola bilan shaxsiy suhbat. Mentor faqat qizil ro'yxat bilan ishlaydi.
@@ -182,7 +182,7 @@ Payback period                   <1 oy     (founder-led)
 
 ### Krasiv emas — bu **B2B SaaS Holy Grail** zonasi.
 > SaaS benchmark: LTV/CAC > 3× — yaxshi, > 5× — ajoyib.
-> Adouptivo 17–44× — chunki markaz egasi mahalliy, sodiq, va tashlash xarajati yuqori.
+> A'lochi 17–44× — chunki markaz egasi mahalliy, sodiq, va tashlash xarajati yuqori.
 
 ---
 
@@ -193,7 +193,7 @@ Payback period                   <1 oy     (founder-led)
 ✅ **MVP to'liq ishchi** — 38 ta migration, 411 ta test yashil
 ✅ **Production-ready** — DEPLOYMENT.md to'liq, CI gates yashil
 ✅ **Pilot mijoz** — Buxoro, G'ijduvon (founder o'z markazi)
-✅ **Public landing** — adouptivo.com live, demo so'rovlar kelyapti
+✅ **Public landing** — alochi.com live, demo so'rovlar kelyapti
 
 ### Go-To-Market signali:
 - 12 demo so'rovi (organik, marketingsiz)
@@ -288,7 +288,7 @@ Payback period                   <1 oy     (founder-led)
 #### **Javohir Uchqun ugli** — Founder & CEO/CTO
 - 6+ yil software muhandislik (full-stack)
 - O'zbekistonda 10+ commercial loyiha
-- Adouptivo'ning butun MVP'sini bir o'zi qurib chiqdi
+- A'lochi'ning butun MVP'sini bir o'zi qurib chiqdi
 - Hudud bilimi: Buxoro, G'ijduvon — birinchi mijozlarning markazi
 - ✈ t.me/Javohir_UH
 
@@ -372,12 +372,12 @@ keladi. **Hozir kirib brand qurmasak — kech bo'ladi.**
 
 ## Slayd 17 — Closing
 
-# **Adouptivo — Markaziy Osiyoning Toolingu.**
+# **A'lochi — Markaziy Osiyoning Toolingu.**
 
 Faqat ingliz tili emas. Faqat O'zbekiston emas. Faqat ed-tech emas.
 
 Bizning kelajak — har bir CIS davlatidagi har bir o'quv markazi
-Adouptivo infratuzilmasida ishlayotgan dunyo.
+A'lochi infratuzilmasida ishlayotgan dunyo.
 
 > Bu tasodif tuzilmagan. Biz 6+ oy qurdik, bozorni o'rgandik,
 > birinchi mijozlarni topdik. Endi **kapital + odam** bilan tezroq
@@ -388,6 +388,6 @@ Adouptivo infratuzilmasida ishlayotgan dunyo.
 📞 **Demo + financial deep-dive uchun:**
 ✉ javohir.uh@gmail.com
 ✈ t.me/Javohir_UH
-🌐 adouptivo.com
+🌐 alochi.com
 
 > *"Lokal infratuzilma. Global standart. O'zbekistonda yaratilgan."*

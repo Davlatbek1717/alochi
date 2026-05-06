@@ -1,4 +1,4 @@
-# Adouptivo
+# A'lochi
 
 Multi-tenant English-learning SaaS for Uzbekistan, grades 3–7.
 AI tutor, camera-supervised lesson runner, parent-Telegram reports,

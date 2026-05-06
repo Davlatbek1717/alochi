@@ -287,7 +287,7 @@ export class MarketingService {
     'contact.personal': 'https://t.me/Javohir_UH',
     'certificate.title': 'Sertifikat',
     'certificate.description':
-      "Har bir bo'limni tugatgan o'quvchi rasmiy Adouptivo sertifikatini oladi.",
+      "Har bir bo'limni tugatgan o'quvchi rasmiy A'lochi sertifikatini oladi.",
     'travel.title': 'Sayohat homiylari',
     'travel.subtitle': "Eng zo'r o'quvchilarga ekskursiya yo'llanmalari",
     'prizes.title': 'Mukofotlar',

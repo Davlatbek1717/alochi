@@ -26,13 +26,13 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Adouptivo",
-  description: "Adouptivo Learning Platform",
+  title: "A'lochi",
+  description: "A'lochi Learning Platform",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Adouptivo",
+    title: "A'lochi",
   },
 };
 

@@ -14,10 +14,10 @@ export interface CertLevel {
 // Defaults — used when no SiteSetting override is present.
 // Stored in descending order so `find()` picks the highest eligible level.
 const DEFAULT_CERT_LEVELS: CertLevel[] = [
-  { level: 'diamond', minLessons: 500, label: 'Olmos Adouptivo', emoji: '💎' },
-  { level: 'gold', minLessons: 250, label: 'Oltin Adouptivo', emoji: '🥇' },
-  { level: 'silver', minLessons: 100, label: 'Kumush Adouptivo', emoji: '🥈' },
-  { level: 'bronze', minLessons: 50, label: 'Bronza Adouptivo', emoji: '🥉' },
+  { level: 'diamond', minLessons: 500, label: "Olmos A'lochi", emoji: '💎' },
+  { level: 'gold', minLessons: 250, label: "Oltin A'lochi", emoji: '🥇' },
+  { level: 'silver', minLessons: 100, label: "Kumush A'lochi", emoji: '🥈' },
+  { level: 'bronze', minLessons: 50, label: "Bronza A'lochi", emoji: '🥉' },
 ];
 
 // SiteSetting keys where superadmin can override the thresholds.
@@ -29,10 +29,10 @@ const LEVEL_SETTING_KEYS: Record<CertLevel['level'], string> = {
 };
 
 const CERT_NAMES: Record<string, string> = {
-  bronze: '🥉 Bronze Adouptivo',
-  silver: '🥈 Silver Adouptivo',
-  gold: '🥇 Gold Adouptivo',
-  diamond: '💎 Diamond Adouptivo',
+  bronze: "🥉 Bronze A'lochi",
+  silver: "🥈 Silver A'lochi",
+  gold: "🥇 Gold A'lochi",
+  diamond: "💎 Diamond A'lochi",
 };
 
 @Injectable()
@@ -139,7 +139,7 @@ export class CertificatesService {
     if (existing) return null;
 
     const qrCode = await QRCode.toDataURL(
-      `https://adouptivo.com/verify/${tenantId}/${studentId}/${eligible.level}`,
+      `https://alochi.com/verify/${tenantId}/${studentId}/${eligible.level}`,
     );
 
     const certificate = await this.prisma.certificate.create({
@@ -207,10 +207,10 @@ export class CertificatesService {
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
     const levelLabels: Record<string, string> = {
-      bronze: '🥉 Bronze Adouptivo',
-      silver: '🥈 Silver Adouptivo',
-      gold: '🥇 Gold Adouptivo',
-      diamond: '💎 Diamond Adouptivo',
+      bronze: "🥉 Bronze A'lochi",
+      silver: "🥈 Silver A'lochi",
+      gold: "🥇 Gold A'lochi",
+      diamond: "💎 Diamond A'lochi",
     };
 
     doc

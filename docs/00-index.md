@@ -1,4 +1,4 @@
-# Adouptivo — Rol Qo'llanmalari
+# A'lochi — Rol Qo'llanmalari
 
 Har bir rol uchun to'liq foydalanish qo'llanmalari.
 

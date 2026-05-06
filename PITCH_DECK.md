@@ -43,7 +43,7 @@ ota-ona Telegram hisobotlari bilan jihozlangan o'quv markazi tizimi.
 
 ## Slayd 3 — Solution
 
-### Adouptivo — bitta tizimda hammasi:
+### A'lochi — bitta tizimda hammasi:
 
 - 🤖 **AI o'qituvchi** har o'quvchi bilan **shaxsiy** suhbat qiladi
 - 📷 **Kamera nazorati** — bola haqiqatan o'qiyotganini kafolatlaydi
@@ -56,7 +56,7 @@ ota-ona Telegram hisobotlari bilan jihozlangan o'quv markazi tizimi.
 
 ---
 
-## Slayd 4 — How it works (Bir kun Adouptivoda)
+## Slayd 4 — How it works (Bir kun A'lochida)
 
 ```
 08:00  Bola maktabga ketadi
@@ -118,7 +118,7 @@ qilayotgani har kuni shaffof.
 
 ## Slayd 7 — Why us (Differentsiatorlar)
 
-| Xususiyat | Adouptivo | An'anaviy markaz | Boshqa LMS |
+| Xususiyat | A'lochi | An'anaviy markaz | Boshqa LMS |
 |---|---|---|---|
 | AI shaxsiy suhbat | ✅ | ❌ | ⚠ Cheklangan |
 | Kamera nazorati | ✅ | ❌ | ❌ |
@@ -217,7 +217,7 @@ qilayotgani har kuni shaffof.
 
 ## Slayd 12 — Team
 
-### Adouptivo orqasidagi jamoa:
+### A'lochi orqasidagi jamoa:
 
 | | |
 |---|---|
@@ -260,7 +260,7 @@ qilayotgani har kuni shaffof.
 
 ### Real markaz — real natija:
 
-> *"Adouptivo'ga o'tgandan keyin 3 oyda o'quvchilar **24% oshdi**.
+> *"A'lochi'ga o'tgandan keyin 3 oyda o'quvchilar **24% oshdi**.
 > Ota-onalar tizimga ulansangizmi yo'qmi degan savol bermay,
 > 'qanday qilib ulanish kerak' deb so'rab kelishadi. Manager
 > hozir har oy 5 ta qizil o'quvchini sariq qiladi — buni AI
@@ -287,11 +287,11 @@ qilayotgani har kuni shaffof.
 
 📞 **+998 88 081 81 88**
 ✉ **javohir.uh@gmail.com**
-🌐 **adouptivo.com**
+🌐 **alochi.com**
 ✈ **t.me/alochibolajon** (umumiy kanal)
 ✈ **t.me/Javohir_UH** (asoschisi bilan to'g'ridan-to'g'ri)
 
 ---
 
-> *Adouptivo — bolaning bilim sayohatini ota-ona, mentor va o'quvchi
+> *A'lochi — bolaning bilim sayohatini ota-ona, mentor va o'quvchi
 > birgalikda yuradigan tizim.*

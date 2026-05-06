@@ -1,6 +1,6 @@
-# Adouptivo — Deployment Guide
+# A'lochi — Deployment Guide
 
-This is the operational checklist for shipping Adouptivo to a production
+This is the operational checklist for shipping A'lochi to a production
 environment. Treat each section as a gate: do not move past one until
 every box in it is ticked.
 
@@ -36,7 +36,7 @@ openssl rand -base64 32   # FACE_VECTOR_KEY
    boot in production if any of them are missing or still hold the
    placeholder value (see [main.ts](apps/api/src/main.ts) `assertProdEnv`).
 3. `ALLOWED_ORIGIN` is comma-separated and must include every host the
-   browser will load from (e.g. `https://app.adouptivo.com,https://www.adouptivo.com`).
+   browser will load from (e.g. `https://app.alochi.com,https://www.alochi.com`).
 4. `NEXT_PUBLIC_API_URL` is **build-time** for the web app — set it
    before running `pnpm --filter web build`.
 5. Verify with: `node -e "require('dotenv').config(); console.log(Object.keys(process.env).filter(k => /^(JWT|DATABASE|ALLOWED|FACE|GEMINI)/.test(k)))"`.
@@ -74,7 +74,7 @@ If it reports drift, do **not** run `prisma db push` against production
 pnpm --filter api run build
 
 # Web (Next 15, static + server bundle)
-NEXT_PUBLIC_API_URL=https://api.adouptivo.com \
+NEXT_PUBLIC_API_URL=https://api.alochi.com \
 NEXT_PUBLIC_TELEGRAM_BOT=alochi_bot \
 pnpm --filter web run build
 ```
@@ -122,7 +122,7 @@ balancer's liveness check there.
 Minimal nginx fragment:
 
 ```nginx
-# api.adouptivo.com
+# api.alochi.com
 location / {
   proxy_pass http://127.0.0.1:3001;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -131,7 +131,7 @@ location / {
   client_max_body_size 5m;
 }
 
-# app.adouptivo.com
+# app.alochi.com
 location / {
   proxy_pass http://127.0.0.1:3000;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -158,7 +158,7 @@ honours HTTPS for cookies / redirects.
       `NODE_ENV !== 'production'`).
 - [ ] Helmet + the security headers in
       [next.config.ts](apps/web/next.config.ts) are reaching the browser
-      (verify with `curl -I https://app.adouptivo.com`).
+      (verify with `curl -I https://app.alochi.com`).
 - [ ] Prisma migrations are run as a low-privilege "migrator" role,
       not the application's runtime user.
 
@@ -212,6 +212,6 @@ git checkout v<previous>-api && pnpm --filter api run build && systemctl restart
 psql $DATABASE_URL -f prisma/migrations/<previous-migration>/rollback.sql
 ```
 
-Most Adouptivo migrations are additive (new tables/columns with
+Most A'lochi migrations are additive (new tables/columns with
 `IF NOT EXISTS`), so rolling code back without touching the schema is
 the default safe path.

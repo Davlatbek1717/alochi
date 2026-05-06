@@ -82,7 +82,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         await ctx.reply('Havola topilmadi yoki eskirgan.');
       } else {
         await ctx.reply(
-          "Adouptivo platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
+          "A'lochi platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
         );
       }
     });
@@ -278,7 +278,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // Statuses arrive in Uzbek canonical (yashil/sariq/qizil); the
     // helper handles unknown / 'nomalum' values gracefully.
     return [
-      `📚 <b>Adouptivo — Kunlik Hisobot</b>`,
+      `📚 <b>A'lochi — Kunlik Hisobot</b>`,
       `👦 Farzand: ${data.studentName}`,
       `📅 Sana: ${data.date}`,
       ``,

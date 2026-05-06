@@ -34,7 +34,7 @@ const STATIC_COLS: { title: string; links: { label: string; href: string }[] }[]
     title: 'Markazlar uchun',
     links: [
       { label: "Demo so'rash", href: '#pricing' },
-      { label: "Bog'lanish", href: 'mailto:hello@adouptivo.com' },
+      { label: "Bog'lanish", href: 'mailto:hello@alochi.com' },
       { label: 'Hujjatlar', href: '#faq' },
     ],
   },
@@ -89,7 +89,7 @@ export function Footer({ cms }: FooterProps) {
                 className="h-9 w-9 brightness-110"
               />
               <span className="text-xl font-extrabold text-white tracking-tight">
-                Adouptivo
+                A&apos;lochi
               </span>
             </Link>
             <p className="mt-4 text-sm font-semibold text-slate-400 max-w-xs leading-relaxed">
@@ -146,7 +146,7 @@ export function Footer({ cms }: FooterProps) {
 
         {/* Bottom row */}
         <div className="mt-12 pt-6 border-t border-white/8 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between text-xs font-bold text-slate-500">
-          <span>© 2026 Adouptivo. Barcha huquqlar himoyalangan.</span>
+          <span>© 2026 A&apos;lochi. Barcha huquqlar himoyalangan.</span>
           <span className="inline-flex items-center gap-1.5">
             Made in Uzbekistan <span aria-hidden>🇺🇿</span>
           </span>

@@ -69,8 +69,8 @@ async function bootstrap() {
   // route map, including admin endpoints, to anyone on the internet.
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Adouptivo API')
-      .setDescription("Adouptivo ta'lim platformasi API hujjatlari")
+      .setTitle("A'lochi API")
+      .setDescription("A'lochi ta'lim platformasi API hujjatlari")
       .setVersion('1.0')
       .addBearerAuth()
       .build();
@@ -107,7 +107,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   new NestLogger('Bootstrap').log(
-    `Adouptivo API listening on :${port} (${process.env.NODE_ENV ?? 'development'})`,
+    `A'lochi API listening on :${port} (${process.env.NODE_ENV ?? 'development'})`,
   );
 }
 

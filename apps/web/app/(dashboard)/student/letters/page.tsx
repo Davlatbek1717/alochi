@@ -371,7 +371,7 @@ function LetterDetail({ letter }: { letter: LetterItem }) {
     ? `https://t.me/share/url?url=${encodeURIComponent(
         `https://t.me/${BOT_USERNAME}`,
       )}&text=${encodeURIComponent(
-        `Men "${letter.char}" harfini Adouptivo'da yutib oldim! 🎉`,
+        `Men "${letter.char}" harfini A'lochi'da yutib oldim! 🎉`,
       )}`
     : '';
 

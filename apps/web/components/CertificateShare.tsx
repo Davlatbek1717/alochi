@@ -15,9 +15,9 @@ const LEVEL_LABELS: Record<string, string> = {
 
 export default function CertificateShare({ cert }: CertificateShareProps) {
   const [copied, setCopied] = useState(false);
-  const url = `https://adouptivo.com/cert/${cert.id}`;
+  const url = `https://alochi.com/cert/${cert.id}`;
   const label = LEVEL_LABELS[cert.level] ?? cert.level;
-  const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`Adouptivo: ${label} sertifikati!`)}`;
+  const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(`A'lochi: ${label} sertifikati!`)}`;
 
   async function copy() {
     try {

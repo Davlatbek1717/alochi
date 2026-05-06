@@ -206,7 +206,7 @@ export function OnboardForm() {
                 className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-white text-sm font-mono focus:border-emerald-500 outline-none"
                 placeholder="toshkent-ielts"
               />
-              <p className="text-xs text-slate-500 mt-1">URL: adouptivo.com/{slug || 'slug'}/login</p>
+              <p className="text-xs text-slate-500 mt-1">URL: alochi.com/{slug || 'slug'}/login</p>
             </div>
           </div>
         </Card>

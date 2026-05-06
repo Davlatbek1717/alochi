@@ -39,7 +39,7 @@ export function Header({ onDemoClick }: Props) {
     >
       <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-6 transition-all ${scrolled ? 'h-14' : 'h-16'}`}>
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 group" aria-label="Adouptivo bosh sahifa">
+        <Link href="/" className="flex items-center gap-2 shrink-0 group" aria-label="A'lochi bosh sahifa">
           <Image
             src="/logo-mark.svg"
             alt=""
@@ -50,7 +50,7 @@ export function Header({ onDemoClick }: Props) {
             priority
           />
           <span className="text-xl font-extrabold text-[#1e1b4b] tracking-tight">
-            Adouptivo
+            A&apos;lochi
           </span>
         </Link>
 

@@ -30,7 +30,7 @@ function useTenantBranding(): BrandingData | null {
             : (json as BrandingData);
         setBranding(data);
       })
-      .catch(() => { /* silently ignore — fallback to 'Adouptivo' */ });
+      .catch(() => { /* silently ignore — fallback to "A'lochi" */ });
     return () => { cancelled = true; };
   }, [slug]);
 
@@ -39,11 +39,11 @@ function useTenantBranding(): BrandingData | null {
 
 /**
  * TenantBrandingLogo — the brand logo/name shown in the left panel (desktop)
- * or above the form (mobile). Replaces the hardcoded "Adouptivo" text.
+ * or above the form (mobile). Replaces the hardcoded "A'lochi" text.
  */
 export function TenantBrandingLogo({ mobile = false }: { mobile?: boolean }) {
   const branding = useTenantBranding();
-  const displayName = branding?.brandName ?? 'Adouptivo';
+  const displayName = branding?.brandName ?? "A'lochi";
 
   const content = (
     <>
