@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 
@@ -28,7 +30,17 @@ export class MarketingService {
   constructor(
     private prisma: PrismaService,
     private i18n: I18nService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
+
+  private async cacheGet<T>(key: string): Promise<T | null> {
+    const val = await this.cache.get<T>(key).catch(() => undefined);
+    return val ?? null;
+  }
+
+  private async cacheSet(key: string, value: unknown, ttlMs: number): Promise<void> {
+    await this.cache.set(key, value, ttlMs).catch(() => undefined);
+  }
 
   /**
    * Featured students grid. Active student users with at least one
@@ -44,6 +56,15 @@ export class MarketingService {
   async listStudents(opts: { limit?: number; skip?: number } = {}) {
     const limit = Math.max(1, Math.min(100, opts.limit ?? 50));
     const skip = Math.max(0, opts.skip ?? 0);
+    const KEY = `mc:students:${limit}:${skip}`;
+    const cached = await this.cacheGet<unknown[]>(KEY);
+    if (cached) return cached;
+    const result = await this.fetchStudents(limit, skip);
+    await this.cacheSet(KEY, result, 30_000);
+    return result;
+  }
+
+  private async fetchStudents(limit: number, skip: number) {
     const [students, totalLessons] = await Promise.all([
       this.prisma.user.findMany({
         where: { role: 'student', status: 'active' },
@@ -163,6 +184,15 @@ export class MarketingService {
    * stats card on the showcase. Cheap counts, no joins.
    */
   async getStats() {
+    const KEY = 'mc:stats';
+    const cached = await this.cacheGet<unknown>(KEY);
+    if (cached) return cached;
+    const result = await this.computeStats();
+    await this.cacheSet(KEY, result, 60_000);
+    return result;
+  }
+
+  private async computeStats() {
     const [totalStudents, totalSchools, totalLessons, completedSessions] =
       await Promise.all([
         this.prisma.user.count({
@@ -211,12 +241,15 @@ export class MarketingService {
    * chips. Sorted alphabetically.
    */
   async getRegions() {
+    const KEY = 'mc:regions';
+    const cached = await this.cacheGet<string[]>(KEY);
+    if (cached) return cached;
     const rows = await this.prisma.user.findMany({
       where: { role: 'student', status: 'active', region: { not: null } },
       select: { region: true },
       distinct: ['region'],
     });
-    return rows
+    const result = rows
       .map((r) => r.region)
       .filter((r): r is string => !!r)
       .sort((a, b) => {
@@ -226,6 +259,8 @@ export class MarketingService {
           return a.localeCompare(b);
         }
       });
+    await this.cacheSet(KEY, result, 300_000);
+    return result;
   }
 
   // ─── CMS — singleton settings ────────────────────────────────────────────
@@ -293,6 +328,15 @@ export class MarketingService {
    * prize and sponsor lists in their author-defined order.
    */
   async getLandingContent() {
+    const KEY = 'mc:landing';
+    const cached = await this.cacheGet<unknown>(KEY);
+    if (cached) return cached;
+    const result = await this.computeLandingContent();
+    await this.cacheSet(KEY, result, 60_000);
+    return result;
+  }
+
+  private async computeLandingContent() {
     const [rows, prizes, sponsors, milestones] = await Promise.all([
       this.prisma.siteSetting.findMany(),
       this.prisma.landingItem.findMany({
