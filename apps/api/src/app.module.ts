@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-yet';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
@@ -57,6 +59,20 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Redis caching — in-memory fallback when REDIS_URL not set (dev/CI).
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const redisUrl = config.get<string>('REDIS_URL');
+        if (!redisUrl) {
+          // No Redis configured — use the built-in in-memory store.
+          return { ttl: 30_000 };
+        }
+        const store = await redisStore({ url: redisUrl, ttl: 30_000 });
+        return { store };
+      },
+    }),
     // Rate limiting: 60 req/min on most endpoints, 10 req/min on auth
     // endpoints (configured per-route with @Throttle decorator).
     // The store defaults to in-memory which is fine for single-node;
