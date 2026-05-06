@@ -1,4 +1,4 @@
-# ADOUPTIVO — Pitch Deck
+# A'LOCHI — Pitch Deck
 
 > **B2B Sales versiyasi** — O'zbekistondagi ingliz tili o'quv markazlari
 > egalariga (filadmin / direktor) yo'naltirilgan. Slaydma-slayd format.
@@ -9,7 +9,7 @@
 
 ## Slayd 1 — Cover
 
-# **ADOUPTIVO**
+# **A'LOCHI**
 ### O'zbekistondagi birinchi to'liq SaaS ingliz tili platformasi
 
 3–7 sinf o'quvchilari uchun AI suhbat, kamera nazorati va
@@ -156,22 +156,27 @@ qilayotgani har kuni shaffof.
 
 ## Slayd 9 — Pricing
 
-### Markaz hajmiga qarab 3 ta paket:
+### Bog'laning — narx individual.
 
-| | **STARTER** | **PRO** ⭐ | **ENTERPRISE** |
-|---|---|---|---|
-| O'quvchilar soni | 50 gacha | 200 gacha | Cheksiz |
-| Filiallar | 1 | 3 | Cheksiz |
-| AI suhbat / kun | 100 | 1000 | Cheksiz |
-| Kamera nazorati | ✅ | ✅ | ✅ |
-| Telegram bot | ✅ | ✅ | ✅ + branded |
-| Sertifikat dizayni | Standart | Standart | Custom |
-| Mentor / manager paneli | ✅ | ✅ | ✅ |
-| Tahlillar (analytics) | Asosiy | To'liq | To'liq + API |
-| Yordam | Telegram | Telegram + tel | Maxsus menejer |
-| **Narx (oylik)** | **2 mln so'm** | **5 mln so'm** | **Kelishuv** |
+A'lochi narxi **markaz hajmi va ehtiyojiga** qarab kelishiladi: o'quvchilar
+soni, filiallar, AI suhbat hajmi, brending darajasi. Tipik tarif jadvali yo'q —
+har bir markaz boshqacha.
 
-> 14 kunlik bepul demo — kredit karta talab qilinmaydi.
+**Hammasi paketda:**
+
+- 🤖 AI suhbat (Google Gemini) — har o'quvchiga shaxsiy
+- 📷 Kamera nazorati (PDPL muvofiq)
+- 📱 Ota-ona Telegram bot
+- 🚦 Yashil/Sariq/Qizil status tizimi
+- 👥 Mentor / manager / filadmin / tester panellari
+- 📊 KPI va analytics
+- 🏆 Sertifikat va mukofotlar
+- 🛠 Telegram orqali to'g'ridan-to'g'ri yordam
+
+**To'lov:** bank o'tkazma, oylik. Yillik shartnoma majburiy emas.
+
+> 14 kunlik bepul demo — kredit karta yoki to'lov talab qilinmaydi.
+> Yoqsangiz davom ettiramiz, yoqmasa to'xtatasiz.
 
 ---
 
@@ -196,7 +201,7 @@ qilayotgani har kuni shaffof.
 ### Bizdan kerak bo'lmaydi:
 - ❌ Maxsus server o'rnatish
 - ❌ IT mutaxassis
-- ❌ Yillik kelishuv (oylik to'lov)
+- ❌ Uzoq muddatli majburiyat — bekor qilish istalgan paytda
 
 ---
 

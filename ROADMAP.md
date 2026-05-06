@@ -1,241 +1,165 @@
-# A'lochi — World-Class SaaS Roadmap
+# A'lochi — Roadmap
 
-> Har bir phase quality gates (typecheck + lint + build + tests) dan o'tgandan
-> keyin commit qilinadi. Hech bir phase yarim holda qoldirilmaydi.
-
----
-
-## Bajarilgan phasalar (2026-05)
-
-| Phase | Commit | Holat |
-|---|---|---|
-| Phase 1 — Brand rename (A'lochi → A'lochi) | d0d0c71 | ✅ |
-| Phase 2 — Filadmin tenant content (lessons CRUD + UI) | c28bc36 | ✅ |
-| Phase 3 — Tenant branding (logo, color, brandName) | d8da090 | ✅ |
-| Phase 4 — Template lesson library | d8da090 | ✅ |
-| Phase 5 — Self-service onboarding (/register + trial) | eb950bb | ✅ |
-| Phase 6 — i18n infrastructure (uz/en/ru) | 43ed337 | ✅ (infra ready, pages deferred) |
-| Phase 7 — Payment integration (Stripe/Payme/Click scaffold) | 4347fb7 | ✅ |
-| Phase 8 — Subdomain/custom domain middleware | 43ed337 | ✅ |
-| Phase 9 — GDPR (/privacy + /terms pages) | eb950bb | ✅ |
-| Phase 10 — Mobile PWA manifest | 4347fb7 | ✅ |
-| Phase 11 — Rate limiting (@nestjs/throttler) | 43ed337 | ✅ |
-| Phase 12 — Sentry monitoring | 43ed337 | ✅ |
-| Phase 13 — Security audit log (schema + UI + migration) | 4347fb7 | ✅ |
-
-**411/411 tests pass. Build clean.**
+> Loyiha 4 ta katta Faza'ga bo'lingan. Har Faza bir necha oy davom etadi
+> va o'zining alohida mahsulot rejasini chiqaradi. Mukammal asos:
+> [docs/superpowers/specs/2026-04-23-alochi-platform-design.md](docs/superpowers/specs/2026-04-23-alochi-platform-design.md).
+>
+> Quality bar: har Phase oxirida `tsc --noEmit`, `eslint`, `jest`, `nest build` va
+> `next build` PASS bo'lishi shart. Yarim Faza'lar yo'q.
 
 ---
 
-## Keyingi sprint uchun qolganlar (Phase 6b, 7b, 13b...)
+## Faza 1 — MVP (4 oy) ✅
 
-- **Phase 6b** — `[locale]` folder migration: landing + dashboard pages `withNextIntl` plugin bilan
-- **Phase 7b** — Real gateway integration: Stripe HMAC verify, Payme test key, Click production
-- **Phase 13b** — 2FA (TOTP authenticator), IP allowlist superadmin uchun, SystemAuditLog yozish (login/logout/user.create)
-- **Phase 11b** — Redis caching, DB indexes `EXPLAIN ANALYZE` bilan
-- **Phase 14** — AI content generation (filadmin uchun dars yaratish assistenti)
-- **Phase 15** — Lesson marketplace (markazlar darslarni sotsin/sotib olsin)
+**Maqsad:** Ishlaydigan asosiy platforma — AI va kamera holati hali yoqilmagan.
 
----
+- Auth + RBAC (6 rol: superadmin, filadmin, manager, mentor, tester, o'quvchi)
+- Superadmin: dars boshqaruvi (video + MCQ test + so'z tartibi)
+- Filial / tenant boshqaruvi
+- O'quvchi dars jarayoni: video ko'rish (tezlashtirish blok) + MCQ/so'z tartibi testlar
+- Mentor paneli: status berish, davomat
+- Manager paneli: qizil/sariq ro'yxat, N override
+- Filadmin paneli: ogohlantirish, to'lov, xodim boshqaruvi
+- Status tizimi (3 ta: ingliz / shaxsiy / tanqidiy) — qo'lda berish
+- Davomat tizimi (o'quvchi + xodim)
+- KPI tizimi (Mentor, Manager)
+- Ogohlantirish tizimi + to'lov bloklash (cron job)
+- Vazifa tizimi (task management)
+- Delegatsiya audit ([2026-04-24-delegation-audit-design.md](docs/superpowers/specs/2026-04-24-delegation-audit-design.md))
 
----
+> MVP da lug'at bo'limi matnli formatda ishlaydi (og'zaki emas).
 
-## PHASE 1 — Brand Rename: A'lochi → A'lochi
-**Maqsad:** Har bir kod qatoridagi "A'lochi" ni olib tashlab "A'lochi" qo'yish.
-
-- [ ] `apps/api/src/main.ts` — Swagger title, logger nomi
-- [ ] `apps/web/next.config.ts` — siteName, metadata
-- [ ] `apps/web/app/(marketing)/page.tsx` — SEO metadata, OG
-- [ ] `apps/web/app/(marketing)/_components/Header.tsx` — logo matni
-- [ ] `apps/web/app/(marketing)/_components/Footer.tsx` — brend nomi
-- [ ] `apps/web/app/(marketing)/_components/Hero.tsx` — hardcoded nom
-- [ ] `apps/web/app/(marketing)/_components/CertificateSection.tsx`
-- [ ] `apps/api/src/gamification/certificates.service.ts` — sertifikat PDF matni
-- [ ] `apps/api/src/cron/cron.service.ts` — Telegram xabarnomalari
-- [ ] `prisma/seed-demo.ts` — demo tenant nomi
-- [ ] `README.md`, `DEPLOYMENT.md`, `PITCH_DECK.md`, `USER_GUIDE.md`
-- [ ] `docs/` — barcha qo'llanmalar
-- [ ] `.env.example` — izohlar
+**Holat:** ✅ Bajarildi.
 
 ---
 
-## PHASE 2 — Tenant Content: Filadmin darslarni boshqarsin
-**Maqsad:** Har bir markaz o'z darslarini mustaqil yaratsin. Superadmin boshqa markazning darsini ko'rmasin.
+## Faza 2 — AI va Muloqot (4 oy) ✅
 
-- [ ] `LessonsController` — `filadmin` rolga `GET/POST/PATCH/DELETE` ruxsat
-- [ ] `LessonsService` — yaratishda `tenantId = req.user.tenantId` majburiy
-- [ ] `LessonsService` — `findAll` faqat `req.user.tenantId` bo'yicha filter
-- [ ] `LessonComponentsController` — filadmin ruxsat
-- [ ] `/superadmin/lessons` — faqat superadmin o'z darslarini ko'rsin
-- [ ] `/filadmin/lessons` — yangi sahifa (list + create + edit + publish)
-- [ ] `/filadmin/lessons/new` — dars yaratish formasi
-- [ ] `/filadmin/lessons/[id]` — dars tahrirlash (komponentlar bilan)
-- [ ] TopNav — filadmin uchun "Darslar" menyu bandi
-- [ ] Testlar yangilanishi
+**Maqsad:** AI komponentlar va ota-onalar bilan muloqot.
 
----
+- Google Gemini AI Tutor (Q&A, dars bo'yicha tushuntirish)
+- Azure Speech (talaffuz tekshirish — lug'at bo'limining og'zaki formati)
+- MediaPipe kamera monitoring (akademiya topshirish)
+- Google Gemini yakuniy baholash (akademiya topshirishda)
+- Telegram bot (ota-onalar + xodimlar + o'quvchilar)
+- Ilg'or gamifikatsiya:
+  - Virtual shahar
+  - XP, streak, daily quests, streak shield
+- Sertifikat ekotizimi (QR kodli, PDF/PNG)
+- Face ID avtomatik davomat (face-api.js + pgvector + Python fallback) —
+  spec: [2026-04-24-face-id-attendance-design.md](docs/superpowers/specs/2026-04-24-face-id-attendance-design.md)
 
-## PHASE 3 — Tenant Branding
-**Maqsad:** Har markaz o'z nomi, logotipi va rangida ishlaydi.
-
-- [ ] `Tenant` modeli — `logoUrl`, `primaryColor`, `brandName`, `faviconUrl` maydonlari
-- [ ] DB migration `0040_tenant_branding`
-- [ ] `TenantsService` + `TenantsController` — yangi maydonlar
-- [ ] `/superadmin/tenants/new` va `/edit` — branding formasi
-- [ ] Login sahifasi — `?tenant=slug` orqali tenant logotipi ko'rsatish
-- [ ] Dashboard layout header — `"A'lochi"` o'rniga `tenant.brandName`
-- [ ] Student dashboard — tenant nomi
-- [ ] Sertifikat PDF — tenant logoUrlini embed qilish
-- [ ] Telegram bot xabarlari — `tenant.brandName` ishlatish
+**Holat:** ✅ Bajarildi.
 
 ---
 
-## PHASE 4 — Template Lesson Library
-**Maqsad:** Superadmin "global shablon" darslar yaratadi. Filadmin ulardan nusxa oladi.
+## Faza 3 — Intellektual va Ijtimoiy Tizim (3 oy) ✅
 
-- [ ] `Lesson` modeli — `isTemplate Boolean` maydoni
-- [ ] DB migration `0041_lesson_templates`
-- [ ] `LessonsService.findTemplates()` — barcha template darslar
-- [ ] `LessonsService.importFromTemplate(lessonId, tenantId)` — nusxa olish
-- [ ] `GET /lessons/templates` — public+auth endpoint
-- [ ] `POST /lessons/import/:templateId` — filadmin nusxa oladi
-- [ ] `/superadmin/lessons` — template belgisi (star icon)
-- [ ] `/filadmin/lessons` — "Shablon kutubxonasidan import" tugmasi
-- [ ] Import modal — template list + tanlash + bulk import
+**Maqsad:** Adaptiv o'qitish, bashoratli tahlil, ijtimoiy funksiyalar.
 
----
+- Adaptiv o'qitish (spaced repetition + qiyinlik moslashishi)
+- Bashoratli tahlil:
+  - Churn prediction (yetarli data to'plangach)
+  - Risk xarita
+- Kontent sifat nazorati:
+  - A/B test
+  - Alertlar
+  - Feedback
+- Ijtimoiy funksiyalar — spec: [2026-04-24-social-features-design.md](docs/superpowers/specs/2026-04-24-social-features-design.md)
+  - Do'stlar
+  - Duel 1v1
+  - Guruh challenge (7 kunlik)
+  - Guruh chat
+  - Moderatsiya
+- Turnirlar va milliy olimpiada
+- ClickHouse analytics
 
-## PHASE 5 — Self-Service Onboarding
-**Maqsad:** Yangi markaz egasi o'zi ro'yxatdan o'tib, 5 daqiqada ishga tushsin.
-
-- [ ] Public `/register` sahifasi — markaz nomi, slug, admin ism/login/parol
-- [ ] `POST /auth/register-tenant` — yangi tenant + filadmin yaratish
-- [ ] Email yoki Telegram orqali tasdiqlash (OTP)
-- [ ] Trial period logic — 14 kun bepul, keyin to'lov
-- [ ] Onboarding wizard (3 qadam): 1) Branding 2) Birinchi dars 3) Birinchi o'quvchi
-- [ ] Welcome email/Telegram xabar
-- [ ] Landing page "Bepul boshlash" tugmasi → `/register`
+**Holat:** ✅ Bajarildi.
 
 ---
 
-## PHASE 6 — Internationalization (i18n)
-**Maqsad:** O'zbek, Rus, Ingliz tillari — global bozor.
+## Faza 4 — Scale va SaaS (2 oy) ✅
 
-- [ ] `next-intl` kutubxona o'rnatish
-- [ ] `apps/web/messages/uz.json` — barcha string'lar
-- [ ] `apps/web/messages/en.json` — ingliz tarjimasi
-- [ ] `apps/web/messages/ru.json` — rus tarjimasi
-- [ ] Middleware: `Accept-Language` header yoki `?lang=en`
-- [ ] UI: Til tanlash komponenti (TopNav yoki Login)
-- [ ] API error messages — `lang` parametri bo'yicha
-- [ ] Tenant sozlamasida default til
+**Maqsad:** Ko'p markaz onboarding, mobil optimizatsiya, ML stabilizatsiya.
 
----
+- Multi-tenant onboarding (yangi markazlar uchun) —
+  spec: [2026-04-30-faza4-tenant-onboarding-design.md](docs/superpowers/specs/2026-04-30-faza4-tenant-onboarding-design.md)
+- ClickHouse analytics to'liq —
+  spec: [2026-04-30-faza4-clickhouse-analytics-design.md](docs/superpowers/specs/2026-04-30-faza4-clickhouse-analytics-design.md)
+- Mobil optimizatsiya (PWA) —
+  spec: [2026-04-30-faza4-pwa-design.md](docs/superpowers/specs/2026-04-30-faza4-pwa-design.md)
+- ML modelni avtomatik yangilash —
+  spec: [2026-04-30-faza4-ml-churn-design.md](docs/superpowers/specs/2026-04-30-faza4-ml-churn-design.md)
+- AI Lesson Generator (Phase 14) —
+  spec: [2026-05-05-ai-lesson-generator-design.md](docs/superpowers/specs/2026-05-05-ai-lesson-generator-design.md)
+- Performance: DB indexes (`EXPLAIN ANALYZE` asosida)
+- Tenant branding (logo, rang, brand nomi)
 
-## PHASE 7 — Payment Integration
-**Maqsad:** Avtomatik obuna tizimi — to'lov kelsa aktiv, kelmasa blok.
-
-- [ ] Stripe global integratsiya (`@stripe/stripe-js`)
-- [ ] Payme webhook handler (O'zbekiston)
-- [ ] Click webhook handler (O'zbekiston)
-- [ ] `Subscription` Prisma modeli — plan, status, nextPaymentDate, gateway
-- [ ] DB migration `0042_subscriptions`
-- [ ] `SubscriptionsService` — to'lov holati boshqaruvi
-- [ ] `SubscriptionsController` — webhook qabul qilish
-- [ ] Auto-block: to'lov muddati o'tsa tenant `isActive=false`
-- [ ] Auto-unblock: to'lov kelsa `isActive=true`
-- [ ] `/superadmin/subscriptions` — barcha obunalar paneli
-- [ ] `/filadmin/billing` — joriy obuna holati va to'lov tarixi
-- [ ] Stripe Customer Portal redirect
+**Holat:** ✅ Bajarildi.
 
 ---
 
-## PHASE 8 — Custom Domain / Subdomain
-**Maqsad:** `abc-english.alochi.com` yoki `abc.uz` — har markaz o'z URL'i.
+## Faza 5+ — Kelajak
 
-- [ ] `Tenant` modeli — `subdomain`, `customDomain` maydonlari
-- [ ] DB migration `0043_tenant_domains`
-- [ ] Next.js middleware — `Host` header bo'yicha tenant aniqlash
-- [ ] `tenantContext` server-side props injection
-- [ ] Login sahifasi — subdomainsiz `login.alochi.com` universal
-- [ ] `/superadmin/tenants/[id]/edit` — subdomain va custom domain sozlash
-- [ ] DNS yo'riqnomasi hujjati
-- [ ] SSL wildcard sertifikat ko'rsatma (Caddy/nginx)
+> Aniq belgilangan emas — strategik fursatlar yuzaga chiqqanda qaror qilinadi.
+> "Hozir nima qilamiz?" emas, "ehtiyojni qachon ko'rsak, qanday harakat
+> qilamiz?" sifatida o'qiladi.
 
----
+### Mumkin yo'nalishlar
 
-## PHASE 9 — GDPR + Legal Compliance
-**Maqsad:** Yevropa va global bozor uchun huquqiy talablar.
+- **Real markaz pilot** — 1-3 markazda 3 oylik chuqur sinov.
+- **Case study to'plash** — pitch deck'dagi placeholder'larni real
+  raqamlar bilan to'ldirish.
+- **Sotuv jarayoni avtomatlash** — landing → demo so'rovi → onboarding flow.
+- **Yangi vertical** — Matematika yoki Ona tili (mavzuga moslab dars
+  generatsiyasi).
+- **Mobil ilova (Native iOS/Android)** — PWA dan tashqari, agar markaz
+  egalari talab qilsa.
 
-- [ ] `/privacy` — Maxfiylik siyosati sahifasi
-- [ ] `/terms` — Foydalanish shartlari sahifasi
-- [ ] Cookie consent banner komponenti
-- [ ] `DELETE /users/me` — GDPR right to erasure (o'z ma'lumotlarini o'chirish)
-- [ ] `GET /users/me/export` — ma'lumotlarni JSON/CSV eksport
-- [ ] `Tenant` modeli — `gdprRegion`, `dataResidency` maydonlari
-- [ ] DB migration `0044_gdpr_fields`
-- [ ] DemoForm'dagi privacy link to'ldirish (`/privacy` havolasi)
-- [ ] Cookie-free analytics mode (GDPR tenantlar uchun)
+### Kechiktirildi (qaytarildi)
 
----
-
-## PHASE 10 — Mobile PWA Polish
-**Maqsad:** iOS va Android'da native-ga yaqin tajriba.
-
-- [ ] Offline dars o'qish — Service Worker cache strategy
-- [ ] Push notifications — Web Push API
-- [ ] Install prompt komponenti (PWA add-to-homescreen)
-- [ ] Mobile-specific touch gestures (swipe to next component)
-- [ ] Kamera full-screen mobile rejimi
-- [ ] iOS Safari audio unlock (talaffuz komponentlari uchun)
-- [ ] `manifest.json` — A'lochi nomi, ikonlar, rang
-- [ ] Lighthouse score ≥ 90 barcha kategoriyada
+> 2026-05-06 da loyiha "dunyo darajasi" yo'lidan A'lochi MVP'ga qaytarildi.
+> Quyidagi fazalar archive'ga ko'chirildi:
+> [docs/superpowers/.archive/global-push/](docs/superpowers/.archive/global-push/)
+>
+> - i18n (uz/en/ru) → faqat o'zbekcha
+> - Stripe to'lov → manual to'lov tracking
+> - 2FA TOTP → klassik parol + JWT
+> - Multi-country (Tojikiston/Qozog'iston/Qirg'iziston) → faqat O'zbekiston
+>
+> Agar bu yo'nalishlar kelajakda qayta kerak bo'lsa, archive'dagi specdan
+> boshlanadi.
 
 ---
 
-## PHASE 11 — Performance & Scale
-**Maqsad:** 100,000+ o'quvchi bo'lganda ham tezkor ishlash.
+## Vaqt jadvali (jami ~13 oy)
 
-- [ ] `@nestjs/throttler` rate limiting — barcha public endpoint'lar
-- [ ] Redis caching — `hot` endpoint'lar (/lessons, /marketing/landing)
-- [ ] `REDIS_URL` `.env.example` ga qo'shish
-- [ ] Prisma query optimization — N+1 muammolarini hal qilish
-- [ ] DB indexes audit — `EXPLAIN ANALYZE` bilan sekin so'rovlar
-- [ ] Image optimization — `next/image` barcha joylarda
-- [ ] Bundle analyzer — keraksiz paketlarni aniqlash
-- [ ] CDN yo'riqnomasi (Cloudflare/BunnyCDN media assets uchun)
-- [ ] PgBouncer connection pooling hujjati
+```
+Faza 1 — MVP (4 oy)
+├── Oy 1: Auth, Rollar (RBAC), DB, Superadmin panel
+├── Oy 2: O'quvchi dars jarayoni, Mentor/Manager paneli
+├── Oy 3: Status, Davomat, KPI, Vazifa, Ogohlantirish, To'lov, Delegatsiya
+└── Oy 4: Beta test, xato tuzatish, performance optimallashtirish
 
----
+Faza 2 — AI, Muloqot va Face ID (4 oy)
+├── Oy 5: Gemini AI Tutor + Azure talaffuz
+├── Oy 6: MediaPipe + yakuniy baholash + Telegram bot
+├── Oy 7: Gamifikatsiya, Sertifikat (QR)
+└── Oy 8: Face ID avtomatik davomat (face-api.js + pgvector + Python fallback)
 
-## PHASE 12 — Monitoring & Observability
-**Maqsad:** Production xatolar real-vaqtda aniqlansin va xabar berilsin.
+Faza 3 — Intellektual va Ijtimoiy Tizim (3 oy)
+├── Oy 9:  Adaptiv o'qitish, Kontent sifat nazorati (A/B)
+├── Oy 10: Ijtimoiy funksiyalar — do'st, duel, challenge, chat, moderatsiya
+└── Oy 11: Churn, turnirlar, ClickHouse analytics
 
-- [ ] Sentry integratsiya (API + Web)
-- [ ] `SENTRY_DSN` `.env.example` ga qo'shish
-- [ ] Custom error boundary — Sentry bilan
-- [ ] Uptime monitoring (Better Uptime yoki UptimeRobot) yo'riqnomasi
-- [ ] Telegram alert channel — critical xatolar uchun
-- [ ] `/health` endpoint kengaytirish — DB + Redis + ClickHouse status
-- [ ] Grafana dashboard yo'riqnomasi (Prometheus metrics)
-- [ ] Log aggregation — Loki/ELK yo'riqnomasi
+Faza 4 — Scale va SaaS (2 oy)
+├── Oy 12: Multi-tenant onboarding, PWA, AI Lesson Generator
+└── Oy 13: Load testing, security audit, production launch
+```
 
----
-
-## PHASE 13 — Security Hardening
-**Maqsad:** Enterprise-grade xavfsizlik.
-
-- [ ] 2FA (TOTP) — superadmin va filadmin uchun
-- [ ] IP allowlisting — superadmin login uchun
-- [ ] API key tizimi — tenant'lar tashqi integratsiya qilsin
-- [ ] Audit log UI — `/superadmin/audit-log` sahifasi
-- [ ] Session revocation — barcha tokenlarni bir vaqtda bekor qilish
-- [ ] Suspicious login detection — boshqa geo/IP dan kirish
-- [ ] Content Security Policy nonce-based scripts
-- [ ] Dependency vulnerability scan (npm audit) CI'ga qo'shish
-- [ ] Penetration test checklist hujjati
+**Production launch:** 2027-yil II chorak (rejalashtirilgan).
 
 ---
 
-## Jami: 13 Phase, ~150 task
-## Taxminiy vaqt: 40-50 ish kuni (to'liq jamoa bilan 3-4 hafta)
+> Hujjat tirik. O'zgartirish kerak bo'lsa — sabab bilan, [PITCH_DECK_INVESTOR.md](PITCH_DECK_INVESTOR.md)
+> dagi "Qarorlar tarixi" bo'limiga yozib qoldiring.

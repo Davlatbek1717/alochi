@@ -1,393 +1,264 @@
-# ADOUPTIVO — Investor Pitch Deck
+# A'LOCHI — Internal Team Document
 
-> **Pre-Seed / Seed versiya** — VC, business angel va strategik
-> investorlar uchun. O'zbek tilida; texnik atamalar (TAM/SAM/SOM,
-> ARPU, LTV, CAC) odatdagidek qoldirildi.
-> Markdown'dan PowerPoint / Pitch.com / Keynote'ga ko'chirish uchun
-> har bir `## Slayd` blokini alohida slayd qilib joylashtiring.
-
----
-
-## Slayd 1 — Cover
-
-# **ADOUPTIVO**
-### Markaziy Osiyodagi ingliz tili o'quv markazlari uchun **operatsion tizim**
-
-> *Bolalar AI bilan o'qiydi. Mentorlar 3× ko'p o'quvchi xizmat qiladi.
-> Ota-ona Telegram'dan kuzatadi. Markaz egasi har kuni daromad ko'radi.*
-
-📅 2026 · 🇺🇿 Buxoro, O'zbekiston
-✈ t.me/Javohir_UH   ·   ✉ javohir.uh@gmail.com
-
-**Pre-Seed Round: $300K kerakli**
+> **Ichki hujjat** — jamoa uchun. Vision, texnik arxitektura, roadmap va
+> risklar. VC pitch emas — agar kelajakda investor qidirilsa, alohida
+> dokument yaratiladi.
+>
+> Maqsadi: yangi qo'shilgan jamoa a'zosi 30 daqiqada loyihani to'liq
+> tushunsin. Strategik qarorlar uchun yagona haqiqat manbasi (single
+> source of truth).
 
 ---
 
-## Slayd 2 — Vision
+## 1. Vision
 
-# **3 yilda — 5 ta davlat. 10,000+ markaz. 1M+ o'quvchi.**
+**A'lochi** — O'zbekistondagi ingliz tili o'quv markazlari uchun
+operatsion SaaS tizim. 3–7 sinf o'quvchilarini AI orqali o'qitadi,
+mentor/manager/filadminlarga real-vaqt panel beradi, ota-onaga
+Telegram'da kunlik xabar yuboradi.
 
-A'lochi: Markaziy Osiyodagi nomdoshchi (vertical) ed-tech SaaS bo'lish.
+### Brending mantiqi
 
-Birinchi qadam — **O'zbekiston ingliz tili markazlari**.
-Ikkinchi qadam — **Tojikiston, Qozog'iston, Qirg'iziston**.
-Uchinchi qadam — **Matematika, Ona tili, IT** fanlariga kengaytirish.
+"A'lochi" o'zbek tilida — eng yaxshi o'quvchi. Brend va product hammasi
+shu so'z atrofida quriladi: **bola kim bo'lib o'sishni xohlaydi, biz
+shunga olib boramiz**.
 
-> Avval ushbu vertical'da yetakchi bo'lamiz. Keyin gorizontal'ga o'tamiz.
+### Hozirgi qamrov (MVP)
 
----
+- **Hudud:** O'zbekiston (faqat). Multi-country yo'q.
+- **Til:** O'zbekcha (faqat). Boshqa tillar yo'q.
+- **Yosh:** 3-7 sinf (8-13 yosh).
+- **Fan:** Ingliz tili (faqat). Matematika/Ona tili — keyin (Faza 4+ keyin).
+- **Mijoz turi:** O'quv markaz egalari (B2B). Ota-ona/o'quvchi to'g'ridan-to'g'ri
+  emas (B2B2C model).
 
-## Slayd 3 — Problem
+### Nima uchun bunchalik tor?
 
-### **Markaziy Osiyoda 100,000+ ingliz tili markazi mavjud.
-### Ularning ichidagi infratuzilma — 1995-yilning Excel jadvali.**
+Avvalgi versiya "Markaziy Osiyo + ko'p til + ko'p fan" deb keng yo'lga
+chiqdi. Tor MVP'ga qaytdik chunki:
 
-Hozirgi markaz egasi har kuni qarshilashadigan muammolar:
-
-| Muammo | Yo'qotish |
-|---|---|
-| 30+ o'quvchini 1 mentor kuzata olmaydi | Sifat tushadi → o'quvchi ketadi |
-| Ota-ona "bolam nima qilyapti" bilmaydi | Churn → 1 o'quvchi yo'qolishi $300/yil |
-| Kim qiziqishini yo'qotyapti — bilinmaydi | 3 oy kech ko'riladi, qaytarish imkonsiz |
-| Mentorlar har xil sifatda o'qitadi | Brand yo'q, narx oshirib bo'lmaydi |
-| Kunlik hisobotlar — Excel + WhatsApp guruh | Direktor 4 soat / kun shu bilan band |
-
-### **Aslida muammo bitta: ma'lumot yo'q.**
-Ma'lumot yo'q joyda — boshqaruv yo'q. Boshqaruv yo'q joyda — biznes
-o'sa olmaydi.
-
----
-
-## Slayd 4 — Market Opportunity
-
-### Faqat O'zbekistonning o'zida:
-
-```
-TAM (Total Addressable Market)
-═══════════════════════════════════════════════
-~$1.2B  — yillik xususiy ingliz tili kursi xarajati
-~8M     — maktab yoshidagi bolalar
-~2.4M   — to'lov qiluvchi shahar oilalari
-
-SAM (Serviceable Available Market)
-═══════════════════════════════════════════════
-~$120M  — markaz tomonidan boshqariladigan qism
-~15,000 — faol ingliz tili markazlari (UZ)
-
-SOM (Serviceable Obtainable Market — 3 yil)
-═══════════════════════════════════════════════
-~$8M ARR — 1,500 markaz × $450/oy avg ARPU
-~10%     — bozor ulushi
-```
-
-### Kengaytirish bo'yicha:
-- **Tojikiston + Qirg'iziston**: +35% market
-- **Qozog'iston**: +180% market (kattaroq, lekin raqobat ham bor)
-- **Tatariston / Boshqirdiston (RF)**: o'xshash demografiya, post-2027
-
-> Total CIS English ed-tech opportunity: **~$4–5B yillik xarajat**, hozirda **<3%** SaaS yechim bilan qoplangan.
+1. **Bitta segmentda chuqur** > ko'p segmentda yuza.
+2. **Mahalliy realiyani** (Telegram, PDPL, naqd to'lov, tanish-bilish
+   sotuvi) chuqur bilamiz — chet davlat = noaniqlik.
+3. **Dars kontenti** har til/fan uchun alohida ishlanadi — ko'paytirish
+   resurs yeydi. Avval bitta product to'g'ri bo'lsin.
 
 ---
 
-## Slayd 5 — Solution
+## 2. Texnik Arxitektura
 
-### A'lochi — markaz egasi uchun yagona platforma:
+### Stack
 
-🤖 **AI o'qituvchi** (Google Gemini)
-   Har bola bilan shaxsiy suhbat. Mentor faqat qizil ro'yxat bilan ishlaydi.
-
-📷 **Kamera nazorati** (MediaPipe)
-   Bola haqiqatan o'qiyotganini real-vaqt tekshirish. PDPL muvofiq.
-
-📱 **Telegram parent bot**
-   Kunlik avtomatik hisobot. Ota-ona dashbord ochmaydi.
-
-📊 **Real-vaqt holat tizimi**
-   Yashil / Sariq / Qizil — kim e'tibor talab qilishini darhol ko'rasiz.
-
-🎯 **Adaptiv qiyinlik + sertifikatlar**
-   Bola darajasiga moslashadi. Tugatganda rasmiy QR-kodli sertifikat.
-
-🏢 **Multi-tenant arxitekturasi**
-   1 platforma, cheksiz markaz. Har biri o'z ma'lumoti, o'z brendi.
-
----
-
-## Slayd 6 — Product
-
-### Texnik ustun nuqtalarimiz (moats):
-
-#### 1. **Multi-modal AI integratsiyasi**
-- Gemini chat + Azure Speech + MediaPipe yuz aniqlash bitta lessonRunner ichida
-- Buni qurish 6+ oy texnik ish — raqib bizdan oldida kelolmaydi
-
-#### 2. **PDPL muvofiq arxitektura**
-- AES-256-GCM yuz vektor shifrlash
-- Audit log + multi-tenant isolation
-- Bu — boshqalar uchun "katta keyinchalik" muammosi, biz birinchi kundan to'g'ri tuzdik
-
-#### 3. **O'zbek-first UX**
-- Barcha xabarlar o'zbek tilida (Telegram bot ham)
-- Cyrillic + Latin keyboard support
-- O'zbek alfaviti bo'yicha sort, viloyat filtrlari
-- International rivallar bu darajada lokallashtirmagan
-
-#### 4. **6 ta rolga moslangan UI**
-- Filadmin / Manager / Mentor / Tester / Student / Parent
-- Har biri faqat o'zining vazifasi uchun ekran ko'radi
-- Generik LMS lar ham bir-ikki rolda yaxshi, hammasida emas
-
----
-
-## Slayd 7 — Business Model
-
-### **B2B SaaS** — markaz egasi har oy obuna to'laydi.
-
-| Paket | Oylik narx | Kim uchun | Gross Margin |
-|---|---|---|---|
-| **Starter** | $160 (2 mln so'm) | ≤50 o'quvchi, 1 filial | 78% |
-| **Pro** ⭐ | $400 (5 mln so'm) | ≤200 o'quvchi, 3 filial | 82% |
-| **Enterprise** | $800+ kelishuv | Cheksiz | 85% |
-
-### Qo'shimcha daromad oqimlari:
-- **Branded sertifikat dizayni** (custom): bir martalik $200
-- **Custom domain + branding**: +$50/oy
-- **WhatsApp bot integratsiyasi** (Phase 28): +$30/oy
-- **Markaz franchayzing** (Phase 30): markaz egasiga revshare
-
-### Avg blended ARPU: **~$450/markaz/oy** (60% Pro paketda)
-
----
-
-## Slayd 8 — Unit Economics
-
-### Sog'lom va kapital-samarali model:
-
-```
-ARPU (avg)                       $450/oy   ($5,400/yil)
-COGS (server + AI quotalar)      $80/oy    (~18%)
-Gross Profit                     $370/oy   (82% margin)
-
-CAC (founder-led + referral)     $200      (1-shi 100 ta mijoz)
-CAC (scaled — sales rep)         $500      (next 1000 mijoz)
-
-Avg customer lifetime            24 oy     (target churn: 4%/oy)
-LTV                              $8,880    ($370 × 24)
-
-LTV / CAC ratio                  44×       (founder-led)
-                                 17×       (scaled)
-Payback period                   <1 oy     (founder-led)
-                                 1.4 oy    (scaled)
-```
-
-### Krasiv emas — bu **B2B SaaS Holy Grail** zonasi.
-> SaaS benchmark: LTV/CAC > 3× — yaxshi, > 5× — ajoyib.
-> A'lochi 17–44× — chunki markaz egasi mahalliy, sodiq, va tashlash xarajati yuqori.
-
----
-
-## Slayd 9 — Traction (early signal)
-
-### Hozirgi holat (2026 Q2):
-
-✅ **MVP to'liq ishchi** — 38 ta migration, 411 ta test yashil
-✅ **Production-ready** — DEPLOYMENT.md to'liq, CI gates yashil
-✅ **Pilot mijoz** — Buxoro, G'ijduvon (founder o'z markazi)
-✅ **Public landing** — alochi.com live, demo so'rovlar kelyapti
-
-### Go-To-Market signali:
-- 12 demo so'rovi (organik, marketingsiz)
-- 3 ta markaz oldindan obuna so'ragan
-- 2 ta viloyat ta'lim bo'limi pilot taklif qilgan
-
-### Keyingi 6 oylik maqsadlar (raise olganda):
-- 50 ta to'lovchi markaz
-- $20K MRR
-- 4,000+ faol o'quvchi
-- 2 ta viloyat hokimiyati bilan rasmiy hamkorlik
-
----
-
-## Slayd 10 — Go-To-Market
-
-### Daromadli o'sish — 3 bosqichli strategiya:
-
-#### **0–6 oy: Founder-led (Buxoro + Toshkent)**
-- 1 ta asoschi to'g'ridan-to'g'ri markazlarga sotadi
-- Dovon: viloyat ta'lim bo'limi konferentsiyalari
-- 50 ta mijoz, $200/CAC, $20K MRR
-
-#### **6–18 oy: Sales rep'lar + referral (Barcha viloyatlar)**
-- 3 ta hududiy sotuvchi (Samarqand, Andijon, Farg'ona)
-- Referral bonus: yangi mijoz uchun 1 oy bepul
-- 500 ta mijoz, $400/CAC, $200K MRR
-
-#### **18–36 oy: Inbound + paid + CIS expansion**
-- SEO / TikTok / Telegram'da brand
-- Tojikiston + Qirg'izistonga kengaytirish
-- 1,500+ mijoz, $5M+ ARR
-
-### Distribution kanallari:
-1. ✅ **Direct sales** (founder + reps)
-2. ✅ **Telegram kanal marketing** (parent network)
-3. 🔄 **Govtech tenders** (e-Maktab integratsiyasi)
-4. 🔄 **Influencer partner** (yetakchi mentorlar / o'qituvchilar)
-
----
-
-## Slayd 11 — Competition
-
-### Bizning bozorda 4 turdagi raqib bor:
-
-| Turdagi | Misol | Bizdan farqi |
+| Qatlam | Texnologiya | Sabab |
 |---|---|---|
-| 🌍 **Global B2C** | Duolingo, Cambly | B2C yo'naltirilgan, markaz uchun emas. Markaz egasi pul ishlamaydi. |
-| 🇷🇺 **CIS LMS** | GetCourse, AntiTreningi | Generik LMS. Yuz aniqlash + AI suhbat yo'q. Lokallashtirilmagan. |
-| 🇺🇿 **Local informal** | Excel + WhatsApp | "Hech narsa" — bizning **asosiy raqibimiz** real bo'lib. |
-| 🏫 **Big-tech ed-tech** | Google Classroom | Hech qaysi markazga moslashtirilgan emas. Daromad modeli yo'q. |
+| **Frontend (web)** | Next.js 15 (App Router) + React 18 + Tailwind | SEO landing + dashboard bir codebase'da. PWA fallback offline. |
+| **Backend (API)** | NestJS 10 + Prisma 5 | RBAC + DI + tenant isolation oson. |
+| **DB (asosiy)** | PostgreSQL 14+ | Tranzaktsional. Prisma migration. pgvector (Face ID). |
+| **DB (analytics)** | ClickHouse | Million+ event uchun aggregatsiya. |
+| **Cache** | Redis | Session, rate limit, hot data. |
+| **AI Tutor** | Google Gemini 2.5 Flash | Narx/sifat balansi. Uzbek til yaxshi. |
+| **Speech** | Azure Speech | Talaffuz baholash. |
+| **Face ID** | MediaPipe (frontend) + face-api.js | 128-dim vector — surat saqlanmaydi. |
+| **Bot** | Telegram (grammY) | Ota-ona kanali — O'zbekistonda Telegram = standart. |
+| **Auth** | JWT + bcrypt + refresh token rotation | Klassik. Stateless. |
+| **Multi-tenant** | Tenant ID stunlari + RBAC guard | Har tenant izolyatsiya. |
 
-### **Hech kim biz qilayotganini qilmayapti**:
-- 🇺🇿 O'zbek-first UX
-- 🤖 Multi-modal AI (chat + speech + face)
-- 🏢 Markaz egasi uchun shipped product
-- 🚦 Real-vaqt holat tizimi
-- 📱 Ota-ona Telegram avtomatlashtirish
+### Rollar (RBAC)
 
----
+6 rol, har birining alohida UI va ruxsatlar to'plami:
 
-## Slayd 12 — Roadmap
+1. **Superadmin** — platforma egasi (ya'ni Javohir). Tenantlar, darslar, ML.
+2. **Filadmin** — markaz direktori. Xodim, to'lov, ogohlantirish.
+3. **Manager** — qizil/sariq o'quvchilarga e'tibor. KPI bo'yicha mukofotlanadi.
+4. **Mentor** — guruh bilan kunlik aloqa. Status berish, AI xato tahlili.
+5. **Tester** — imtihon nazorati va texnik yordam.
+6. **O'quvchi** — yo'l xaritasi, AI suhbat, do'stlar bilan duel.
 
-### 18-oylik harakat reja:
+### Asosiy domen modellari
 
-**Q2 2026** (hozir — Pre-Seed olingach)
-- ✅ MVP production
-- 🎯 50 ta to'lovchi markaz
-- 🎯 Mobil PWA optimizatsiya
+- `Tenant` (markaz) → `Branch` (filial) → `Group` (guruh) → `User` (o'quvchi/xodim)
+- `Lesson` → `LessonComponent` (video/MCQ/word-order/pronunciation)
+- `StudentProgress` (har dars uchun)
+- `Status` (yashil/sariq/qizil — 3 vertikal: ingliz/shaxsiy/tanqidiy)
+- `Attendance` (o'quvchi va xodim)
+- `Warning` (3 ta = blok)
+- `TenantSubscription` (manual to'lov tracking)
 
-**Q3 2026** ($20K MRR'ga yetganda)
-- 🎯 Mobil ilova (Native iOS/Android)
-- 🎯 Voice-AI suhbat (real-time STT)
-- 🎯 Markaz franchayzing dashboard
+### Quality bar
 
-**Q4 2026** ($50K MRR — Seed Round trigger)
-- 🎯 Ona tili + Matematika fanlari
-- 🎯 Tojikiston pilot (5 ta markaz)
-- 🎯 ML churn prediction (3 oy oldin)
+Har PR oldidan o'tishi shart:
+- `tsc --noEmit` (api + web)
+- `eslint` (api + web)
+- `jest` (api unit + integration)
+- `nest build` + `next build`
 
-**Q1 2027** ($100K MRR — Seed Round close)
-- 🎯 e-Maktab API integratsiyasi
-- 🎯 Qirg'iziston + Qozog'iston pilot
-- 🎯 Series A material (12 oy ichida)
-
----
-
-## Slayd 13 — Team
-
-### Yetakchi va kelajakdagi xodimlar:
-
-#### **Javohir Uchqun ugli** — Founder & CEO/CTO
-- 6+ yil software muhandislik (full-stack)
-- O'zbekistonda 10+ commercial loyiha
-- A'lochi'ning butun MVP'sini bir o'zi qurib chiqdi
-- Hudud bilimi: Buxoro, G'ijduvon — birinchi mijozlarning markazi
-- ✈ t.me/Javohir_UH
-
-### Pre-Seed olingach 6 oyda yollanadi:
-- **Head of Sales** ($1.5K/oy, ekvivalentidan ulush) — UZ regional
-- **Customer Success** ($1K/oy) — onboarding va support
-- **Mid-level engineer** ($2K/oy) — mobil ilova + integratsiyalar
-
-### Advisorlar (jalb qilish ustida):
-- IT Park Uzbekistan founder networki
-- 2 ta amaldagi English center direktori (mijoz tomonidan tasdiqlash)
-- 1 ta CIS ed-tech VC (raise uchun network)
+PR fayl o'zgartirgan bo'lsa — gate ishlamasa merge yo'q.
 
 ---
 
-## Slayd 14 — The Ask
+## 3. Roadmap (Faza 1-4)
 
-# **$300K Pre-Seed**
-### SAFE (Y Combinator standard) — $3M post-money valuation cap
+> Bu — original A'lochi spec ([2026-04-23-alochi-platform-design.md](docs/superpowers/specs/2026-04-23-alochi-platform-design.md)) bo'yicha.
+> Global push fazalari (i18n, Stripe, 2FA, multi-country) archive'ga
+> ko'chirildi: [docs/superpowers/.archive/global-push/](docs/superpowers/.archive/global-push/).
 
-### Mablag'ning taqsimoti (18 oy):
+### Faza 1 — MVP (4 oy)
 
-```
-$120K  ──  Engineering team        (40%)  2 ta mid-level dev
-                                          mobil ilova + integratsiyalar
-$90K   ──  Sales & marketing       (30%)  3 hududiy sales rep
-                                          Telegram + Google Ads
-$45K   ──  Founder salary          (15%)  $2.5K/oy (subsidiyalashtirish)
-$30K   ──  Customer success        (10%)  1 ta CS rep + tooling
-$15K   ──  Infra & legal           (5%)   AWS, Sentry, kompliyans
-```
+Asosiy platforma. AI va kamera holati hali yoqilmagan.
 
-### Bu raise bilan 18 oyda erishadigan natijalar:
-- **500 to'lovchi markaz** (10× hozirgi pipeline)
-- **$200K MRR** ($2.4M ARR)
-- **2 ta viloyat hokimiyati** rasmiy hamkorlik
-- **Series A material** — to'g'ri unit economics + retention metrics
+- Auth + RBAC (6 rol)
+- Superadmin: dars boshqaruvi (video + MCQ + word-order)
+- O'quvchi dars jarayoni (video + test)
+- Mentor/Manager/Filadmin/Tester panellari
+- Status (yashil/sariq/qizil — qo'lda)
+- Davomat (o'quvchi + xodim)
+- KPI tizimi
+- Ogohlantirish + to'lov bloklash (cron)
+- Vazifa tizimi
+- Delegatsiya audit (vakolatlar vaqtinchalik berish)
 
----
+**Status:** ✅ Bajarildi.
 
-## Slayd 15 — 5-Year Forecast
+### Faza 2 — AI va muloqot (4 oy)
 
-### Konservativ proyeksiya (oddiy o'sish — agressiv emas):
+- AI Tutor (Google Gemini Q&A)
+- Azure Speech (talaffuz baholash)
+- MediaPipe kamera nazorati
+- Telegram bot (ota-ona + xodim + o'quvchi)
+- Gamifikatsiya (XP, streak, virtual shahar, daily quests)
+- Sertifikat ekotizimi (QR kodli PDF/PNG)
+- Face ID avtomatik davomat (face-api.js + pgvector)
 
-| Yil | Markazlar | ARR | Gross Profit | Headcount |
-|---|---|---|---|---|
-| **2026** | 50 | $270K | $220K | 2 |
-| **2027** | 500 | $2.7M | $2.2M | 12 |
-| **2028** | 1,500 | $8.1M | $6.6M | 35 |
-| **2029** | 3,500 | $19M | $15.5M | 75 |
-| **2030** | 6,000 | $32M | $26M | 130 |
+**Status:** ✅ Bajarildi.
 
-### **2030'da: $32M ARR, 6,000 markaz, 4 davlat.**
+### Faza 3 — Intellektual va ijtimoiy tizim (3 oy)
 
-> 5 yilda 100× — chunki sotmagan bozorimizning 0.5%'igagina yetib boramiz.
+- Adaptiv o'qitish (spaced repetition + qiyinlik moslashishi)
+- Bashoratli tahlil (churn prediction)
+- Kontent sifat nazorati (A/B test, alertlar)
+- Ijtimoiy funksiyalar (do'stlar, duel 1v1, guruh challenge, chat)
+- Turnirlar va milliy olimpiada
+- ClickHouse analytics
 
----
+**Status:** ✅ Bajarildi.
 
-## Slayd 16 — Why now?
+### Faza 4 — Scale va SaaS (2 oy)
 
-### **Hozirgi vaqt — perfect entry point. 5 yil kechiksak — kech.**
+- Multi-tenant onboarding (yangi markazlar uchun)
+- PWA (offline rejim)
+- AI Lesson Generator (Phase 14 — filadmin mavzu kiritadi, AI dars yaratadi)
+- ML model yangilash avtomatlashtirish
+- Tenant onboarding flow
 
-🌐 **AI revolyutsiyasi** — Gemini / Claude API'lar so'nggi 18 oyda
-yetarli arzon va kuchli bo'ldi. 2 yil oldin imkonsiz edi.
+**Status:** ✅ Bajarildi.
 
-📱 **Smartfon penetratsiyasi UZ'da 92%+** — har bir ota-onaning
-qo'lida Telegram bor. WhatsApp emas, Telegram — bizning afzalligimiz.
+### Faza 5+ — Kelajak
 
-🎓 **Davlat siyosati** — 2030 strategiyasi: "Ingliz tili 100%
-maktabda" — shu yo'lda markaz infrastrukturasiga investisiya
-oshmoqda.
+> Bu yerda **siz** yangi ehtiyojni topib qarorga kelasiz. Bo'sh ro'yxat
+> emas — strategik fursatlar:
 
-💰 **Disposable income o'sishi** — UZ middle class so'nggi 5 yilda
-2× kengaydi. Xususiy ta'limga sarflanadigan budjet yiliga 18% o'sadi.
-
-🏢 **Raqobat hali ko'tarilmagan** — bizning niche'da haqiqiy
-SaaS player yo'q. 2-3 yildan keyin Duolingo / Cambly bu bozorga
-keladi. **Hozir kirib brand qurmasak — kech bo'ladi.**
-
----
-
-## Slayd 17 — Closing
-
-# **A'lochi — Markaziy Osiyoning Toolingu.**
-
-Faqat ingliz tili emas. Faqat O'zbekiston emas. Faqat ed-tech emas.
-
-Bizning kelajak — har bir CIS davlatidagi har bir o'quv markazi
-A'lochi infratuzilmasida ishlayotgan dunyo.
-
-> Bu tasodif tuzilmagan. Biz 6+ oy qurdik, bozorni o'rgandik,
-> birinchi mijozlarni topdik. Endi **kapital + odam** bilan tezroq
-> harakatlanish kerak.
+- **Real markaz pilot** — 1-3 markazda 3 oylik chuqur sinov.
+- **Case study to'plash** — pitch deck'dagi placeholder'larni real
+  raqam bilan to'ldirish.
+- **Sotuv jarayoni avtomatlash** — landing → demo → onboarding flow.
+- **Yangi vertical** — Matematika yoki Ona tili (mavzu/dars
+  generatsiyasi A'lochi infrastrukturasidan foyda olishi mumkin).
 
 ---
 
-📞 **Demo + financial deep-dive uchun:**
-✉ javohir.uh@gmail.com
-✈ t.me/Javohir_UH
-🌐 alochi.com
+## 4. Risklar
 
-> *"Lokal infratuzilma. Global standart. O'zbekistonda yaratilgan."*
+### Texnik
+
+| Risk | Ehtimol | Ta'siri | Mitigation |
+|---|---|---|---|
+| AI provayder narx oshishi (Gemini) | O'rta | O'rta | Anthropic Claude / OpenAI fallback. Token cache. |
+| ClickHouse muvaffaqiyatsizligi | Past | Yuqori | Daily backup. PostgreSQL'da kritik metriklar dublikat. |
+| Face ID ishlamasligi (kameraning) | O'rta | Past | Fallback: qo'lda davomat. |
+| PDPL talab o'zgarishi | O'rta | Yuqori | Yuz vektor — invertible emas. Encrypted at rest. Auditga tayyor. |
+
+### Biznes
+
+| Risk | Ehtimol | Ta'siri | Mitigation |
+|---|---|---|---|
+| Markaz egasi tushunmaydi | Yuqori | Yuqori | 14-kun bepul demo. Onboarding ga jonli yordam. |
+| Yangi raqobatchi paydo bo'lishi | O'rta | O'rta | Mahalliy moslashish (Telegram, PDPL, til). Switching cost. |
+| Maktab o'qituvchilari sotib olishni to'sadi | O'rta | O'rta | Markazlar bilan to'g'ridan-to'g'ri ishlash, maktab emas. |
+| Trial → conversion past | Yuqori | Yuqori | Onboarding sifatini doimiy o'lchash. KPI: 14-kun trial → to'lov. |
+
+### Asoschi
+
+| Risk | Mitigation |
+|---|---|
+| Single point of failure (Javohir) | Kritik bilim docslarda. CLAUDE.md, spec/plan/.archive/. |
+| Buyurtma overload | Quality bar — phase commit'lar. CI/CD avtomatlashtirilgan. |
+| Burnout | YAGNI prinsipi. Phase 5+ aniq belgilanmagan — kerak bo'lganda qaror. |
+
+---
+
+## 5. Jamoa va resurslar
+
+### Hozirgi jamoa
+
+- **Javohir Uchqun ugli** — asoschisi va yagona muhandis.
+  - 6+ yil software development.
+  - Buxoro, O'zbekiston.
+  - Aloqa: t.me/Javohir_UH · javohir.uh@gmail.com
+
+### Texnologik infratuzilma
+
+- Production: bulutda (provider tanlanadi — Hetzner / DigitalOcean / Yandex Cloud).
+- Domain: alochi.com (planning) + tenant subdomainlar (`abc.alochi.com`).
+- Kod: GitHub (private repo).
+- Issue tracking: GitHub Issues.
+- Secrets: `.env.example` shablon, prod secretlar Vault/SSM.
+
+---
+
+## 6. Qarorlar tarixi
+
+> Strategik qarorlar bu yerda yoziladi — yangi a'zoga "nega bunaqa qilingan?"
+> savoliga to'g'ridan-to'g'ri javob.
+
+### 2026-05-06 — "Dunyo darajasi" g'oyasini qaytarish
+
+**Holat:** Loyiha "Adouptivo / multi-country / multi-language / Stripe / 2FA"
+yo'liga kirgan edi. Yarmidan to'xtatdik.
+
+**Sabab:** Kuchli MVP > yarim-tugallangan global. Mahalliy bozorni chuqur
+bilamiz, chet bozorni esa noaniqlik. Resource (vaqt, e'tibor) cheklangan.
+
+**Qaror:** Hammasi A'lochi MVP'ga qaytarildi. Bu 7 ta phase'lik
+revert: 2FA, Stripe, i18n, brand rename, archive. Reja:
+[docs/superpowers/plans/2026-05-06-revert-to-alochi-mvp.md](docs/superpowers/plans/2026-05-06-revert-to-alochi-mvp.md).
+
+**Ta'sir:** ~250 fayl o'zgardi, 3 schema migration rollback (0049, 0050, 0051),
+3 dependency olib tashlandi (`next-intl`, `stripe`, `otplib`). Test/build
+gates 411 PASS.
+
+**Saqlandi:** AI Tutor, Azure Speech, MediaPipe, Telegram bot, gamification,
+Face ID, social, adaptive, churn prediction, ClickHouse, PWA, AI Lesson
+Generator (Phase 14), tenant onboarding, manual to'lov, performance indexes
+(0047).
+
+### Kelajak qarorlar
+
+> Bu yerga davom ettirib turing.
+
+---
+
+## 7. Aloqa va resurslar
+
+- **Asosiy spec:** [2026-04-23-alochi-platform-design.md](docs/superpowers/specs/2026-04-23-alochi-platform-design.md)
+- **README:** [README.md](README.md)
+- **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)
+- **User guide:** [USER_GUIDE.md](USER_GUIDE.md)
+- **Roadmap:** [ROADMAP.md](ROADMAP.md)
+- **Customer pitch:** [PITCH_DECK.md](PITCH_DECK.md)
+- **Specs/plans:** [docs/superpowers/specs/](docs/superpowers/specs/) · [docs/superpowers/plans/](docs/superpowers/plans/)
+- **Archived (global push):** [docs/superpowers/.archive/global-push/](docs/superpowers/.archive/global-push/)
+
+---
+
+> *Hujjat tirik. O'zgarishlar aniq sababsiz qabul qilinmaydi —
+> "Qarorlar tarixi" bo'limiga yozib qoldiring.*
