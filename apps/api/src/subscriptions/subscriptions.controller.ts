@@ -1,12 +1,15 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
   Request,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -19,7 +22,10 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubscriptionsController {
-  constructor(private readonly svc: SubscriptionsService) {}
+  constructor(
+    private readonly svc: SubscriptionsService,
+    private readonly config: ConfigService,
+  ) {}
 
   /**
    * GET /subscriptions/me
@@ -29,6 +35,43 @@ export class SubscriptionsController {
   @Roles(UserRole.superadmin, UserRole.filadmin)
   getMe(@Request() req: any) {
     return this.svc.getForTenant(req.user.tenantId);
+  }
+
+  /**
+   * POST /subscriptions/checkout
+   * Filadmin initiates a Stripe Checkout session for their tenant.
+   * Returns { url } — frontend redirects window.location.href to it.
+   */
+  @Post('checkout')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  async checkout(
+    @Body('plan') plan: string,
+    @Request() req: any,
+  ) {
+    if (!['starter', 'pro', 'enterprise'].includes(plan)) {
+      throw new BadRequestException('Invalid plan. Must be starter, pro, or enterprise.');
+    }
+    const returnBaseUrl =
+      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ?? 'http://localhost:3000';
+    const url = await this.svc.createCheckoutSession(
+      req.user.tenantId,
+      plan as 'starter' | 'pro' | 'enterprise',
+      returnBaseUrl,
+    );
+    return { url };
+  }
+
+  /**
+   * POST /subscriptions/portal
+   * Returns a Stripe Customer Portal URL for plan management.
+   */
+  @Post('portal')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  async portal(@Request() req: any) {
+    const returnBaseUrl =
+      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ?? 'http://localhost:3000';
+    const url = await this.svc.createPortalSession(req.user.tenantId, returnBaseUrl);
+    return { url };
   }
 
   /**
