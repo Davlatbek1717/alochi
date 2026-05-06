@@ -24,7 +24,7 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async login(dto: LoginDto, tenantSlug?: string, locale = 'uz') {
+  async login(dto: LoginDto, tenantSlug?: string) {
     // Resolution rules:
     //   - If the caller passed an x-tenant-slug header, scope the lookup
     //     to that tenant and accept any role (mentor / manager / student
@@ -58,25 +58,21 @@ export class AuthService {
         if (matches.length === 1) {
           user = matches[0];
         } else if (matches.length > 1) {
-          throw new UnauthorizedException(
-            this.i18n.t('multiple_tenants', locale),
-          );
+          throw new UnauthorizedException(this.i18n.t('multiple_tenants'));
         }
       }
     }
 
-    if (!user)
-      throw new UnauthorizedException(this.i18n.t('login_failed', locale));
+    if (!user) throw new UnauthorizedException(this.i18n.t('login_failed'));
     if (user.status === UserStatus.blocked_warning)
-      throw new UnauthorizedException(this.i18n.t('blocked_warning', locale));
+      throw new UnauthorizedException(this.i18n.t('blocked_warning'));
     if (user.status === UserStatus.blocked_payment)
-      throw new UnauthorizedException(this.i18n.t('blocked_payment', locale));
+      throw new UnauthorizedException(this.i18n.t('blocked_payment'));
     if (user.status !== UserStatus.active)
-      throw new UnauthorizedException(this.i18n.t('profile_blocked', locale));
+      throw new UnauthorizedException(this.i18n.t('profile_blocked'));
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!match)
-      throw new UnauthorizedException(this.i18n.t('login_failed', locale));
+    if (!match) throw new UnauthorizedException(this.i18n.t('login_failed'));
 
     const payload = {
       sub: user.id,
