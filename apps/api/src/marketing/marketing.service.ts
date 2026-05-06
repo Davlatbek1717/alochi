@@ -38,7 +38,11 @@ export class MarketingService {
     return val ?? null;
   }
 
-  private async cacheSet(key: string, value: unknown, ttlMs: number): Promise<void> {
+  private async cacheSet(
+    key: string,
+    value: unknown,
+    ttlMs: number,
+  ): Promise<void> {
     await this.cache.set(key, value, ttlMs).catch(() => undefined);
   }
 
@@ -271,7 +275,7 @@ export class MarketingService {
   // strings or JSON strings (the consumer parses where needed).
   private static DEFAULT_SETTINGS: Record<string, string> = {
     'hero.badge': "Premium Ta'lim Platformasi",
-    'hero.title': "ADOUPTIVO",
+    'hero.title': 'ADOUPTIVO',
     'hero.tagline': 'revolyutsiya',
     'hero.subtitle':
       "3-7 sinf o'quvchilari uchun zamonaviy ta'lim platformasi — AI suhbatlar, kamera nazorati va ota-onalar uchun Telegram hisobotlar.",

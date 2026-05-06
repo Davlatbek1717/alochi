@@ -69,7 +69,13 @@ export class GamificationController {
   @Put('certificate-levels')
   @Roles(UserRole.superadmin)
   saveCertLevels(
-    @Body() body: { bronze?: number; silver?: number; gold?: number; diamond?: number },
+    @Body()
+    body: {
+      bronze?: number;
+      silver?: number;
+      gold?: number;
+      diamond?: number;
+    },
   ) {
     return this.certificates.saveLevels(body);
   }

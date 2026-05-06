@@ -21,9 +21,12 @@ export class WebhooksController {
     private readonly subs: SubscriptionsService,
     private readonly config: ConfigService,
   ) {
-    this.stripe = new Stripe(this.config.get<string>('STRIPE_SECRET_KEY') ?? '', {
-      apiVersion: '2026-04-22.dahlia',
-    });
+    this.stripe = new Stripe(
+      this.config.get<string>('STRIPE_SECRET_KEY') ?? '',
+      {
+        apiVersion: '2026-04-22.dahlia',
+      },
+    );
   }
 
   /**
@@ -54,7 +57,9 @@ export class WebhooksController {
         webhookSecret ?? '',
       );
     } catch (err) {
-      this.logger.warn(`stripe.webhook.signature_invalid: ${(err as Error).message}`);
+      this.logger.warn(
+        `stripe.webhook.signature_invalid: ${(err as Error).message}`,
+      );
       throw new BadRequestException(
         `Webhook signature verification failed: ${(err as Error).message}`,
       );
@@ -89,14 +94,24 @@ export class WebhooksController {
 
         const tenantId = sub.metadata?.tenantId;
         if (!tenantId) {
-          this.logger.warn('stripe.webhook: no tenantId in subscription metadata');
+          this.logger.warn(
+            'stripe.webhook: no tenantId in subscription metadata',
+          );
           return;
         }
 
         const priceKey = sub.items.data[0]?.price.lookup_key ?? 'starter';
         const periodEnd = new Date((sub.current_period_end ?? 0) * 1000);
-        await this.subs.activate(tenantId, priceKey, 'stripe', periodEnd, sub.id);
-        this.logger.log(`stripe.webhook: activated tenant=${tenantId} plan=${priceKey}`);
+        await this.subs.activate(
+          tenantId,
+          priceKey,
+          'stripe',
+          periodEnd,
+          sub.id,
+        );
+        this.logger.log(
+          `stripe.webhook: activated tenant=${tenantId} plan=${priceKey}`,
+        );
         break;
       }
 
@@ -160,7 +175,10 @@ export class WebhooksController {
   @Post('payme')
   @HttpCode(200)
   async paymeWebhook() {
-    return { result: null, error: { code: -32300, message: 'Not available yet' } };
+    return {
+      result: null,
+      error: { code: -32300, message: 'Not available yet' },
+    };
   }
 
   // Click integration deferred — merchant account not yet configured (Phase 7c).

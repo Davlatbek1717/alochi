@@ -2,7 +2,11 @@ import { LessonsService } from '../src/lessons/lessons.service';
 import { translateError } from '../src/i18n/errors';
 
 const mockI18n = { t: (key: string) => translateError(key as any) };
-const mockCache = { get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
+const mockCache = {
+  get: jest.fn().mockResolvedValue(undefined),
+  set: jest.fn().mockResolvedValue(undefined),
+  del: jest.fn().mockResolvedValue(undefined),
+};
 
 describe('LessonsService', () => {
   const mockPrisma = {
@@ -20,7 +24,11 @@ describe('LessonsService', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  const service = new LessonsService(mockPrisma as any, mockI18n as any, mockCache as any);
+  const service = new LessonsService(
+    mockPrisma as any,
+    mockI18n as any,
+    mockCache as any,
+  );
 
   it('creates a lesson', async () => {
     const result = await service.create(

@@ -63,8 +63,7 @@ export class StatusService {
         ])
       : null;
 
-    const autoGreen =
-      dto.color === 'yashil' && previousCritical !== 'yashil';
+    const autoGreen = dto.color === 'yashil' && previousCritical !== 'yashil';
 
     const result = await this.prisma.studentStatus.upsert({
       where: { studentId_date: { studentId: dto.studentId, date: dateObj } },

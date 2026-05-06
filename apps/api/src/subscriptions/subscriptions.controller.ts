@@ -44,15 +44,15 @@ export class SubscriptionsController {
    */
   @Post('checkout')
   @Roles(UserRole.filadmin, UserRole.superadmin)
-  async checkout(
-    @Body('plan') plan: string,
-    @Request() req: any,
-  ) {
+  async checkout(@Body('plan') plan: string, @Request() req: any) {
     if (!['starter', 'pro', 'enterprise'].includes(plan)) {
-      throw new BadRequestException('Invalid plan. Must be starter, pro, or enterprise.');
+      throw new BadRequestException(
+        'Invalid plan. Must be starter, pro, or enterprise.',
+      );
     }
     const returnBaseUrl =
-      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ?? 'http://localhost:3000';
+      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ??
+      'http://localhost:3000';
     const url = await this.svc.createCheckoutSession(
       req.user.tenantId,
       plan as 'starter' | 'pro' | 'enterprise',
@@ -69,8 +69,12 @@ export class SubscriptionsController {
   @Roles(UserRole.filadmin, UserRole.superadmin)
   async portal(@Request() req: any) {
     const returnBaseUrl =
-      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ?? 'http://localhost:3000';
-    const url = await this.svc.createPortalSession(req.user.tenantId, returnBaseUrl);
+      this.config.get<string>('NEXT_PUBLIC_FRONTEND_URL') ??
+      'http://localhost:3000';
+    const url = await this.svc.createPortalSession(
+      req.user.tenantId,
+      returnBaseUrl,
+    );
     return { url };
   }
 

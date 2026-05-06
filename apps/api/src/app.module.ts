@@ -80,13 +80,13 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60_000,  // 1 minute window
-        limit: 120,   // 120 req/min per IP (generous for SaaS dashboard)
+        ttl: 60_000, // 1 minute window
+        limit: 120, // 120 req/min per IP (generous for SaaS dashboard)
       },
       {
         name: 'auth',
         ttl: 60_000,
-        limit: 10,    // 10 attempts/min for login/register
+        limit: 10, // 10 attempts/min for login/register
       },
     ]),
     LoggerModule.forRoot(loggerConfig),

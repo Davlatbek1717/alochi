@@ -50,7 +50,11 @@ export class TotpService {
   /** Verify a 6-digit TOTP token against the (already decrypted) secret. */
   verifyToken(token: string, decryptedSecret: string): boolean {
     try {
-      const result: unknown = otpVerifySync({ token, secret: decryptedSecret, strategy: 'totp' });
+      const result: unknown = otpVerifySync({
+        token,
+        secret: decryptedSecret,
+        strategy: 'totp',
+      });
       // VerifyResult can be {delta: number} (valid) or false (invalid)
       return result !== false && result !== null && result !== undefined;
     } catch {

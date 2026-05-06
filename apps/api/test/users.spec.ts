@@ -31,7 +31,11 @@ describe('UsersService', () => {
     mockPrisma.user.create.mockResolvedValue({ id: 'uuid', role: 'mentor' });
 
     const mockEvents = { emit: jest.fn() };
-    const service = new UsersService(mockPrisma as any, mockEvents as any, mockI18n as any);
+    const service = new UsersService(
+      mockPrisma as any,
+      mockEvents as any,
+      mockI18n as any,
+    );
     await service.create({
       tenantId: 'tenant-id',
       branchId: 'branch-id',
@@ -53,7 +57,11 @@ describe('UsersService', () => {
     mockPrisma.user.findFirst.mockResolvedValue({ id: 'existing' });
 
     const mockEvents = { emit: jest.fn() };
-    const service = new UsersService(mockPrisma as any, mockEvents as any, mockI18n as any);
+    const service = new UsersService(
+      mockPrisma as any,
+      mockEvents as any,
+      mockI18n as any,
+    );
     await expect(
       service.create({
         tenantId: 'tenant-id',
@@ -191,7 +199,11 @@ describe('UsersService', () => {
       });
       mockPrisma.user.update.mockResolvedValue({ id: 'u1', status: 'active' });
       const events = { emit: jest.fn() };
-      const service = new UsersService(mockPrisma as any, events as any, mockI18n as any);
+      const service = new UsersService(
+        mockPrisma as any,
+        events as any,
+        mockI18n as any,
+      );
 
       const res = await service.unblock('u1', 't1', 'admin1', 'Mistake');
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -219,7 +231,11 @@ describe('UsersService', () => {
         status: 'active',
       });
       const events = { emit: jest.fn() };
-      const service = new UsersService(mockPrisma as any, events as any, mockI18n as any);
+      const service = new UsersService(
+        mockPrisma as any,
+        events as any,
+        mockI18n as any,
+      );
 
       await service.unblock('u1', 't1', 'admin1');
       expect(mockPrisma.user.update).not.toHaveBeenCalled();

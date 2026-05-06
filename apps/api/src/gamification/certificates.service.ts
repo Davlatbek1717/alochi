@@ -14,25 +14,25 @@ export interface CertLevel {
 // Defaults — used when no SiteSetting override is present.
 // Stored in descending order so `find()` picks the highest eligible level.
 const DEFAULT_CERT_LEVELS: CertLevel[] = [
-  { level: 'diamond', minLessons: 500, label: "Olmos Adouptivo", emoji: '💎' },
-  { level: 'gold',    minLessons: 250, label: "Oltin Adouptivo",  emoji: '🥇' },
-  { level: 'silver',  minLessons: 100, label: "Kumush Adouptivo", emoji: '🥈' },
-  { level: 'bronze',  minLessons: 50,  label: "Bronza Adouptivo", emoji: '🥉' },
+  { level: 'diamond', minLessons: 500, label: 'Olmos Adouptivo', emoji: '💎' },
+  { level: 'gold', minLessons: 250, label: 'Oltin Adouptivo', emoji: '🥇' },
+  { level: 'silver', minLessons: 100, label: 'Kumush Adouptivo', emoji: '🥈' },
+  { level: 'bronze', minLessons: 50, label: 'Bronza Adouptivo', emoji: '🥉' },
 ];
 
 // SiteSetting keys where superadmin can override the thresholds.
 const LEVEL_SETTING_KEYS: Record<CertLevel['level'], string> = {
-  bronze:  'cert.bronze.minLessons',
-  silver:  'cert.silver.minLessons',
-  gold:    'cert.gold.minLessons',
+  bronze: 'cert.bronze.minLessons',
+  silver: 'cert.silver.minLessons',
+  gold: 'cert.gold.minLessons',
   diamond: 'cert.diamond.minLessons',
 };
 
 const CERT_NAMES: Record<string, string> = {
-  bronze:  "🥉 Bronze Adouptivo",
-  silver:  "🥈 Silver Adouptivo",
-  gold:    "🥇 Gold Adouptivo",
-  diamond: "💎 Diamond Adouptivo",
+  bronze: '🥉 Bronze Adouptivo',
+  silver: '🥈 Silver Adouptivo',
+  gold: '🥇 Gold Adouptivo',
+  diamond: '💎 Diamond Adouptivo',
 };
 
 @Injectable()
@@ -207,16 +207,16 @@ export class CertificatesService {
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
     const levelLabels: Record<string, string> = {
-      bronze: "🥉 Bronze Adouptivo",
-      silver: "🥈 Silver Adouptivo",
-      gold: "🥇 Gold Adouptivo",
-      diamond: "💎 Diamond Adouptivo",
+      bronze: '🥉 Bronze Adouptivo',
+      silver: '🥈 Silver Adouptivo',
+      gold: '🥇 Gold Adouptivo',
+      diamond: '💎 Diamond Adouptivo',
     };
 
     doc
       .fontSize(36)
       .font('Helvetica-Bold')
-      .text("ADOUPTIVO SERTIFIKATI", { align: 'center' });
+      .text('ADOUPTIVO SERTIFIKATI', { align: 'center' });
 
     doc.moveDown();
     doc

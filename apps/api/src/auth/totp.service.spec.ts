@@ -3,7 +3,8 @@ import { TotpService } from './totp.service';
 
 const mockConfig = {
   get: (key: string) => {
-    if (key === 'TOTP_ENCRYPTION_KEY') return Buffer.from('a'.repeat(32)).toString('base64');
+    if (key === 'TOTP_ENCRYPTION_KEY')
+      return Buffer.from('a'.repeat(32)).toString('base64');
     return undefined;
   },
 };

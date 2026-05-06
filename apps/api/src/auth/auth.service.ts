@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -60,12 +64,15 @@ export class AuthService {
         if (matches.length === 1) {
           user = matches[0];
         } else if (matches.length > 1) {
-          throw new UnauthorizedException(this.i18n.t('multiple_tenants', locale));
+          throw new UnauthorizedException(
+            this.i18n.t('multiple_tenants', locale),
+          );
         }
       }
     }
 
-    if (!user) throw new UnauthorizedException(this.i18n.t('login_failed', locale));
+    if (!user)
+      throw new UnauthorizedException(this.i18n.t('login_failed', locale));
     if (user.status === UserStatus.blocked_warning)
       throw new UnauthorizedException(this.i18n.t('blocked_warning', locale));
     if (user.status === UserStatus.blocked_payment)
@@ -74,7 +81,8 @@ export class AuthService {
       throw new UnauthorizedException(this.i18n.t('profile_blocked', locale));
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!match) throw new UnauthorizedException(this.i18n.t('login_failed', locale));
+    if (!match)
+      throw new UnauthorizedException(this.i18n.t('login_failed', locale));
 
     // ── 2FA check ──────────────────────────────────────────────────────────────
     if (user.totpEnabled) {
@@ -222,7 +230,9 @@ export class AuthService {
         secret: this.config.get<string>('JWT_2FA_SECRET') ?? 'dev-2fa-secret',
       });
     } catch {
-      throw new UnauthorizedException("Temp token yaroqsiz yoki muddati o'tgan");
+      throw new UnauthorizedException(
+        "Temp token yaroqsiz yoki muddati o'tgan",
+      );
     }
     if (payload.purpose !== '2fa') {
       throw new UnauthorizedException("Noto'g'ri token turi");
@@ -237,11 +247,17 @@ export class AuthService {
     }
 
     const decryptedSecret = this.totp.decryptSecret(user.totpSecret!);
-    const isTotp = this.totp.verifyToken(code.replace(/\s/g, ''), decryptedSecret);
+    const isTotp = this.totp.verifyToken(
+      code.replace(/\s/g, ''),
+      decryptedSecret,
+    );
 
     if (!isTotp) {
       const backupCodes: string[] = JSON.parse(user.totpBackupCodes ?? '[]');
-      const idx = await this.totp.verifyBackupCode(code.trim().toUpperCase(), backupCodes);
+      const idx = await this.totp.verifyBackupCode(
+        code.trim().toUpperCase(),
+        backupCodes,
+      );
       if (idx === -1) {
         throw new UnauthorizedException("Kod noto'g'ri");
       }
@@ -272,13 +288,19 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: {
-        id: user.id, name: user.name, role: user.role,
-        tenantId: user.tenantId, branchId: user.branchId, groupId: user.groupId,
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+        branchId: user.branchId,
+        groupId: user.groupId,
       },
     };
   }
 
-  async initTwoFactorSetup(userId: string): Promise<{ qrCodeDataUrl: string; secret: string }> {
+  async initTwoFactorSetup(
+    userId: string,
+  ): Promise<{ qrCodeDataUrl: string; secret: string }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { login: true },
@@ -290,7 +312,11 @@ export class AuthService {
     return { qrCodeDataUrl, secret };
   }
 
-  async enableTwoFactor(userId: string, code: string, secret: string): Promise<{ backupCodes: string[] }> {
+  async enableTwoFactor(
+    userId: string,
+    code: string,
+    secret: string,
+  ): Promise<{ backupCodes: string[] }> {
     const isValid = this.totp.verifyToken(code, secret);
     if (!isValid) throw new BadRequestException("Kod noto'g'ri");
     const { plain, hashed } = await this.totp.generateBackupCodes();
@@ -315,7 +341,10 @@ export class AuthService {
     const isTotp = this.totp.verifyToken(code, decryptedSecret);
     if (!isTotp) {
       const hashes: string[] = JSON.parse(user.totpBackupCodes ?? '[]');
-      const idx = await this.totp.verifyBackupCode(code.trim().toUpperCase(), hashes);
+      const idx = await this.totp.verifyBackupCode(
+        code.trim().toUpperCase(),
+        hashes,
+      );
       if (idx === -1) throw new BadRequestException("Kod noto'g'ri");
     }
     await this.prisma.user.update({
@@ -324,7 +353,10 @@ export class AuthService {
     });
   }
 
-  async regenerateBackupCodes(userId: string, code: string): Promise<{ backupCodes: string[] }> {
+  async regenerateBackupCodes(
+    userId: string,
+    code: string,
+  ): Promise<{ backupCodes: string[] }> {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       select: { totpSecret: true, totpEnabled: true },

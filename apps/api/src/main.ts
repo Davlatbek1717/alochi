@@ -74,7 +74,7 @@ async function bootstrap() {
   // route map, including admin endpoints, to anyone on the internet.
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle("Adouptivo API")
+      .setTitle('Adouptivo API')
       .setDescription("Adouptivo ta'lim platformasi API hujjatlari")
       .setVersion('1.0')
       .addBearerAuth()

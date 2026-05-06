@@ -32,8 +32,7 @@ export class LessonsService {
     const existing = await this.prisma.lesson.findFirst({
       where: { tenantId, orderNumber: dto.orderNumber },
     });
-    if (existing)
-      throw new ConflictException(this.i18n.t('order_conflict'));
+    if (existing) throw new ConflictException(this.i18n.t('order_conflict'));
 
     const {
       mcqEnabled,
@@ -113,7 +112,8 @@ export class LessonsService {
       where: { id: templateId, isTemplate: true },
       include: { components_data: true },
     });
-    if (!template) throw new NotFoundException(this.i18n.t('template_not_found'));
+    if (!template)
+      throw new NotFoundException(this.i18n.t('template_not_found'));
 
     const maxOrder = await this.prisma.lesson.aggregate({
       where: { tenantId },
@@ -135,7 +135,7 @@ export class LessonsService {
         aiTutorContext: template.aiTutorContext,
         subcategory: template.subcategory,
         components: template.components as object,
-        isPublished: false,  // imported lessons start unpublished
+        isPublished: false, // imported lessons start unpublished
         isTemplate: false,
         components_data: {
           create: template.components_data.map((c) => ({

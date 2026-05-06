@@ -1,4 +1,12 @@
-import { Controller, Post, Body, UseGuards, Request, Headers, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+  Headers,
+  Get,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { localeFromHeader } from '../i18n/errors';
 import { AuthService } from './auth.service';
@@ -58,8 +66,15 @@ export class AuthController {
   @Post('2fa/enable')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.superadmin, UserRole.filadmin)
-  enable2fa(@Body() body: { code: string; secret: string }, @Request() req: any) {
-    return this.authService.enableTwoFactor(req.user.userId, body.code, body.secret);
+  enable2fa(
+    @Body() body: { code: string; secret: string },
+    @Request() req: any,
+  ) {
+    return this.authService.enableTwoFactor(
+      req.user.userId,
+      body.code,
+      body.secret,
+    );
   }
 
   @Post('2fa/disable')

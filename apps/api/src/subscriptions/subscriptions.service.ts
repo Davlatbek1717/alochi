@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Stripe = require('stripe');
 import { PrismaService } from '../prisma/prisma.service';
@@ -21,9 +25,12 @@ export class SubscriptionsService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    this.stripe = new Stripe(this.config.get<string>('STRIPE_SECRET_KEY') ?? '', {
-      apiVersion: '2026-04-22.dahlia',
-    });
+    this.stripe = new Stripe(
+      this.config.get<string>('STRIPE_SECRET_KEY') ?? '',
+      {
+        apiVersion: '2026-04-22.dahlia',
+      },
+    );
   }
 
   async getForTenant(tenantId: string) {
@@ -65,7 +72,12 @@ export class SubscriptionsService {
 
     await this.prisma.tenantSubscription.upsert({
       where: { tenantId },
-      create: { tenantId, stripeCustomerId: customer.id, status: 'trialing', plan: 'starter' },
+      create: {
+        tenantId,
+        stripeCustomerId: customer.id,
+        status: 'trialing',
+        plan: 'starter',
+      },
       update: { stripeCustomerId: customer.id },
     });
 
@@ -81,9 +93,13 @@ export class SubscriptionsService {
     plan: 'starter' | 'pro' | 'enterprise',
     returnBaseUrl: string,
   ): Promise<string> {
-    const priceId = this.config.get<string>(`STRIPE_PRICE_ID_${plan.toUpperCase()}`);
+    const priceId = this.config.get<string>(
+      `STRIPE_PRICE_ID_${plan.toUpperCase()}`,
+    );
     if (!priceId) {
-      throw new BadRequestException(`Stripe Price ID for plan "${plan}" is not configured.`);
+      throw new BadRequestException(
+        `Stripe Price ID for plan "${plan}" is not configured.`,
+      );
     }
 
     const customerId = await this.ensureStripeCustomer(tenantId);
@@ -98,7 +114,8 @@ export class SubscriptionsService {
       allow_promotion_codes: true,
     });
 
-    if (!session.url) throw new BadRequestException('Stripe did not return a checkout URL.');
+    if (!session.url)
+      throw new BadRequestException('Stripe did not return a checkout URL.');
     return session.url;
   }
 
@@ -106,14 +123,19 @@ export class SubscriptionsService {
    * Create a Stripe Billing Portal session for plan management.
    * Returns the portal URL — caller should redirect window.location.href.
    */
-  async createPortalSession(tenantId: string, returnBaseUrl: string): Promise<string> {
+  async createPortalSession(
+    tenantId: string,
+    returnBaseUrl: string,
+  ): Promise<string> {
     const sub = await this.prisma.tenantSubscription.findUnique({
       where: { tenantId },
       select: { stripeCustomerId: true },
     });
 
     if (!sub?.stripeCustomerId) {
-      throw new BadRequestException('No Stripe customer found for this tenant. Subscribe first.');
+      throw new BadRequestException(
+        'No Stripe customer found for this tenant. Subscribe first.',
+      );
     }
 
     const session = await this.stripe.billingPortal.sessions.create({
@@ -152,7 +174,11 @@ export class SubscriptionsService {
     if (immediate) {
       return this.prisma.tenantSubscription.update({
         where: { tenantId },
-        data: { status: 'canceled', cancelAtPeriodEnd: false, updatedAt: new Date() },
+        data: {
+          status: 'canceled',
+          cancelAtPeriodEnd: false,
+          updatedAt: new Date(),
+        },
       });
     }
     return this.prisma.tenantSubscription.update({

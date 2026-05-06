@@ -7,7 +7,11 @@ import { I18nService } from '../i18n/i18n.service';
 import { translateError } from '../i18n/errors';
 
 const mockI18n = { t: (key: string) => translateError(key as any) };
-const mockCache = { get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined), del: jest.fn().mockResolvedValue(undefined) };
+const mockCache = {
+  get: jest.fn().mockResolvedValue(undefined),
+  set: jest.fn().mockResolvedValue(undefined),
+  del: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   lesson: {
@@ -68,18 +72,23 @@ describe('LessonsService', () => {
     it('throws ConflictException when orderNumber already exists in tenant', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue({ id: 'existing' });
 
-      await expect(service.create(baseDto, 'tenant-test')).rejects.toThrow(ConflictException);
+      await expect(service.create(baseDto, 'tenant-test')).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('stores component flags derived from dto booleans', async () => {
       mockPrisma.lesson.findFirst.mockResolvedValue(null);
       mockPrisma.lesson.create.mockResolvedValue({ id: 'lesson-2' });
 
-      await service.create({
-        ...baseDto,
-        mcqEnabled: true,
-        wordOrderEnabled: true,
-      }, 'tenant-test');
+      await service.create(
+        {
+          ...baseDto,
+          mcqEnabled: true,
+          wordOrderEnabled: true,
+        },
+        'tenant-test',
+      );
 
       const callArg = mockPrisma.lesson.create.mock.calls[0][0];
       expect(callArg.data.components.mcq).toBe(true);

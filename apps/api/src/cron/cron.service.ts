@@ -619,7 +619,9 @@ export class CronService {
 
     try {
       // ── 3-day warning ─────────────────────────────────────────────────────
-      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const threeDaysFromNow = new Date(
+        now.getTime() + 3 * 24 * 60 * 60 * 1000,
+      );
       const soonExpiring = await this.prisma.tenant.findMany({
         where: {
           trialEndsAt: { gt: now, lte: threeDaysFromNow },
@@ -631,7 +633,11 @@ export class CronService {
           name: true,
           trialEndsAt: true,
           users: {
-            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            where: {
+              role: 'filadmin',
+              status: 'active',
+              telegramId: { not: null },
+            },
             select: { telegramId: true },
             take: 1,
           },
@@ -642,14 +648,17 @@ export class CronService {
         const filadmin = tenant.users[0];
         if (!filadmin?.telegramId) continue;
         const daysLeft = Math.ceil(
-          ((tenant.trialEndsAt?.getTime() ?? 0) - now.getTime()) / (1000 * 60 * 60 * 24),
+          ((tenant.trialEndsAt?.getTime() ?? 0) - now.getTime()) /
+            (1000 * 60 * 60 * 24),
         );
         try {
           await this.telegram.sendMessage(
             filadmin.telegramId,
             `⚠️ <b>${tenant.name}</b>: sinov davri ${daysLeft} kunda tugaydi.\n\nObunani boshlash: <b>Filadmin paneli → Billing</b>`,
           );
-        } catch { /* Telegram send failure must not block the loop */ }
+        } catch {
+          /* Telegram send failure must not block the loop */
+        }
       }
 
       // ── 1-day urgent warning ───────────────────────────────────────────────
@@ -664,7 +673,11 @@ export class CronService {
           id: true,
           name: true,
           users: {
-            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            where: {
+              role: 'filadmin',
+              status: 'active',
+              telegramId: { not: null },
+            },
             select: { telegramId: true },
             take: 1,
           },
@@ -679,7 +692,9 @@ export class CronService {
             filadmin.telegramId,
             `🚨 <b>${tenant.name}</b>: Ertaga sinov davri tugaydi va kirish bloklanadi!\n\nHoziroq obuna qiling: <b>Filadmin paneli → Billing</b>`,
           );
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       // ── Hard block expired tenants ─────────────────────────────────────────
@@ -696,7 +711,11 @@ export class CronService {
           id: true,
           name: true,
           users: {
-            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            where: {
+              role: 'filadmin',
+              status: 'active',
+              telegramId: { not: null },
+            },
             select: { telegramId: true },
             take: 1,
           },
@@ -723,7 +742,9 @@ export class CronService {
             filadmin.telegramId,
             `🔒 <b>${tenant.name}</b>: Sinov davri tugadi va kirish bloklanadi.\n\nObuna qilish: <b>Filadmin paneli → Billing</b>`,
           );
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       this.logger.log(

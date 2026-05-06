@@ -62,10 +62,7 @@ export class LessonsController {
    */
   @Post('import/:templateId')
   @Roles(UserRole.superadmin, UserRole.filadmin)
-  importTemplate(
-    @Param('templateId') templateId: string,
-    @Request() req: any,
-  ) {
+  importTemplate(@Param('templateId') templateId: string, @Request() req: any) {
     return this.lessons.importFromTemplate(templateId, req.user.tenantId);
   }
 
