@@ -8,7 +8,7 @@
 
 ## Maqsad
 
-Adouptivo API'ning eng ko'p so'ratiladigan endpoint'larini Redis bilan keshlab, DB yukini kamaytirish va javob vaqtini tezlashtirish. Shuningdek, `EXPLAIN ANALYZE` orqali DB'dagi sekin so'rovlarni aniqlash va kerakli indekslarni qo'shish.
+A'lochi API'ning eng ko'p so'ratiladigan endpoint'larini Redis bilan keshlab, DB yukini kamaytirish va javob vaqtini tezlashtirish. Shuningdek, `EXPLAIN ANALYZE` orqali DB'dagi sekin so'rovlarni aniqlash va kerakli indekslarni qo'shish.
 
 ---
 

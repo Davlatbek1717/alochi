@@ -277,7 +277,7 @@ export default function RegisterPage() {
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
             <span className="text-white font-extrabold text-sm">A</span>
           </div>
-          <span className="text-[#1e1b4b] text-xl font-black tracking-tight">A'lochi</span>
+          <span className="text-[#1e1b4b] text-xl font-black tracking-tight">A&apos;lochi</span>
         </Link>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1e1b4b] leading-tight">
           {'Markazingizni ro\'yxatdan o\'tkazing'}

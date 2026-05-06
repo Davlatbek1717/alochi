@@ -3,8 +3,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Menu, X } from 'lucide-react';
-// LanguageSwitcher deferred until [locale] folder migration (Phase 6b).
-// import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const NAV = [
   { href: '#features', label: 'Imkoniyatlar' },

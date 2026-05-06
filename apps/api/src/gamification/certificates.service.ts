@@ -216,7 +216,7 @@ export class CertificatesService {
     doc
       .fontSize(36)
       .font('Helvetica-Bold')
-      .text('ADOUPTIVO SERTIFIKATI', { align: 'center' });
+      .text("A'LOCHI SERTIFIKATI", { align: 'center' });
 
     doc.moveDown();
     doc
