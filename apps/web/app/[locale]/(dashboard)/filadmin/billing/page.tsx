@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useToast } from '@/components/ui';
 import {
   ArrowLeft,
   CreditCard,
@@ -80,9 +81,47 @@ function formatDate(iso: string | null) {
 
 export default function FiladminBillingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const toast = useToast();
   const [sub, setSub] = useState<TenantSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  async function startCheckout(plan: 'starter' | 'pro' | 'enterprise') {
+    setCheckoutLoading(plan);
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      const res = await apiRequest<{ url: string }>(
+        '/subscriptions/checkout',
+        { method: 'POST', body: JSON.stringify({ plan }) },
+        token,
+      );
+      window.location.href = res.data.url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik yuz berdi');
+    } finally {
+      setCheckoutLoading(null);
+    }
+  }
+
+  async function openPortal() {
+    setPortalLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      const res = await apiRequest<{ url: string }>(
+        '/subscriptions/portal',
+        { method: 'POST' },
+        token,
+      );
+      window.location.href = res.data.url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik yuz berdi');
+    } finally {
+      setPortalLoading(false);
+    }
+  }
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('accessToken') ?? '') : '';
@@ -204,6 +243,71 @@ export default function FiladminBillingPage() {
             </div>
           )}
         </div>
+
+        {/* Stripe redirect success/cancel banners */}
+        {searchParams.get('checkout') === 'success' && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl text-sm font-bold flex items-center gap-2">
+            <CheckCircle size={16} />
+            To&apos;lov muvaffaqiyatli! Obuna faollashtirildi.
+          </div>
+        )}
+        {searchParams.get('checkout') === 'cancel' && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-xl text-sm font-semibold">
+            To&apos;lov bekor qilindi. Xohlasangiz yana urinib ko&apos;ring.
+          </div>
+        )}
+
+        {/* Plan selection — show when no active subscription */}
+        {(!sub || ['trialing', 'past_due', 'canceled'].includes(sub.status)) && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+            <p className="text-xs font-extrabold uppercase tracking-widest text-[#64748b] mb-4">
+              Obuna tanlang
+            </p>
+            <div className="grid sm:grid-cols-3 gap-3">
+              {([
+                { plan: 'starter' as const, label: 'Starter', price: "$160/oy", desc: "≤50 o'quvchi, 1 filial" },
+                { plan: 'pro' as const, label: 'Pro ⭐', price: "$400/oy", desc: "≤200 o'quvchi, 3 filial" },
+                { plan: 'enterprise' as const, label: 'Enterprise', price: "Kelishuv", desc: "Cheksiz" },
+              ]).map(({ plan, label, price, desc }) => (
+                <button
+                  key={plan}
+                  type="button"
+                  onClick={() => startCheckout(plan)}
+                  disabled={checkoutLoading !== null}
+                  className="flex flex-col items-start gap-1 p-4 rounded-xl border-2 border-[#ede9e1] hover:border-[#6d28d9] hover:bg-[#fffaf0] transition-colors text-left disabled:opacity-50"
+                >
+                  <span className="text-sm font-extrabold text-[#0f172a]">{label}</span>
+                  <span className="text-lg font-black text-[#6d28d9]">{price}</span>
+                  <span className="text-xs text-[#64748b] font-semibold">{desc}</span>
+                  {checkoutLoading === plan && (
+                    <Loader2 size={14} className="animate-spin text-[#6d28d9] mt-1" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Billing portal — show when active Stripe subscription */}
+        {sub?.gateway === 'stripe' && sub.status === 'active' && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-extrabold text-[#0f172a]">Billing boshqaruvi</p>
+              <p className="text-xs text-[#64748b] font-semibold mt-0.5">
+                Karta yangilash, bekor qilish, invoice ko&apos;rish
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openPortal}
+              disabled={portalLoading}
+              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 hover:bg-[#1e293b] transition-colors"
+            >
+              {portalLoading ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={14} />}
+              Stripe portalga o&apos;tish
+            </button>
+          </div>
+        )}
 
         {/* Support / contact card */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden shadow-sm">
