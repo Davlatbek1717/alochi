@@ -615,21 +615,92 @@ export class CronService {
   @Cron('0 2 * * *', { name: 'trial_expiry_check' })
   async checkTrialExpiries() {
     this.logger.log('Cron: trial_expiry_check.start');
-    try {
-      const now = new Date();
+    const now = new Date();
 
-      // Find tenants whose trial has ended and have no active subscription.
+    try {
+      // ── 3-day warning ─────────────────────────────────────────────────────
+      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const soonExpiring = await this.prisma.tenant.findMany({
+        where: {
+          trialEndsAt: { gt: now, lte: threeDaysFromNow },
+          isActive: true,
+          subscription: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          trialEndsAt: true,
+          users: {
+            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            select: { telegramId: true },
+            take: 1,
+          },
+        },
+      });
+
+      for (const tenant of soonExpiring) {
+        const filadmin = tenant.users[0];
+        if (!filadmin?.telegramId) continue;
+        const daysLeft = Math.ceil(
+          ((tenant.trialEndsAt?.getTime() ?? 0) - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        try {
+          await this.telegram.sendMessage(
+            filadmin.telegramId,
+            `⚠️ <b>${tenant.name}</b>: sinov davri ${daysLeft} kunda tugaydi.\n\nObunani boshlash: <b>Filadmin paneli → Billing</b>`,
+          );
+        } catch { /* Telegram send failure must not block the loop */ }
+      }
+
+      // ── 1-day urgent warning ───────────────────────────────────────────────
+      const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const urgentExpiring = await this.prisma.tenant.findMany({
+        where: {
+          trialEndsAt: { gt: now, lte: oneDayFromNow },
+          isActive: true,
+          subscription: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          users: {
+            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            select: { telegramId: true },
+            take: 1,
+          },
+        },
+      });
+
+      for (const tenant of urgentExpiring) {
+        const filadmin = tenant.users[0];
+        if (!filadmin?.telegramId) continue;
+        try {
+          await this.telegram.sendMessage(
+            filadmin.telegramId,
+            `🚨 <b>${tenant.name}</b>: Ertaga sinov davri tugaydi va kirish bloklanadi!\n\nHoziroq obuna qiling: <b>Filadmin paneli → Billing</b>`,
+          );
+        } catch { /* ignore */ }
+      }
+
+      // ── Hard block expired tenants ─────────────────────────────────────────
       const expiredTenants = await this.prisma.tenant.findMany({
         where: {
           isActive: true,
           trialEndsAt: { lt: now },
-          // Either no subscription row at all, or subscription status is not 'active'
           OR: [
             { subscription: null },
             { subscription: { status: { not: 'active' } } },
           ],
         },
-        select: { id: true },
+        select: {
+          id: true,
+          name: true,
+          users: {
+            where: { role: 'filadmin', status: 'active', telegramId: { not: null } },
+            select: { telegramId: true },
+            take: 1,
+          },
+        },
       });
 
       if (expiredTenants.length === 0) {
@@ -642,6 +713,18 @@ export class CronService {
         where: { id: { in: ids } },
         data: { isActive: false },
       });
+
+      // Notify blocked tenants
+      for (const tenant of expiredTenants) {
+        const filadmin = tenant.users[0];
+        if (!filadmin?.telegramId) continue;
+        try {
+          await this.telegram.sendMessage(
+            filadmin.telegramId,
+            `🔒 <b>${tenant.name}</b>: Sinov davri tugadi va kirish bloklanadi.\n\nObuna qilish: <b>Filadmin paneli → Billing</b>`,
+          );
+        } catch { /* ignore */ }
+      }
 
       this.logger.log(
         `trial_expiry_check.done expired=${result.count} tenantIds=${ids.join(',')}`,
