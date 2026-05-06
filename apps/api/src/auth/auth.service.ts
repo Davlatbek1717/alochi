@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { TenantsService } from '../tenants/tenants.service';
 import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
 import { I18nService } from '../i18n/i18n.service';
+import { TotpService } from './totp.service';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +19,7 @@ export class AuthService {
     private config: ConfigService,
     private tenantsService: TenantsService,
     private i18n: I18nService,
+    private totp: TotpService,
   ) {}
 
   private hashToken(token: string): string {
@@ -73,6 +75,19 @@ export class AuthService {
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
     if (!match) throw new UnauthorizedException(this.i18n.t('login_failed', locale));
+
+    // ── 2FA check ──────────────────────────────────────────────────────────────
+    if (user.totpEnabled) {
+      const tempToken = this.jwt.sign(
+        { sub: user.id, purpose: '2fa' },
+        {
+          secret: this.config.get<string>('JWT_2FA_SECRET') ?? 'dev-2fa-secret',
+          expiresIn: '5m',
+        },
+      );
+      return { status: '2fa_required' as const, tempToken };
+    }
+    // ── Normal JWT flow (no 2FA) ────────────────────────────────────────────────
 
     const payload = {
       sub: user.id,
@@ -198,5 +213,132 @@ export class AuthService {
       data: { trialEndsAt },
     });
     return { ...result, trialEndsAt };
+  }
+
+  async verifyTwoFactor(tempToken: string, code: string) {
+    let payload: { sub: string; purpose: string };
+    try {
+      payload = await this.jwt.verifyAsync(tempToken, {
+        secret: this.config.get<string>('JWT_2FA_SECRET') ?? 'dev-2fa-secret',
+      });
+    } catch {
+      throw new UnauthorizedException("Temp token yaroqsiz yoki muddati o'tgan");
+    }
+    if (payload.purpose !== '2fa') {
+      throw new UnauthorizedException("Noto'g'ri token turi");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { tenant: true },
+    });
+    if (!user || !user.totpEnabled) {
+      throw new UnauthorizedException('2FA aktiv emas');
+    }
+
+    const decryptedSecret = this.totp.decryptSecret(user.totpSecret!);
+    const isTotp = this.totp.verifyToken(code.replace(/\s/g, ''), decryptedSecret);
+
+    if (!isTotp) {
+      const backupCodes: string[] = JSON.parse(user.totpBackupCodes ?? '[]');
+      const idx = await this.totp.verifyBackupCode(code.trim().toUpperCase(), backupCodes);
+      if (idx === -1) {
+        throw new UnauthorizedException("Kod noto'g'ri");
+      }
+      backupCodes.splice(idx, 1);
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { totpBackupCodes: JSON.stringify(backupCodes) },
+      });
+    }
+
+    const jwtPayload = {
+      sub: user.id,
+      role: user.role,
+      tenantId: user.tenantId,
+      branchId: user.branchId,
+    };
+    const accessToken = this.jwt.sign(jwtPayload, { expiresIn: '1h' });
+    const refreshToken = this.jwt.sign(jwtPayload, {
+      secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: '7d',
+    });
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await this.prisma.refreshToken.create({
+      data: { userId: user.id, token: this.hashToken(refreshToken), expiresAt },
+    });
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id, name: user.name, role: user.role,
+        tenantId: user.tenantId, branchId: user.branchId, groupId: user.groupId,
+      },
+    };
+  }
+
+  async initTwoFactorSetup(userId: string): Promise<{ qrCodeDataUrl: string; secret: string }> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { login: true },
+    });
+    const secret = this.totp.generateSecret();
+    const otpauthUrl = this.totp.buildOtpauthUrl(user.login, secret);
+    const QRCode = await import('qrcode');
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+    return { qrCodeDataUrl, secret };
+  }
+
+  async enableTwoFactor(userId: string, code: string, secret: string): Promise<{ backupCodes: string[] }> {
+    const isValid = this.totp.verifyToken(code, secret);
+    if (!isValid) throw new BadRequestException("Kod noto'g'ri");
+    const { plain, hashed } = await this.totp.generateBackupCodes();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        totpSecret: this.totp.encryptSecret(secret),
+        totpEnabled: true,
+        totpBackupCodes: JSON.stringify(hashed),
+      },
+    });
+    return { backupCodes: plain };
+  }
+
+  async disableTwoFactor(userId: string, code: string): Promise<void> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { totpSecret: true, totpEnabled: true, totpBackupCodes: true },
+    });
+    if (!user.totpEnabled) throw new BadRequestException('2FA yoqilmagan');
+    const decryptedSecret = this.totp.decryptSecret(user.totpSecret!);
+    const isTotp = this.totp.verifyToken(code, decryptedSecret);
+    if (!isTotp) {
+      const hashes: string[] = JSON.parse(user.totpBackupCodes ?? '[]');
+      const idx = await this.totp.verifyBackupCode(code.trim().toUpperCase(), hashes);
+      if (idx === -1) throw new BadRequestException("Kod noto'g'ri");
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { totpEnabled: false, totpSecret: null, totpBackupCodes: null },
+    });
+  }
+
+  async regenerateBackupCodes(userId: string, code: string): Promise<{ backupCodes: string[] }> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { totpSecret: true, totpEnabled: true },
+    });
+    if (!user.totpEnabled) throw new BadRequestException('2FA yoqilmagan');
+    const decryptedSecret = this.totp.decryptSecret(user.totpSecret!);
+    if (!this.totp.verifyToken(code, decryptedSecret)) {
+      throw new BadRequestException("Kod noto'g'ri");
+    }
+    const { plain, hashed } = await this.totp.generateBackupCodes();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { totpBackupCodes: JSON.stringify(hashed) },
+    });
+    return { backupCodes: plain };
   }
 }

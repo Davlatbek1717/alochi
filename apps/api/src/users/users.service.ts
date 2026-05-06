@@ -302,6 +302,18 @@ export class UsersService {
     return this.prisma.user.update({ where: { id }, data: { status } });
   }
 
+  async resetTwoFactor(id: string, tenantId: string): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
+    await this.prisma.user.update({
+      where: { id },
+      data: { totpEnabled: false, totpSecret: null, totpBackupCodes: null },
+    });
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },

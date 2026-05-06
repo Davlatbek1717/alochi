@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -186,5 +187,11 @@ export class UsersController {
     @Request() req: any,
   ) {
     return this.users.unblock(id, req.user.tenantId, req.user.userId, reason);
+  }
+
+  @Delete(':id/2fa')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  resetTwoFactor(@Param('id') id: string, @Request() req: any) {
+    return this.users.resetTwoFactor(id, req.user.tenantId);
   }
 }

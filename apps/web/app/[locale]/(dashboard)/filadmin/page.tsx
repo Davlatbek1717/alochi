@@ -1,6 +1,7 @@
 'use client';
 import { Link } from '@/i18n/navigation';
 import { useEffect, useState } from 'react';
+import { TwoFactorSection } from '../_components/TwoFactorSection';
 import {
   BarChart2,
   CreditCard,
@@ -260,6 +261,8 @@ export default function FiladminDashboard() {
             ))}
           </div>
         </div>
+
+        <TwoFactorSection />
       </div>
     </div>
   );
