@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger as NestLogger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
-import { json, urlencoded } from 'express';
+import { json, urlencoded, raw } from 'express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
 import { EmptyStringToUndefinedInterceptor } from './common/interceptors/empty-string-to-undefined.interceptor';
@@ -57,6 +57,11 @@ async function bootstrap() {
   }
 
   app.use(helmet());
+
+  // Stripe webhook HMAC verification requires the raw, unparsed body.
+  // Must be registered BEFORE the global json() parser so that
+  // /webhooks/stripe receives the original Buffer, not a parsed object.
+  app.use('/webhooks/stripe', raw({ type: 'application/json' }));
 
   // Explicit body size caps so a single oversized POST cannot OOM the
   // node process. 1 MB covers the largest legitimate payload (face
