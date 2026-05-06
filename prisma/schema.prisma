@@ -65,6 +65,7 @@ model TenantSubscription {
   gateway              String?  // "stripe" | "payme" | "click" | "manual"
   // Gateway-specific subscription / order ID for webhook correlation
   gatewaySubscriptionId String? @unique @map("gateway_subscription_id")
+  stripeCustomerId     String? @unique @map("stripe_customer_id")
   currentPeriodStart   DateTime? @map("current_period_start")
   currentPeriodEnd     DateTime? @map("current_period_end")
   cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
