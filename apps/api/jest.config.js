@@ -19,6 +19,9 @@ module.exports = {
   // mock to exist so the module graph resolves.
   moduleNameMapper: {
     '^isomorphic-dompurify$': '<rootDir>/__mocks__/isomorphic-dompurify.js',
+    // otplib v13 ships TypeScript source + ESM which Jest CJS cannot parse.
+    // Use a CJS-compatible mock that provides the same API surface.
+    '^otplib$': '<rootDir>/__mocks__/otplib.js',
   },
   collectCoverageFrom: [
     'src/**/*.ts',
