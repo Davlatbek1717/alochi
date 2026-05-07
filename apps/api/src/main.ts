@@ -58,6 +58,13 @@ async function bootstrap() {
 
   app.use(helmet());
 
+  // Optional path prefix used when API and web share a single domain
+  // (e.g. https://alochi.biznesjon.uz/api/...). WebSocket gateways are
+  // unaffected — they keep their default /socket.io/ path.
+  if (process.env.API_GLOBAL_PREFIX) {
+    app.setGlobalPrefix(process.env.API_GLOBAL_PREFIX);
+  }
+
   // Explicit body size caps so a single oversized POST cannot OOM the
   // node process. 1 MB covers the largest legitimate payload (face
   // enrol vector, exam answers blob); larger uploads should be routed
