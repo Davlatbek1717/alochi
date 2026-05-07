@@ -11,10 +11,6 @@ interface Props {
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
   closeOnOverlay?: boolean;
-  /**
-   * Visual theme. Defaults to `light` (white surface, slate text) so light
-   * pages don't need to opt in. Pass `dark` for the legacy slate-800 surface.
-   */
   theme?: 'light' | 'dark';
 }
 
@@ -26,15 +22,17 @@ const SIZES = {
 
 const THEME = {
   light: {
-    surface: 'bg-white border border-slate-200',
-    title: 'text-slate-900',
-    description: 'text-slate-500',
-    closeBtn: 'text-slate-400 hover:text-slate-600',
-    border: 'border-slate-200',
-    footer: 'bg-slate-50/60',
+    surface:
+      'bg-[var(--surface)] border border-[var(--line)] shadow-[var(--shadow-5)]',
+    title: 'text-[var(--ink)]',
+    description: 'text-[var(--ink-3)]',
+    closeBtn:
+      'text-[var(--ink-4)] hover:text-[var(--ink)] hover:bg-[var(--surface-3)]',
+    border: 'border-[var(--line)]',
+    footer: 'bg-[var(--surface-2)]',
   },
   dark: {
-    surface: 'bg-slate-800 border border-slate-700',
+    surface: 'bg-slate-800 border border-slate-700 shadow-2xl',
     title: 'text-white',
     description: 'text-slate-400',
     closeBtn: 'text-slate-500 hover:text-slate-300',
@@ -76,30 +74,66 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'modal-title' : undefined}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
+      className={[
+        'fixed inset-0 z-50 flex items-center justify-center p-4',
+        'bg-[#0f0c2d]/70 backdrop-blur-sm',
+        'motion-safe:[animation:fadeIn_var(--dur-base)_var(--ease-out-expo)]',
+      ].join(' ')}
       onClick={closeOnOverlay ? onClose : undefined}
     >
       <div
-        className={`${t.surface} rounded-xl shadow-2xl w-full ${SIZES[size]} animate-[scaleIn_0.15s_ease-out]`}
+        className={[
+          t.surface,
+          'rounded-3xl w-full',
+          SIZES[size],
+          'motion-safe:[animation:scaleIn_var(--dur-slow)_var(--ease-spring)]',
+        ].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || description) && (
-          <div className={`flex items-start justify-between p-6 border-b ${t.border}`}>
-            <div>
+          <div
+            className={`flex items-start justify-between p-6 border-b ${t.border}`}
+          >
+            <div className="min-w-0">
               {title && (
-                <h2 id="modal-title" className={`text-lg font-semibold ${t.title}`}>
+                <h2
+                  id="modal-title"
+                  className={`font-display text-xl font-bold tracking-[-0.005em] ${t.title}`}
+                >
                   {title}
                 </h2>
               )}
-              {description && <p className={`text-sm ${t.description} mt-1`}>{description}</p>}
+              {description && (
+                <p className={`text-sm leading-relaxed mt-1 ${t.description}`}>
+                  {description}
+                </p>
+              )}
             </div>
-            <button onClick={onClose} aria-label="Yopish" className={`${t.closeBtn} transition-colors`}>
-              <X size={18} />
+            <button
+              onClick={onClose}
+              aria-label="Yopish"
+              className={[
+                'grid place-items-center w-9 h-9 rounded-xl shrink-0 ml-3',
+                'transition-colors',
+                t.closeBtn,
+              ].join(' ')}
+            >
+              <X size={18} strokeWidth={2.25} />
             </button>
           </div>
         )}
         <div className="p-6">{children}</div>
-        {footer && <div className={`flex justify-end gap-3 px-6 py-4 border-t ${t.border} ${t.footer} rounded-b-xl`}>{footer}</div>}
+        {footer && (
+          <div
+            className={[
+              'flex justify-end gap-3 px-6 py-4 border-t rounded-b-3xl',
+              t.border,
+              t.footer,
+            ].join(' ')}
+          >
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

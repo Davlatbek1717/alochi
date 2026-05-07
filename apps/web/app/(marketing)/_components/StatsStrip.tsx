@@ -23,20 +23,24 @@ export function StatsStrip() {
   useEffect(() => {
     fetch(`${API_BASE}/marketing/stats`)
       .then((r) => r.json())
-      .then((json: { success?: boolean; data?: MarketingStats } | MarketingStats) => {
-        const data =
-          json && typeof json === 'object' && 'data' in json && json.data
-            ? (json.data as MarketingStats)
-            : (json as MarketingStats);
-        if (data && typeof data === 'object') setStats(data);
-      })
+      .then(
+        (
+          json:
+            | { success?: boolean; data?: MarketingStats }
+            | MarketingStats,
+        ) => {
+          const data =
+            json && typeof json === 'object' && 'data' in json && json.data
+              ? (json.data as MarketingStats)
+              : (json as MarketingStats);
+          if (data && typeof data === 'object') setStats(data);
+        },
+      )
       .catch(() => {
-        /* graceful fallback — strip stays hidden */
+        /* graceful fallback */
       });
   }, []);
 
-  // Hide entirely when data hasn't loaded or every counter is zero
-  // so we never show "0 o'quvchilar / 0 maktablar" on the landing.
   if (
     !stats ||
     (stats.totalStudents === 0 &&
@@ -49,22 +53,22 @@ export function StatsStrip() {
 
   const ITEMS = [
     {
-      icon: <Users2 size={22} strokeWidth={2.5} />,
+      icon: <Users2 size={22} strokeWidth={2.25} />,
       value: fmt(stats.totalStudents),
-      label: "Jami o'quvchilar",
+      label: "O'quvchilar",
     },
     {
-      icon: <School size={22} strokeWidth={2.5} />,
+      icon: <School size={22} strokeWidth={2.25} />,
       value: fmt(stats.totalSchools),
-      label: 'Jami maktablar',
+      label: 'Markazlar',
     },
     {
-      icon: <BookOpen size={22} strokeWidth={2.5} />,
+      icon: <BookOpen size={22} strokeWidth={2.25} />,
       value: fmt(stats.totalLessons),
       label: 'Tugatilgan darslar',
     },
     {
-      icon: <TrendingUp size={22} strokeWidth={2.5} />,
+      icon: <TrendingUp size={22} strokeWidth={2.25} />,
       value: `${stats.avgProgress}%`,
       label: "O'rtacha progress",
     },
@@ -73,37 +77,45 @@ export function StatsStrip() {
   return (
     <section
       aria-labelledby="stats-h2"
-      className="relative bg-[#6d28d9] text-white overflow-hidden"
+      className="relative bg-[#0f0c2d] text-white overflow-hidden"
     >
       <h2 id="stats-h2" className="sr-only">
         Platformaning asosiy raqamlari
       </h2>
 
-      {/* Decorative wash */}
+      {/* Layered atmosphere */}
       <div
         aria-hidden
-        className="absolute inset-0 opacity-30 pointer-events-none"
-        style={{
-          backgroundImage:
-            'radial-gradient(40% 80% at 90% 50%, #f97316 0%, rgba(249,115,22,0) 60%), radial-gradient(40% 80% at 10% 50%, #4c1d95 0%, rgba(76,29,149,0) 60%)',
-        }}
+        className="absolute inset-0 opacity-100 pointer-events-none"
+      >
+        <div className="absolute -top-32 left-1/4 w-[480px] h-[300px] rounded-full bg-[var(--brand)]/30 blur-3xl" />
+        <div className="absolute -bottom-32 right-1/4 w-[480px] h-[300px] rounded-full bg-[var(--accent)]/14 blur-3xl" />
+      </div>
+
+      {/* Top gradient seam */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--brand)] to-transparent opacity-40"
       />
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-6 lg:gap-x-10">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-6 lg:gap-x-12">
           {ITEMS.map((stat, i) => (
             <li
               key={stat.label}
-              className="flex flex-col items-start motion-safe:[animation:count-up-fade_550ms_ease-out_both]"
-              style={{ animationDelay: `${i * 90}ms` }}
+              className={[
+                'flex flex-col items-start',
+                'motion-safe:[animation:count-up-fade_650ms_var(--ease-out-expo)_both]',
+              ].join(' ')}
+              style={{ animationDelay: `${i * 110}ms` }}
             >
-              <span className="grid place-items-center w-10 h-10 rounded-full bg-white/15 ring-1 ring-white/20 mb-3">
+              <span className="grid place-items-center w-11 h-11 rounded-xl bg-white/[0.08] ring-1 ring-white/[0.12] mb-4 backdrop-blur-sm">
                 {stat.icon}
               </span>
-              <div className="text-4xl sm:text-5xl font-extrabold leading-none tracking-tight">
+              <div className="font-display text-5xl sm:text-6xl font-bold leading-[0.9] tracking-[-0.025em]">
                 {stat.value}
               </div>
-              <div className="mt-2 text-xs sm:text-sm font-extrabold uppercase tracking-widest text-white/85">
+              <div className="mt-3 text-[11px] font-extrabold uppercase tracking-[0.18em] text-white/65">
                 {stat.label}
               </div>
             </li>

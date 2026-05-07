@@ -11,26 +11,95 @@ interface Props {
   theme?: 'light' | 'dark';
 }
 
-export function Stat({ icon, label, value, sub, trend, color = 'text-emerald-400', theme = 'dark' }: Props) {
-  const cardBg = theme === 'light'
-    ? 'bg-white border-[#ede9e1] hover:border-[#d4cfc4]'
-    : 'bg-slate-800/60 border-slate-700 hover:border-slate-600';
-  const labelText = theme === 'light' ? 'text-slate-700' : 'text-slate-400';
-  const subText = 'text-slate-500';
-  const valueText = theme === 'light' ? 'text-slate-900' : 'text-white';
+/**
+ * KPI / stat card. Editorial: display serif for the value (tabular nums
+ * for alignment), small-caps tracking-wide label, optional trend pill.
+ */
+export function Stat({
+  icon,
+  label,
+  value,
+  sub,
+  trend,
+  color = 'text-[var(--brand)]',
+  theme = 'light',
+}: Props) {
+  const isLight = theme === 'light';
   return (
-    <div className={`${cardBg} border rounded-xl p-5 transition-colors`}>
-      <div className="flex items-center justify-between mb-3">
-        {icon && <span className={color}>{icon}</span>}
+    <div
+      className={[
+        'group rounded-2xl p-5',
+        'transition-all duration-200 ease-out',
+        isLight
+          ? [
+              'bg-[var(--surface)]',
+              'border border-[var(--line)]',
+              'shadow-[var(--shadow-1)]',
+              'hover:-translate-y-0.5 hover:shadow-[var(--shadow-3)] hover:border-[var(--line-strong)]',
+            ].join(' ')
+          : [
+              'bg-slate-800/60',
+              'border border-slate-700',
+              'hover:border-slate-600',
+            ].join(' '),
+      ].join(' ')}
+    >
+      <div className="flex items-center justify-between mb-3.5">
+        {icon ? (
+          <span
+            className={[
+              'grid place-items-center w-10 h-10 rounded-xl',
+              'bg-[var(--surface-2)]',
+              color,
+              'transition-transform duration-200 group-hover:scale-105',
+            ].join(' ')}
+          >
+            {icon}
+          </span>
+        ) : (
+          <span />
+        )}
         {trend && (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${trend.positive ? 'text-emerald-400 bg-emerald-900/30' : 'text-red-400 bg-red-900/30'}`}>
-            {trend.positive ? '+' : ''}{trend.value}%
+          <span
+            className={[
+              'inline-flex items-center gap-0.5',
+              'text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-full',
+              trend.positive
+                ? 'text-[var(--success)] bg-[var(--success-soft)]'
+                : 'text-[var(--danger)] bg-[var(--danger-soft)]',
+            ].join(' ')}
+          >
+            {trend.positive ? '+' : ''}
+            {trend.value}%
           </span>
         )}
       </div>
-      <p className={`text-3xl font-bold tabular-nums ${valueText}`}>{value}</p>
-      <p className={`text-xs mt-1 ${labelText}`}>{label}</p>
-      {sub && <p className={`text-xs mt-0.5 ${subText}`}>{sub}</p>}
+      <p
+        className={[
+          'font-display text-3xl font-bold tabular-nums leading-none tracking-[-0.02em]',
+          isLight ? 'text-[var(--ink)]' : 'text-white',
+        ].join(' ')}
+      >
+        {value}
+      </p>
+      <p
+        className={[
+          'text-[11px] font-extrabold uppercase tracking-[0.16em] mt-3',
+          isLight ? 'text-[var(--ink-3)]' : 'text-slate-400',
+        ].join(' ')}
+      >
+        {label}
+      </p>
+      {sub && (
+        <p
+          className={[
+            'text-xs mt-1.5',
+            isLight ? 'text-[var(--ink-4)]' : 'text-slate-500',
+          ].join(' ')}
+        >
+          {sub}
+        </p>
+      )}
     </div>
   );
 }

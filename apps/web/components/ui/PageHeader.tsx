@@ -5,25 +5,60 @@ interface Props {
   icon?: ReactNode;
   title: string;
   description?: string;
+  eyebrow?: string;
   actions?: ReactNode;
   iconColor?: string;
 }
 
-export function PageHeader({ icon, title, description, actions, iconColor = 'text-emerald-400' }: Props) {
+/**
+ * Page header — editorial heading + optional icon avatar + actions.
+ *
+ * Use the `eyebrow` prop for the small uppercase tag above the title
+ * (e.g. "TIZIM BOSHQARUVI" → "Superadmin Paneli").
+ */
+export function PageHeader({
+  icon,
+  title,
+  description,
+  eyebrow,
+  actions,
+  iconColor = 'text-[var(--brand)]',
+}: Props) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
-      <div className="flex items-start gap-3">
+    <div className="flex items-start justify-between gap-4 mb-7">
+      <div className="flex items-start gap-4 min-w-0">
         {icon && (
-          <div className={`shrink-0 w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center ${iconColor}`}>
+          <div
+            className={[
+              'shrink-0 grid place-items-center',
+              'w-12 h-12 rounded-2xl',
+              'bg-[var(--surface)] border border-[var(--line)]',
+              'shadow-[var(--shadow-1)]',
+              iconColor,
+            ].join(' ')}
+          >
             {icon}
           </div>
         )}
-        <div>
-          <h1 className="text-2xl font-bold text-white">{title}</h1>
-          {description && <p className="text-sm text-slate-400 mt-0.5">{description}</p>}
+        <div className="min-w-0">
+          {eyebrow && (
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--ink-4)] mb-1">
+              {eyebrow}
+            </p>
+          )}
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[var(--ink)] tracking-[-0.01em] truncate">
+            {title}
+          </h1>
+          {description && (
+            <p className="text-sm text-[var(--ink-3)] mt-1 leading-relaxed">
+              {description}
+            </p>
+          )}
         </div>
       </div>
-      {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex items-center gap-2 shrink-0">{actions}</div>
+      )}
     </div>
   );
 }

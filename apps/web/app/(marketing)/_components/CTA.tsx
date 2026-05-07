@@ -1,5 +1,5 @@
 'use client';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
 
 interface Props {
@@ -10,56 +10,98 @@ export function CTA({ onDemoClick }: Props) {
   return (
     <section
       aria-labelledby="cta-h2"
-      className="relative overflow-hidden"
-      style={{
-        background:
-          'linear-gradient(135deg, #6d28d9 0%, #5b21b6 45%, #1e1b4b 100%)',
-      }}
+      className="relative overflow-hidden bg-[#0f0c2d]"
     >
-      {/* Decorative orange wash */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none opacity-40"
-        style={{
-          backgroundImage:
-            'radial-gradient(35% 60% at 90% 20%, rgba(249,115,22,0.55) 0%, rgba(249,115,22,0) 60%), radial-gradient(35% 60% at 10% 80%, rgba(251,191,36,0.4) 0%, rgba(251,191,36,0) 60%)',
-        }}
-      />
+      {/* Layered atmosphere */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 right-0 w-[560px] h-[420px] rounded-full bg-[var(--brand)]/35 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[480px] h-[300px] rounded-full bg-[var(--accent)]/20 blur-3xl" />
+        <div className="absolute top-1/2 -right-20 w-[280px] h-[280px] rounded-full bg-[#fbbf24]/15 blur-3xl" />
+      </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
-        <div className="relative bg-[#fffaf0] rounded-3xl border border-[#fbbf24]/30 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.6)] px-6 py-12 sm:px-12 sm:py-16 lg:py-20 overflow-hidden">
-          {/* Mascot peeking — desktop only */}
-          <div className="hidden lg:block absolute -right-2 bottom-0 pointer-events-none" aria-hidden>
-            <Mascot expression="happy" size={220} animated />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div
+          className={[
+            'relative bg-[var(--background)]',
+            'rounded-3xl',
+            'border border-[var(--accent)]/30',
+            'shadow-[0_40px_100px_-40px_rgba(0,0,0,0.7)]',
+            'px-6 py-14 sm:px-14 sm:py-20 lg:py-24',
+            'overflow-hidden grain',
+          ].join(' ')}
+        >
+          <div
+            className="hidden lg:block absolute -right-4 bottom-0 pointer-events-none"
+            aria-hidden
+          >
+            <Mascot expression="happy" size={240} animated />
           </div>
 
+          <div
+            aria-hidden
+            className="absolute inset-0 grid-mask opacity-50 pointer-events-none"
+          />
+
           <div className="max-w-2xl relative">
-            <span className="inline-block text-xs uppercase tracking-widest font-extrabold text-[#f97316]">
+            <span
+              className={[
+                'inline-flex items-center gap-2',
+                'px-3.5 py-1.5 rounded-full',
+                'bg-[var(--brand-soft)] border border-[var(--brand)]/15',
+                'text-[var(--brand)] text-[11px] font-extrabold uppercase tracking-[0.2em]',
+              ].join(' ')}
+            >
+              <Sparkles size={13} strokeWidth={2.75} />
               Keyingi qadam
             </span>
             <h2
               id="cta-h2"
-              className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#1e1b4b] tracking-tight leading-tight"
+              className="font-display mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold text-[var(--ink)] tracking-[-0.02em] leading-[1.05]"
             >
-              Markazingizni keyingi avlod platformasiga oling.
+              Markazingizni{' '}
+              <span className="italic font-medium text-[var(--brand)]">
+                keyingi avlod
+              </span>{' '}
+              platformasiga oling.
             </h2>
-            <p className="mt-5 text-lg text-[#475569] font-semibold">
-              Demo so&apos;rang — bizning jamoa siz bilan 24 soat ichida bog&apos;lanadi va
-              platformani 30 daqiqada to&apos;liq ko&apos;rsatadi.
+            <p className="mt-7 text-lg text-[var(--ink-2)] leading-relaxed max-w-xl">
+              Demo so&apos;rang — bizning jamoa siz bilan 24 soat ichida
+              bog&apos;lanadi va platformani 30 daqiqada to&apos;liq
+              ko&apos;rsatadi.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={onDemoClick}
-                className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-7 py-4 rounded-2xl shadow-[0_8px_0_0_#4c1d95] active:translate-y-[3px] active:shadow-[0_3px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
+                className={[
+                  'group inline-flex items-center justify-center gap-2.5',
+                  'bg-[var(--brand)] text-white font-extrabold text-base tracking-wide',
+                  'px-7 py-4 rounded-2xl',
+                  'border-b-[5px] border-[var(--brand-deep)]',
+                  'hover:bg-[var(--brand-strong)]',
+                  'active:translate-y-[3px] active:border-b-[2px]',
+                  'transition-all duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
+                ].join(' ')}
               >
                 Demo so&apos;rash
-                <ArrowRight size={18} strokeWidth={2.75} />
+                <ArrowRight
+                  size={18}
+                  strokeWidth={2.75}
+                  className="transition-transform duration-200 group-hover:translate-x-1"
+                />
               </button>
               <a
-                href="#features"
-                className="inline-flex items-center justify-center gap-2 bg-white text-[#1e1b4b] font-extrabold text-base px-6 py-4 rounded-2xl border-2 border-[#1e1b4b]/12 hover:border-[#6d28d9]/30 transition-all"
+                href="#capabilities"
+                className={[
+                  'inline-flex items-center justify-center gap-2',
+                  'bg-[var(--surface)] text-[var(--ink)] font-extrabold text-base tracking-wide',
+                  'px-7 py-4 rounded-2xl',
+                  'border-[1.5px] border-[var(--line-strong)]',
+                  'hover:border-[var(--brand)]/40 hover:bg-[var(--surface-2)]',
+                  'transition-all duration-150',
+                ].join(' ')}
               >
                 Imkoniyatlarni ko&apos;rish
               </a>

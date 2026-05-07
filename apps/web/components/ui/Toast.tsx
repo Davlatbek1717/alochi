@@ -1,5 +1,12 @@
 'use client';
-import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -26,18 +33,34 @@ export function useToast() {
   return ctx;
 }
 
-const ICON: Record<ToastType, ReactNode> = {
-  success: <CheckCircle2 size={18} className="text-emerald-400" />,
-  error: <XCircle size={18} className="text-red-400" />,
-  warning: <AlertTriangle size={18} className="text-amber-400" />,
-  info: <Info size={18} className="text-blue-400" />,
-};
-
-const BORDER: Record<ToastType, string> = {
-  success: 'border-emerald-700/50',
-  error: 'border-red-700/50',
-  warning: 'border-amber-700/50',
-  info: 'border-blue-700/50',
+const ACCENT: Record<
+  ToastType,
+  { icon: ReactNode; bg: string; border: string; iconBg: string }
+> = {
+  success: {
+    icon: <CheckCircle2 size={18} strokeWidth={2.25} />,
+    bg: 'bg-[var(--surface)]',
+    border: 'border-[var(--success)]/30',
+    iconBg: 'bg-[var(--success-soft)] text-[var(--success)]',
+  },
+  error: {
+    icon: <XCircle size={18} strokeWidth={2.25} />,
+    bg: 'bg-[var(--surface)]',
+    border: 'border-[var(--danger)]/30',
+    iconBg: 'bg-[var(--danger-soft)] text-[var(--danger)]',
+  },
+  warning: {
+    icon: <AlertTriangle size={18} strokeWidth={2.25} />,
+    bg: 'bg-[var(--surface)]',
+    border: 'border-[var(--accent)]/30',
+    iconBg: 'bg-[var(--accent-soft)] text-[var(--accent-strong)]',
+  },
+  info: {
+    icon: <Info size={18} strokeWidth={2.25} />,
+    bg: 'bg-[var(--surface)]',
+    border: 'border-[var(--brand)]/30',
+    iconBg: 'bg-[var(--brand-soft)] text-[var(--brand)]',
+  },
 };
 
 function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
@@ -45,15 +68,39 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
   }, [onClose]);
+  const a = ACCENT[toast.type];
   return (
     <div
       role="status"
-      className={`flex items-start gap-3 px-4 py-3 bg-slate-800 border ${BORDER[toast.type]} rounded-lg shadow-2xl min-w-[280px] max-w-md animate-[slideIn_0.2s_ease-out]`}
+      className={[
+        'flex items-start gap-3',
+        'pl-3 pr-4 py-3',
+        a.bg,
+        'border',
+        a.border,
+        'rounded-2xl',
+        'shadow-[var(--shadow-4)]',
+        'min-w-[300px] max-w-md',
+        'motion-safe:[animation:slideIn_var(--dur-base)_var(--ease-out-expo)]',
+      ].join(' ')}
     >
-      <span className="shrink-0 mt-0.5">{ICON[toast.type]}</span>
-      <p className="flex-1 text-sm text-slate-200">{toast.message}</p>
-      <button onClick={onClose} className="shrink-0 text-slate-500 hover:text-slate-300" aria-label="Yopish">
-        <X size={14} />
+      <span
+        className={[
+          'shrink-0 grid place-items-center w-9 h-9 rounded-xl',
+          a.iconBg,
+        ].join(' ')}
+      >
+        {a.icon}
+      </span>
+      <p className="flex-1 text-sm leading-relaxed text-[var(--ink)] pt-1">
+        {toast.message}
+      </p>
+      <button
+        onClick={onClose}
+        className="shrink-0 grid place-items-center w-7 h-7 rounded-lg text-[var(--ink-4)] hover:text-[var(--ink)] hover:bg-[var(--surface-3)] transition-colors"
+        aria-label="Yopish"
+      >
+        <X size={14} strokeWidth={2.5} />
       </button>
     </div>
   );
@@ -82,10 +129,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-        <div className="pointer-events-auto flex flex-col gap-2">
+      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none">
+        <div className="pointer-events-auto flex flex-col gap-2.5">
           {toasts.map((toast) => (
-            <ToastItem key={toast.id} toast={toast} onClose={() => remove(toast.id)} />
+            <ToastItem
+              key={toast.id}
+              toast={toast}
+              onClose={() => remove(toast.id)}
+            />
           ))}
         </div>
       </div>

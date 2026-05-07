@@ -66,10 +66,13 @@ export function Table<T extends Record<string, unknown>>({
 
   if (loading) {
     return (
-      <div className="bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden">
-        <div className="p-3 space-y-2 animate-pulse">
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-[var(--shadow-1)]">
+        <div className="p-4 space-y-2.5 animate-pulse">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-10 bg-slate-700/50 rounded" />
+            <div
+              key={i}
+              className="h-11 bg-[var(--surface-3)] rounded-lg"
+            />
           ))}
         </div>
       </div>
@@ -78,42 +81,71 @@ export function Table<T extends Record<string, unknown>>({
 
   if (data.length === 0) {
     return (
-      <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-12 text-center text-slate-500 text-sm">
+      <div
+        className={[
+          'bg-[var(--surface)]',
+          'border border-[var(--line)] rounded-2xl',
+          'p-14 text-center',
+          'text-[var(--ink-3)] text-sm',
+          'shadow-[var(--shadow-1)]',
+        ].join(' ')}
+      >
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className={`bg-slate-800/60 border border-slate-700 rounded-xl overflow-hidden ${className}`}>
+    <div
+      className={[
+        'bg-[var(--surface)] rounded-2xl overflow-hidden',
+        'border border-[var(--line)]',
+        'shadow-[var(--shadow-1)]',
+        className,
+      ].join(' ')}
+    >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-900/40 sticky top-0">
-            <tr className="border-b border-slate-700">
+          <thead className="bg-[var(--surface-2)] sticky top-0">
+            <tr className="border-b border-[var(--line)]">
               {columns.map((col) => {
                 const align = col.align ?? 'left';
-                const alignCls = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+                const alignCls =
+                  align === 'center'
+                    ? 'text-center'
+                    : align === 'right'
+                      ? 'text-right'
+                      : 'text-left';
                 return (
                   <th
                     key={String(col.key)}
                     scope="col"
-                    className={`px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider ${alignCls}`}
+                    className={[
+                      'px-5 py-3.5',
+                      'text-[10px] font-extrabold uppercase tracking-[0.16em]',
+                      'text-[var(--ink-3)]',
+                      alignCls,
+                    ].join(' ')}
                     style={col.width ? { width: col.width } : undefined}
                   >
                     {col.sortable ? (
                       <button
                         onClick={() => toggleSort(String(col.key))}
-                        className="inline-flex items-center gap-1 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1.5 hover:text-[var(--brand)] transition-colors"
                       >
                         {col.label}
                         {sortBy === col.key ? (
                           sortDir === 'asc' ? (
-                            <ArrowUp size={12} />
+                            <ArrowUp size={12} strokeWidth={2.5} />
                           ) : (
-                            <ArrowDown size={12} />
+                            <ArrowDown size={12} strokeWidth={2.5} />
                           )
                         ) : (
-                          <ArrowUpDown size={12} className="opacity-40" />
+                          <ArrowUpDown
+                            size={12}
+                            strokeWidth={2.5}
+                            className="opacity-40"
+                          />
                         )}
                       </button>
                     ) : (
@@ -129,18 +161,35 @@ export function Table<T extends Record<string, unknown>>({
               <tr
                 key={String(row[keyField])}
                 onClick={rowAction ? () => rowAction(row) : undefined}
-                className={`border-b border-slate-700/50 last:border-0 transition-colors ${
-                  idx % 2 === 1 ? 'bg-slate-900/20' : ''
-                } ${rowAction ? 'cursor-pointer hover:bg-slate-700/40' : 'hover:bg-slate-700/20'} ${
-                  rowClassName ? rowClassName(row) : ''
-                }`}
+                className={[
+                  'border-b border-[var(--line)]/70 last:border-0',
+                  'transition-colors duration-100',
+                  idx % 2 === 1 ? 'bg-[var(--surface-2)]/40' : '',
+                  rowAction
+                    ? 'cursor-pointer hover:bg-[var(--brand-soft)]/40'
+                    : 'hover:bg-[var(--surface-2)]/60',
+                  rowClassName ? rowClassName(row) : '',
+                ].join(' ')}
               >
                 {columns.map((col) => {
                   const align = col.align ?? 'left';
-                  const alignCls = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
-                  const content = col.render ? col.render(row) : (row[col.key as keyof T] as ReactNode);
+                  const alignCls =
+                    align === 'center'
+                      ? 'text-center'
+                      : align === 'right'
+                        ? 'text-right'
+                        : 'text-left';
+                  const content = col.render
+                    ? col.render(row)
+                    : (row[col.key as keyof T] as ReactNode);
                   return (
-                    <td key={String(col.key)} className={`px-4 py-3 text-slate-300 ${alignCls}`}>
+                    <td
+                      key={String(col.key)}
+                      className={[
+                        'px-5 py-3.5 text-[var(--ink)]',
+                        alignCls,
+                      ].join(' ')}
+                    >
                       {content as ReactNode}
                     </td>
                   );

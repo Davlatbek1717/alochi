@@ -3,7 +3,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ArrowLeft, Check, Building2, User, ClipboardList } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowLeft,
+  Check,
+  Building2,
+  User,
+  ClipboardList,
+  Sparkles,
+} from 'lucide-react';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 type Step = 1 | 2 | 3;
@@ -27,7 +36,13 @@ function slugify(value: string): string {
     .slice(0, 50);
 }
 
-function ProgressBar({ step, labels }: { step: Step; labels: [string, string, string] }) {
+function ProgressBar({
+  step,
+  labels,
+}: {
+  step: Step;
+  labels: [string, string, string];
+}) {
   const steps = [
     { num: 1, label: labels[0], icon: Building2 },
     { num: 2, label: labels[1], icon: User },
@@ -41,24 +56,37 @@ function ProgressBar({ step, labels }: { step: Step; labels: [string, string, st
         const active = step === s.num;
         const done = step > s.num;
         return (
-          <div key={s.num} className="flex items-center flex-1 last:flex-none">
+          <div
+            key={s.num}
+            className="flex items-center flex-1 last:flex-none"
+          >
             <div className="flex flex-col items-center">
               <div
                 className={[
-                  'w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-sm transition-all',
+                  'grid place-items-center w-11 h-11 rounded-full',
+                  'font-extrabold text-sm',
+                  'transition-all duration-300 ease-out',
                   done
-                    ? 'bg-[#10b981] text-white shadow-[0_4px_0_0_#059669]'
+                    ? 'bg-[var(--success)] text-white shadow-[0_4px_0_0_#14532d]'
                     : active
-                    ? 'bg-[#6d28d9] text-white shadow-[0_4px_0_0_#4c1d95]'
-                    : 'bg-[#e8e0d0] text-[#94a3b8]',
+                      ? 'bg-[var(--brand)] text-white shadow-[0_4px_0_0_var(--brand-deep)] scale-110'
+                      : 'bg-[var(--surface-3)] text-[var(--ink-4)]',
                 ].join(' ')}
               >
-                {done ? <Check size={18} strokeWidth={3} /> : <Icon size={16} />}
+                {done ? (
+                  <Check size={18} strokeWidth={3} />
+                ) : (
+                  <Icon size={16} strokeWidth={2.5} />
+                )}
               </div>
               <span
                 className={[
-                  'mt-1 text-[11px] font-bold uppercase tracking-wider',
-                  active ? 'text-[#6d28d9]' : done ? 'text-[#10b981]' : 'text-[#94a3b8]',
+                  'mt-2 text-[10px] font-extrabold uppercase tracking-[0.18em]',
+                  active
+                    ? 'text-[var(--brand)]'
+                    : done
+                      ? 'text-[var(--success)]'
+                      : 'text-[var(--ink-4)]',
                 ].join(' ')}
               >
                 {s.label}
@@ -67,8 +95,9 @@ function ProgressBar({ step, labels }: { step: Step; labels: [string, string, st
             {i < steps.length - 1 && (
               <div
                 className={[
-                  'flex-1 h-0.5 mx-2 mb-5 rounded-full transition-all',
-                  step > s.num ? 'bg-[#10b981]' : 'bg-[#e8e0d0]',
+                  'flex-1 h-[2.5px] mx-3 mb-6 rounded-full',
+                  'transition-all duration-500',
+                  step > s.num ? 'bg-[var(--success)]' : 'bg-[var(--surface-3)]',
                 ].join(' ')}
               />
             )}
@@ -108,8 +137,16 @@ function InputField({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-extrabold text-[#1e1b4b] mb-1.5">
-        {label} {required && <span className="text-[#ef4444]">*</span>}
+      <label
+        htmlFor={id}
+        className="block text-[11px] font-extrabold text-[var(--ink-3)] uppercase tracking-[0.16em] mb-2"
+      >
+        {label}{' '}
+        {required && (
+          <span className="text-[var(--danger)] normal-case tracking-normal">
+            *
+          </span>
+        )}
       </label>
       <input
         id={id}
@@ -123,19 +160,30 @@ function InputField({
         maxLength={maxLength}
         placeholder={placeholder}
         className={[
-          'w-full px-4 py-3 rounded-xl border-2 font-semibold text-[#1e1b4b] bg-white placeholder:text-[#94a3b8] outline-none transition-all',
-          'focus:border-[#6d28d9] focus:ring-2 focus:ring-[#6d28d9]/20',
-          error ? 'border-[#ef4444]' : 'border-[#e8e0d0]',
+          'w-full px-4 py-3.5 rounded-xl',
+          'border-[1.5px] font-medium text-[var(--ink)]',
+          'bg-[var(--surface-2)] placeholder:text-[var(--ink-4)] placeholder:font-normal',
+          'outline-none transition-all duration-150',
+          'focus:bg-[var(--surface)] focus:ring-4',
+          error
+            ? 'border-[var(--danger)] focus:border-[var(--danger)] focus:ring-[var(--danger)]/12'
+            : 'border-[var(--line-strong)] focus:border-[var(--brand)] focus:ring-[var(--brand)]/12',
         ].join(' ')}
       />
-      {hint && !error && <p className="mt-1 text-xs text-[#64748b] font-semibold">{hint}</p>}
-      {error && <p className="mt-1 text-xs text-[#ef4444] font-semibold">{error}</p>}
+      {hint && !error && (
+        <p className="mt-2 text-xs text-[var(--ink-3)]">{hint}</p>
+      )}
+      {error && (
+        <p className="mt-2 text-xs text-[var(--danger)] font-semibold">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
 export default function RegisterPage() {
-    const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormData>({
     tenantName: '',
     slug: '',
@@ -174,7 +222,7 @@ export default function RegisterPage() {
     if (!form.tenantName.trim() || form.tenantName.length < 2)
       errs.tenantName = "Markaz nomi kamida 2 ta belgi bo'lishi kerak";
     if (!form.slug || !/^[a-z0-9-]{3,50}$/.test(form.slug))
-      errs.slug = "Slug: faqat a-z, 0-9, - (3-50 belgi)";
+      errs.slug = 'Slug: faqat a-z, 0-9, - (3-50 belgi)';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -184,7 +232,7 @@ export default function RegisterPage() {
     if (!form.adminName.trim() || form.adminName.length < 2)
       errs.adminName = "Ism kamida 2 ta belgi bo'lishi kerak";
     if (!form.adminLogin || !/^[a-zA-Z0-9_.-]{3,50}$/.test(form.adminLogin))
-      errs.adminLogin = "Login: faqat harflar, raqamlar, _ . - (3-50 belgi)";
+      errs.adminLogin = 'Login: faqat harflar, raqamlar, _ . - (3-50 belgi)';
     if (!form.adminPassword || form.adminPassword.length < 6)
       errs.adminPassword = "Parol kamida 6 ta belgi bo'lishi kerak";
     setErrors(errs);
@@ -224,13 +272,15 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.message ?? "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
+        throw new Error(
+          data?.message ?? "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.",
+        );
       }
 
       setRegisteredSlug(form.slug);
       setSuccess(true);
     } catch (err: unknown) {
-      setApiError(err instanceof Error ? err.message : "Xatolik yuz berdi");
+      setApiError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
       setLoading(false);
     }
@@ -238,30 +288,68 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-[#fffaf0] flex items-center justify-center px-4 py-16">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-2xl border-2 border-[#10b981]/30 p-8 shadow-[0_8px_30px_-12px_rgba(16,185,129,0.3)] text-center">
-            <div className="w-16 h-16 rounded-full bg-[#10b981] flex items-center justify-center mx-auto mb-4 shadow-[0_4px_0_0_#059669]">
-              <Check size={32} strokeWidth={3} className="text-white" />
+      <div className="min-h-screen relative bg-[var(--background)] flex items-center justify-center px-4 py-16 overflow-hidden">
+        {/* Atmosphere */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-[420px] h-[420px] rounded-full bg-[var(--success)]/15 blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[380px] h-[380px] rounded-full bg-[var(--brand)]/10 blur-3xl" />
+        </div>
+
+        <div className="relative w-full max-w-md">
+          <div
+            className={[
+              'bg-[var(--surface)] rounded-3xl p-10',
+              'border-2 border-[var(--success)]/30',
+              'shadow-[0_24px_60px_-24px_rgba(21,128,61,0.35)]',
+              'text-center',
+            ].join(' ')}
+          >
+            <div
+              className={[
+                'grid place-items-center w-20 h-20 rounded-full mx-auto mb-6',
+                'bg-[var(--success)] text-white',
+                'shadow-[0_6px_0_0_#14532d]',
+                'motion-safe:[animation:bounce-in_550ms_var(--ease-spring)]',
+              ].join(' ')}
+            >
+              <Check size={36} strokeWidth={3.25} />
             </div>
-            <h2 className="text-2xl font-extrabold text-[#1e1b4b] mb-2">
-              {'Muvaffaqiyatli ro\'yxatdan o\'tdingiz!'}
+            <h2 className="font-display text-3xl font-bold text-[var(--ink)] mb-2 tracking-[-0.01em]">
+              Muvaffaqiyatli ro&apos;yxatdan o&apos;tdingiz!
             </h2>
-            <p className="text-[#64748b] font-semibold mb-1">
+            <p className="text-[var(--ink-2)] mb-1">
               14 kunlik bepul sinov davri boshlandi.
             </p>
-            <p className="text-[#64748b] font-semibold mb-6">
-              Kirish uchun:
+            <p className="text-[var(--ink-3)] mb-6 text-sm">
+              Markaz kirish manzili:
             </p>
-            <div className="bg-[#f8f5ef] rounded-xl px-4 py-3 mb-6 font-mono text-sm font-bold text-[#6d28d9] border border-[#6d28d9]/20">
+            <div
+              className={[
+                'bg-[var(--surface-2)] rounded-xl px-4 py-3 mb-7',
+                'font-mono text-sm font-bold text-[var(--brand)]',
+                'border border-[var(--brand)]/20',
+              ].join(' ')}
+            >
               alochi.com/{registeredSlug}/login
             </div>
             <a
               href={`/${registeredSlug}/login`}
-              className="inline-flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-3 rounded-2xl shadow-[0_4px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95] transition-all w-full"
+              className={[
+                'group inline-flex items-center justify-center gap-2.5',
+                'bg-[var(--brand)] text-white font-extrabold text-base tracking-wide',
+                'px-6 py-4 rounded-2xl w-full',
+                'border-b-[5px] border-[var(--brand-deep)]',
+                'hover:bg-[var(--brand-strong)]',
+                'active:translate-y-[3px] active:border-b-[2px]',
+                'transition-all duration-150',
+              ].join(' ')}
             >
-              {'Kirishga o\'tish'}
-              <ArrowRight size={18} strokeWidth={2.75} />
+              Kirishga o&apos;tish
+              <ArrowRight
+                size={18}
+                strokeWidth={2.75}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
             </a>
           </div>
         </div>
@@ -270,31 +358,72 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fffaf0] flex flex-col items-center justify-center px-4 py-16">
+    <div className="min-h-screen relative bg-[var(--background)] flex flex-col items-center justify-center px-4 py-16 overflow-hidden">
+      {/* Atmosphere */}
+      <div aria-hidden className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 left-1/4 w-[420px] h-[420px] rounded-full bg-[var(--brand)]/12 blur-3xl" />
+        <div className="absolute -bottom-32 right-1/4 w-[420px] h-[300px] rounded-full bg-[var(--accent)]/10 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <div className="mb-8 text-center">
-        <Link href="/" className="inline-flex items-center gap-2 mb-6">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-md">
+      <div className="relative mb-10 text-center">
+        <Link href="/" className="inline-flex items-center gap-2.5 mb-7 group">
+          <div
+            className={[
+              'grid place-items-center w-10 h-10 rounded-xl',
+              'bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)]',
+              'shadow-[0_4px_12px_-4px_rgba(109,40,217,0.5)]',
+              'transition-transform duration-300 group-hover:rotate-[-8deg]',
+            ].join(' ')}
+          >
             <span className="text-white font-extrabold text-sm">A</span>
           </div>
-          <span className="text-[#1e1b4b] text-xl font-black tracking-tight">A&apos;lochi</span>
+          <span className="font-display text-[var(--ink)] text-2xl font-bold tracking-tight">
+            A&apos;lochi
+          </span>
         </Link>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1e1b4b] leading-tight">
-          {'Markazingizni ro\'yxatdan o\'tkazing'}
+        <span
+          className={[
+            'inline-flex items-center gap-2',
+            'px-3.5 py-1.5 rounded-full',
+            'bg-[var(--brand-soft)] border border-[var(--brand)]/15',
+            'text-[var(--brand)] text-[11px] font-extrabold uppercase tracking-[0.2em]',
+            'mb-5',
+          ].join(' ')}
+        >
+          <Sparkles size={13} strokeWidth={2.75} />
+          14 kun bepul
+        </span>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold text-[var(--ink)] leading-[1.05] tracking-[-0.02em]">
+          Markazingizni
+          <br />
+          <span className="italic font-medium text-[var(--brand)]">
+            ro&apos;yxatdan o&apos;tkazing
+          </span>
         </h1>
-        <p className="mt-2 text-[#64748b] font-semibold">
-          {'14 kun bepul sinov — kredit karta talab qilinmaydi'}
+        <p className="mt-4 text-[var(--ink-2)] max-w-md mx-auto">
+          Kredit karta talab qilinmaydi — sinov muddati avtomatik tugaydi
         </p>
       </div>
 
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl border border-[#ede9e1] p-8 shadow-sm">
-          <ProgressBar step={step} labels={['Markaz', 'Admin', 'Tasdiqlash']} />
+      <div className="relative w-full max-w-md">
+        <div
+          className={[
+            'bg-[var(--surface)] rounded-3xl p-8',
+            'border border-[var(--line)]',
+            'shadow-[var(--shadow-3)]',
+          ].join(' ')}
+        >
+          <ProgressBar
+            step={step}
+            labels={['Markaz', 'Admin', 'Tasdiqlash']}
+          />
 
-          {/* Step 1 — Markaz ma'lumotlari */}
           {step === 1 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-extrabold text-[#1e1b4b]">Markaz ma&apos;lumotlari</h2>
+              <h2 className="font-display text-2xl font-bold text-[var(--ink)] tracking-[-0.01em]">
+                Markaz ma&apos;lumotlari
+              </h2>
 
               <InputField
                 label="Markaz nomi"
@@ -319,18 +448,26 @@ export default function RegisterPage() {
                   hint="Faqat kichik harflar, raqamlar va chiziqcha (-)"
                 />
                 {form.slug && !errors.slug && (
-                  <div className="mt-2 bg-[#f8f5ef] rounded-lg px-3 py-2 text-xs font-bold text-[#6d28d9] border border-[#6d28d9]/15">
-                    Kirish manzili: alochi.com/<strong>{form.slug}</strong>/login
+                  <div
+                    className={[
+                      'mt-2.5 bg-[var(--brand-soft)] rounded-lg px-3.5 py-2.5',
+                      'text-xs font-bold text-[var(--brand)]',
+                      'border border-[var(--brand)]/20',
+                    ].join(' ')}
+                  >
+                    Kirish manzili: alochi.com/<strong>{form.slug}</strong>
+                    /login
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Step 2 — Admin akkaunt */}
           {step === 2 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-extrabold text-[#1e1b4b]">Admin akkaunt</h2>
+              <h2 className="font-display text-2xl font-bold text-[var(--ink)] tracking-[-0.01em]">
+                Admin akkaunt
+              </h2>
 
               <InputField
                 label="To'liq ism"
@@ -377,36 +514,61 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* Step 3 — Tasdiqlash */}
           {step === 3 && (
             <div className="space-y-5">
-              <h2 className="text-xl font-extrabold text-[#1e1b4b]">Ma&apos;lumotlarni tasdiqlash</h2>
+              <h2 className="font-display text-2xl font-bold text-[var(--ink)] tracking-[-0.01em]">
+                Ma&apos;lumotlarni tasdiqlash
+              </h2>
 
               <div className="space-y-3">
-                <div className="bg-[#f8f5ef] rounded-xl p-4 border border-[#ede9e1]">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#94a3b8] mb-2">Markaz</p>
-                  <p className="font-extrabold text-[#1e1b4b]">{form.tenantName}</p>
-                  <p className="text-sm font-bold text-[#6d28d9] mt-0.5">
+                <SummaryCard label="Markaz">
+                  <p className="font-display font-bold text-[var(--ink)] text-lg">
+                    {form.tenantName}
+                  </p>
+                  <p className="font-mono text-sm font-bold text-[var(--brand)] mt-1">
                     alochi.com/{form.slug}/login
                   </p>
-                </div>
+                </SummaryCard>
 
-                <div className="bg-[#f8f5ef] rounded-xl p-4 border border-[#ede9e1]">
-                  <p className="text-xs font-extrabold uppercase tracking-widest text-[#94a3b8] mb-2">Admin</p>
-                  <p className="font-extrabold text-[#1e1b4b]">{form.adminName}</p>
-                  <p className="text-sm font-bold text-[#475569]">Login: {form.adminLogin}</p>
+                <SummaryCard label="Admin">
+                  <p className="font-display font-bold text-[var(--ink)] text-lg">
+                    {form.adminName}
+                  </p>
+                  <p className="text-sm text-[var(--ink-2)] mt-0.5">
+                    Login:{' '}
+                    <span className="font-mono font-semibold">
+                      {form.adminLogin}
+                    </span>
+                  </p>
                   {form.adminPhone && (
-                    <p className="text-sm font-bold text-[#475569]">Tel: {form.adminPhone}</p>
+                    <p className="text-sm text-[var(--ink-2)]">
+                      Tel: {form.adminPhone}
+                    </p>
                   )}
-                </div>
+                </SummaryCard>
 
-                <div className="flex items-center gap-3 bg-[#ecfdf5] rounded-xl p-4 border border-[#10b981]/25">
-                  <div className="w-8 h-8 rounded-full bg-[#10b981] flex items-center justify-center shrink-0">
-                    <Check size={16} strokeWidth={3} className="text-white" />
+                <div
+                  className={[
+                    'flex items-center gap-3.5',
+                    'bg-[var(--success-soft)] rounded-xl p-4',
+                    'border border-[var(--success)]/25',
+                  ].join(' ')}
+                >
+                  <div
+                    className={[
+                      'grid place-items-center w-9 h-9 rounded-xl',
+                      'bg-[var(--success)] text-white',
+                      'shadow-[0_3px_0_0_#14532d]',
+                      'shrink-0',
+                    ].join(' ')}
+                  >
+                    <Check size={16} strokeWidth={3} />
                   </div>
                   <div>
-                    <p className="font-extrabold text-[#065f46] text-sm">14 kun bepul sinov</p>
-                    <p className="text-[#047857] text-xs font-semibold">
+                    <p className="font-extrabold text-[var(--success)] text-sm">
+                      14 kun bepul sinov
+                    </p>
+                    <p className="text-[var(--success)]/80 text-xs">
                       Kredit karta va to&apos;lov ma&apos;lumotlari shart emas
                     </p>
                   </div>
@@ -414,21 +576,36 @@ export default function RegisterPage() {
               </div>
 
               {apiError && (
-                <div className="bg-[#fef2f2] border border-[#fca5a5] rounded-xl px-4 py-3">
-                  <p className="text-[#dc2626] text-sm font-bold">{apiError}</p>
+                <div
+                  className={[
+                    'bg-[var(--danger-soft)] rounded-xl px-4 py-3',
+                    'border border-[var(--danger)]/30',
+                  ].join(' ')}
+                >
+                  <p className="text-[var(--danger)] text-sm font-bold">
+                    {apiError}
+                  </p>
                 </div>
               )}
             </div>
           )}
 
           {/* Navigation */}
-          <div className="mt-8 flex gap-3">
+          <div className="mt-9 flex gap-3">
             {step > 1 && (
               <button
                 type="button"
                 onClick={goBack}
                 disabled={loading}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#1e1b4b]/12 hover:border-[#6d28d9]/30 font-extrabold text-[#1e1b4b] transition-all disabled:opacity-50"
+                className={[
+                  'flex items-center gap-2',
+                  'px-5 py-3.5 rounded-xl',
+                  'border-[1.5px] border-[var(--line-strong)]',
+                  'hover:border-[var(--ink)] hover:bg-[var(--surface-2)]',
+                  'font-bold text-[var(--ink)] text-sm',
+                  'transition-all duration-150',
+                  'disabled:opacity-50',
+                ].join(' ')}
               >
                 <ArrowLeft size={16} strokeWidth={2.75} />
                 Orqaga
@@ -439,26 +616,47 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={goNext}
-                className="flex-1 flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-base px-6 py-3 rounded-xl shadow-[0_4px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95] transition-all"
+                className={[
+                  'group flex-1 flex items-center justify-center gap-2',
+                  'bg-[var(--brand)] text-white font-extrabold text-sm tracking-wide',
+                  'px-6 py-3.5 rounded-xl',
+                  'border-b-[4px] border-[var(--brand-deep)]',
+                  'hover:bg-[var(--brand-strong)]',
+                  'active:translate-y-[2px] active:border-b-[1px]',
+                  'transition-all duration-150',
+                ].join(' ')}
               >
                 Keyingi
-                <ArrowRight size={18} strokeWidth={2.75} />
+                <ArrowRight
+                  size={18}
+                  strokeWidth={2.75}
+                  className="transition-transform duration-200 group-hover:translate-x-1"
+                />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] disabled:bg-[#6d28d9]/60 text-white font-extrabold text-base px-6 py-3 rounded-xl shadow-[0_4px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95] transition-all"
+                className={[
+                  'group flex-1 flex items-center justify-center gap-2',
+                  'bg-[var(--brand)] text-white font-extrabold text-sm tracking-wide',
+                  'px-6 py-3.5 rounded-xl',
+                  'border-b-[4px] border-[var(--brand-deep)]',
+                  'hover:bg-[var(--brand-strong)]',
+                  'active:translate-y-[2px] active:border-b-[1px]',
+                  'transition-all duration-150',
+                  'disabled:opacity-60 disabled:cursor-not-allowed disabled:active:translate-y-0',
+                ].join(' ')}
               >
                 {loading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Yuborilmoqda...
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Yuborilmoqda…
                   </>
                 ) : (
                   <>
-                    {'Ro\'yxatdan o\'tish'}
+                    Ro&apos;yxatdan o&apos;tish
                     <Check size={18} strokeWidth={2.75} />
                   </>
                 )}
@@ -467,13 +665,38 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-sm font-semibold text-[#64748b]">
-          {'Allaqachon hisobingiz bormi?'}{' '}
-          <Link href="/login" className="text-[#6d28d9] font-extrabold hover:underline">
-            {'Kirish'}
+        <p className="mt-6 text-center text-sm text-[var(--ink-3)]">
+          Allaqachon hisobingiz bormi?{' '}
+          <Link
+            href="/login"
+            className="text-[var(--brand)] hover:text-[var(--brand-strong)] font-semibold underline decoration-[1.5px] underline-offset-4 decoration-[var(--brand)]/40 hover:decoration-[var(--brand)] transition-all"
+          >
+            Kirish
           </Link>
         </p>
       </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={[
+        'bg-[var(--surface-2)] rounded-xl p-4',
+        'border border-[var(--line)]',
+      ].join(' ')}
+    >
+      <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[var(--ink-4)] mb-2">
+        {label}
+      </p>
+      {children}
     </div>
   );
 }
