@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
@@ -112,6 +113,8 @@ export default function MentorAttendancePage() {
   useEffect(() => {
     loadStudents();
   }, [loadStudents]);
+
+  useFocusRevalidate(loadStudents);
 
   function setStatus(id: string, status: AttendanceStatus) {
     setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));

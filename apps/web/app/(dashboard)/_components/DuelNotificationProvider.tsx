@@ -5,6 +5,14 @@ import { Swords, Trophy } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal, Button } from '@/components/ui';
 
+/** Dispatch a window-level CustomEvent so any page hook can revalidate. */
+function dispatchRevalidate(type: string, payload: unknown) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('alochi:revalidate', { detail: { type, payload } }),
+  );
+}
+
 interface DuelChallenge {
   duelId: string;
   challengerName: string;
@@ -24,9 +32,6 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
   const [result, setResult] = useState<DuelResult | null>(null);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { role?: string };
-    if (user.role !== 'student') return;
-
     const token = localStorage.getItem('accessToken') ?? '';
     if (!token) return;
 
@@ -42,6 +47,22 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
       setResult(data);
       setTimeout(() => setResult(null), 5_000);
     });
+
+    // Revalidation bridge — forward server-push events as window CustomEvents
+    // so any page using useRevalidateOnEvent can refetch without polling.
+    const REVALIDATE_EVENTS = [
+      'xp:updated',
+      'cert:earned',
+      'status:updated',
+      'kpi:updated',
+      'challenge:update',
+    ] as const;
+
+    for (const event of REVALIDATE_EVENTS) {
+      socket.on(event, (payload: unknown) => {
+        dispatchRevalidate(event, payload);
+      });
+    }
 
     return () => { socket.disconnect(); };
   }, []);

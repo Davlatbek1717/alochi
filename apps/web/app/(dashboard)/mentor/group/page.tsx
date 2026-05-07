@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { EmptyState, Skeleton } from '@/components/ui';
 
 /** Auto-save fires this long after the last edit. 800ms feels snappy
@@ -120,6 +122,9 @@ export default function MentorGroupPage() {
   useEffect(() => {
     loadStudents();
   }, [loadStudents]);
+
+  useFocusRevalidate(loadStudents);
+  useRevalidateOnEvent(['status:updated', 'xp:updated'], loadStudents);
 
   function updateStatus(id: string, status: Status) {
     setStudents((prev) =>

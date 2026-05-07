@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import {
   RefreshCw,
   BarChart2,
@@ -219,6 +220,10 @@ export default function StudentDashboard() {
   // another window. Canonical implementation lives in useFocusRevalidate —
   // all pages use the same hook instead of duplicating listener wiring.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate on socket push so XP, certs, and status changes
+  // appear without the student having to switch tabs.
+  useRevalidateOnEvent(['xp:updated', 'cert:earned', 'status:updated'], load);
 
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();

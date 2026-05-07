@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
@@ -135,6 +136,9 @@ export default function StudentProfilePage() {
   // Refresh student status and lesson data whenever the manager returns to
   // this tab so changes made by other staff are immediately visible.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate on socket push for status, XP, or cert changes.
+  useRevalidateOnEvent(['status:updated', 'xp:updated', 'cert:earned'], load);
 
   async function loadHistory() {
     if (historyLoading || history.length > 0) { setShowHistory(true); return; }

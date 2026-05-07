@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { Award, Lock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton } from '@/components/ui';
@@ -79,6 +80,9 @@ export default function StudentCertificatesPage() {
   // Refresh certificates and progress when the user returns to this tab so
   // newly awarded certificates appear without a full page reload.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate immediately when the server signals a cert was earned.
+  useRevalidateOnEvent(['cert:earned'], load);
 
   return (
     <div className="min-h-full bg-[#fffaf0] pb-8">

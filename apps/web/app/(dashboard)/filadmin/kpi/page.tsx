@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, CheckCircle, AlertCircle } from 'lucide-react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { apiRequest } from '@/lib/api';
 import { formatDateShort } from '@/lib/date-uz';
 
@@ -78,7 +80,7 @@ export default function FiladminKpiPage() {
     };
   }, []);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
     let branchId = '';
     try {
@@ -89,58 +91,60 @@ export default function FiladminKpiPage() {
     }
     setHasBranch(!!branchId);
 
+    if (!branchId) {
+      setLoadingUsers(false);
+      setLoadingStats(false);
+      setHistoryLoading(false);
+      return;
+    }
+
     // Month-bounded ?from=&to= for the branch-wide award history.
     const now = new Date();
     const fromIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const toIso = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
-    async function load() {
-      if (!branchId) {
-        setLoadingUsers(false);
-        setLoadingStats(false);
-        setHistoryLoading(false);
-        return;
-      }
-      setHistoryLoading(true);
-      const [usersRes, todayRes, recentRes, historyRes] = await Promise.allSettled([
-        apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
-        apiRequest<number>('/kpi/today', {}, token),
-        apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
-        branchId
-          ? apiRequest<BranchAward[]>(
-              `/kpi/by-branch/${branchId}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&limit=200`,
-              {},
-              token,
-            )
-          : Promise.reject(new Error('no branch')),
-      ]);
+    setHistoryLoading(true);
+    const [usersRes, todayRes, recentRes, historyRes] = await Promise.allSettled([
+      apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
+      apiRequest<number>('/kpi/today', {}, token),
+      apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
+      apiRequest<BranchAward[]>(
+        `/kpi/by-branch/${branchId}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&limit=200`,
+        {},
+        token,
+      ),
+    ]);
 
-      if (usersRes.status === 'fulfilled') {
-        setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
-      } else {
-        setUsersError('Xodimlar yuklanmadi');
-      }
-      setLoadingUsers(false);
+    if (usersRes.status === 'fulfilled') {
+      setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
+    } else {
+      setUsersError('Xodimlar yuklanmadi');
+    }
+    setLoadingUsers(false);
 
-      if (todayRes.status === 'fulfilled') {
-        setTodayTotal(todayRes.value.data ?? 0);
-      } else {
-        setStatsError(true);
-      }
-      setLoadingStats(false);
+    if (todayRes.status === 'fulfilled') {
+      setTodayTotal(todayRes.value.data ?? 0);
+    } else {
+      setStatsError(true);
+    }
+    setLoadingStats(false);
 
-      if (recentRes.status === 'fulfilled') {
-        setRecentAwards(recentRes.value.data ?? []);
-      }
-
-      if (historyRes.status === 'fulfilled') {
-        setBranchHistory(historyRes.value.data ?? []);
-      }
-      setHistoryLoading(false);
+    if (recentRes.status === 'fulfilled') {
+      setRecentAwards(recentRes.value.data ?? []);
     }
 
-    load();
+    if (historyRes.status === 'fulfilled') {
+      setBranchHistory(historyRes.value.data ?? []);
+    }
+    setHistoryLoading(false);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['kpi:updated'], load);
 
   async function handleAward() {
     setSubmitting(true);

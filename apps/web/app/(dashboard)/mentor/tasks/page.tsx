@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ClipboardList,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type Task = {
   id: string;
@@ -85,7 +86,7 @@ export default function MentorTasksPage() {
     return localStorage.getItem('accessToken') ?? '';
   }
 
-  useEffect(() => {
+  const load = useCallback(() => {
     try {
       const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
         id?: string;
@@ -108,6 +109,12 @@ export default function MentorTasksPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
 
   async function loadStudents() {
     setStudentsLoading(true);

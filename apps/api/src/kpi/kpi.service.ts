@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface AwardKpiDto {
@@ -35,10 +36,13 @@ export const KPI_REASONS = {
 
 @Injectable()
 export class KpiService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   async award(dto: AwardKpiDto) {
-    return this.prisma.kpiScore.create({
+    const row = await this.prisma.kpiScore.create({
       data: {
         tenantId: dto.tenantId,
         userId: dto.userId,
@@ -49,6 +53,18 @@ export class KpiService {
         delegationId: dto.delegationId,
       },
     });
+
+    // Best-effort: notify socket layer so tenant dashboards revalidate.
+    this.events
+      .emitAsync('kpi.awarded', {
+        tenantId: dto.tenantId,
+        scorerId: dto.userId,
+        scoreDelta: dto.score,
+        branchId: '',
+      })
+      .catch(() => undefined);
+
+    return row;
   }
 
   async getDailyTotal(userId: string, date: Date): Promise<number> {

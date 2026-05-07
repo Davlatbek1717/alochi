@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -192,6 +193,9 @@ export default function StudentProfilePage() {
   // Refresh XP, streak and certificate data whenever the user returns to this
   // tab so the profile never shows stale gamification numbers.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate on XP or certificate socket push.
+  useRevalidateOnEvent(['xp:updated', 'cert:earned'], load);
 
   async function saveEdit() {
     if (!profile) return;

@@ -326,4 +326,54 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }) {
     this.server?.to(`group:${payload.groupId}`).emit('chat:pinned', payload);
   }
+
+  // ── Gamification events → WebSocket forwarders ─────────────────────────
+
+  /** A1. xp:updated — emitted after XpService.award upserts studentXp. */
+  @OnEvent('xp.awarded')
+  forwardXpAwarded(payload: {
+    studentId: string;
+    totalXp: number;
+    delta: number;
+    tenantId: string;
+  }) {
+    const eventPayload = {
+      studentId: payload.studentId,
+      totalXp: payload.totalXp,
+      delta: payload.delta,
+    };
+    this.emitToUser(payload.studentId, 'xp:updated', eventPayload);
+    this.emitToTenant(payload.tenantId, 'xp:updated', eventPayload);
+  }
+
+  /** A2. cert:earned — bridged from the EventEmitter2 event CertificatesService already emits. */
+  @OnEvent('certificate.earned')
+  forwardCertificateEarned(payload: {
+    certificateId: string;
+    studentId: string;
+    tenantId: string;
+    level: string;
+    certName: string;
+  }) {
+    this.emitToUser(payload.studentId, 'cert:earned', {
+      studentId: payload.studentId,
+      level: payload.level,
+      certName: payload.certName,
+    });
+  }
+
+  /** A3. kpi:updated — emitted after KpiService.award writes a kpiScore row. */
+  @OnEvent('kpi.awarded')
+  forwardKpiAwarded(payload: {
+    tenantId: string;
+    scorerId: string;
+    scoreDelta: number;
+    branchId: string;
+  }) {
+    this.emitToTenant(payload.tenantId, 'kpi:updated', {
+      scorerId: payload.scorerId,
+      scoreDelta: payload.scoreDelta,
+      branchId: payload.branchId,
+    });
+  }
 }

@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import {
   BarChart2,
   CreditCard,
@@ -177,6 +178,9 @@ export default function FiladminDashboard() {
   // Refresh dashboard stats whenever the filadmin returns to this tab so
   // attendance and task counts reflect the latest state.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate on socket push for status or KPI mutations.
+  useRevalidateOnEvent(['status:updated', 'kpi:updated'], load);
 
   const totalStatus = stats.statusYashil + stats.statusSariq + stats.statusQizil;
   const pct = (n: number) => (totalStatus > 0 ? Math.round((n / totalStatus) * 100) : 0);

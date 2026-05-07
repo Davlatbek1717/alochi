@@ -9,7 +9,8 @@ describe('XpService', () => {
       create: jest.fn().mockResolvedValue({}),
     },
   };
-  const service = new XpService(mockPrisma as any);
+  const mockEvents = { emitAsync: jest.fn().mockResolvedValue([]) };
+  const service = new XpService(mockPrisma as any, mockEvents as any);
 
   it('awards correct XP for lesson completion', async () => {
     await service.award('student-id', 'lesson_complete');

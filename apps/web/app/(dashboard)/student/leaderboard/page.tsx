@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import Link from 'next/link';
 import {
   Trophy,
@@ -81,6 +82,9 @@ export default function LeaderboardPage() {
   // Refresh leaderboard positions whenever the user returns to this tab so
   // rank changes made by peers are visible without a full page reload.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate when any student earns XP so rankings update live.
+  useRevalidateOnEvent(['xp:updated'], load);
 
   const reset = weeklyResetIn();
 

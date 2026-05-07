@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { KpiService } from './kpi.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,12 +12,18 @@ const mockPrisma = {
   },
 };
 
+const mockEvents = { emitAsync: jest.fn().mockResolvedValue([]) };
+
 describe('KpiService', () => {
   let service: KpiService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [KpiService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        KpiService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: mockEvents },
+      ],
     }).compile();
     service = module.get(KpiService);
   });

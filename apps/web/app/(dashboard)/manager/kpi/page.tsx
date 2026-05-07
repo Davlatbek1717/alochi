@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, CheckCircle, AlertCircle } from 'lucide-react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { apiRequest } from '@/lib/api';
 import { formatDateShort } from '@/lib/date-uz';
 import { getBranchIdFromToken } from '@/lib/jwt';
@@ -68,40 +70,42 @@ export default function ManagerKpiPage() {
     };
   }, []);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const branchId = getBranchIdFromToken() ?? '';
     setHasBranch(!!branchId);
-
     const token = localStorage.getItem('accessToken') ?? '';
 
-    async function load() {
-      const [usersRes, todayRes, recentRes] = await Promise.allSettled([
-        apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
-        apiRequest<number>('/kpi/today', {}, token),
-        apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
-      ]);
+    const [usersRes, todayRes, recentRes] = await Promise.allSettled([
+      apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
+      apiRequest<number>('/kpi/today', {}, token),
+      apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
+    ]);
 
-      if (usersRes.status === 'fulfilled') {
-        setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
-      } else {
-        setUsersError('Xodimlar yuklanmadi');
-      }
-      setLoadingUsers(false);
-
-      if (todayRes.status === 'fulfilled') {
-        setTodayTotal(todayRes.value.data ?? 0);
-      } else {
-        setStatsError(true);
-      }
-      setLoadingStats(false);
-
-      if (recentRes.status === 'fulfilled') {
-        setRecentAwards(recentRes.value.data ?? []);
-      }
+    if (usersRes.status === 'fulfilled') {
+      setStaffUsers(usersRes.value.data.filter((u) => u.role !== 'student'));
+    } else {
+      setUsersError('Xodimlar yuklanmadi');
     }
+    setLoadingUsers(false);
 
-    load();
+    if (todayRes.status === 'fulfilled') {
+      setTodayTotal(todayRes.value.data ?? 0);
+    } else {
+      setStatsError(true);
+    }
+    setLoadingStats(false);
+
+    if (recentRes.status === 'fulfilled') {
+      setRecentAwards(recentRes.value.data ?? []);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['kpi:updated'], load);
 
   async function handleAward() {
     setSubmitting(true);

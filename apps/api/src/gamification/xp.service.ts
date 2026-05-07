@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const XP_AMOUNTS = {
@@ -28,7 +29,10 @@ const LEVELS = [
 
 @Injectable()
 export class XpService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private events: EventEmitter2,
+  ) {}
 
   getLevel(totalXp: number): string {
     for (let i = LEVELS.length - 1; i >= 0; i--) {
@@ -52,11 +56,24 @@ export class XpService {
       data: { studentId, amount, reason: key, metadata },
     });
 
-    return this.prisma.studentXp.upsert({
+    const row = await this.prisma.studentXp.upsert({
       where: { studentId },
       create: { studentId, totalXp: amount },
       update: { totalXp: { increment: amount } },
+      select: { totalXp: true, student: { select: { tenantId: true } } },
     });
+
+    // Best-effort: notify socket layer via EventEmitter2 bridge.
+    this.events
+      .emitAsync('xp.awarded', {
+        studentId,
+        totalXp: row.totalXp,
+        delta: amount,
+        tenantId: row.student?.tenantId ?? '',
+      })
+      .catch(() => undefined);
+
+    return row;
   }
 
   /** Default per-day XP target shown by the dashboard ring. Future work can

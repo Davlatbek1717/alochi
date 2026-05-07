@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { XpService, XP_AMOUNTS } from './xp.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -13,12 +14,18 @@ const mockPrisma = {
   },
 };
 
+const mockEvents = { emitAsync: jest.fn().mockResolvedValue([]) };
+
 describe('XpService', () => {
   let service: XpService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      providers: [XpService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        XpService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: EventEmitter2, useValue: mockEvents },
+      ],
     }).compile();
     service = module.get(XpService);
   });
@@ -67,6 +74,7 @@ describe('XpService', () => {
         where: { studentId: 'student-1' },
         create: { studentId: 'student-1', totalXp: XP_AMOUNTS.LESSON_COMPLETE },
         update: { totalXp: { increment: XP_AMOUNTS.LESSON_COMPLETE } },
+        select: { totalXp: true, student: { select: { tenantId: true } } },
       });
       expect(result).toEqual(upserted);
     });

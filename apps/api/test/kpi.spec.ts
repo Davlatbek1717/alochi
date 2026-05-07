@@ -11,7 +11,8 @@ describe('KpiService', () => {
       aggregate: jest.fn().mockResolvedValue({ _sum: { score: 15 } }),
     },
   };
-  const service = new KpiService(mockPrisma as any);
+  const mockEvents = { emitAsync: jest.fn().mockResolvedValue([]) };
+  const service = new KpiService(mockPrisma as any, mockEvents as any);
 
   it('awards KPI points with reason', async () => {
     const result = await service.award({

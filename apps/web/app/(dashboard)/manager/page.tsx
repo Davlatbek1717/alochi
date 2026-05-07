@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { Users, CreditCard, ClipboardList, Send, AlertCircle, AlertTriangle, TrendingUp, Trophy, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, Stat, useToast } from '@/components/ui';
@@ -60,6 +61,10 @@ export default function ManagerDashboard() {
   // Refresh student status lists whenever the manager returns to this tab so
   // status changes made by mentors are visible without a full page reload.
   useFocusRevalidate(load);
+
+  // Real-time: revalidate immediately when a socket push signals that status
+  // or KPI data has changed while the manager is actively viewing this page.
+  useRevalidateOnEvent(['status:updated', 'kpi:updated'], load);
 
   const navCards = [
     { href: '/manager/students',    icon: <Users size={20} />,        title: "O'quvchilar", desc: 'Status boshqaruv',  color: 'hover:border-violet-300 hover:bg-violet-50' },

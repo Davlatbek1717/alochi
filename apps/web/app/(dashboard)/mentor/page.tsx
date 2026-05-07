@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users,
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { formatDateWeekday } from '@/lib/date-uz';
 import { Skeleton } from '@/components/ui';
 
@@ -36,7 +38,7 @@ export default function MentorDashboard() {
   const [mentorName, setMentorName] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     const groupId = getGroupIdFromToken();
     const branchId = getBranchIdFromToken();
@@ -73,6 +75,13 @@ export default function MentorDashboard() {
       setConfirmedTasks(sentTasks.filter((t) => t.status === 'done' || t.status === 'confirmed').length);
     }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['kpi:updated', 'status:updated'], load);
 
   const dateStr = formatDateWeekday(new Date());
 

@@ -1,8 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Award, Medal } from 'lucide-react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
@@ -37,7 +39,7 @@ export default function ManagerCertificatesPage() {
   const [loading, setLoading] = useState(true);
   const [hasBranch, setHasBranch] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     const branchId = getBranchIdFromToken() ?? '';
     setHasBranch(!!branchId);
@@ -58,7 +60,15 @@ export default function ManagerCertificatesPage() {
         toast.error(err instanceof Error ? err.message : 'Sertifikatlar yuklanmadi');
       })
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['cert:earned'], load);
 
   return (
     <div className="min-h-full bg-[#f7f4ef]">

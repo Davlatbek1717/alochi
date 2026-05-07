@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Student = { id: string; name: string; role: string };
 
@@ -61,7 +63,7 @@ export default function MentorStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     const branchId = getBranchIdFromToken();
     if (!branchId) {
@@ -75,6 +77,13 @@ export default function MentorStudentsPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['status:updated'], load);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
