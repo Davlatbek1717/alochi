@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Star, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateShort } from '@/lib/date-uz';
+import { getBranchIdFromToken } from '@/lib/jwt';
 
 type BranchUser = {
   id: string;
@@ -68,13 +69,7 @@ export default function ManagerKpiPage() {
   }, []);
 
   useEffect(() => {
-    let branchId = '';
-    try {
-      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
-      branchId = user.branchId ?? '';
-    } catch {
-      // malformed JSON — branchId stays empty
-    }
+    const branchId = getBranchIdFromToken() ?? '';
     setHasBranch(!!branchId);
 
     const token = localStorage.getItem('accessToken') ?? '';
@@ -124,10 +119,13 @@ export default function ManagerKpiPage() {
       setSuccess(true);
       setSelectedUserId('');
       setReason('');
-      setTodayTotal((prev) => prev + score);
       successTimerRef.current = setTimeout(() => setSuccess(false), 3000);
-      // Refresh recent awards
-      const recentRes = await apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token).catch(() => null);
+      // Refresh both today total and recent awards from server
+      const [todayRes, recentRes] = await Promise.all([
+        apiRequest<number>('/kpi/today', {}, token).catch(() => null),
+        apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token).catch(() => null),
+      ]);
+      if (todayRes) setTodayTotal(todayRes.data ?? 0);
       if (recentRes) setRecentAwards(recentRes.data ?? []);
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
@@ -149,7 +147,7 @@ export default function ManagerKpiPage() {
             <ArrowLeft size={16} /> Manager
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/20 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/20 border border-[#f59e0b]/30 flex items-center justify-center">
               <Star size={18} className="text-[#f59e0b]" />
             </div>
             <div>
@@ -174,7 +172,7 @@ export default function ManagerKpiPage() {
         ) : (
         <>
         {/* Today stat */}
-        <div className="bg-[#162032] rounded-[18px] p-5">
+        <div className="bg-[#0f172a] rounded-[18px] p-5">
           <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-widest mb-1">Bugun berilgan jami</p>
           {loadingStats ? (
             <div className="h-9 w-24 bg-white/10 rounded animate-pulse" />
@@ -196,9 +194,9 @@ export default function ManagerKpiPage() {
                   className="flex-shrink-0 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 min-w-[160px]"
                 >
                   <div className="text-amber-700 font-semibold">+{a.score}</div>
-                  <div className="text-xs text-slate-600 truncate">{a.recipientName ?? 'Xodim'}</div>
-                  <div className="text-xs text-slate-500 truncate">{a.reason}</div>
-                  <div className="text-xs text-slate-400">{formatRelativeTime(a.date)}</div>
+                  <div className="text-xs text-[#64748b] truncate">{a.recipientName ?? 'Xodim'}</div>
+                  <div className="text-xs text-[#64748b] truncate">{a.reason}</div>
+                  <div className="text-xs text-[#94a3b8]">{formatRelativeTime(a.date)}</div>
                 </div>
               ))}
             </div>

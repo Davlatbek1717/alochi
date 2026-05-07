@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Modal } from '@/components/ui';
+import { Modal, Skeleton, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
 
 interface Lesson {
@@ -58,17 +58,18 @@ export default function StudentProfilePage() {
     personalNote?: string; givenBy?: string;
   };
 
+  const toast = useToast();
   const [studentName, setStudentName] = useState('');
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [status, setStatus] = useState<StudentStatus | null>(null);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [toast, setToast] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [studentError, setStudentError] = useState<string | null>(null);
   const [history, setHistory] = useState<StatusRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
   // Quick-action modal state
@@ -86,28 +87,39 @@ export default function StudentProfilePage() {
     const token = localStorage.getItem('accessToken') ?? '';
 
     async function load() {
+      let studentFetched = false;
       try {
         // Fetch user first — if user fetch fails, render full-page error.
         const userRes = await apiRequest<UserInfo>(`/users/${studentId}`, {}, token);
         setStudentName(userRes.data.name);
+        studentFetched = true;
 
-        const [lessonsRes, statusRes] = await Promise.all([
+        const [lessonsRes, statusRes, configRes] = await Promise.all([
           apiRequest<Lesson[]>('/lessons', {}, token),
           apiRequest<StudentStatus>(`/status/${studentId}`, {}, token).catch(() => ({ data: null })),
+          apiRequest<Array<{ lessonId: string; nRepetitionsOverride: number }>>(
+            `/student-config/${studentId}`,
+            {},
+            token,
+          ).catch(() => ({ data: [] as Array<{ lessonId: string; nRepetitionsOverride: number }> })),
         ]);
 
         setLessons(lessonsRes.data);
         setStatus(statusRes.data);
 
+        // Build per-student override map; fall back to global default when no row exists
+        const configMap = new Map<string, number>(
+          (configRes.data ?? []).map((c) => [c.lessonId, c.nRepetitionsOverride]),
+        );
         const initial: Record<string, number> = {};
         for (const l of lessonsRes.data) {
-          initial[l.id] = l.nRepetitions;
+          initial[l.id] = configMap.has(l.id) ? (configMap.get(l.id) as number) : l.nRepetitions;
         }
         setOverrides(initial);
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Xatolik yuz berdi';
-        // If we never got the studentName, this is a fatal student-fetch error.
-        if (!studentName) {
+        // Only promote to full-page error when the student fetch itself failed
+        if (!studentFetched) {
           setStudentError(msg);
         } else {
           setError(msg);
@@ -118,25 +130,27 @@ export default function StudentProfilePage() {
     }
 
     load();
-  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [studentId]);
 
   async function loadHistory() {
     if (historyLoading || history.length > 0) { setShowHistory(true); return; }
     setHistoryLoading(true);
+    setHistoryError(null);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<StatusRecord[]>(`/status/history/${studentId}`, {}, token);
       setHistory(res.data);
-    } catch { /* ignore */ }
-    finally { setHistoryLoading(false); setShowHistory(true); }
-  }
-
-  function showToast(msg: string) {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setHistoryError(err instanceof Error ? err.message : 'Tarixni yuklashda xatolik');
+    } finally { setHistoryLoading(false); setShowHistory(true); }
   }
 
   async function handleSave(lessonId: string) {
+    const val = overrides[lessonId];
+    if (!Number.isFinite(val) || val < 1) {
+      toast.error("Takrorlash soni kamida 1 bo'lishi kerak");
+      return;
+    }
     const token = localStorage.getItem('accessToken') ?? '';
     setSaving((prev) => ({ ...prev, [lessonId]: true }));
     try {
@@ -148,9 +162,9 @@ export default function StudentProfilePage() {
         },
         token,
       );
-      showToast('Saqlandi!');
+      toast.success('Saqlandi!');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      toast.error(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setSaving((prev) => ({ ...prev, [lessonId]: false }));
     }
@@ -188,9 +202,9 @@ export default function StudentProfilePage() {
       setShowHistory(false);
       setStatusModalOpen(false);
       setStatusNote('');
-      showToast('Status saqlandi');
+      toast.success('Status saqlandi');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      toast.error(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setStatusSaving(false);
     }
@@ -198,7 +212,7 @@ export default function StudentProfilePage() {
 
   async function submitKpi() {
     if (!studentId || !kpiReason.trim()) {
-      showToast("Sababni kiriting");
+      toast.error("Sababni kiriting");
       return;
     }
     setKpiSaving(true);
@@ -218,9 +232,9 @@ export default function StudentProfilePage() {
       );
       setKpiModalOpen(false);
       setKpiReason('');
-      showToast('KPI berildi');
+      toast.success('KPI berildi');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Saqlashda xatolik');
+      toast.error(err instanceof Error ? err.message : 'Saqlashda xatolik');
     } finally {
       setKpiSaving(false);
     }
@@ -248,12 +262,6 @@ export default function StudentProfilePage() {
 
   return (
     <div className="min-h-full bg-[#f7f4ef]">
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-[#0f172a] text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium">
-          {toast}
-        </div>
-      )}
-
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
@@ -323,7 +331,11 @@ export default function StudentProfilePage() {
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Holat</p>
           {loading ? (
-            <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+            <div className="flex flex-wrap gap-2">
+              <Skeleton theme="light" className="h-6 w-24 rounded-full" />
+              <Skeleton theme="light" className="h-6 w-20 rounded-full" />
+              <Skeleton theme="light" className="h-6 w-22 rounded-full" />
+            </div>
           ) : error ? (
             <p className="text-sm text-[#e11d48]">{error}</p>
           ) : status ? (
@@ -357,7 +369,20 @@ export default function StudentProfilePage() {
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Dars takrorlash soni (N override)</p>
           </div>
           {loading ? (
-            <div className="p-5 text-sm text-[#94a3b8]">Yuklanmoqda...</div>
+            <div className="p-5 space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Skeleton theme="light" className="w-8 h-8 rounded-lg shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton theme="light" className="h-3.5 w-2/3" />
+                      <Skeleton theme="light" className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton theme="light" className="h-8 w-20 rounded-xl shrink-0" />
+                </div>
+              ))}
+            </div>
           ) : error ? (
             <div className="p-5 text-sm text-[#e11d48]">{error}</div>
           ) : (
@@ -423,7 +448,15 @@ export default function StudentProfilePage() {
 
           {showHistory && (
             historyLoading ? (
-              <p className="p-5 text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+              <div className="p-5 space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} theme="light" className="h-10 w-full rounded-xl" />
+                ))}
+              </div>
+            ) : historyError ? (
+              <div className="m-4 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700">
+                {historyError}
+              </div>
             ) : history.length === 0 ? (
               <p className="p-5 text-sm text-[#94a3b8]">Tarix yo&apos;q</p>
             ) : (
@@ -470,14 +503,14 @@ export default function StudentProfilePage() {
           <>
             <button
               onClick={() => setStatusModalOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+              className="px-4 py-2 rounded-xl text-sm text-[#64748b] hover:bg-[#f7f4ef]"
             >
               Bekor qilish
             </button>
             <button
               onClick={submitStatus}
               disabled={statusSaving}
-              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
             >
               {statusSaving ? '...' : 'Saqlash'}
             </button>
@@ -494,10 +527,10 @@ export default function StudentProfilePage() {
               <button
                 key={o.v}
                 onClick={() => setStatusColorPick(o.v)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border-[1.5px] text-sm font-bold transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl border-[1.5px] text-sm font-bold transition-colors ${
                   statusColorPick === o.v
-                    ? 'border-[#0f172a] bg-slate-50 text-[#0f172a]'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-400'
+                    ? 'border-[#0f172a] bg-[#f7f4ef] text-[#0f172a]'
+                    : 'border-[#ede9e1] text-[#94a3b8] hover:border-[#0f172a]'
                 }`}
               >
                 <span className={`w-3 h-3 rounded-full ${o.dot}`} />
@@ -506,7 +539,7 @@ export default function StudentProfilePage() {
             ))}
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">
               Izoh (ixtiyoriy)
             </label>
             <textarea
@@ -514,7 +547,7 @@ export default function StudentProfilePage() {
               maxLength={500}
               value={statusNote}
               onChange={(e) => setStatusNote(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 resize-none"
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] resize-none focus:outline-none focus:border-[#0f172a]"
             />
           </div>
         </div>
@@ -530,14 +563,14 @@ export default function StudentProfilePage() {
           <>
             <button
               onClick={() => setKpiModalOpen(false)}
-              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+              className="px-4 py-2 rounded-xl text-sm text-[#64748b] hover:bg-[#f7f4ef]"
             >
               Bekor qilish
             </button>
             <button
               onClick={submitKpi}
               disabled={kpiSaving || !kpiReason.trim()}
-              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50"
+              className="bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-50"
             >
               {kpiSaving ? '...' : `${kpiScore} ball berish`}
             </button>
@@ -546,7 +579,7 @@ export default function StudentProfilePage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">
               Ball
             </label>
             <div className="flex flex-wrap gap-2">
@@ -554,10 +587,10 @@ export default function StudentProfilePage() {
                 <button
                   key={p}
                   onClick={() => setKpiScore(p)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border-[1.5px] transition-colors ${
+                  className={`px-3 py-1.5 rounded-xl text-sm font-bold border-[1.5px] transition-colors ${
                     kpiScore === p
                       ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-400'
+                      : 'border-[#ede9e1] text-[#94a3b8] hover:border-[#0f172a]'
                   }`}
                 >
                   {p}
@@ -566,7 +599,7 @@ export default function StudentProfilePage() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
+            <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">
               Sabab
             </label>
             <textarea
@@ -575,10 +608,10 @@ export default function StudentProfilePage() {
               value={kpiReason}
               onChange={(e) => setKpiReason(e.target.value)}
               placeholder="Nima uchun mukofot?"
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 resize-none"
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] resize-none focus:outline-none focus:border-[#0f172a]"
             />
             {!kpiReason.trim() && (
-              <p className="text-xs text-slate-400 mt-1">Sababni kiriting</p>
+              <p className="text-xs text-[#94a3b8] mt-1">Sababni kiriting</p>
             )}
           </div>
         </div>

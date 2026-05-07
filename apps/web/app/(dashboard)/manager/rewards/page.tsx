@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Gift, Pencil, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Gift, Pencil, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
+import { getBranchIdFromToken } from '@/lib/jwt';
 
 type Reward = {
   id: string;
@@ -16,7 +18,10 @@ type Reward = {
 
 type Student = { id: string; name: string };
 
+const TYPE_LABEL: Record<string, string> = { gift: "Sovg'a", book: 'Kitob', other: 'Boshqa' };
+
 export default function ManagerRewardsPage() {
+  const router = useRouter();
   const toast = useToast();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -51,8 +56,8 @@ export default function ManagerRewardsPage() {
     try {
       const r = await apiRequest<Reward[]>('/manager-rewards', {}, token());
       setRewards(r.data);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sovg'alar yuklanmadi");
     } finally {
       setLoading(false);
     }
@@ -61,15 +66,7 @@ export default function ManagerRewardsPage() {
   const [hasBranch, setHasBranch] = useState(true);
 
   useEffect(() => {
-    let branchId = '';
-    try {
-      const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-        branchId?: string;
-      };
-      branchId = u.branchId ?? '';
-    } catch {
-      /* ignore */
-    }
+    const branchId = getBranchIdFromToken() ?? '';
     setHasBranch(!!branchId);
     if (branchId) {
       apiRequest<Student[]>(
@@ -77,22 +74,15 @@ export default function ManagerRewardsPage() {
         {},
         token(),
       )
-        .then((r) =>
-          setStudents(
-            r.data.filter(
-              (s: Student & { role?: string }) =>
-                (s as { role?: string }).role === 'student' || true,
-            ),
-          ),
-        )
+        .then((r) => setStudents(r.data))
         .catch(() => setStudents([]));
     }
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!studentId || !title) return;
+    if (!studentId || !title.trim()) return;
     setSubmitting(true);
     try {
       await apiRequest(
@@ -162,7 +152,7 @@ export default function ManagerRewardsPage() {
         { method: 'DELETE' },
         token(),
       );
-      toast.success('O‘chirildi');
+      toast.success("O'chirildi");
       setDeleteTarget(null);
       load();
     } catch (err) {
@@ -173,61 +163,96 @@ export default function ManagerRewardsPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] p-5 space-y-5">
-      <div className="flex items-center gap-2">
-        <Gift size={20} className="text-amber-500" />
-        <h1 className="text-xl font-bold text-[#0f172a]">Sovgʻa va Kitob</h1>
+    <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10">
+          <button onClick={() => router.push('/manager')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Manager
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/20 border border-[#f59e0b]/30 flex items-center justify-center">
+              <Gift size={18} className="text-[#f59e0b]" />
+            </div>
+            <div>
+              <p className="text-white font-bold text-lg">Mukofotlar</p>
+              <p className="text-[#94a3b8] text-xs">O&apos;quvchilarga sovg&apos;a/kitob berish</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {!hasBranch && !loading ? (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
-          <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
-          <p className="mt-1 text-sm text-rose-700">
-            Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
-          </p>
-        </div>
-      ) : null}
+      {/* Body */}
+      <div className="p-5 space-y-5">
+        {!hasBranch && !loading ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : null}
 
       <form
         onSubmit={submit}
         className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3"
       >
-        <select
-          value={studentId}
-          onChange={(e) => setStudentId(e.target.value)}
-          required
-          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-        >
-          <option value="">O&apos;quvchi tanlang</option>
-          {students.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-        >
-          <option value="gift">Sovgʻa</option>
-          <option value="book">Kitob</option>
-          <option value="other">Boshqa</option>
-        </select>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-          placeholder="Nomi"
-          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-        />
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={2}
-          placeholder="Izoh (ixtiyoriy)"
-          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-        />
+        <div>
+          <label htmlFor="reward-student" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">O&apos;quvchi</label>
+          <select
+            id="reward-student"
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            required
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
+          >
+            <option value="">O&apos;quvchi tanlang</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="reward-type" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">Tur</label>
+          <select
+            id="reward-type"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
+          >
+            <option value="gift">Sovgʻa</option>
+            <option value="book">Kitob</option>
+            <option value="other">Boshqa</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="reward-title" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">Sarlavha</label>
+          <input
+            id="reward-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            placeholder="Nomi"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
+          />
+        </div>
+        <div>
+          <label htmlFor="reward-description" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">Tafsilot</label>
+          <textarea
+            id="reward-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="Izoh (ixtiyoriy)"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
+          />
+        </div>
         <button
           disabled={submitting}
           className="w-full bg-[#0f172a] text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
@@ -266,7 +291,7 @@ export default function ManagerRewardsPage() {
                   {r.title}
                 </p>
                 <p className="text-xs text-[#64748b]">
-                  {r.type} •{' '}
+                  {TYPE_LABEL[r.type] ?? r.type} •{' '}
                   {formatDateNumeric(r.givenAt)}
                 </p>
                 {r.description && (
@@ -284,7 +309,7 @@ export default function ManagerRewardsPage() {
               </button>
               <button
                 onClick={() => setDeleteTarget(r)}
-                aria-label="O‘chirish"
+                aria-label="O'chirish"
                 className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
               >
                 <Trash2 size={14} />
@@ -292,6 +317,7 @@ export default function ManagerRewardsPage() {
             </div>
           ))
         )}
+      </div>
       </div>
 
       {/* Edit */}
@@ -307,7 +333,7 @@ export default function ManagerRewardsPage() {
             onChange={(e) =>
               setEditForm({ ...editForm, type: e.target.value })
             }
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
           >
             <option value="gift">Sovgʻa</option>
             <option value="book">Kitob</option>
@@ -319,7 +345,7 @@ export default function ManagerRewardsPage() {
               setEditForm({ ...editForm, title: e.target.value })
             }
             placeholder="Nomi *"
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
           />
           <textarea
             value={editForm.description}
@@ -328,13 +354,13 @@ export default function ManagerRewardsPage() {
             }
             rows={2}
             placeholder="Izoh"
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
+            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
           />
           <div className="flex gap-2 mt-4 justify-end">
             <button
               onClick={() => setEditing(null)}
               disabled={editSaving}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#0f172a] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>
@@ -353,7 +379,7 @@ export default function ManagerRewardsPage() {
       <Modal
         open={deleteTarget !== null}
         onClose={() => !deleting && setDeleteTarget(null)}
-        title="Sovgʻa o‘chirilsinmi?"
+        title="Sovgʻa o'chirilsinmi?"
         size="sm"
         theme="light"
       >
@@ -361,22 +387,22 @@ export default function ManagerRewardsPage() {
           <span className="font-semibold text-[#0f172a]">
             {deleteTarget?.title}
           </span>{' '}
-          o‘chirilsin? Bu amal qaytarib bo‘lmaydi.
+          o&apos;chirilsin? Bu amal qaytarib bo&apos;lmaydi.
         </p>
         <div className="flex gap-2 mt-4 justify-end">
           <button
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#0f172a] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
-            Yo‘q
+            Yo&apos;q
           </button>
           <button
             onClick={doDelete}
             disabled={deleting}
             className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50"
           >
-            {deleting ? 'O‘chirilmoqda...' : 'Ha, o‘chir'}
+            {deleting ? "O'chirilmoqda..." : "Ha, o'chir"}
           </button>
         </div>
       </Modal>

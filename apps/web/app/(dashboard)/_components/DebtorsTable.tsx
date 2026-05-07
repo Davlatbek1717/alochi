@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
+import { CheckCircle, Lock, Clock, CreditCard } from 'lucide-react';
 import { formatNumber } from '@/lib/date-uz';
+import { EmptyState, Skeleton } from '@/components/ui';
 
 export interface BranchStudent {
   id: string;
@@ -68,14 +70,14 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
 
   if (loading) {
     return (
-      <div className="divide-y">
+      <div className="divide-y divide-[#ede9e1]">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center justify-between px-5 py-4 animate-pulse">
-            <div className="space-y-2">
-              <div className="h-4 w-36 bg-gray-200 rounded" />
-              <div className="h-3 w-24 bg-gray-100 rounded" />
+          <div key={i} className="flex items-center justify-between px-5 py-4 gap-3">
+            <div className="space-y-2 flex-1 min-w-0">
+              <Skeleton theme="light" className="h-4 w-36" />
+              <Skeleton theme="light" className="h-3 w-24" />
             </div>
-            <div className="h-8 w-20 bg-gray-200 rounded-lg" />
+            <Skeleton theme="light" className="h-8 w-20 rounded-xl shrink-0" />
           </div>
         ))}
       </div>
@@ -84,15 +86,15 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
 
   return (
     <div>
-      <div className="flex gap-2 px-5 py-3 border-b border-gray-100 flex-wrap">
+      <div className="flex gap-2 px-5 py-3 border-b border-[#ede9e1] flex-wrap">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
               filter === tab.key
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-[#0f172a] text-white'
+                : 'bg-[#f7f4ef] text-[#64748b] hover:bg-[#ede9e1]'
             }`}
           >
             {tab.label}
@@ -100,35 +102,41 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
         ))}
         <button
           onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc'))}
-          className="ml-auto px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200"
+          className="ml-auto px-3 py-1 rounded-full text-sm font-medium bg-[#f7f4ef] text-[#64748b] hover:bg-[#ede9e1]"
         >
           Summa {sortDir === 'asc' ? '↑' : sortDir === 'desc' ? '↓' : '↕'}
         </button>
       </div>
 
       {sorted.length === 0 ? (
-        <p className="px-5 py-8 text-sm text-center text-gray-400">Qarzdorlar topilmadi</p>
+        <EmptyState
+          icon={<CreditCard size={28} />}
+          title="Qarzdorlar topilmadi"
+          theme="light"
+        />
       ) : (
-        <div className="divide-y">
+        <div className="divide-y divide-[#ede9e1]">
           {sorted.map((s) => (
             <div key={s.id} className="px-5 py-4">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-medium">{s.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-[#0f172a] truncate">{s.name}</p>
                   <p
-                    className={`text-sm ${
+                    className={`text-sm flex items-center gap-1 ${
                       s.hasPaid
-                        ? 'text-green-600'
+                        ? 'text-[#15803d]'
                         : s.status === 'blocked_payment'
-                        ? 'text-red-600'
-                        : 'text-gray-500'
+                        ? 'text-rose-700'
+                        : 'text-[#64748b]'
                     }`}
                   >
-                    {s.hasPaid
-                      ? `✅ ${formatNumber(s.payment!.amount)} so'm · ${s.payment!.paidAt.slice(0, 10)}`
-                      : s.status === 'blocked_payment'
-                      ? '🔒 Bloklangan'
-                      : "⏳ Hali to'lamagan"}
+                    {s.hasPaid ? (
+                      <><CheckCircle size={14} className="shrink-0" /> {formatNumber(s.payment!.amount)} so&apos;m · {s.payment!.paidAt.slice(0, 10)}</>
+                    ) : s.status === 'blocked_payment' ? (
+                      <><Lock size={14} className="shrink-0" /> Bloklangan</>
+                    ) : (
+                      <><Clock size={14} className="shrink-0" /> Hali to&apos;lamagan</>
+                    )}
                   </p>
                 </div>
                 {!readOnly && !s.hasPaid && (
@@ -138,7 +146,7 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
                       setAmountInput('');
                       setPayError('');
                     }}
-                    className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-700 shrink-0"
+                    className="bg-[#0d9488] text-white px-3 py-1 rounded-xl text-sm hover:bg-[#0f766e] shrink-0 min-w-0 transition-colors"
                   >
                     To&apos;lov qabul
                   </button>
@@ -152,23 +160,23 @@ export default function DebtorsTable({ students, readOnly, onMarkPaid, loading }
                       value={amountInput}
                       onChange={(e) => setAmountInput(e.target.value)}
                       placeholder="Summa (so'm)"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      className="flex-1 border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a]"
                     />
                     <button
                       onClick={() => handlePay(s.id)}
                       disabled={paying}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+                      className="bg-[#0d9488] text-white px-4 py-2 rounded-xl text-sm hover:bg-[#0f766e] disabled:opacity-50 transition-colors"
                     >
                       {paying ? '...' : 'Saqlash'}
                     </button>
                     <button
                       onClick={() => setSelectedId(null)}
-                      className="px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100"
+                      className="px-3 py-2 rounded-xl text-sm text-[#64748b] hover:bg-[#f7f4ef]"
                     >
                       ✕
                     </button>
                   </div>
-                  {payError && <p className="text-red-500 text-sm">{payError}</p>}
+                  {payError && <p className="text-rose-700 text-sm">{payError}</p>}
                 </div>
               )}
             </div>

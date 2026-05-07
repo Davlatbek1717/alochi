@@ -4,6 +4,7 @@ import { Calendar, Plus, Check, Trash2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 import { formatDateTimeLong } from '@/lib/date-uz';
+import { getBranchIdFromToken } from '@/lib/jwt';
 
 interface Session {
   id: string;
@@ -24,6 +25,7 @@ export default function ManagerSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasBranch, setHasBranch] = useState(true);
   const [studentId, setStudentId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [notes, setNotes] = useState('');
@@ -40,13 +42,23 @@ export default function ManagerSessionsPage() {
     setLoading(true);
     apiRequest<Session[]>('/manager-sessions/mine', {}, token())
       .then((r) => setSessions(r.data))
-      .catch(() => setSessions([]))
+      .catch((err) => {
+        setSessions([]);
+        toast.error(err instanceof Error ? err.message : 'Sessiyalar yuklanmadi');
+      })
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     load();
-    apiRequest<Student[]>('/users?role=student', {}, token())
+    const branchId = getBranchIdFromToken();
+    if (!branchId) {
+      setHasBranch(false);
+      setStudents([]);
+      return;
+    }
+    setHasBranch(true);
+    apiRequest<Student[]>(`/users/by-branch/${branchId}?role=student`, {}, token())
       .then((r) => setStudents(r.data))
       .catch(() => setStudents([]));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,7 +119,7 @@ export default function ManagerSessionsPage() {
       );
       setSessions((prev) => prev.filter((s) => s.id !== deleteTarget.id));
       setDeleteTarget(null);
-      toast.success('O‘chirildi');
+      toast.success("O'chirildi");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Xato yuz berdi');
     } finally {
@@ -133,36 +145,57 @@ export default function ManagerSessionsPage() {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
+      <div className="p-4 space-y-4">
+        {!hasBranch && !loading && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        )}
         <form
           onSubmit={create}
           className="bg-white border-[1.5px] border-[#ede9e1] rounded-[18px] p-4 space-y-3"
         >
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a]"
-          >
-            <option value="">Talaba tanlang...</option>
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a]"
-          />
-          <textarea
-            placeholder="Izoh (ixtiyoriy)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] placeholder-[#94a3b8]"
-          />
+          <div>
+            <label htmlFor="session-student" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">O&apos;quvchi</label>
+            <select
+              id="session-student"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+            >
+              <option value="">Talaba tanlang...</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="session-time" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">Vaqt</label>
+            <input
+              id="session-time"
+              type="datetime-local"
+              value={scheduledAt}
+              min={new Date().toISOString().slice(0, 16)}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+            />
+          </div>
+          <div>
+            <label htmlFor="session-notes" className="block text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-1.5">Eslatma</label>
+            <textarea
+              id="session-notes"
+              placeholder="Izoh (ixtiyoriy)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-[#0f172a]"
+            />
+          </div>
           <button
             type="submit"
             disabled={saving}
@@ -182,7 +215,7 @@ export default function ManagerSessionsPage() {
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
             <EmptyState
               icon={<Calendar size={28} />}
-              title="Hali sessiya yo‘q"
+              title="Hali sessiya yo'q"
               description="Birinchi 1:1 sessiyani rejalashtiring"
               theme="light"
             />
@@ -214,14 +247,14 @@ export default function ManagerSessionsPage() {
                     )}
                   </div>
                   {isDone ? (
-                    <span className="text-xs text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded">
+                    <span className="text-xs text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-full">
                       Bajarildi
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => complete(s.id)}
-                      className="inline-flex items-center gap-1 bg-[#f59e0b] hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-lg font-semibold"
+                      className="inline-flex items-center gap-1 bg-[#f59e0b] hover:bg-amber-600 text-white text-xs px-2.5 py-1.5 rounded-xl font-semibold"
                     >
                       <Check size={12} /> Bajardim
                     </button>
@@ -229,7 +262,7 @@ export default function ManagerSessionsPage() {
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(s)}
-                    aria-label="O‘chirish"
+                    aria-label="O'chirish"
                     className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
                   >
                     <Trash2 size={14} />
@@ -244,7 +277,7 @@ export default function ManagerSessionsPage() {
       <Modal
         open={deleteTarget !== null}
         onClose={() => !deleting && setDeleteTarget(null)}
-        title="Sessiya o‘chirilsinmi?"
+        title="Sessiya o'chirilsinmi?"
         size="sm"
         theme="light"
       >
@@ -252,23 +285,23 @@ export default function ManagerSessionsPage() {
           <span className="font-semibold text-[#0f172a]">
             {deleteTarget?.student?.name ?? deleteTarget?.studentId}
           </span>{' '}
-          uchun rejalashtirilgan sessiya o‘chirilsin? Bu amal qaytarib
-          bo‘lmaydi.
+          uchun rejalashtirilgan sessiya o&apos;chirilsin? Bu amal qaytarib
+          bo&apos;lmaydi.
         </p>
         <div className="flex gap-2 mt-4 justify-end">
           <button
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#0f172a] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
-            Yo‘q
+            Yo&apos;q
           </button>
           <button
             onClick={doDelete}
             disabled={deleting}
             className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50"
           >
-            {deleting ? 'O‘chirilmoqda...' : 'Ha, o‘chir'}
+            {deleting ? "O'chirilmoqda..." : "Ha, o'chir"}
           </button>
         </div>
       </Modal>

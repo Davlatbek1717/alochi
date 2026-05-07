@@ -154,7 +154,7 @@ export default function ManagerStudentsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Ism boʻyicha qidirish..."
-              className="w-full bg-white border border-[#ede9e1] rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+              className="w-full bg-white border border-[#ede9e1] rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a]"
             />
           </div>
           <div className="flex gap-2 items-center flex-wrap">

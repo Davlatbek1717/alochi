@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, Calendar, Award } from 'lucide-react';
+import { Users, CreditCard, ClipboardList, Send, AlertCircle, AlertTriangle, TrendingUp, Trophy, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Skeleton, Stat } from '@/components/ui';
+import { EmptyState, Skeleton, Stat, useToast } from '@/components/ui';
 import { formatDateWeekday } from '@/lib/date-uz';
 
 type StatusStudent = {
@@ -26,6 +26,7 @@ function getInitials(name: string): string {
 }
 
 export default function ManagerDashboard() {
+  const toast = useToast();
   const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
@@ -37,14 +38,16 @@ export default function ManagerDashboard() {
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setManagerName(user.name ?? '');
 
-    Promise.all([
-      apiRequest<StatusStudent[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
-      apiRequest<StatusStudent[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusStudent[] })),
-      apiRequest<HighPerformer[]>('/status/high-performers', {}, token).catch(() => ({ data: [] as HighPerformer[] })),
+    Promise.allSettled([
+      apiRequest<StatusStudent[]>('/status/red-students', {}, token),
+      apiRequest<StatusStudent[]>('/status/yellow-students', {}, token),
+      apiRequest<HighPerformer[]>('/status/high-performers', {}, token),
     ]).then(([redRes, yellowRes, highRes]) => {
-      setRedStudents(redRes.data ?? []);
-      setYellowStudents(yellowRes.data ?? []);
-      setHighPerformers(highRes.data ?? []);
+      if (redRes.status === 'fulfilled') setRedStudents(redRes.value.data ?? []);
+      else toast.error("Qizil o'quvchilar yuklanmadi");
+      if (yellowRes.status === 'fulfilled') setYellowStudents(yellowRes.value.data ?? []);
+      else toast.error("Sariq o'quvchilar yuklanmadi");
+      if (highRes.status === 'fulfilled') setHighPerformers(highRes.value.data ?? []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -106,24 +109,39 @@ export default function ManagerDashboard() {
 
       <div className="px-4 pt-8 pb-6 space-y-5">
         {/* Stats */}
-        {!loading && (
-          <div className="grid grid-cols-2 gap-3">
-            <Stat
-              theme="light"
-              icon={<AlertCircle size={18} />}
-              label="Qizil o'quvchilar"
-              value={redStudents.length}
-              color="text-rose-400"
-            />
-            <Stat
-              theme="light"
-              icon={<Trophy size={18} />}
-              label="Yuqori natija"
-              value={highPerformers.length}
-              color="text-amber-400"
-            />
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3">
+          {loading ? (
+            <>
+              <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3">
+                <Skeleton theme="light" className="h-5 w-5 rounded-lg" />
+                <Skeleton theme="light" className="h-8 w-1/2" />
+                <Skeleton theme="light" className="h-3 w-3/4" />
+              </div>
+              <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3">
+                <Skeleton theme="light" className="h-5 w-5 rounded-lg" />
+                <Skeleton theme="light" className="h-8 w-1/2" />
+                <Skeleton theme="light" className="h-3 w-3/4" />
+              </div>
+            </>
+          ) : (
+            <>
+              <Stat
+                theme="light"
+                icon={<AlertCircle size={18} />}
+                label="Qizil o'quvchilar"
+                value={redStudents.length}
+                color="text-rose-400"
+              />
+              <Stat
+                theme="light"
+                icon={<Trophy size={18} />}
+                label="Yuqori natija"
+                value={highPerformers.length}
+                color="text-amber-400"
+              />
+            </>
+          )}
+        </div>
 
         {/* Nav cards */}
         <div>
@@ -165,8 +183,8 @@ export default function ManagerDashboard() {
                 </div>
               ))
             ) : redStudents.length === 0 ? (
-              <div className="bg-white rounded-[14px] px-4 py-6 border-[1.5px] border-[#ede9e1] text-center">
-                <p className="text-[#94a3b8] text-sm">Hech kim yo&apos;q</p>
+              <div className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+                <EmptyState icon={<AlertCircle size={24} />} title="Hech kim yo'q" theme="light" />
               </div>
             ) : (
               redStudents.map((s) => (
@@ -206,8 +224,8 @@ export default function ManagerDashboard() {
                 </div>
               ))
             ) : yellowStudents.length === 0 ? (
-              <div className="bg-white rounded-[14px] px-4 py-6 border-[1.5px] border-[#ede9e1] text-center">
-                <p className="text-[#94a3b8] text-sm">Hech kim yo&apos;q</p>
+              <div className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+                <EmptyState icon={<AlertTriangle size={24} />} title="Hech kim yo'q" theme="light" />
               </div>
             ) : (
               yellowStudents.map((s) => (

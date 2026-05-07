@@ -8,6 +8,7 @@ import {
   Button, Card, CardHeader, CardTitle,
   EmptyState, Modal, Skeleton, useToast,
 } from '@/components/ui';
+import { getBranchIdFromToken } from '@/lib/jwt';
 
 type Assignee = { id: string; name: string; role: string; groupId?: string | null };
 type Task = {
@@ -28,14 +29,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function getMe() {
-  try {
-    const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-      branchId?: string;
-    };
-    return { branchId: u.branchId ?? '' };
-  } catch {
-    return { branchId: '' };
-  }
+  return { branchId: getBranchIdFromToken() ?? '' };
 }
 
 function emptyForm() {
@@ -69,8 +63,9 @@ export default function ManagerTasksPage() {
     try {
       const res = await apiRequest<Task[]>(tab === 'sent' ? '/tasks/sent' : '/tasks/my', {}, token());
       setTasks(res.data);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Vazifalar yuklanmadi");
+    } finally { setLoading(false); }
   }
 
   useEffect(() => { fetchTasks(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -85,10 +80,15 @@ export default function ManagerTasksPage() {
 
   async function createTask() {
     if (!form.title.trim() || !form.assignedTo.trim()) {
-      setFormError('Sarlavha va o‘quvchi kerak');
+      setFormError("Sarlavha va o'quvchi kerak");
       return;
     }
-    setSaving(true); setFormError('');
+    const kpiBallNum = Number(form.kpiBall);
+    if (isNaN(kpiBallNum) || kpiBallNum < 0) {
+      setFormError("KPI ball noto'g'ri");
+      return;
+    }
+    setSaving(true); setFormError("");
     try {
       const res = await apiRequest<Task>('/tasks', {
         method: 'POST',
@@ -163,7 +163,7 @@ export default function ManagerTasksPage() {
     try {
       await apiRequest(`/tasks/${deleteTarget.id}`, { method: 'DELETE' }, token());
       setTasks((prev) => prev.filter((t) => t.id !== deleteTarget.id));
-      success('O‘chirildi');
+      success("O'chirildi");
       setDeleteTarget(null);
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Xato');
@@ -211,12 +211,12 @@ export default function ManagerTasksPage() {
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               />
               <select
-                aria-label="O‘quvchi"
+                aria-label="O'quvchi"
                 value={form.assignedTo}
                 onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
               >
-                <option value="">O‘quvchini tanlang...</option>
+                <option value="">O&apos;quvchini tanlang...</option>
                 {assignees.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
@@ -228,11 +228,12 @@ export default function ManagerTasksPage() {
                 rows={2}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a] resize-none"
               />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
                   type="number"
                   placeholder="KPI ball"
                   aria-label="KPI ball"
+                  min={0}
                   value={form.kpiBall}
                   onChange={(e) => setForm({ ...form, kpiBall: Number(e.target.value) })}
                   className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -240,6 +241,7 @@ export default function ManagerTasksPage() {
                 <input
                   type="date"
                   aria-label="Muddat"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={form.deadline}
                   onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                   className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
@@ -334,7 +336,7 @@ export default function ManagerTasksPage() {
                       onClick={() => setDeleteTarget(t)}
                       className="flex-1 text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 px-3 py-2 rounded-lg border border-rose-200 inline-flex items-center justify-center gap-1.5"
                     >
-                      <Trash2 size={12} /> O‘chirish
+                      <Trash2 size={12} /> O&apos;chirish
                     </button>
                   </div>
                 )}
@@ -387,7 +389,7 @@ export default function ManagerTasksPage() {
             placeholder="Tavsif"
             className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input
               type="number"
               value={editForm.kpiBall}
@@ -406,7 +408,7 @@ export default function ManagerTasksPage() {
             <button
               onClick={() => setEditing(null)}
               disabled={editSaving}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#0f172a] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>
@@ -425,27 +427,27 @@ export default function ManagerTasksPage() {
       <Modal
         open={deleteTarget !== null}
         onClose={() => !deleting && setDeleteTarget(null)}
-        title="Vazifa o‘chirilsinmi?"
+        title="Vazifa o'chirilsinmi?"
         size="sm"
         theme="light"
       >
         <p className="text-sm text-[#64748b]">
-          <span className="font-semibold text-[#0f172a]">{deleteTarget?.title}</span> o‘chirilsin? Bu amal qaytarib bo‘lmaydi.
+          <span className="font-semibold text-[#0f172a]">{deleteTarget?.title}</span> o&apos;chirilsin? Bu amal qaytarib bo&apos;lmaydi.
         </p>
         <div className="flex gap-2 mt-4 justify-end">
           <button
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#0f172a] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
-            Yo‘q
+            Yo&apos;q
           </button>
           <button
             onClick={doDelete}
             disabled={deleting}
             className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 disabled:opacity-50"
           >
-            {deleting ? 'O‘chirilmoqda...' : 'Ha, o‘chir'}
+            {deleting ? "O'chirilmoqda..." : "Ha, o'chir"}
           </button>
         </div>
       </Modal>
