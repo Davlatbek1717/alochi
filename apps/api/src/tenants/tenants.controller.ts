@@ -42,6 +42,21 @@ export class TenantsController {
     return this.tenants.listAllWithCounts();
   }
 
+  /**
+   * Branding for the caller's own tenant.
+   *
+   * Any authenticated user inside the tenant can read their own
+   * tenant's branding (logo, accent colour, brand name) so the
+   * dashboard chrome can render correctly. The /tenants/:id endpoint
+   * stays superadmin-only — this is the public-shape variant scoped
+   * to req.user.tenantId, so RBAC stays clean and we don't leak
+   * billing or operational fields.
+   */
+  @Get('me/branding')
+  getMyBranding(@Request() req: any) {
+    return this.tenants.getBrandingById(req.user.tenantId);
+  }
+
   /** 25.C.3: Read certificate template for the calling tenant. */
   @Get('me/cert-template')
   @Roles(UserRole.superadmin)

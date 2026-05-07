@@ -61,7 +61,7 @@ model TenantSubscription {
   plan                 String   @default("starter")  // "starter" | "pro" | "enterprise"
   status               String   @default("trialing")  // "trialing" | "active" | "past_due" | "canceled"
   // Payment gateway that manages this subscription
-  gateway              String?  // "stripe" | "payme" | "click" | "manual"
+  gateway              String?  // "payme" | "click" | "manual"
   // Gateway-specific subscription / order ID for webhook correlation
   gatewaySubscriptionId String? @unique @map("gateway_subscription_id")
   currentPeriodStart   DateTime? @map("current_period_start")

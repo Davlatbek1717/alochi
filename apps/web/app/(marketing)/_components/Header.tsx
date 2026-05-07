@@ -67,7 +67,6 @@ export function Header({ onDemoClick }: Props) {
 
         {/* Right CTAs — desktop */}
         <div className="hidden lg:flex items-center gap-2 ml-auto">
-          {/* <LanguageSwitcher /> — deferred Phase 6b */}
           <Link
             href="/login"
             className="text-sm font-bold text-[#1e1b4b]/85 hover:text-[#6d28d9] px-3 py-2 rounded-md transition-colors"

@@ -93,6 +93,29 @@ export class TenantsService {
   }
 
   /**
+   * Same shape as getBrandingBySlug, but keyed by tenant ID for the
+   * authenticated dashboard chrome (caller's own tenant).
+   */
+  async getBrandingById(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        brandName: true,
+        logoUrl: true,
+        faviconUrl: true,
+        primaryColor: true,
+        isActive: true,
+      },
+    });
+    if (!tenant || !tenant.isActive)
+      throw new NotFoundException(this.i18n.t('tenant_not_found'));
+    return tenant;
+  }
+
+  /**
    * Update mutable tenant-level settings (Phase 5: warningBlockLimit).
    * Returns the updated tenant row.
    */

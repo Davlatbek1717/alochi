@@ -60,9 +60,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (parsed && typeof parsed.id === 'string' && typeof parsed.role === 'string') {
           const userInfo = parsed as unknown as UserInfo;
           setUser(userInfo);
-          // Fetch tenant branding if tenantId is available
+          // Fetch tenant branding for the dashboard chrome. Uses the
+          // /tenants/me/branding endpoint (open to any authenticated
+          // user inside the tenant) so non-superadmin roles don't
+          // 403-spam the console on every dashboard load.
           if (userInfo.tenantId) {
-            apiRequest<TenantBranding>(`/tenants/${userInfo.tenantId}`, {}, token)
+            apiRequest<TenantBranding>('/tenants/me/branding', {}, token)
               .then((res) => {
                 if (res.data.brandName) setBrandName(res.data.brandName);
               })
