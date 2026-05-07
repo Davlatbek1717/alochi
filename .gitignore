@@ -13,3 +13,4 @@ coverage/
 apps/coverage/
 apps/web/test-results/
 .superpowers/
+.deploy/

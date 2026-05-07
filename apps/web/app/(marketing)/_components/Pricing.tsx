@@ -160,7 +160,7 @@ export function Pricing({ onDemoClick }: Props) {
                       : 'bg-[var(--ink)] text-white border-b-[4px] border-[#0a0717] hover:bg-[#2a2660] active:translate-y-[2px] active:border-b-[1px] focus-visible:ring-[var(--ink)]',
                   ].join(' ')}
                 >
-                  Aloqaga chiqish
+                  Tizimga kirish
                   <ArrowRight
                     size={16}
                     strokeWidth={2.75}

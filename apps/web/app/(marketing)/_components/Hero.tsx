@@ -1,22 +1,24 @@
 'use client';
 import Link from 'next/link';
-import { ArrowRight, Play, Check, Lock, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Lock, Sparkles } from 'lucide-react';
 import { Mascot } from '@/components/ui/Mascot';
 import type { LandingCms } from './cms-types';
 
 interface Props {
-  onDemoClick: () => void;
+  // Kept for landing-shell prop compatibility; Hero no longer surfaces
+  // a second CTA, but the shell still passes a login click handler so
+  // future hero variants can re-add a secondary button without re-wiring.
+  onDemoClick?: () => void;
   cms: LandingCms['hero'] | null;
 }
 
-export function Hero({ onDemoClick, cms }: Props) {
+export function Hero({ cms }: Props) {
   const badge = cms?.badge || "O'zbekiston ta'lim platformasi";
   const title =
     cms?.title || "Bolangizning muvaffaqiyat yo'li shu yerdan boshlanadi.";
   const subtitle =
     cms?.subtitle ||
     "3–7 sinf o'quvchilari uchun ingliz tili, shaxsiy rivojlanish va tanqidiy fikrlashni o'rgatuvchi zamonaviy SaaS platforma. AI suhbatlar, kamera nazorati va ota-onalar uchun Telegram hisobotlar.";
-  const cta = cms?.cta || 'Markaz sifatida ulanish';
 
   return (
     <section
@@ -67,7 +69,7 @@ export function Hero({ onDemoClick, cms }: Props) {
 
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <Link
-                href="/register"
+                href="/login"
                 className={[
                   'group inline-flex items-center justify-center gap-2.5',
                   'bg-[var(--brand)] text-white font-extrabold text-base tracking-wide',
@@ -79,34 +81,13 @@ export function Hero({ onDemoClick, cms }: Props) {
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
                 ].join(' ')}
               >
-                Bepul boshlash
+                Tizimga kirish
                 <ArrowRight
                   size={18}
                   strokeWidth={2.75}
                   className="transition-transform duration-200 group-hover:translate-x-1"
                 />
               </Link>
-              <button
-                type="button"
-                onClick={onDemoClick}
-                className={[
-                  'inline-flex items-center justify-center gap-2.5',
-                  'bg-[var(--surface)] text-[var(--ink)] font-extrabold text-base tracking-wide',
-                  'px-7 py-4 rounded-2xl',
-                  'border-[1.5px] border-[var(--line-strong)]',
-                  'hover:border-[var(--brand)]/40 hover:bg-[var(--surface-2)]',
-                  'shadow-[var(--shadow-1)]',
-                  'transition-all duration-150 ease-out',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
-                ].join(' ')}
-              >
-                <Play
-                  size={16}
-                  strokeWidth={2.75}
-                  className="text-[var(--brand)] fill-[var(--brand)]"
-                />
-                {cta}
-              </button>
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-2.5 text-xs sm:text-sm font-semibold text-[var(--ink-3)]">

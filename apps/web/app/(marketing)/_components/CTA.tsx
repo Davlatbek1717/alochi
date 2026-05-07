@@ -65,9 +65,9 @@ export function CTA({ onDemoClick }: Props) {
               platformasiga oling.
             </h2>
             <p className="mt-7 text-lg text-[var(--ink-2)] leading-relaxed max-w-xl">
-              Demo so&apos;rang — bizning jamoa siz bilan 24 soat ichida
-              bog&apos;lanadi va platformani 30 daqiqada to&apos;liq
-              ko&apos;rsatadi.
+              Tizimga kirib, A&apos;lochi platformasini bugundan ishlatishni
+              boshlang. Markazingiz, mentorlar va o&apos;quvchilar bir
+              joyda — barchasi 30 daqiqada sozlanadi.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
@@ -85,7 +85,7 @@ export function CTA({ onDemoClick }: Props) {
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
                 ].join(' ')}
               >
-                Demo so&apos;rash
+                Tizimga kirish
                 <ArrowRight
                   size={18}
                   strokeWidth={2.75}

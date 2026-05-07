@@ -24,19 +24,19 @@ interface Props {
 /**
  * Client shell for the landing page.
  *
- * Every former "Demo so'rash" CTA now lands the visitor on /register
- * where they start a 14-day free trial directly. The contact-request
- * modal funnel was removed — the trial is the demo.
+ * Self-serve registration was removed — the only entry point is
+ * the existing tenant superadmin signing in via /login. CTAs that
+ * used to launch a demo/trial flow now route there.
  */
 export function LandingShell({ cms }: Props) {
   const router = useRouter();
-  const goRegister = () => router.push('/register');
+  const goLogin = () => router.push('/login');
 
   return (
     <>
-      <Header onDemoClick={goRegister} />
+      <Header onDemoClick={goLogin} />
       <main id="main">
-        <Hero onDemoClick={goRegister} cms={cms?.hero ?? null} />
+        <Hero onDemoClick={goLogin} cms={cms?.hero ?? null} />
         <StatsStrip />
         <StudentsShowcase />
         <WhyAlochi />
@@ -46,9 +46,9 @@ export function LandingShell({ cms }: Props) {
         <Roles />
         <HowItWorks />
         <ForParents />
-        <Pricing onDemoClick={goRegister} />
+        <Pricing onDemoClick={goLogin} />
         <FAQ />
-        <CTA onDemoClick={goRegister} />
+        <CTA onDemoClick={goLogin} />
       </main>
       <Footer cms={cms?.contact ?? null} />
     </>

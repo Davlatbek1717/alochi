@@ -110,7 +110,7 @@ export function Header({ onDemoClick }: Props) {
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
             ].join(' ')}
           >
-            Demo so&apos;rash
+            Tizimga kirish
             <ArrowRight size={16} strokeWidth={2.75} />
           </button>
         </div>
@@ -167,7 +167,7 @@ export function Header({ onDemoClick }: Props) {
                 'transition-all',
               ].join(' ')}
             >
-              Demo so&apos;rash
+              Tizimga kirish
               <ArrowRight size={18} strokeWidth={2.75} />
             </button>
           </div>

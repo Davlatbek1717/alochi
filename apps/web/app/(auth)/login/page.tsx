@@ -129,16 +129,6 @@ export default function LoginPage() {
           <div className="bg-[var(--surface)] rounded-3xl p-7 shadow-[var(--shadow-3)] border border-[var(--line)]">
             <LoginForm />
           </div>
-
-          <p className="mt-6 text-center text-sm text-[var(--ink-3)]">
-            Markazingiz hali ulanmaganmi?{' '}
-            <a
-              href="/register"
-              className="font-semibold text-[var(--brand)] hover:text-[var(--brand-strong)] underline decoration-[1.5px] underline-offset-4 decoration-[var(--brand)]/40 hover:decoration-[var(--brand)] transition-all"
-            >
-              14 kun bepul demo
-            </a>
-          </p>
         </div>
       </div>
     </div>
