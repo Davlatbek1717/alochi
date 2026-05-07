@@ -50,6 +50,7 @@
     "cache-manager-redis-yet": "^5.1.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "express": "^4.21.2",
     "grammy": "^1.42.0",
     "helmet": "^8.1.0",
     "isomorphic-dompurify": "^3.11.0",
