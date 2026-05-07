@@ -256,7 +256,17 @@ export default function TopNav({ role }: Props) {
     >
       <div className="max-w-7xl mx-auto px-4">
         {/* Row 1 — primary groups */}
-        <ul className="flex items-stretch gap-0.5 overflow-x-auto">
+        <ul
+          className={[
+            'flex items-stretch gap-0.5',
+            // overflow horizontally if the row doesn't fit (mobile-ish viewports)
+            'overflow-x-auto',
+            // hide the visible scrollbar — Firefox + WebKit/Edge
+            '[scrollbar-width:none]',
+            '[-ms-overflow-style:none]',
+            '[&::-webkit-scrollbar]:hidden',
+          ].join(' ')}
+        >
           {items.map((entry) => (
             <PrimaryEntry
               key={entry.label}
@@ -280,7 +290,15 @@ export default function TopNav({ role }: Props) {
         {/* Row 2 — sub-pills */}
         {activeEntry?.items && activeEntry.items.length > 0 && (
           <div className="bg-[var(--surface-2)] -mx-4 px-4 border-t border-[var(--line)]">
-            <ul className="flex items-center gap-1.5 overflow-x-auto py-2.5 max-w-7xl mx-auto">
+            <ul
+              className={[
+                'flex items-center gap-1.5 py-2.5 max-w-7xl mx-auto',
+                'overflow-x-auto',
+                '[scrollbar-width:none]',
+                '[-ms-overflow-style:none]',
+                '[&::-webkit-scrollbar]:hidden',
+              ].join(' ')}
+            >
               {activeEntry.items.map((sub) => {
                 const isSubActive =
                   pathname === sub.href ||

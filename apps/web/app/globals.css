@@ -166,6 +166,41 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
+/* Modern slim scrollbars — no classic up/down arrow buttons.
+   Replaces the OS-default Windows scrollbar (which shows ▲▼ arrows
+   at the ends) with a thin track + rounded thumb. Firefox uses
+   `scrollbar-width` + `scrollbar-color`; Chromium/WebKit uses the
+   ::-webkit-scrollbar* pseudos and explicitly hides the buttons. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(30, 27, 75, 0.22) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(30, 27, 75, 0.20);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 27, 75, 0.36);
+  background-clip: padding-box;
+}
+/* Kill the up/down (and left/right) arrow buttons that Windows shows
+   on each end of the scrollbar by default. */
+*::-webkit-scrollbar-button {
+  display: none;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 ::selection {
   background: var(--brand);
   color: var(--brand-ink);
@@ -328,6 +363,17 @@ select {
 .tactile:active {
   transform: translateY(2px);
   box-shadow: 0 0 0 0 var(--brand-deep);
+}
+
+/* Hide native scrollbar while keeping overflow scroll behaviour.
+   Apply to horizontal nav rows that should scroll on touch / narrow
+   viewports without the heavy Windows scrollbar arrows. */
+.no-scrollbar {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* legacy IE/Edge */
+}
+.no-scrollbar::-webkit-scrollbar { /* WebKit (Chrome, Safari, modern Edge) */
+  display: none;
 }
 
 /* Hairline divider with brand seam */
