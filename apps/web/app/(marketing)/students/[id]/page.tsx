@@ -135,13 +135,10 @@ export default async function StudentProfilePage({
   const color = initialsGradient(student.name);
   const recent = student.recent?.slice(0, 20) ?? [];
 
-  // Days the student has been on the platform — counted as full days,
-  // floored so "joined today" reads as day 1, not day 0.
   const joinedAtMs = new Date(student.joinedAt).getTime();
   const daysSinceJoin = Number.isFinite(joinedAtMs)
-    ? Math.max(1, Math.floor((Date.now() - joinedAtMs) / 86_400_000) + 1)
+    ? Math.max(1, Math.floor((Date.now() - joinedAtMs) / 86_400_000))
     : 1;
-  // Activity intensity per the spec: completed steps × 100 ÷ days.
   const activityScore = Math.round((student.completedLessons * 100) / daysSinceJoin);
 
   return (
@@ -270,8 +267,8 @@ export default async function StudentProfilePage({
                 <span className="grid place-items-center w-9 h-9 rounded-full bg-[#f97316]/12 text-[#f97316] mb-2">
                   <Zap size={18} strokeWidth={2.5} />
                 </span>
-                <span className="text-3xl font-extrabold text-[#1e1b4b]">
-                  {activityScore}
+                <span className={`text-3xl font-extrabold ${activityScore >= 100 ? 'text-[#15803d]' : 'text-[#b91c1c]'}`}>
+                  {activityScore}%
                 </span>
                 <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#94a3b8]">
                   Faollik darajasi

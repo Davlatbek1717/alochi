@@ -55,26 +55,67 @@ async function main() {
   console.log('=== A\'lochi demo seed — START ===');
 
   // ── Guard ──
-  const tenant = await prisma.tenant.findUnique({ where: { slug: 'demo' } });
+  // Find any tenant (prefer slug 'demo' or 'demo-markaz' for stability,
+  // but fall back to the first one we see). The basic seed.ts creates a
+  // tenant with slug='demo-markaz', so we accept that too.
+  const tenant =
+    (await prisma.tenant.findUnique({ where: { slug: 'demo' } })) ??
+    (await prisma.tenant.findUnique({ where: { slug: 'demo-markaz' } })) ??
+    (await prisma.tenant.findFirst({ orderBy: { createdAt: 'asc' } }));
   if (!tenant) {
-    console.error('[ABORT] No tenant with slug="demo". Run clean-db.ts first.');
+    console.error('[ABORT] No tenant found. Create one first.');
     process.exit(1);
   }
-  console.log(`Tenant: "${tenant.name}" (${tenant.id})`);
+  console.log(`Tenant: "${tenant.name}" (slug=${tenant.slug}, ${tenant.id})`);
 
-  const superadmin = await prisma.user.findFirst({ where: { role: 'superadmin' } });
+  const superadmin = await prisma.user.findFirst({
+    where: { role: 'superadmin' },
+  });
   if (!superadmin) {
     console.error('[ABORT] No superadmin user found.');
     process.exit(1);
   }
 
   // Fetch existing lessons — we reference their IDs for progress/errors/etc.
-  const lessons = await prisma.lesson.findMany({ orderBy: { orderNumber: 'asc' } });
+  // If none exist, create ten quick stand-in English lessons so the demo
+  // dataset has something to attach progress and error logs to.
+  let lessons = await prisma.lesson.findMany({
+    orderBy: { orderNumber: 'asc' },
+  });
   if (lessons.length === 0) {
-    console.error('[ABORT] No lessons found. Run seed-step-1.ts / seed-steps-2-10.ts first.');
-    process.exit(1);
+    console.log('  No lessons found — creating 10 demo lessons.');
+    const titles = [
+      'Greetings & Introductions',
+      'Numbers & Counting',
+      'Colors & Shapes',
+      'Family Members',
+      'Daily Routines',
+      'Food & Drinks',
+      'School & Classroom',
+      'Animals & Nature',
+      'Weather & Seasons',
+      'Hobbies & Sports',
+    ];
+    for (let i = 0; i < titles.length; i++) {
+      await prisma.lesson.create({
+        data: {
+          tenantId: tenant.id,
+          title: titles[i],
+          type: 'english',
+          orderNumber: i + 1,
+          youtubeUrl: 'https://www.youtube.com/watch?v=hZTkOcAjOCs',
+          nRepetitions: 3,
+          maxNOverride: 10,
+          components: {},
+          hasExam: false,
+          cameraEnabled: false,
+          isPublished: true,
+        },
+      });
+    }
+    lessons = await prisma.lesson.findMany({ orderBy: { orderNumber: 'asc' } });
   }
-  console.log(`Found ${lessons.length} lessons (untouched).`);
+  console.log(`Found ${lessons.length} lessons.`);
 
   // Hash password ONCE — bcrypt is slow (~100 ms/hash).
   const pwHash = await bcrypt.hash('demo12345', 10);
@@ -191,6 +232,9 @@ async function main() {
   const students: { id: string; branchId: string; groupId: string }[] = [];
   for (let i = 0; i < 16; i++) {
     const login = `student${i + 1}`;
+    // Spread enrolment over the last 2-12 weeks so faollik (lessons × 100 ÷ days)
+    // produces a realistic mix instead of "everybody joined today → 200%".
+    const enrolledDaysAgo = 14 + i * 5; // 14, 19, 24, ... up to ~89 days
     const u = await prisma.user.create({
       data: {
         tenantId: tenant.id,
@@ -205,6 +249,7 @@ async function main() {
         telegramId: null,
         region: regions[i],
         school: schools[i],
+        createdAt: daysAgo(enrolledDaysAgo),
       },
     });
     students.push({ id: u.id, branchId: u.branchId!, groupId: u.groupId! });

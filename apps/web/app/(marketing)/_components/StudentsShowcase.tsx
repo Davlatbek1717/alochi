@@ -35,6 +35,15 @@ function getInitials(name: string): string {
 function StudentCard({ student }: { student: Student }) {
   const color = initialsGradient(student.name);
 
+  const joinedAtMs = student.joinedAt ? new Date(student.joinedAt).getTime() : NaN;
+  const daysSinceJoin = Number.isFinite(joinedAtMs)
+    ? Math.max(1, Math.floor((Date.now() - joinedAtMs) / 86_400_000))
+    : 1;
+  const activityScore = Math.round((student.completedLessons * 100) / daysSinceJoin);
+  const isHighActivity = activityScore >= 100;
+  const activityText = isHighActivity ? 'text-[#15803d]' : 'text-[#b91c1c]';
+  const activityBg = isHighActivity ? 'bg-[#15803d]/10' : 'bg-[#b91c1c]/10';
+
   return (
     <article className="lift bg-white rounded-2xl border-2 border-[#e8e0d0] overflow-hidden flex flex-col">
       {/* Top band */}
@@ -61,7 +70,7 @@ function StudentCard({ student }: { student: Student }) {
           )}
         </div>
         {/* Name + meta */}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-extrabold text-[#1e1b4b] text-base leading-snug truncate">
             {student.name}
           </p>
@@ -71,6 +80,18 @@ function StudentCard({ student }: { student: Student }) {
           <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-[#6d28d9]/8 text-[10px] font-extrabold text-[#6d28d9] uppercase tracking-wider">
             <MapPin size={9} strokeWidth={3} />
             {student.region}
+          </span>
+        </div>
+        {/* Activity badge — as prominent as the name */}
+        <div
+          className={`shrink-0 flex flex-col items-center justify-center px-3 py-2 rounded-2xl ${activityBg}`}
+          aria-label={`Faollik ${activityScore}%`}
+        >
+          <span className={`text-xl leading-none font-extrabold ${activityText}`}>
+            {activityScore}%
+          </span>
+          <span className="mt-1 text-[9px] font-extrabold uppercase tracking-widest text-[#64748b]">
+            Faollik
           </span>
         </div>
       </div>

@@ -96,6 +96,15 @@ export class MarketingService {
       const completed = s._count.studentProgress;
       const progressPct =
         totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
+      // Same privacy rounding as the detail endpoint — keeps faollik %
+      // consistent between the showcase card and the profile page.
+      const joinedMonth = new Date(
+        Date.UTC(
+          s.createdAt.getUTCFullYear(),
+          s.createdAt.getUTCMonth(),
+          1,
+        ),
+      );
       return {
         id: s.id,
         name: s.name,
@@ -106,7 +115,7 @@ export class MarketingService {
         totalLessons,
         sessions: 0,
         progress: progressPct,
-        joinedAt: s.createdAt,
+        joinedAt: joinedMonth,
       };
     });
   }
