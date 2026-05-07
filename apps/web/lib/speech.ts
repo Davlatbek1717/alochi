@@ -239,8 +239,16 @@ interface ListenOptions {
   continuous?: boolean;
   /** Fired with each interim transcript. Useful for live captions. */
   onInterim?: (text: string) => void;
-  /** Fired ONCE when the recognizer has a final result. */
-  onResult: (text: string) => void;
+  /**
+   * Fired ONCE when the recognizer has a final result.
+   *
+   * `alternatives` is the recognizer's top-N candidate transcripts for
+   * the latest utterance, top-confidence first. Short words like "wake"
+   * or non-English names like "Ali" frequently get mis-transcribed in
+   * the top slot but appear correctly further down — callers that grade
+   * pronunciation can match against the whole list.
+   */
+  onResult: (text: string, alternatives?: string[]) => void;
   onError?: (error: string) => void;
   onEnd?: () => void;
 }
@@ -268,7 +276,10 @@ export function listen(opts: ListenOptions): ListenHandle {
   recog.lang = opts.lang ?? 'en-US';
   recog.continuous = !!opts.continuous;
   recog.interimResults = !!opts.onInterim;
-  recog.maxAlternatives = 1;
+  // 5 alternates — mobile recognizers often put the right transcript in
+  // slots 2-5 for short words. The grader picks the best match across
+  // them rather than relying on the top guess alone.
+  recog.maxAlternatives = 5;
 
   // With `continuous: true` the recognizer issues a separate result entry
   // per utterance (a pause finalises the previous one). The browser does
@@ -290,7 +301,22 @@ export function listen(opts: ListenOptions): ListenHandle {
     if (last?.isFinal) {
       if (segText) finalizedSegments.push(segText);
       const cumulative = finalizedSegments.join(' ').trim();
-      opts.onResult(cumulative);
+      // Surface every alternate transcript for the grader. The cumulative
+      // top transcript stays as the default `text` so simple callers
+      // (AiTutor, OralExamRunner) keep working unchanged.
+      const alternatives: string[] = [];
+      const altCount = (last as unknown as { length?: number }).length ?? 0;
+      for (let i = 0; i < altCount; i++) {
+        const alt = last[i]?.transcript;
+        if (alt) {
+          // Replace the most recent finalised segment with this alt to
+          // get a "what if the recognizer had picked alt #i" cumulative.
+          const all = [...finalizedSegments];
+          if (all.length > 0) all[all.length - 1] = alt.trim();
+          alternatives.push(all.join(' ').trim());
+        }
+      }
+      opts.onResult(cumulative, alternatives);
     } else {
       const base = finalizedSegments.join(' ');
       const cumulative = (base ? `${base} ${segText}` : segText).trim();

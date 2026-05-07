@@ -30,14 +30,13 @@ interface SpeakWordsProps {
 type WordStatus = 'pending' | 'active' | 'correct' | 'wrong';
 type Phase = 'idle' | 'listening' | 'passed' | 'failed';
 
-// Per-word match threshold on the 0-100 scale returned by
-// similarityScore(). 90 forgives a single-character STT mishearing
-// on most words ("morning" → "mornin" still passes at 86 fails, but
-// "morning" → "mornings" at 88 fails) while still catching clearly
-// wrong words. Practical sweet spot between 100 (too strict — Web
-// Speech mishearings false-fail) and 65 (too lax — "launch" passes
-// for "morning").
-const WORD_MATCH_THRESHOLD = 90;
+// Strict 100% normalized-equality match per the product spec: a word
+// only advances when the student's pronunciation is exact (after
+// case-folding + diacritic + punctuation strip). The recognizer's
+// fuzziness is handled by checking *every* alternative transcript
+// it produced — top alt may be wrong, but if any of slots 2-5 matches
+// the expected word exactly, we accept.
+const WORD_MATCH_THRESHOLD = 100;
 
 /**
  * Normalize a word for comparison: lowercase, strip diacritics + all
@@ -194,21 +193,45 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
    * Process a transcript update from the recognizer.
    *
    * Behaviour: the cursor only moves forward when the student pronounces
-   * the CURRENT expected word correctly (similarityScore ≥ threshold).
-   * If they say something else, the spoken token is consumed but the
-   * cursor stays put — the same word stays "active", the miss is
-   * counted, and the student must retry until they get it right.
+   * the CURRENT expected word correctly (normalized exact match — see
+   * WORD_MATCH_THRESHOLD). If they say something else, the spoken token
+   * is consumed but the cursor stays put — the same word stays "active",
+   * the miss is counted, and the student must retry until they get it
+   * right.
+   *
+   * `alternatives` is the recognizer's top-N candidate transcripts of
+   * the latest utterance. The top guess is often wrong for short words
+   * (the recognizer hears "wake" as "wait"); checking lower-confidence
+   * alternates fixes most false negatives without loosening the match
+   * threshold itself.
    *
    * Punctuation-only words (very rare for English, but possible) are
    * auto-skipped because there's nothing to pronounce.
    */
-  function processTranscript(transcript: string) {
+  function processTranscript(transcript: string, alternatives?: string[]) {
     if (finishedRef.current) return;
-    const spoken = transcript
-      .split(/\s+/)
-      .filter(Boolean)
-      .map(normalize)
-      .filter(Boolean);
+
+    // Build the list of token streams to grade against. Always include
+    // the top transcript first; append unique alternatives so the grader
+    // picks the best match across all of them.
+    const tokenStreams: string[][] = [];
+    const seen = new Set<string>();
+    const candidates = [transcript, ...(alternatives ?? [])];
+    for (const c of candidates) {
+      if (!c) continue;
+      const key = c.trim();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      tokenStreams.push(
+        c.split(/\s+/).filter(Boolean).map(normalize).filter(Boolean),
+      );
+    }
+    if (tokenStreams.length === 0) return;
+
+    // Use the top transcript's stream as the canonical cursor — its
+    // length defines how far we walk. Alts only affect whether each
+    // position is considered a hit.
+    const primary = tokenStreams[0];
 
     let cursor = cursorRef.current;
     let consumed = consumedSpokenIdxRef.current;
@@ -217,7 +240,7 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     let lastWasMiss = false;
     let advancedThisPass = false;
 
-    while (consumed < spoken.length && cursor < words.length) {
+    while (consumed < primary.length && cursor < words.length) {
       const expected = normalize(words[cursor]);
       if (!expected) {
         // Pure punctuation entry — auto-pass and advance.
@@ -226,8 +249,17 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
         misses = 0;
         continue;
       }
-      const sim = similarityScore(spoken[consumed], expected);
-      if (sim >= WORD_MATCH_THRESHOLD) {
+      // Hit if ANY alt's token at this position scores ≥ threshold.
+      // Threshold is 100, i.e. exact normalized equality.
+      let bestSim = 0;
+      for (const stream of tokenStreams) {
+        const tok = stream[consumed];
+        if (!tok) continue;
+        const sim = similarityScore(tok, expected);
+        if (sim > bestSim) bestSim = sim;
+        if (bestSim >= WORD_MATCH_THRESHOLD) break;
+      }
+      if (bestSim >= WORD_MATCH_THRESHOLD) {
         // Hit — mark green, advance both pointers, reset miss counter.
         next[cursor] = 'correct';
         cursor += 1;
@@ -297,13 +329,14 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
           if (!mountedRef.current) return;
           setInterimTranscript(txt);
         },
-        onResult: (txt) => {
+        onResult: (txt, alternatives) => {
           // Final result for the latest utterance — recognition has
           // committed to the wording, safe to advance the cursor and
-          // colour the words.
+          // colour the words. Pass alternates so processTranscript can
+          // accept any of them as the right pronunciation.
           if (!mountedRef.current) return;
           setInterimTranscript(txt);
-          processTranscript(txt);
+          processTranscript(txt, alternatives);
         },
         onError: (err) => {
           if (!mountedRef.current) return;
