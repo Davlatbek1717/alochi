@@ -100,6 +100,26 @@ function primeVoices() {
 
 if (typeof window !== 'undefined') {
   primeVoices();
+  // Mobile auto-unlock: iOS Safari and some Android Chrome builds only
+  // accept the *first* speak() inside a user-gesture. Components that
+  // call speak() much later (ListenPick, SpeakSentence, etc.) would
+  // miss this window. Listen once for any tap or click anywhere in the
+  // app, fire a near-silent priming utterance, then drop the listeners.
+  let unlocked = false;
+  // capture: true so we unlock during the gesture's capture phase —
+  // before the target component's onClick runs and tries to speak().
+  const opts: AddEventListenerOptions = { passive: true, capture: true };
+  const unlockOnce = () => {
+    if (unlocked) return;
+    unlocked = true;
+    unlockSpeech();
+    document.removeEventListener('click', unlockOnce, opts);
+    document.removeEventListener('touchstart', unlockOnce, opts);
+    document.removeEventListener('keydown', unlockOnce, opts);
+  };
+  document.addEventListener('click', unlockOnce, opts);
+  document.addEventListener('touchstart', unlockOnce, opts);
+  document.addEventListener('keydown', unlockOnce, opts);
 }
 
 function getVoicesSync(): SpeechSynthesisVoice[] {

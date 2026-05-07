@@ -163,3 +163,22 @@ export function unlockAudio(): void {
     void context.resume().catch(() => {});
   }
 }
+
+// Auto-unlock on the first user gesture anywhere in the app. Components
+// that play sound asynchronously (after a fetch, after recognition,
+// from a setTimeout) would otherwise hit a suspended context.
+if (typeof window !== 'undefined') {
+  let unlocked = false;
+  const opts: AddEventListenerOptions = { passive: true, capture: true };
+  const unlockOnce = () => {
+    if (unlocked) return;
+    unlocked = true;
+    unlockAudio();
+    document.removeEventListener('click', unlockOnce, opts);
+    document.removeEventListener('touchstart', unlockOnce, opts);
+    document.removeEventListener('keydown', unlockOnce, opts);
+  };
+  document.addEventListener('click', unlockOnce, opts);
+  document.addEventListener('touchstart', unlockOnce, opts);
+  document.addEventListener('keydown', unlockOnce, opts);
+}
