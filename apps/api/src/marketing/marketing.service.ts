@@ -64,7 +64,9 @@ export class MarketingService {
     const cached = await this.cacheGet<unknown[]>(KEY);
     if (cached) return cached;
     const result = await this.fetchStudents(limit, skip);
-    await this.cacheSet(KEY, result, 30_000);
+    // TTL reduced to 10 s (was 30 s) as a backstop for any lesson-completion
+    // path that bypasses the explicit cache.del() invalidation in ProgressService.
+    await this.cacheSet(KEY, result, 10_000);
     return result;
   }
 
@@ -197,7 +199,9 @@ export class MarketingService {
     const cached = await this.cacheGet<unknown>(KEY);
     if (cached) return cached;
     const result = await this.computeStats();
-    await this.cacheSet(KEY, result, 60_000);
+    // TTL reduced to 15 s (was 60 s) as a backstop for any lesson-completion
+    // path that bypasses the explicit cache.del() invalidation in ProgressService.
+    await this.cacheSet(KEY, result, 15_000);
     return result;
   }
 

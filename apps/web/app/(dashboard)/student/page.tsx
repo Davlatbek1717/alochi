@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import {
   RefreshCw,
   BarChart2,
@@ -146,86 +147,78 @@ export default function StudentDashboard() {
     setReloadKey((k) => k + 1);
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchData(true);
+  const load = useCallback(async () => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const [
+        profileRes,
+        xpRes,
+        streakRes,
+        progressRes,
+        warningsRes,
+        reviewRes,
+        certsRes,
+        nextLessonRes,
+        statusRes,
+      ] = await Promise.all([
+        apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
+        apiRequest<XpData>('/gamification/xp', {}, token),
+        apiRequest<StreakData>('/gamification/streak', {}, token),
+        apiRequest<ProgressRow[]>('/progress/my', {}, token),
+        apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
+        apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
+        apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
+        apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
+        apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
+      ]);
+      if (profileRes.data) setProfile(profileRes.data);
+      setXpData(xpRes.data);
+      setStreak(streakRes.data.streak);
+      setHasShield(streakRes.data.hasShield);
+      setLessonProgress(progressRes.data.length);
+      setWarnings(warningsRes.data ?? []);
+      setReviewItems(reviewRes.data ?? []);
+      setCertificates(certsRes.data ?? []);
+      setStatusData(statusRes.data);
 
-    function onFocus() {
-      fetchData(false);
-    }
-    function onVisibilityChange() {
-      if (document.visibilityState === 'visible') fetchData(false);
-    }
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-
-    async function fetchData(initial = false) {
-      const token = localStorage.getItem('accessToken') ?? '';
-      try {
-        const [
-          profileRes,
-          xpRes,
-          streakRes,
-          progressRes,
-          warningsRes,
-          reviewRes,
-          certsRes,
-          nextLessonRes,
-          statusRes,
-        ] = await Promise.all([
-          apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
-          apiRequest<XpData>('/gamification/xp', {}, token),
-          apiRequest<StreakData>('/gamification/streak', {}, token),
-          apiRequest<ProgressRow[]>('/progress/my', {}, token),
-          apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
-          apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token).catch(() => ({ data: [] as ReviewItem[] })),
-          apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
-          apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
-          apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
-        ]);
-        if (cancelled) return;
-        if (profileRes.data) setProfile(profileRes.data);
-        setXpData(xpRes.data);
-        setStreak(streakRes.data.streak);
-        setHasShield(streakRes.data.hasShield);
-        setLessonProgress(progressRes.data.length);
-        setWarnings(warningsRes.data ?? []);
-        setReviewItems(reviewRes.data ?? []);
-        setCertificates(certsRes.data ?? []);
-        setStatusData(statusRes.data);
-
-        const nextL = nextLessonRes.data ?? null;
-        setNextLesson(nextL);
-        if (nextL) {
-          const row = (progressRes.data ?? []).find((p) => p.lessonId === nextL.id);
-          if (nextL.nRepetitions && nextL.nRepetitions > 0) {
-            setNextLessonSession({ count: row?.sessionCount ?? 0, total: nextL.nRepetitions });
-          } else {
-            setNextLessonSession(null);
-          }
+      const nextL = nextLessonRes.data ?? null;
+      setNextLesson(nextL);
+      if (nextL) {
+        const row = (progressRes.data ?? []).find((p) => p.lessonId === nextL.id);
+        if (nextL.nRepetitions && nextL.nRepetitions > 0) {
+          setNextLessonSession({ count: row?.sessionCount ?? 0, total: nextL.nRepetitions });
         } else {
           setNextLessonSession(null);
         }
-        // Successful refresh clears any stale error from a previous attempt.
-        if (!cancelled) setLoadError(null);
-      } catch (err) {
-        // Only surface errors on the initial load. A flake during a
-        // focus/visibility refresh shouldn't blow away a working page.
-        if (initial && !cancelled) {
-          setLoadError(
-            err instanceof Error ? err.message : 'Maʼlumotlar yuklanmadi',
-          );
-        }
-      } finally {
-        if (initial && !cancelled) setLoading(false);
+      } else {
+        setNextLessonSession(null);
       }
+      // Successful refresh clears any stale error from a previous attempt.
+      setLoadError(null);
+    } catch (err) {
+      // Background refreshes (focus/visibility) intentionally don't surface
+      // errors so a brief flake on a tab switch doesn't tear down a working
+      // dashboard. Errors on the initial load (still in loading state) are
+      // surfaced so the user gets the retry button.
+      if (loading) {
+        setLoadError(
+          err instanceof Error ? err.message : 'Maʼlumotlar yuklanmadi',
+        );
+      }
+    } finally {
+      setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh whenever the user switches back to this tab or returns from
+  // another window. Canonical implementation lives in useFocusRevalidate —
+  // all pages use the same hook instead of duplicating listener wiring.
+  useFocusRevalidate(load);
 
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();

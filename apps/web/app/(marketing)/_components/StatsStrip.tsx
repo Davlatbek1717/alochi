@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { Users2, School, BookOpen, TrendingUp } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -20,7 +21,7 @@ function fmt(n: number): string {
 export function StatsStrip() {
   const [stats, setStats] = useState<MarketingStats | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     fetch(`${API_BASE}/marketing/stats`)
       .then((r) => r.json())
       .then(
@@ -40,6 +41,14 @@ export function StatsStrip() {
         /* graceful fallback */
       });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh platform stats when the visitor returns to the tab so the numbers
+  // shown on the landing page reflect lesson completions that just happened.
+  useFocusRevalidate(load);
 
   if (
     !stats ||

@@ -21,10 +21,17 @@ describe('ProgressService', () => {
 
   const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
   const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
+  // CACHE_MANAGER mock — del is best-effort so just resolve silently.
+  const mockCache = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn().mockResolvedValue(undefined),
+  };
   const service = new ProgressService(
     mockPrisma as any,
     mockFeedEvent as any,
     mockAnalytics as any,
+    mockCache as any,
   );
 
   it('increments session count and marks homeCompleted when reaching N', async () => {

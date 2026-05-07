@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
@@ -83,54 +84,57 @@ export default function StudentProfilePage() {
   const [kpiReason, setKpiReason] = useState('');
   const [kpiSaving, setKpiSaving] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
+    let studentFetched = false;
+    try {
+      // Fetch user first — if user fetch fails, render full-page error.
+      const userRes = await apiRequest<UserInfo>(`/users/${studentId}`, {}, token);
+      setStudentName(userRes.data.name);
+      studentFetched = true;
 
-    async function load() {
-      let studentFetched = false;
-      try {
-        // Fetch user first — if user fetch fails, render full-page error.
-        const userRes = await apiRequest<UserInfo>(`/users/${studentId}`, {}, token);
-        setStudentName(userRes.data.name);
-        studentFetched = true;
+      const [lessonsRes, statusRes, configRes] = await Promise.all([
+        apiRequest<Lesson[]>('/lessons', {}, token),
+        apiRequest<StudentStatus>(`/status/${studentId}`, {}, token).catch(() => ({ data: null })),
+        apiRequest<Array<{ lessonId: string; nRepetitionsOverride: number }>>(
+          `/student-config/${studentId}`,
+          {},
+          token,
+        ).catch(() => ({ data: [] as Array<{ lessonId: string; nRepetitionsOverride: number }> })),
+      ]);
 
-        const [lessonsRes, statusRes, configRes] = await Promise.all([
-          apiRequest<Lesson[]>('/lessons', {}, token),
-          apiRequest<StudentStatus>(`/status/${studentId}`, {}, token).catch(() => ({ data: null })),
-          apiRequest<Array<{ lessonId: string; nRepetitionsOverride: number }>>(
-            `/student-config/${studentId}`,
-            {},
-            token,
-          ).catch(() => ({ data: [] as Array<{ lessonId: string; nRepetitionsOverride: number }> })),
-        ]);
+      setLessons(lessonsRes.data);
+      setStatus(statusRes.data);
 
-        setLessons(lessonsRes.data);
-        setStatus(statusRes.data);
-
-        // Build per-student override map; fall back to global default when no row exists
-        const configMap = new Map<string, number>(
-          (configRes.data ?? []).map((c) => [c.lessonId, c.nRepetitionsOverride]),
-        );
-        const initial: Record<string, number> = {};
-        for (const l of lessonsRes.data) {
-          initial[l.id] = configMap.has(l.id) ? (configMap.get(l.id) as number) : l.nRepetitions;
-        }
-        setOverrides(initial);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Xatolik yuz berdi';
-        // Only promote to full-page error when the student fetch itself failed
-        if (!studentFetched) {
-          setStudentError(msg);
-        } else {
-          setError(msg);
-        }
-      } finally {
-        setLoading(false);
+      // Build per-student override map; fall back to global default when no row exists
+      const configMap = new Map<string, number>(
+        (configRes.data ?? []).map((c) => [c.lessonId, c.nRepetitionsOverride]),
+      );
+      const initial: Record<string, number> = {};
+      for (const l of lessonsRes.data) {
+        initial[l.id] = configMap.has(l.id) ? (configMap.get(l.id) as number) : l.nRepetitions;
       }
+      setOverrides(initial);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Xatolik yuz berdi';
+      // Only promote to full-page error when the student fetch itself failed
+      if (!studentFetched) {
+        setStudentError(msg);
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
     }
-
-    load();
   }, [studentId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh student status and lesson data whenever the manager returns to
+  // this tab so changes made by other staff are immediately visible.
+  useFocusRevalidate(load);
 
   async function loadHistory() {
     if (historyLoading || history.length > 0) { setShowHistory(true); return; }

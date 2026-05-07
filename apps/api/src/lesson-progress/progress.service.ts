@@ -3,7 +3,10 @@ import {
   Injectable,
   NotFoundException,
   Optional,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -11,6 +14,7 @@ import { CityService } from '../gamification/city.service';
 import { XpService } from '../gamification/xp.service';
 import { StreakService } from '../gamification/streak.service';
 import { QuestService } from '../gamification/quest.service';
+import { CertificatesService } from '../gamification/certificates.service';
 import { StatusService } from '../student-status/status.service';
 import type { StatusColor } from '../student-status/status.types';
 
@@ -31,11 +35,15 @@ export class ProgressService {
     private prisma: PrismaService,
     private feedEvent: FeedEventService,
     private analytics: AnalyticsService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
     @Optional() private city?: CityService,
     @Optional() private xp?: XpService,
     @Optional() private streak?: StreakService,
     @Optional() private quest?: QuestService,
     @Optional() private status?: StatusService,
+    @Optional()
+    @Inject(forwardRef(() => CertificatesService))
+    private certificates?: CertificatesService,
   ) {}
 
   private async getEffectiveN(
@@ -119,6 +127,14 @@ export class ProgressService {
         data: { lessonId, sessionCount: newCount },
       })
       .catch(() => {});
+
+    // Invalidate the marketing cache so the landing page's student list and
+    // stats reflect the updated session count within seconds instead of
+    // waiting for the full TTL. We don't use pattern-delete because
+    // cache-manager v5 stores don't expose that uniformly across backends.
+    for (const key of ['mc:stats', 'mc:students:50:0', 'mc:students:100:0']) {
+      this.cache.del(key).catch(() => undefined);
+    }
 
     // Reward the student for completing this session. All four side-effects
     // are best-effort: a failure here must not roll back the progress row
@@ -255,6 +271,14 @@ export class ProgressService {
       select: { title: true, tenantId: true },
     });
 
+    // Invalidate the marketing cache so the landing page's student list and
+    // stats reflect the newly completed academy lesson within seconds. We
+    // don't use pattern-delete because cache-manager v5 stores don't expose
+    // that uniformly across backends.
+    for (const key of ['mc:stats', 'mc:students:50:0', 'mc:students:100:0']) {
+      this.cache.del(key).catch(() => undefined);
+    }
+
     if (lesson) {
       this.feedEvent
         .emit(lesson.tenantId, studentId, 'lesson_done', {
@@ -273,6 +297,13 @@ export class ProgressService {
           .addBuildingForLesson(studentId, lesson.tenantId, lessonId)
           .catch(() => undefined);
       }
+
+      // Auto-award any certificate the student has now earned. Best-effort —
+      // a failure here must not roll back the academy-completion the mentor
+      // just recorded.
+      this.certificates
+        ?.checkAndAward(studentId, lesson.tenantId)
+        .catch(() => undefined);
     }
 
     return result;

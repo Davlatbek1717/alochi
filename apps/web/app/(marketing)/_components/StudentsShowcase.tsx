@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import Link from 'next/link';
 import { Search, MapPin, ArrowRight, Users } from 'lucide-react';
 
@@ -159,8 +160,7 @@ export function StudentsShowcase() {
   const [query, setQuery] = useState('');
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
 
-  useEffect(() => {
-    let mounted = true;
+  const load = useCallback(() => {
     // API responses are wrapped in { success, data } — pull `.data` out.
     const unwrap = (j: unknown) =>
       j && typeof j === 'object' && 'data' in (j as Record<string, unknown>)
@@ -170,13 +170,19 @@ export function StudentsShowcase() {
       fetch(`${API_BASE}/marketing/students`).then((r) => r.json()).then(unwrap).catch(() => []),
       fetch(`${API_BASE}/marketing/regions`).then((r) => r.json()).then(unwrap).catch(() => []),
     ]).then(([s, r]) => {
-      if (!mounted) return;
       setStudents(Array.isArray(s) ? (s as Student[]) : []);
       setRegions(Array.isArray(r) ? (r as string[]) : []);
       setLoading(false);
     });
-    return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh the student showcase when the visitor returns to the tab so the
+  // grid reflects any lesson completions that just invalidated the server cache.
+  useFocusRevalidate(load);
 
   const filtered = students.filter((s) => {
     const q = query.toLowerCase();

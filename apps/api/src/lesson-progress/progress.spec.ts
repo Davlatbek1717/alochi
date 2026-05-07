@@ -1,11 +1,17 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ProgressService } from './progress.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 
 const mockAnalytics = { logEvent: jest.fn().mockResolvedValue(undefined) };
+const mockCache = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   lesson: {
@@ -38,6 +44,7 @@ describe('ProgressService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: FeedEventService, useValue: mockFeedEvent },
         { provide: AnalyticsService, useValue: mockAnalytics },
+        { provide: CACHE_MANAGER, useValue: mockCache },
       ],
     }).compile();
     service = module.get(ProgressService);

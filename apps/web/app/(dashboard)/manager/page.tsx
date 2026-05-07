@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { Users, CreditCard, ClipboardList, Send, AlertCircle, AlertTriangle, TrendingUp, Trophy, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, Stat, useToast } from '@/components/ui';
@@ -33,7 +34,7 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [managerName, setManagerName] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setManagerName(user.name ?? '');
@@ -49,7 +50,16 @@ export default function ManagerDashboard() {
       else toast.error("Sariq o'quvchilar yuklanmadi");
       if (highRes.status === 'fulfilled') setHighPerformers(highRes.value.data ?? []);
     }).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh student status lists whenever the manager returns to this tab so
+  // status changes made by mentors are visible without a full page reload.
+  useFocusRevalidate(load);
 
   const navCards = [
     { href: '/manager/students',    icon: <Users size={20} />,        title: "O'quvchilar", desc: 'Status boshqaruv',  color: 'hover:border-violet-300 hover:bg-violet-50' },

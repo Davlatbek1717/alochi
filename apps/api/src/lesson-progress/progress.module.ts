@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { ProgressController } from './progress.controller';
 import { SocialModule } from '../social/social.module';
@@ -10,7 +10,10 @@ import { StudentStatusModule } from '../student-status/status.module';
   imports: [
     SocialModule,
     AnalyticsModule,
-    GamificationModule,
+    // forwardRef breaks the GamificationModule ↔ ProgressModule cycle that
+    // would otherwise arise when CertificatesService is injected into
+    // ProgressService for auto-awarding on academy completion.
+    forwardRef(() => GamificationModule),
     // Variant B auto-status — feeds StatusService.setEnglishStatus from
     // the per-session accuracy reported by the lesson runner.
     StudentStatusModule,

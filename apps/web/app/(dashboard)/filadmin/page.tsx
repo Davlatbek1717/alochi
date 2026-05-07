@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import {
   BarChart2,
   CreditCard,
@@ -126,7 +127,7 @@ const INITIAL_STATS: DashboardStats = {
 export default function FiladminDashboard() {
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     let branchId = '';
     try {
@@ -168,6 +169,14 @@ export default function FiladminDashboard() {
       });
     });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh dashboard stats whenever the filadmin returns to this tab so
+  // attendance and task counts reflect the latest state.
+  useFocusRevalidate(load);
 
   const totalStatus = stats.statusYashil + stats.statusSariq + stats.statusQizil;
   const pct = (n: number) => (totalStatus > 0 ? Math.round((n / totalStatus) * 100) : 0);

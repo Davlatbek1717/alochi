@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import Link from 'next/link';
 import {
   Trophy,
@@ -51,7 +52,7 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [myId, setMyId] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const payload = JSON.parse(atob(token.split('.')[1])) as { sub?: string };
@@ -72,6 +73,14 @@ export default function LeaderboardPage() {
       })
       .finally(() => setLoading(false));
   }, [period]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh leaderboard positions whenever the user returns to this tab so
+  // rank changes made by peers are visible without a full page reload.
+  useFocusRevalidate(load);
 
   const reset = weeklyResetIn();
 

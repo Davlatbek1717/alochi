@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { Award, Lock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton } from '@/components/ui';
@@ -57,7 +58,7 @@ export default function StudentCertificatesPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     Promise.all([
       apiRequest<Certificate[]>('/gamification/certificates', {}, token),
@@ -70,6 +71,14 @@ export default function StudentCertificatesPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Yuklab boʻlmadi'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh certificates and progress when the user returns to this tab so
+  // newly awarded certificates appear without a full page reload.
+  useFocusRevalidate(load);
 
   return (
     <div className="min-h-full bg-[#fffaf0] pb-8">

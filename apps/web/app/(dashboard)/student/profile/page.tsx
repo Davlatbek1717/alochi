@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -148,7 +149,7 @@ export default function StudentProfilePage() {
     setWebSpeechPreference(next);
   }
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     Promise.all([
       apiRequest<Profile>('/users/my-profile', {}, token),
@@ -183,6 +184,14 @@ export default function StudentProfilePage() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh XP, streak and certificate data whenever the user returns to this
+  // tab so the profile never shows stale gamification numbers.
+  useFocusRevalidate(load);
 
   async function saveEdit() {
     if (!profile) return;
