@@ -46,7 +46,12 @@ export class UsersController {
   ) {
     const callerRole: UserRole = req.user.role;
 
-    // Non-superadmin callers: derive tenantId and branchId from JWT; never trust body
+    // tenantId is always JWT-derived (single-tenant; no API consumer should
+    // ever pick a tenant). Drop any client-supplied value, then set ours.
+    delete (dto as any).tenantId;
+    dto.tenantId = req.user.tenantId;
+
+    // Non-superadmin callers cannot pick branchId either — force from JWT.
     if (callerRole !== UserRole.superadmin) {
       const callerBranchId: string | null = req.user.branchId ?? null;
 
@@ -57,10 +62,7 @@ export class UsersController {
         );
       }
 
-      // Force tenant and branch from JWT — ignore whatever the client sent
-      delete (dto as any).tenantId;
       delete (dto as any).branchId;
-      dto.tenantId = req.user.tenantId;
       dto.branchId = callerBranchId;
     }
 

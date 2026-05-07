@@ -29,8 +29,16 @@ export class UsersService {
     dto: CreateUserDto,
     actor?: { userId: string; delegationId?: string | null },
   ) {
+    // The controller guarantees tenantId is set from the JWT before calling
+    // us, but the DTO type marks it optional so single-tenant clients can
+    // omit it from the request body. Re-narrow here.
+    if (!dto.tenantId) {
+      throw new ConflictException(this.i18n.t('duplicate_login'));
+    }
+    const tenantId = dto.tenantId;
+
     const exists = await this.prisma.user.findFirst({
-      where: { tenantId: dto.tenantId, login: dto.login },
+      where: { tenantId, login: dto.login },
     });
     if (exists) throw new ConflictException(this.i18n.t('duplicate_login'));
 
@@ -38,7 +46,7 @@ export class UsersService {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await this.prisma.user.create({
-      data: { ...data, passwordHash },
+      data: { ...data, tenantId, passwordHash },
     });
 
     // Auto-friendship: when a student joins a group, accept-link them with
