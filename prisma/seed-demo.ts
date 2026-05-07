@@ -896,39 +896,6 @@ async function main() {
   }
   console.log('  Created 3 warnings.');
 
-  // ── 25. ContactRequest ────────────────────────────────────────────────────────
-  console.log('\n[24] Creating contact requests...');
-
-  await prisma.contactRequest.createMany({
-    data: [
-      {
-        centerName:  'Yunusobod o\'quv markazi',
-        contactName: 'Hamid Tursunov',
-        phone:       '+998901234567',
-        email:       'hamid@example.com',
-        centerSize:  'medium',
-        message:     'Platformangiz haqida ko\'proq ma\'lumot olmoqchi edim',
-        status:      'new',
-      },
-      {
-        centerName:  'Smart Academy',
-        contactName: 'Ziyoda Rahimova',
-        phone:       '+998911234567',
-        centerSize:  'small',
-        status:      'contacted',
-      },
-      {
-        centerName:  'Future Stars',
-        contactName: 'Mirzo Umarov',
-        phone:       '+998931234567',
-        centerSize:  'large',
-        status:      'demo_scheduled',
-        notes:       'Demo 2026-05-10 da belgilangan',
-      },
-    ],
-  });
-  console.log('  Created 3 contact requests.');
-
   // ── 26. StaffVideoGuide ───────────────────────────────────────────────────────
   console.log('\n[25] Creating staff video guides...');
 
@@ -1309,7 +1276,6 @@ async function main() {
     prisma.tournamentRegistration.count(),
     prisma.warning.count(),
     prisma.churnScore.count(),
-    prisma.contactRequest.count(),
     prisma.notification.count(),
     prisma.analyticsEvent.count(),
     prisma.letter.count(),
@@ -1342,7 +1308,7 @@ async function main() {
   const labels = [
     'Branches', 'Users (total)', 'StudentXp', 'Exams', 'ExamQuestions',
     'ExamPermissions', 'Payments', 'Tasks', 'KpiScores', 'Tournaments',
-    'TournamentRegistrations', 'Warnings', 'ChurnScores', 'ContactRequests',
+    'TournamentRegistrations', 'Warnings', 'ChurnScores',
     'Notifications', 'AnalyticsEvents', 'Letters', 'StudentLetters',
     'Friendships', 'Duels', 'LessonVariants', 'StudentVariantAssignments',
     'SpacedRepetitionItems', 'AttendanceStudents', 'StudentProgress',

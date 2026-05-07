@@ -2,7 +2,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   MaxLength,
   MinLength,
@@ -71,13 +70,4 @@ export class OnboardTenantDto {
   @ValidateNested()
   @Type(() => OnboardBranchPart)
   branch?: OnboardBranchPart;
-
-  /**
-   * Optional ID of a `ContactRequest` this onboarding originated from.
-   * When provided, the request is marked `converted` + linked to the new
-   * tenant inside the same flow.
-   */
-  @IsOptional()
-  @IsUUID()
-  contactRequestId?: string;
 }

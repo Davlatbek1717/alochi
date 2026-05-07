@@ -62,7 +62,6 @@ const NAV: Record<string, NavEntry[]> = {
       items: [
         { href: '/superadmin/tenants', icon: <Building2 size={14} />, label: 'Markazlar' },
         { href: '/superadmin/branches', icon: <Building2 size={14} />, label: 'Filiallar' },
-        { href: '/superadmin/contact-requests', icon: <Inbox size={14} />, label: "Demo so'rovlar" },
       ],
     },
     {

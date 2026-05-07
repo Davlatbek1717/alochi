@@ -48,7 +48,6 @@ import { ManagerSessionsModule } from './manager-sessions/manager-sessions.modul
 import { ManagerRewardsModule } from './manager-rewards/manager-rewards.module';
 import { TechIssuesModule } from './tech-issues/tech-issues.module';
 import { ExamQueueModule } from './exams/exam-queue.module';
-import { ContactRequestsModule } from './contact-requests/contact-requests.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SystemAuditModule } from './system-audit/system-audit.module';
@@ -132,7 +131,6 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     ManagerRewardsModule,
     TechIssuesModule,
     ExamQueueModule,
-    ContactRequestsModule,
     MarketingModule,
     SubscriptionsModule,
     SystemAuditModule,

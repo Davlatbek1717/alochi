@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Header } from './Header';
 import { Hero } from './Hero';
 import { StatsStrip } from './StatsStrip';
@@ -15,7 +15,6 @@ import { Pricing } from './Pricing';
 import { FAQ } from './FAQ';
 import { CTA } from './CTA';
 import { Footer } from './Footer';
-import { DemoForm } from './DemoForm';
 import type { LandingCms } from './cms-types';
 
 interface Props {
@@ -23,24 +22,21 @@ interface Props {
 }
 
 /**
- * Client shell that owns the DemoForm modal state. The modal is shared
- * across Header, Hero, Pricing, CTA — putting the state in one place
- * keeps every "Demo so'rash" trigger in sync.
+ * Client shell for the landing page.
  *
- * `cms` is fetched server-side in page.tsx and passed down here.
- * When null (fetch failed / API down) every component falls back
- * to its own hardcoded copy.
+ * Every former "Demo so'rash" CTA now lands the visitor on /register
+ * where they start a 14-day free trial directly. The contact-request
+ * modal funnel was removed — the trial is the demo.
  */
 export function LandingShell({ cms }: Props) {
-  const [demoOpen, setDemoOpen] = useState(false);
-  const openDemo = () => setDemoOpen(true);
-  const closeDemo = () => setDemoOpen(false);
+  const router = useRouter();
+  const goRegister = () => router.push('/register');
 
   return (
     <>
-      <Header onDemoClick={openDemo} />
+      <Header onDemoClick={goRegister} />
       <main id="main">
-        <Hero onDemoClick={openDemo} cms={cms?.hero ?? null} />
+        <Hero onDemoClick={goRegister} cms={cms?.hero ?? null} />
         <StatsStrip />
         <StudentsShowcase />
         <WhyAlochi />
@@ -50,12 +46,11 @@ export function LandingShell({ cms }: Props) {
         <Roles />
         <HowItWorks />
         <ForParents />
-        <Pricing onDemoClick={openDemo} />
+        <Pricing onDemoClick={goRegister} />
         <FAQ />
-        <CTA onDemoClick={openDemo} />
+        <CTA onDemoClick={goRegister} />
       </main>
       <Footer cms={cms?.contact ?? null} />
-      <DemoForm open={demoOpen} onClose={closeDemo} />
     </>
   );
 }

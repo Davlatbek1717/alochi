@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
-import { ContactRequestStatus, Prisma, UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
@@ -209,7 +209,7 @@ export class TenantsService {
     ]);
   }
 
-  async onboardTenant(dto: OnboardTenantDto, actorUserId?: string) {
+  async onboardTenant(dto: OnboardTenantDto) {
     const existing = await this.prisma.tenant.findUnique({
       where: { slug: dto.tenant.slug },
     });
@@ -269,26 +269,6 @@ export class TenantsService {
         throw new ConflictException(SLUG_TAKEN_MESSAGE);
       }
       throw e;
-    }
-
-    // Phase 26 — finalise demo-request funnel. Failure here must NOT roll
-    // back the freshly-created tenant: we just log and return.
-    if (dto.contactRequestId) {
-      try {
-        await this.prisma.contactRequest.update({
-          where: { id: dto.contactRequestId },
-          data: {
-            status: ContactRequestStatus.converted,
-            convertedTenantId: result.tenant.id,
-            handledBy: actorUserId ?? null,
-            handledAt: new Date(),
-          },
-        });
-      } catch (err) {
-        this.logger.warn(
-          `onboardTenant: contact request ${dto.contactRequestId} convert failed: ${err}`,
-        );
-      }
     }
 
     return result;

@@ -1,18 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Building2, RefreshCw, User, Lock, Inbox } from 'lucide-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Building2, RefreshCw, User, Lock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, Card, CardHeader, CardTitle, CardDescription, useToast } from '@/components/ui';
 import { CredentialsModal } from './CredentialsModal';
-
-interface ContactRequestPrefill {
-  id: string;
-  centerName: string;
-  contactName: string;
-  phone: string;
-  email: string | null;
-}
 
 const PASSWORD_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -46,9 +38,7 @@ interface ModalData {
 
 export function OnboardForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const toast = useToast();
-  const prefillId = searchParams.get('prefill');
   const [tenantName, setTenantName] = useState('');
   const [slug, setSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
@@ -60,42 +50,6 @@ export function OnboardForm() {
   const [branchName, setBranchName] = useState('Markaziy filial');
   const [submitting, setSubmitting] = useState(false);
   const [modal, setModal] = useState<ModalData | null>(null);
-  const [prefillSource, setPrefillSource] =
-    useState<ContactRequestPrefill | null>(null);
-
-  useEffect(() => {
-    if (!prefillId) return;
-    const token = localStorage.getItem('accessToken') ?? '';
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiRequest<ContactRequestPrefill>(
-          `/contact-requests/${prefillId}`,
-          {},
-          token,
-        );
-        if (cancelled) return;
-        const r = res.data;
-        setPrefillSource(r);
-        setTenantName(r.centerName);
-        setSlug(deriveSlug(r.centerName));
-        setAdminName(r.contactName);
-        setAdminPhone(r.phone);
-      } catch (err) {
-        if (!cancelled) {
-          toast.error(
-            err instanceof Error
-              ? `Demo so'rovi yuklanmadi: ${err.message}`
-              : "Demo so'rovi yuklanmadi",
-          );
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefillId]);
 
   function onTenantNameChange(value: string) {
     setTenantName(value);
@@ -123,14 +77,8 @@ export function OnboardForm() {
             ...(adminPhone ? { phone: adminPhone } : {}),
           },
           ...(includeBranch ? { branch: { name: branchName } } : {}),
-          ...(prefillSource ? { contactRequestId: prefillSource.id } : {}),
         }),
       }, token);
-      if (prefillSource) {
-        toast.success(
-          "Markaz yaratildi va so'rov 'Konvertatsiya qilindi' ga o'tkazildi",
-        );
-      }
       setModal({
         tenantSlug: r.data.tenant.slug,
         login: r.data.admin.login,
@@ -147,27 +95,6 @@ export function OnboardForm() {
   return (
     <>
       <form onSubmit={onSubmit} className="max-w-2xl space-y-6">
-        {prefillSource && (
-          <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-3 flex items-start gap-3">
-            <Inbox size={18} className="text-violet-300 mt-0.5 shrink-0" />
-            <div className="text-sm text-violet-100 flex-1 min-w-0">
-              <p className="font-bold">
-                Demo so&apos;rovidan ma&apos;lumotlar to&apos;ldirildi
-              </p>
-              <p className="text-violet-200/80 text-xs mt-0.5 truncate">
-                Manba: {prefillSource.centerName} ({prefillSource.contactName})
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push('/superadmin/contact-requests')}
-              className="text-xs font-bold text-violet-200 hover:text-white underline shrink-0"
-            >
-              So&apos;rovlar
-            </button>
-          </div>
-        )}
-
         <Card>
           <CardHeader>
             <CardTitle>

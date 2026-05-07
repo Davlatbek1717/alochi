@@ -32,8 +32,8 @@ export class TenantsController {
 
   @Post('onboard')
   @Roles(UserRole.superadmin)
-  onboard(@Body() dto: OnboardTenantDto, @Request() req: any) {
-    return this.tenants.onboardTenant(dto, req.user?.userId);
+  onboard(@Body() dto: OnboardTenantDto) {
+    return this.tenants.onboardTenant(dto);
   }
 
   @Get()

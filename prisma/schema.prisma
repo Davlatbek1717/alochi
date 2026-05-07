@@ -1292,46 +1292,6 @@ model TechIssue {
   @@map("tech_issues")
 }
 
-// Phase 26 — public demo / contact requests funnel
-enum ContactRequestStatus {
-  new
-  contacted
-  demo_scheduled
-  demo_completed
-  converted
-  declined
-}
-
-enum CenterSize {
-  small  // <50 students
-  medium // 51-200 students
-  large  // 200+
-}
-
-model ContactRequest {
-  id                String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  centerName        String               @map("center_name")
-  contactName       String               @map("contact_name")
-  phone             String
-  email             String?
-  centerSize        CenterSize?          @map("center_size")
-  message           String?
-  status            ContactRequestStatus @default(new)
-  declineReason     String?              @map("decline_reason")
-  notes             String?
-  handledBy         String?              @map("handled_by") @db.Uuid
-  handledAt         DateTime?            @map("handled_at")
-  convertedTenantId String?              @map("converted_tenant_id") @db.Uuid
-  ipAddress         String?              @map("ip_address")
-  userAgent         String?              @map("user_agent")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  updatedAt         DateTime             @updatedAt @map("updated_at")
-
-  @@index([status])
-  @@index([createdAt])
-  @@map("contact_requests")
-}
-
 // 25.E.3 Manager rewards (gifts, books)
 model ManagerReward {
   id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid

@@ -189,7 +189,7 @@ export class AuthService {
   async registerTenant(dto: OnboardTenantDto) {
     // Delegate to TenantsService.onboardTenant (same logic as superadmin flow)
     // but set trialEndsAt = 14 days from now on the created tenant.
-    const result = await this.tenantsService.onboardTenant(dto, undefined);
+    const result = await this.tenantsService.onboardTenant(dto);
     // Set trial period
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 14);
