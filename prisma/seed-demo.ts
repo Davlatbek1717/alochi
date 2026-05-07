@@ -851,29 +851,6 @@ async function main() {
   }
   console.log('  Created 3 promotion reports.');
 
-  // ── 23. ChurnScore ────────────────────────────────────────────────────────────
-  console.log('\n[22] Creating churn scores...');
-
-  let churnCount = 0;
-  for (const stu of students.slice(0, 8)) {
-    const score = ri(5, 90);
-    await prisma.churnScore.create({
-      data: {
-        studentId: stu.id,
-        tenantId:  tenant.id,
-        score,
-        signals: {
-          missed_days:   ri(0, 5),
-          xp_drop:       score > 50,
-          payment_late:  score > 70,
-        },
-        alertSent: score > 75,
-      },
-    });
-    churnCount++;
-  }
-  console.log(`  Created ${churnCount} churn scores.`);
-
   // ── 24. Warnings ─────────────────────────────────────────────────────────────
   console.log('\n[23] Creating warnings...');
 
@@ -945,39 +922,6 @@ async function main() {
     });
   }
   console.log(`  Created ${templates.length} notification templates.`);
-
-  // ── 28. ChatKeyword ───────────────────────────────────────────────────────────
-  console.log('\n[27] Creating chat keywords...');
-
-  const keywords = ['yomon', 'ahmoq', 'stupid', 'idiot', 'bad', 'hate', 'ugly', 'fool'];
-  let kwCount = 0;
-  for (const word of keywords) {
-    try {
-      await prisma.chatKeyword.create({
-        data: { tenantId: tenant.id, word },
-      });
-      kwCount++;
-    } catch {
-      // unique — skip duplicates
-    }
-  }
-  console.log(`  Created ${kwCount} chat keywords.`);
-
-  // ── 29. AdaptiveDifficultyConfig ──────────────────────────────────────────────
-  console.log('\n[28] Creating adaptive difficulty config...');
-
-  await prisma.adaptiveDifficultyConfig.upsert({
-    where: { tenantId: tenant.id },
-    update: {},
-    create: {
-      tenantId:      tenant.id,
-      minN:          1,
-      maxN:          10,
-      hardThreshold: 0.40,
-      easyThreshold: 0.15,
-    },
-  });
-  console.log('  Created 1 adaptive difficulty config.');
 
   // ── 30. ErrorLog ──────────────────────────────────────────────────────────────
   console.log('\n[29] Creating error logs...');
@@ -1275,7 +1219,6 @@ async function main() {
     prisma.tournament.count(),
     prisma.tournamentRegistration.count(),
     prisma.warning.count(),
-    prisma.churnScore.count(),
     prisma.notification.count(),
     prisma.analyticsEvent.count(),
     prisma.letter.count(),
@@ -1294,12 +1237,10 @@ async function main() {
     prisma.promotionReport.count(),
     prisma.techIssue.count(),
     prisma.staffVideoGuide.count(),
-    prisma.chatKeyword.count(),
     prisma.errorLog.count(),
     prisma.socialFeedEvent.count(),
     prisma.kpiOverrideLog.count(),
     prisma.notificationTemplate.count(),
-    prisma.adaptiveDifficultyConfig.count(),
     prisma.examQueueEntry.count(),
     prisma.dailyQuest.count(),
     prisma.xpEvent.count(),
@@ -1308,14 +1249,14 @@ async function main() {
   const labels = [
     'Branches', 'Users (total)', 'StudentXp', 'Exams', 'ExamQuestions',
     'ExamPermissions', 'Payments', 'Tasks', 'KpiScores', 'Tournaments',
-    'TournamentRegistrations', 'Warnings', 'ChurnScores',
+    'TournamentRegistrations', 'Warnings',
     'Notifications', 'AnalyticsEvents', 'Letters', 'StudentLetters',
     'Friendships', 'Duels', 'LessonVariants', 'StudentVariantAssignments',
     'SpacedRepetitionItems', 'AttendanceStudents', 'StudentProgress',
     'StudentStatuses', 'StudentBuildings', 'ManagerRewards', 'ManagerSessions',
-    'PromotionReports', 'TechIssues', 'StaffVideoGuides', 'ChatKeywords',
+    'PromotionReports', 'TechIssues', 'StaffVideoGuides',
     'ErrorLogs', 'SocialFeedEvents', 'KpiOverrideLogs', 'NotificationTemplates',
-    'AdaptiveDifficultyConfigs', 'ExamQueueEntries', 'DailyQuests', 'XpEvents',
+    'ExamQueueEntries', 'DailyQuests', 'XpEvents',
   ];
 
   for (let i = 0; i < labels.length; i++) {

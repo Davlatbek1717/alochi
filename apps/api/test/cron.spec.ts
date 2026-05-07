@@ -1,5 +1,4 @@
 import { Test } from '@nestjs/testing';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CronService } from '../src/cron/cron.service';
@@ -7,8 +6,6 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { TelegramService } from '../src/telegram/telegram.service';
 import { NotificationsService } from '../src/notifications/notifications.service';
 import { NotificationTemplatesService } from '../src/notification-templates/notification-templates.service';
-import { AdaptiveService } from '../src/adaptive/adaptive.service';
-import { ChurnService } from '../src/churn/churn.service';
 import { ClickHouseService } from '../src/clickhouse/clickhouse.service';
 import { KpiService } from '../src/kpi/kpi.service';
 import { XpService } from '../src/gamification/xp.service';
@@ -63,13 +60,10 @@ const mockTelegram = {
 const mockNotifications = { send: jest.fn() };
 const mockXp = { award: jest.fn() };
 const mockTemplates = {};
-const mockAdaptive = { runNightlyAdaptation: jest.fn() };
-const mockChurn = { runDailyScoring: jest.fn() };
 const mockClickhouse = {
   isReady: jest.fn(() => false),
   insertEvent: jest.fn(),
 };
-const mockHttp = { post: jest.fn() };
 const mockConfig = { get: jest.fn() };
 const mockEvents = { emit: jest.fn() };
 const mockKpi = { award: jest.fn(), hasAwardInRange: jest.fn() };
@@ -85,10 +79,7 @@ describe('CronService', () => {
         { provide: TelegramService, useValue: mockTelegram },
         { provide: NotificationsService, useValue: mockNotifications },
         { provide: NotificationTemplatesService, useValue: mockTemplates },
-        { provide: AdaptiveService, useValue: mockAdaptive },
-        { provide: ChurnService, useValue: mockChurn },
         { provide: ClickHouseService, useValue: mockClickhouse },
-        { provide: HttpService, useValue: mockHttp },
         { provide: ConfigService, useValue: mockConfig },
         { provide: EventEmitter2, useValue: mockEvents },
         { provide: KpiService, useValue: mockKpi },

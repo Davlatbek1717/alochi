@@ -2,7 +2,6 @@ import {
   Injectable,
   BadRequestException,
   ForbiddenException,
-  OnModuleInit,
   Optional,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -35,18 +34,12 @@ interface SendMessageDto {
 }
 
 @Injectable()
-export class ChatService implements OnModuleInit {
-  private keywordCache = new Map<string, Set<string>>();
-
+export class ChatService {
   constructor(
     private prisma: PrismaService,
     private events: EventEmitter2,
     @Optional() private warnings?: WarningsService,
   ) {}
-
-  async onModuleInit() {
-    await this.reloadKeywords();
-  }
 
   /**
    * 25.M.1: Per-user daily message count, backed by Redis when REDIS_URL is
@@ -106,55 +99,6 @@ export class ChatService implements OnModuleInit {
     }
   }
 
-  async reloadKeywords() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const keywords = await (this.prisma as any).chatKeyword.findMany({
-      select: { tenantId: true, word: true },
-    });
-    this.keywordCache.clear();
-    for (const kw of keywords as { tenantId: string; word: string }[]) {
-      if (!this.keywordCache.has(kw.tenantId)) {
-        this.keywordCache.set(kw.tenantId, new Set());
-      }
-      this.keywordCache.get(kw.tenantId)!.add(kw.word.toLowerCase());
-    }
-  }
-
-  addKeywordToCache(tenantId: string, word: string) {
-    if (!this.keywordCache.has(tenantId)) {
-      this.keywordCache.set(tenantId, new Set());
-    }
-    this.keywordCache.get(tenantId)!.add(word.toLowerCase());
-  }
-
-  removeKeywordFromCache(tenantId: string, word: string) {
-    this.keywordCache.get(tenantId)?.delete(word.toLowerCase());
-  }
-
-  async createKeyword(tenantId: string, word: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const kw = await (this.prisma as any).chatKeyword.create({
-      data: { tenantId, word: word.trim().toLowerCase() },
-    });
-    this.addKeywordToCache(tenantId, word);
-    return kw;
-  }
-
-  getKeywords(tenantId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (this.prisma as any).chatKeyword.findMany({
-      where: { tenantId },
-      orderBy: { word: 'asc' },
-    });
-  }
-
-  async deleteKeyword(id: string, tenantId: string) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const kw = await (this.prisma as any).chatKeyword.delete({ where: { id } });
-    this.removeKeywordFromCache(tenantId, kw.word);
-    return kw;
-  }
-
   async sendMessage(dto: SendMessageDto) {
     // PHASE 1.6 — XSS hardening: strip every HTML tag/attribute before any
     // further processing. Length and keyword checks run on the sanitized text
@@ -183,18 +127,6 @@ export class ChatService implements OnModuleInit {
       });
     }
 
-    const lowerContent = cleanContent.toLowerCase();
-    let needsModeration = false;
-    const tenantKeywords = this.keywordCache.get(dto.tenantId);
-    if (tenantKeywords) {
-      for (const kw of tenantKeywords) {
-        if (lowerContent.includes(kw)) {
-          needsModeration = true;
-          break;
-        }
-      }
-    }
-
     const ban = await this.prisma.chatBan.findFirst({
       where: {
         userId: dto.senderId,
@@ -219,19 +151,10 @@ export class ChatService implements OnModuleInit {
       data: {
         ...dto,
         content: cleanContent,
-        moderationStatus: needsModeration ? 'pending' : 'approved',
+        moderationStatus: 'approved',
       },
       include: { sender: { select: { name: true, role: true } } },
     });
-
-    if (needsModeration) {
-      this.events.emit('chat.moderation_pending', {
-        messageId: message.id,
-        groupId: dto.groupId,
-        senderId: dto.senderId,
-        tenantId: dto.tenantId,
-      });
-    }
 
     return message;
   }

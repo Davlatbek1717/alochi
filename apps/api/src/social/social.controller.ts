@@ -230,22 +230,4 @@ export class SocialController {
   ) {
     return this.feedEvent.addReaction(eventId, req.user.userId, body.emoji);
   }
-
-  @Post('keywords')
-  @Roles(UserRole.superadmin)
-  addKeyword(@Body() body: { word: string }, @Request() req: any) {
-    return this.chat.createKeyword(req.user.tenantId, body.word);
-  }
-
-  @Get('keywords')
-  @Roles(UserRole.superadmin)
-  getKeywords(@Request() req: any) {
-    return this.chat.getKeywords(req.user.tenantId);
-  }
-
-  @Delete('keywords/:id')
-  @Roles(UserRole.superadmin)
-  deleteKeyword(@Param('id') id: string, @Request() req: any) {
-    return this.chat.deleteKeyword(id, req.user.tenantId);
-  }
 }

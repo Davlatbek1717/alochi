@@ -1,15 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
-import { AdaptiveService } from '../adaptive/adaptive.service';
-import { ChurnService } from '../churn/churn.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
 import { XpService, XP_AMOUNTS } from '../gamification/xp.service';
@@ -41,10 +37,7 @@ export class CronService {
     private prisma: PrismaService,
     private telegram: TelegramService,
     private notifications: NotificationsService,
-    private adaptive: AdaptiveService,
-    private churn: ChurnService,
     private clickhouse: ClickHouseService,
-    private http: HttpService,
     private config: ConfigService,
     private events: EventEmitter2,
     private templates: NotificationTemplatesService,
@@ -473,76 +466,6 @@ export class CronService {
       this.logger.log('Materialized views yangilandi');
     } catch (e) {
       this.logger.error(`Materialized view refresh failed: ${e.message}`);
-    }
-  }
-
-  @Cron('0 3 * * *', { name: 'adaptive_difficulty' })
-  async runAdaptiveDifficulty() {
-    this.logger.log('Cron: adaptive difficulty boshlanmoqda...');
-    const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
-    for (const tenant of tenants) {
-      await this.adaptive
-        .runNightlyAdaptation(tenant.id)
-        .catch((e) =>
-          this.logger.error(`Adaptive error tenant ${tenant.id}: ${e.message}`),
-        );
-    }
-  }
-
-  @Cron('0 5 * * *', { name: 'ml_churn_train' })
-  async runMlChurnTraining() {
-    this.logger.log('Cron: ML churn training boshlanmoqda...');
-    const mlUrl = this.config.get<string>('ML_SERVICE_URL');
-    if (!mlUrl) {
-      this.logger.warn('ML_SERVICE_URL not set — skip training');
-      return;
-    }
-    try {
-      const response = await firstValueFrom(
-        this.http.post(`${mlUrl}/train`, {}, { timeout: 60_000 }),
-      );
-      this.logger.log(`ML training success: ${JSON.stringify(response.data)}`);
-    } catch (e) {
-      const message = (e as Error).message;
-      // 25.N.1: structured log + Telegram alert to superadmins on failure
-      this.logger.error(
-        { event: 'ml_churn_training_failed', error: message },
-        `ML training failed: ${message}`,
-      );
-      try {
-        const superadmins = await this.prisma.user.findMany({
-          where: {
-            role: 'superadmin',
-            status: 'active',
-            telegramId: { not: null },
-          },
-          select: { telegramId: true, tenantId: true },
-        });
-        for (const sa of superadmins) {
-          if (!sa.telegramId) continue;
-          await this.telegram
-            .sendMessage(
-              sa.telegramId,
-              `[ML] Churn training muvaffaqiyatsiz: ${message}`,
-            )
-            .catch(() => undefined);
-        }
-      } catch {
-        /* swallow — alert is best-effort */
-      }
-    }
-  }
-
-  @Cron('0 6 * * *', { name: 'churn_scoring' })
-  async runChurnScoring() {
-    this.logger.log('Cron: churn scoring boshlanmoqda...');
-    const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
-    for (const tenant of tenants) {
-      await this.churn
-        .runDailyScoring(tenant.id)
-        .catch((e) =>
-          this.logger.error(`Churn error tenant ${tenant.id}: ${e.message}`),
-        );
     }
   }
 

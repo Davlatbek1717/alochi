@@ -47,8 +47,6 @@ model Tenant {
   lessons                  Lesson[]
   certificates             Certificate[]
   tournaments              Tournament[]              @relation("TenantTournaments")
-  adaptiveDifficultyConfig AdaptiveDifficultyConfig?
-  churnScores              ChurnScore[]              @relation("ChurnTenant")
   exams                    Exam[]                    @relation("TenantExams")
   subscription             TenantSubscription?
 
@@ -150,10 +148,8 @@ model User {
   spacedRepetitionItems    SpacedRepetitionItem[]     @relation("SpacedRepetitionItems")
   errorLogs                ErrorLog[]                 @relation("ErrorLogs")
   tournamentRegistrations  TournamentRegistration[]   @relation("TournamentRegistrations")
-  adaptiveLogs             AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
   lessonFeedbacks          LessonFeedback[]           @relation("LessonFeedbacks")
   variantAssignments       StudentVariantAssignment[] @relation("VariantAssignments")
-  churnScore               ChurnScore?                @relation("ChurnScores")
   cultureAttendances       CultureLessonAttendance[]  @relation("CultureAttendances")
   studentLetters           StudentLetter[]            @relation("StudentLetters")
   staffVideoGuidesCreated  StaffVideoGuide[]          @relation("StaffVideoGuideCreator")
@@ -218,7 +214,6 @@ model Lesson {
   studentConfigs     StudentLessonConfig[]
   errorLogs          ErrorLog[]                 @relation("ErrorLogs")
   examPermissions    ExamPermission[]
-  adaptiveLogs       AdaptiveDifficultyLog[]    @relation("AdaptiveLogs")
   feedbacks          LessonFeedback[]           @relation("LessonFeedbacks")
   variants           LessonVariant[]            @relation("LessonVariants")
   variantAssignments StudentVariantAssignment[] @relation("VariantAssignments")
@@ -763,15 +758,6 @@ model FeedEventReaction {
   @@map("feed_event_reactions")
 }
 
-model ChatKeyword {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  word      String
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@unique([tenantId, word])
-  @@map("chat_keywords")
-}
 
 model Notification {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -941,37 +927,6 @@ model ExamPermission {
 }
 
 // ---- ADAPTIVE DIFFICULTY ----
-model AdaptiveDifficultyConfig {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId      String   @unique @map("tenant_id") @db.Uuid
-  minN          Int      @default(1) @map("min_n")
-  maxN          Int      @default(10) @map("max_n")
-  hardThreshold Float    @default(0.40) @map("hard_threshold")
-  easyThreshold Float    @default(0.15) @map("easy_threshold")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@map("adaptive_difficulty_configs")
-}
-
-model AdaptiveDifficultyLog {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  studentId String   @map("student_id") @db.Uuid
-  lessonId  String   @map("lesson_id") @db.Uuid
-  oldN      Int      @map("old_n")
-  newN      Int      @map("new_n")
-  errorRate Float    @map("error_rate")
-  changedAt DateTime @default(now()) @map("changed_at")
-
-  student User   @relation("AdaptiveLogs", fields: [studentId], references: [id], onDelete: Cascade)
-  lesson  Lesson @relation("AdaptiveLogs", fields: [lessonId], references: [id], onDelete: Cascade)
-
-  @@index([studentId])
-  @@index([lessonId])
-  @@map("adaptive_difficulty_logs")
-}
-
 // ---- CONTENT QUALITY + A/B TEST ----
 model LessonFeedback {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
@@ -1015,23 +970,6 @@ model StudentVariantAssignment {
 
   @@unique([studentId, lessonId])
   @@map("student_variant_assignments")
-}
-
-// ---- CHURN PREDICTION ----
-model ChurnScore {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  studentId String   @unique @map("student_id") @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  score     Int      @default(0)
-  signals   Json
-  alertSent Boolean  @default(false) @map("alert_sent")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  student User   @relation("ChurnScores", fields: [studentId], references: [id], onDelete: Cascade)
-  tenant  Tenant @relation("ChurnTenant", fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId, score])
-  @@map("churn_scores")
 }
 
 // ---- ANALYTICS ----

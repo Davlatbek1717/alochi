@@ -9,23 +9,55 @@ export interface CertLevel {
   minLessons: number;
   label: string;
   emoji: string;
+  /** Optional uploaded certificate template image (data URL). */
+  imageUrl: string | null;
 }
 
 // Defaults — used when no SiteSetting override is present.
 // Stored in descending order so `find()` picks the highest eligible level.
 const DEFAULT_CERT_LEVELS: CertLevel[] = [
-  { level: 'diamond', minLessons: 500, label: "Olmos A'lochi", emoji: '💎' },
-  { level: 'gold', minLessons: 250, label: "Oltin A'lochi", emoji: '🥇' },
-  { level: 'silver', minLessons: 100, label: "Kumush A'lochi", emoji: '🥈' },
-  { level: 'bronze', minLessons: 50, label: "Bronza A'lochi", emoji: '🥉' },
+  {
+    level: 'diamond',
+    minLessons: 500,
+    label: "Olmos A'lochi",
+    emoji: '💎',
+    imageUrl: null,
+  },
+  {
+    level: 'gold',
+    minLessons: 250,
+    label: "Oltin A'lochi",
+    emoji: '🥇',
+    imageUrl: null,
+  },
+  {
+    level: 'silver',
+    minLessons: 100,
+    label: "Kumush A'lochi",
+    emoji: '🥈',
+    imageUrl: null,
+  },
+  {
+    level: 'bronze',
+    minLessons: 50,
+    label: "Bronza A'lochi",
+    emoji: '🥉',
+    imageUrl: null,
+  },
 ];
 
-// SiteSetting keys where superadmin can override the thresholds.
-const LEVEL_SETTING_KEYS: Record<CertLevel['level'], string> = {
+// SiteSetting keys where superadmin can override per-level config.
+const LEVEL_MIN_LESSONS_KEYS: Record<CertLevel['level'], string> = {
   bronze: 'cert.bronze.minLessons',
   silver: 'cert.silver.minLessons',
   gold: 'cert.gold.minLessons',
   diamond: 'cert.diamond.minLessons',
+};
+const LEVEL_IMAGE_KEYS: Record<CertLevel['level'], string> = {
+  bronze: 'cert.bronze.imageUrl',
+  silver: 'cert.silver.imageUrl',
+  gold: 'cert.gold.imageUrl',
+  diamond: 'cert.diamond.imageUrl',
 };
 
 const CERT_NAMES: Record<string, string> = {
@@ -47,32 +79,73 @@ export class CertificatesService {
 
   /** Returns the configured cert levels (DB overrides > defaults), high → low. */
   async getLevels(): Promise<CertLevel[]> {
+    const allKeys = [
+      ...Object.values(LEVEL_MIN_LESSONS_KEYS),
+      ...Object.values(LEVEL_IMAGE_KEYS),
+    ];
     const rows = await this.prisma.siteSetting.findMany({
-      where: { key: { in: Object.values(LEVEL_SETTING_KEYS) } },
+      where: { key: { in: allKeys } },
     });
     const override = new Map(rows.map((r) => [r.key, r.value]));
 
     return DEFAULT_CERT_LEVELS.map((def) => {
-      const raw = override.get(LEVEL_SETTING_KEYS[def.level]);
+      const rawN = override.get(LEVEL_MIN_LESSONS_KEYS[def.level]);
       const minLessons =
-        raw !== undefined && Number.isFinite(Number(raw)) && Number(raw) > 0
-          ? Number(raw)
+        rawN !== undefined && Number.isFinite(Number(rawN)) && Number(rawN) > 0
+          ? Number(rawN)
           : def.minLessons;
-      return { ...def, minLessons };
+      const imageUrl = override.get(LEVEL_IMAGE_KEYS[def.level]) ?? null;
+      return { ...def, minLessons, imageUrl };
     });
   }
 
-  /** Saves custom thresholds to SiteSettings (superadmin only). */
-  async saveLevels(updates: Partial<Record<CertLevel['level'], number>>) {
+  /**
+   * Saves per-level config (threshold + optional template image) to
+   * SiteSettings. Each level value can be either:
+   *   - a number → updates `minLessons` only (legacy form)
+   *   - an object `{ minLessons?, imageUrl? }` → updates either field
+   */
+  async saveLevels(
+    updates: Partial<
+      Record<
+        CertLevel['level'],
+        number | { minLessons?: number; imageUrl?: string | null }
+      >
+    >,
+  ) {
     await this.prisma.$transaction(async (tx) => {
-      for (const [level, value] of Object.entries(updates)) {
-        const key = LEVEL_SETTING_KEYS[level as CertLevel['level']];
-        if (!key || !Number.isFinite(value) || (value as number) < 1) continue;
-        await tx.siteSetting.upsert({
-          where: { key },
-          create: { key, value: String(value) },
-          update: { value: String(value) },
-        });
+      for (const [levelKey, value] of Object.entries(updates)) {
+        const level = levelKey as CertLevel['level'];
+        const minN = typeof value === 'number' ? value : value?.minLessons;
+        const img =
+          typeof value === 'object' && value !== null
+            ? value.imageUrl
+            : undefined;
+
+        if (typeof minN === 'number' && Number.isFinite(minN) && minN >= 1) {
+          await tx.siteSetting.upsert({
+            where: { key: LEVEL_MIN_LESSONS_KEYS[level] },
+            create: {
+              key: LEVEL_MIN_LESSONS_KEYS[level],
+              value: String(minN),
+            },
+            update: { value: String(minN) },
+          });
+        }
+
+        if (img !== undefined) {
+          if (img === null || img === '') {
+            await tx.siteSetting
+              .delete({ where: { key: LEVEL_IMAGE_KEYS[level] } })
+              .catch(() => undefined); // already absent — fine
+          } else {
+            await tx.siteSetting.upsert({
+              where: { key: LEVEL_IMAGE_KEYS[level] },
+              create: { key: LEVEL_IMAGE_KEYS[level], value: img },
+              update: { value: img },
+            });
+          }
+        }
       }
     });
     return this.getLevels();

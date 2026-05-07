@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, AlertTriangle, Calendar, Award } from 'lucide-react';
+import { Users, CreditCard, ClipboardList, Send, AlertCircle, TrendingUp, Trophy, Calendar, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, Stat } from '@/components/ui';
 import { formatDateWeekday } from '@/lib/date-uz';
@@ -21,40 +21,14 @@ type HighPerformer = {
   totalLessons: number;
 };
 
-type ChurnRow = {
-  id: string;
-  studentId: string;
-  score: number;
-  signals: Record<string, boolean> | null;
-  student: { id: string; name: string };
-};
-
 function getInitials(name: string): string {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-}
-
-const SIGNAL_LABELS: Record<string, string> = {
-  absent3Days: 'Absent 3 kun',
-  redStatus: 'Qizil status',
-  passRateDrop: "O'tish % tushdi",
-  streakBroken: 'Streak uzildi',
-  noParentTg: "Ota-ona Telegram yo'q",
-};
-
-function formatSignals(signals: Record<string, boolean> | null | undefined): string {
-  if (!signals) return '';
-  return Object.entries(signals)
-    .filter(([, v]) => v === true)
-    .map(([k]) => SIGNAL_LABELS[k] ?? k)
-    .join(' + ');
 }
 
 export default function ManagerDashboard() {
   const [redStudents, setRedStudents] = useState<StatusStudent[]>([]);
   const [yellowStudents, setYellowStudents] = useState<StatusStudent[]>([]);
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
-  const [highRisk, setHighRisk] = useState<ChurnRow[]>([]);
-  const [mediumRisk, setMediumRisk] = useState<ChurnRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [managerName, setManagerName] = useState('');
 
@@ -72,14 +46,6 @@ export default function ManagerDashboard() {
       setYellowStudents(yellowRes.data ?? []);
       setHighPerformers(highRes.data ?? []);
     }).finally(() => setLoading(false));
-
-    apiRequest<ChurnRow[]>('/churn/high-risk', {}, token)
-      .then((r) => setHighRisk((r.data ?? []).slice(0, 5)))
-      .catch(() => {});
-
-    apiRequest<ChurnRow[]>('/churn/medium-risk', {}, token)
-      .then((r) => setMediumRisk((r.data ?? []).slice(0, 5)))
-      .catch(() => {});
   }, []);
 
   const navCards = [
@@ -286,76 +252,6 @@ export default function ManagerDashboard() {
             </div>
           </div>
         )}
-
-        {/* Churn high-risk block */}
-        {highRisk.length > 0 && (
-          <section>
-            <h3 className="text-rose-700 font-semibold mb-3 text-sm flex items-center gap-2">
-              <AlertTriangle size={14} />
-              Yuqori xavfli o&apos;quvchilar ({highRisk.length})
-            </h3>
-            <ul className="space-y-2">
-              {highRisk.map((s) => {
-                const signalText = formatSignals(s.signals);
-                return (
-                  <li
-                    key={s.id}
-                    className="p-3 bg-rose-50 rounded-lg flex items-center justify-between border border-rose-100"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/manager/students/${s.studentId ?? s.student.id}`}
-                        className="font-medium text-[#0f172a] truncate block"
-                      >
-                        {s.student.name}
-                      </Link>
-                      {signalText && (
-                        <div className="text-xs text-slate-600 mt-1 truncate">{signalText}</div>
-                      )}
-                    </div>
-                    <span className="text-rose-600 font-bold ml-2 shrink-0">{s.score}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {/* Churn medium-risk block */}
-        <section>
-          <h3 className="text-amber-700 font-semibold mb-3 text-sm flex items-center gap-2">
-            <AlertTriangle size={14} />
-            O&apos;rta xavfli o&apos;quvchilar ({mediumRisk.length})
-          </h3>
-          {mediumRisk.length === 0 ? (
-            <p className="text-slate-500 text-sm">Hech kim yo&apos;q.</p>
-          ) : (
-            <ul className="space-y-2">
-              {mediumRisk.map((s) => {
-                const signalText = formatSignals(s.signals);
-                return (
-                  <li
-                    key={s.id}
-                    className="p-3 bg-amber-50 rounded-lg flex items-center justify-between border border-amber-100"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/manager/students/${s.studentId ?? s.student.id}`}
-                        className="font-medium text-[#0f172a] truncate block"
-                      >
-                        {s.student.name}
-                      </Link>
-                      {signalText && (
-                        <div className="text-xs text-slate-600 mt-1 truncate">{signalText}</div>
-                      )}
-                    </div>
-                    <span className="text-amber-600 font-bold ml-2 shrink-0">{s.score}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
       </div>
     </div>
   );

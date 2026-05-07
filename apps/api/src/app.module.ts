@@ -35,8 +35,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { NotificationTemplatesModule } from './notification-templates/notification-templates.module';
 import { TournamentsModule } from './tournaments/tournaments.module';
 import { ExamsModule } from './exams/exams.module';
-import { ChurnModule } from './churn/churn.module';
-import { AdaptiveModule } from './adaptive/adaptive.module';
 import { ContentQualityModule } from './content-quality/content-quality.module';
 import { ClickHouseModule } from './clickhouse/clickhouse.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -118,8 +116,6 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     NotificationTemplatesModule,
     TournamentsModule,
     ExamsModule,
-    ChurnModule,
-    AdaptiveModule,
     ContentQualityModule,
     ClickHouseModule,
     AnalyticsModule,

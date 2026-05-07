@@ -1,333 +1,321 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Save, Award, QrCode } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Save, Upload, Trash2, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
-
-type Template = {
-  primaryColor: string;
-  secondaryColor: string;
-  font: string;
-  signatureName: string;
-  showQr: boolean;
-};
 
 type CertLevel = {
   level: 'bronze' | 'silver' | 'gold' | 'diamond';
   label: string;
   emoji: string;
   minLessons: number;
+  imageUrl: string | null;
 };
 
-const DEFAULT: Template = {
-  primaryColor: '#0f172a',
-  secondaryColor: '#0d9488',
-  font: 'Helvetica',
-  signatureName: 'Direktor',
-  showQr: true,
-};
+interface Draft {
+  minLessons: string; // string for input value
+  imageUrl: string | null; // null = unchanged from server, '' = explicit clear
+  imagePreview: string | null; // local preview (data URL)
+}
+
+const MAX_IMAGE_BYTES = 1024 * 1024; // 1 MB cap on the data-URL payload
 
 function getToken() {
-  return typeof window !== 'undefined' ? (localStorage.getItem('accessToken') ?? '') : '';
+  return typeof window !== 'undefined'
+    ? (localStorage.getItem('accessToken') ?? '')
+    : '';
 }
 
 export default function CertificateDesignPage() {
   const toast = useToast();
-  const [tpl, setTpl] = useState<Template>(DEFAULT);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
-
-  // Milestone levels
   const [levels, setLevels] = useState<CertLevel[]>([]);
-  const [levelInputs, setLevelInputs] = useState<Record<string, string>>({});
-  const [savingLevels, setSavingLevels] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [saving, setSaving] = useState(false);
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  useEffect(() => {
-    const token = getToken();
-    apiRequest<{ certTemplate: Template | null }>('/tenants/me/cert-template', {}, token)
+  function loadLevels() {
+    apiRequest<CertLevel[]>('/gamification/certificate-levels', {}, getToken())
       .then((res) => {
-        if (res.data?.certTemplate) setTpl({ ...DEFAULT, ...res.data.certTemplate });
-      })
-      .catch(() => {});
-
-    apiRequest<CertLevel[]>('/gamification/certificate-levels', {}, token)
-      .then((res) => {
-        const sorted = [...(res.data ?? [])].sort((a, b) => a.minLessons - b.minLessons);
+        const sorted = [...(res.data ?? [])].sort(
+          (a, b) => a.minLessons - b.minLessons,
+        );
         setLevels(sorted);
-        const inputs: Record<string, string> = {};
-        for (const l of sorted) inputs[l.level] = String(l.minLessons);
-        setLevelInputs(inputs);
+        const next: Record<string, Draft> = {};
+        for (const l of sorted) {
+          next[l.level] = {
+            minLessons: String(l.minLessons),
+            imageUrl: null, // null = unchanged
+            imagePreview: l.imageUrl,
+          };
+        }
+        setDrafts(next);
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => toast.error('Levels yuklanmadi'));
+  }
 
-  async function saveLevels() {
-    setSavingLevels(true);
+  useEffect(loadLevels, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleFile(level: string, file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Faqat rasm fayli (PNG, JPG, WebP) qabul qilinadi');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error(`Fayl 1 MB dan kichik bo'lishi kerak (joriy: ${(file.size / 1024).toFixed(0)} KB)`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setDrafts((p) => ({
+        ...p,
+        [level]: {
+          ...p[level],
+          imageUrl: dataUrl,
+          imagePreview: dataUrl,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage(level: string) {
+    setDrafts((p) => ({
+      ...p,
+      [level]: {
+        ...p[level],
+        imageUrl: '', // explicit clear sentinel
+        imagePreview: null,
+      },
+    }));
+    const input = fileInputs.current[level];
+    if (input) input.value = '';
+  }
+
+  function setStep(level: string, value: string) {
+    setDrafts((p) => ({
+      ...p,
+      [level]: { ...p[level], minLessons: value },
+    }));
+  }
+
+  async function saveAll() {
+    setSaving(true);
     try {
-      const body: Record<string, number> = {};
-      for (const [k, v] of Object.entries(levelInputs)) {
-        const n = Number(v);
-        if (Number.isFinite(n) && n > 0) body[k] = n;
+      const body: Record<
+        string,
+        { minLessons?: number; imageUrl?: string | null }
+      > = {};
+      for (const lvl of levels) {
+        const draft = drafts[lvl.level];
+        if (!draft) continue;
+        const entry: { minLessons?: number; imageUrl?: string | null } = {};
+        const n = Number(draft.minLessons);
+        if (Number.isFinite(n) && n > 0 && n !== lvl.minLessons) {
+          entry.minLessons = n;
+        }
+        if (draft.imageUrl !== null) {
+          // null = unchanged. '' = clear. data-url = new image.
+          entry.imageUrl = draft.imageUrl === '' ? null : draft.imageUrl;
+        }
+        if (entry.minLessons !== undefined || entry.imageUrl !== undefined) {
+          body[lvl.level] = entry;
+        }
+      }
+      if (Object.keys(body).length === 0) {
+        toast.info("O'zgarish topilmadi");
+        setSaving(false);
+        return;
       }
       const res = await apiRequest<CertLevel[]>(
         '/gamification/certificate-levels',
         { method: 'PUT', body: JSON.stringify(body) },
         getToken(),
       );
-      const sorted = [...(res.data ?? [])].sort((a, b) => a.minLessons - b.minLessons);
-      setLevels(sorted);
-      const inputs: Record<string, string> = {};
-      for (const l of sorted) inputs[l.level] = String(l.minLessons);
-      setLevelInputs(inputs);
-      toast.success('Milestone chegaralari saqlandi');
-    } catch {
-      toast.error('Saqlashda xatolik');
-    } finally {
-      setSavingLevels(false);
-    }
-  }
-
-  async function save() {
-    setSaving(true);
-    setMsg('');
-    try {
-      const token = localStorage.getItem('accessToken') ?? '';
-      await apiRequest(
-        '/tenants/me/cert-template',
-        { method: 'PUT', body: JSON.stringify({ certTemplate: tpl }) },
-        token,
+      const sorted = [...(res.data ?? [])].sort(
+        (a, b) => a.minLessons - b.minLessons,
       );
-      setMsg('Saqlandi');
-    } catch {
-      setMsg('Xatolik');
+      setLevels(sorted);
+      const next: Record<string, Draft> = {};
+      for (const l of sorted) {
+        next[l.level] = {
+          minLessons: String(l.minLessons),
+          imageUrl: null,
+          imagePreview: l.imageUrl,
+        };
+      }
+      setDrafts(next);
+      toast.success("Sertifikat sozlamalari saqlandi");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Saqlashda xatolik',
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  // Map font names to web-safe CSS family stacks for the live preview.
-  const fontFamily = (() => {
-    switch (tpl.font) {
-      case 'Times-Roman': return '"Times New Roman", Times, serif';
-      case 'Courier': return '"Courier New", Courier, monospace';
-      default: return 'Helvetica, Arial, sans-serif';
-    }
-  })();
-
   return (
     <div className="min-h-full bg-[#f7f4ef] p-5">
-      <h1 className="text-xl font-bold text-[#0f172a] mb-4">
-        Sertifikat dizayni
-      </h1>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Settings */}
-        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-4">
-          <Field label="Asosiy rang">
-            <input
-              type="color"
-              value={tpl.primaryColor}
-              onChange={(e) =>
-                setTpl({ ...tpl, primaryColor: e.target.value })
-              }
-              className="w-16 h-10 rounded cursor-pointer"
-            />
-            <span className="ml-2 text-xs font-mono text-slate-500">{tpl.primaryColor}</span>
-          </Field>
-          <Field label="Yordamchi rang">
-            <input
-              type="color"
-              value={tpl.secondaryColor}
-              onChange={(e) =>
-                setTpl({ ...tpl, secondaryColor: e.target.value })
-              }
-              className="w-16 h-10 rounded cursor-pointer"
-            />
-            <span className="ml-2 text-xs font-mono text-slate-500">{tpl.secondaryColor}</span>
-          </Field>
-          <Field label="Shrift">
-            <select
-              value={tpl.font}
-              onChange={(e) => setTpl({ ...tpl, font: e.target.value })}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-            >
-              <option value="Helvetica">Helvetica</option>
-              <option value="Times-Roman">Times Roman</option>
-              <option value="Courier">Courier</option>
-            </select>
-          </Field>
-          <Field label="Imzo nomi">
-            <input
-              value={tpl.signatureName}
-              onChange={(e) =>
-                setTpl({ ...tpl, signatureName: e.target.value })
-              }
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm"
-            />
-          </Field>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={tpl.showQr}
-              onChange={(e) => setTpl({ ...tpl, showQr: e.target.checked })}
-            />
-            QR-kodni ko&apos;rsatish
-          </label>
-          <button
-            disabled={saving}
-            onClick={save}
-            className="w-full bg-[#0f172a] text-white py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            <Save size={16} /> Saqlash
-          </button>
-          {msg && (
-            <p
-              className={`text-sm ${msg === 'Saqlandi' ? 'text-[#0d9488]' : 'text-rose-500'}`}
-              aria-live="polite"
-            >
-              {msg}
+      <header className="flex items-start justify-between gap-4 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#fbbf24]/15 border border-[#fbbf24]/30 grid place-items-center text-[#b45309]">
+            <Award size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-[#0f172a]">
+              Sertifikat dizayni
+            </h1>
+            <p className="text-sm text-[#64748b] mt-0.5">
+              Har bir bosqich uchun sertifikat shaklini yuklang va o&apos;quvchi
+              nechinchi darsdan keyin uni olishini belgilang.
             </p>
-          )}
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={saveAll}
+          disabled={saving}
+          className={[
+            'inline-flex items-center gap-2',
+            'bg-[#0f172a] text-white font-extrabold text-sm tracking-wide',
+            'px-5 py-3 rounded-xl',
+            'border-b-[4px] border-[#0a0717]',
+            'hover:bg-[#1e293b]',
+            'active:translate-y-[2px] active:border-b-[1px]',
+            'disabled:opacity-60 disabled:cursor-not-allowed disabled:active:translate-y-0',
+            'transition-all duration-150',
+          ].join(' ')}
+        >
+          {saving ? (
+            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Save size={16} />
+          )}
+          {saving ? 'Saqlanmoqda…' : 'Saqlash'}
+        </button>
+      </header>
 
-        {/* Live preview */}
-        <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
-          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">
-            Tirik ko&apos;rinish
-          </p>
-          <div
-            className="aspect-[1.41] w-full rounded-lg p-6 flex flex-col"
-            style={{
-              fontFamily,
-              border: `4px double ${tpl.primaryColor}`,
-              background: `linear-gradient(135deg, #ffffff 0%, ${tpl.secondaryColor}11 100%)`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <Award size={28} style={{ color: tpl.primaryColor }} />
-              <span
-                className="text-[10px] font-bold uppercase tracking-widest"
-                style={{ color: tpl.secondaryColor }}
-              >
-                A&apos;LOCHI
-              </span>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-              <p className="text-xs uppercase tracking-widest mb-2" style={{ color: tpl.secondaryColor }}>
-                Sertifikat
-              </p>
-              <p className="text-xl font-bold mb-2" style={{ color: tpl.primaryColor }}>
-                Familiya Ism
-              </p>
-              <p className="text-xs" style={{ color: '#64748b' }}>
-                ingliz tili kursini muvaffaqiyatli tugatdi
-              </p>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div
-                  className="border-t border-dashed pt-1 text-xs"
-                  style={{ color: tpl.primaryColor, borderColor: tpl.primaryColor, minWidth: '120px' }}
-                >
-                  {tpl.signatureName || '—'}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {levels.map((lvl) => {
+          const draft = drafts[lvl.level];
+          if (!draft) return null;
+          return (
+            <article
+              key={lvl.level}
+              className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5 flex flex-col gap-4"
+            >
+              {/* Title */}
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{lvl.emoji}</span>
+                <div>
+                  <h2 className="font-extrabold text-[#0f172a] text-base">
+                    {lvl.label}
+                  </h2>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-[#94a3b8]">
+                    {lvl.level}
+                  </p>
                 </div>
               </div>
-              {tpl.showQr && (
-                <div
-                  className="w-12 h-12 rounded flex items-center justify-center"
-                  style={{ background: tpl.primaryColor }}
-                  aria-label="QR-kod o'rni"
+
+              {/* Image preview / dropzone */}
+              <div className="relative">
+                {draft.imagePreview ? (
+                  <div className="group relative aspect-[1.41] w-full rounded-xl overflow-hidden border border-[#ede9e1] bg-[#f7f4ef]">
+                    {/* Preview */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={draft.imagePreview}
+                      alt={`${lvl.label} sertifikat shabloni`}
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-[#0f172a]/0 group-hover:bg-[#0f172a]/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => fileInputs.current[lvl.level]?.click()}
+                        className="inline-flex items-center gap-2 bg-white text-[#0f172a] px-3 py-2 rounded-lg text-xs font-bold shadow-md"
+                      >
+                        <Upload size={14} />
+                        O&apos;zgartirish
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => clearImage(lvl.level)}
+                        className="inline-flex items-center gap-2 bg-white text-rose-600 px-3 py-2 rounded-lg text-xs font-bold shadow-md"
+                      >
+                        <Trash2 size={14} />
+                        O&apos;chirish
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputs.current[lvl.level]?.click()}
+                    className="aspect-[1.41] w-full rounded-xl border-2 border-dashed border-[#cbd5e1] bg-[#f7f4ef] hover:border-[#0f172a] hover:bg-[#fffaf0] transition-colors flex flex-col items-center justify-center gap-2 text-[#64748b]"
+                  >
+                    <Upload size={28} strokeWidth={1.75} />
+                    <span className="text-sm font-bold">
+                      Sertifikat shaklini yuklang
+                    </span>
+                    <span className="text-[11px]">
+                      PNG, JPG yoki WebP · 1 MB gacha
+                    </span>
+                  </button>
+                )}
+                <input
+                  ref={(el) => {
+                    fileInputs.current[lvl.level] = el;
+                  }}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFile(lvl.level, f);
+                  }}
+                />
+              </div>
+
+              {/* Step trigger */}
+              <div>
+                <label
+                  htmlFor={`step-${lvl.level}`}
+                  className="block text-[11px] font-extrabold text-[#64748b] uppercase tracking-[0.18em] mb-1.5"
                 >
-                  <QrCode size={28} style={{ color: '#ffffff' }} />
-                </div>
-              )}
-            </div>
-          </div>
-          <p className="text-xs text-[#94a3b8] mt-3">
-            Haqiqiy chop versiyasi PDF-da generatsiya qilinadi; mazkur ko&apos;rinish faqat sozlamalarni tekshirish uchun.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Milestone chegaralari ─────────────────────────────────── */}
-      {levels.length > 0 && (
-        <div className="mt-4 bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-extrabold text-[#0f172a] uppercase tracking-widest">
-                Sertifikat milestone chegaralari
-              </h2>
-              <p className="text-xs text-[#64748b] mt-0.5">
-                O&apos;quvchi nechta dars tugatganda qaysi sertifikat berilishini sozlang
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={saveLevels}
-              disabled={savingLevels}
-              className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-2 rounded-xl text-sm font-bold disabled:opacity-40"
-            >
-              {savingLevels
-                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <Save size={14} />
-              }
-              Saqlash
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {levels.map((lvl) => (
-              <div
-                key={lvl.level}
-                className="bg-[#f7f4ef] rounded-xl border border-[#ede9e1] p-4 space-y-2"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{lvl.emoji}</span>
-                  <span className="text-sm font-extrabold text-[#0f172a]">{lvl.label}</span>
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-[#64748b] uppercase tracking-widest">
-                    Minimal darslar soni
-                  </label>
+                  Nechinchi darsdan keyin beriladi
+                </label>
+                <div className="relative">
                   <input
+                    id={`step-${lvl.level}`}
                     type="number"
                     min={1}
                     max={9999}
-                    value={levelInputs[lvl.level] ?? ''}
-                    onChange={(e) =>
-                      setLevelInputs((p) => ({ ...p, [lvl.level]: e.target.value }))
-                    }
-                    className="w-full bg-white border border-[#ede9e1] rounded-lg px-3 py-2 text-sm font-bold text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+                    value={draft.minLessons}
+                    onChange={(e) => setStep(lvl.level, e.target.value)}
+                    className="w-full bg-[#f7f4ef] border-[1.5px] border-[#cbd5e1] rounded-xl px-4 py-3 pr-16 text-base font-extrabold text-[#0f172a] focus:outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-[#0f172a]/15"
                   />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[#94a3b8]">
+                    dars
+                  </span>
                 </div>
-                <p className="text-[10px] text-[#94a3b8]">
-                  Hozir: {lvl.minLessons} ta dars
+                <p className="mt-1.5 text-[11px] text-[#94a3b8]">
+                  Hozir: <strong>{lvl.minLessons}</strong> ta dars
                 </p>
               </div>
-            ))}
-          </div>
+            </article>
+          );
+        })}
+      </div>
 
-          <div className="mt-4 p-3 bg-[#fffaf0] rounded-xl border border-[#ede9e1]">
-            <p className="text-xs text-[#64748b] font-semibold">
-              💡 <strong>Eslatma:</strong> Milestone o&apos;zgarganda allaqachon olgan sertifikatlar bekor bo&apos;lmaydi.
-              Yangi chegara keyingi o&apos;quvchilarga tatbiq etiladi.
-              <br />
-              ⚠️ Misolda: Bronza 50 → 30 ga o&apos;zgarsa, 30-40 dars oralig&apos;idagi o&apos;quvchilar
-              keyingi dars tugatganda avtomatik sertifikat oladi.
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-xs font-semibold text-[#64748b] uppercase tracking-wider mb-1 block">
-        {label}
-      </label>
-      <div className="flex items-center">{children}</div>
+      <div className="mt-5 p-4 bg-[#fffaf0] rounded-xl border border-[#fbbf24]/35">
+        <p className="text-xs text-[#64748b] leading-relaxed">
+          💡 <strong>Eslatma:</strong> Yangi rasm yoki dars soni o&apos;zgartirilgandan
+          so&apos;ng <strong>Saqlash</strong> tugmasini bosing.
+          Allaqachon sertifikat olgan o&apos;quvchilar bekor bo&apos;lmaydi —
+          yangi sozlama keyingi darslarni tugatuvchilarga tatbiq etiladi.
+        </p>
+      </div>
     </div>
   );
 }

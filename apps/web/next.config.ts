@@ -73,6 +73,19 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+
+  // Memory tuning for `next dev` on Windows.
+  // The default jest-worker pool spawns one parallel webpack worker
+  // per CPU core, each with the parent's full module graph in heap.
+  // On 8-core Windows that compounds to 8+ GB and the workers OOM
+  // out, killing the dev server with "Jest worker exceeded retry
+  // limit". Capping the worker count + relying on filesystem cache
+  // (turned on by default in Next 15) keeps the dev session stable.
+  experimental: {
+    cpus: 2,
+    workerThreads: false,
+  },
+
   async headers() {
     return [
       {

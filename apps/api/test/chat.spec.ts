@@ -21,9 +21,6 @@ describe('ChatService', () => {
     branch: {
       update: jest.fn().mockResolvedValue({}),
     },
-    chatKeyword: {
-      findMany: jest.fn().mockResolvedValue([]),
-    },
   };
 
   const mockEvents = { emit: jest.fn() };
@@ -81,34 +78,6 @@ describe('ChatService', () => {
         content: 'Salom',
       }),
     ).rejects.toThrow(/CHAT_LOCKED|yopilgan/);
-  });
-
-  it('marks message moderationStatus=pending when keyword detected', async () => {
-    // Inject a keyword into the cache
-    service.addKeywordToCache('t', 'badword');
-    mockPrisma.groupMessage.create.mockResolvedValueOnce({
-      id: 'msg-9',
-      tenantId: 't',
-      groupId: 'g',
-      senderId: 's',
-      content: 'this has badword in it',
-      moderationStatus: 'pending',
-    });
-    await service.sendMessage({
-      tenantId: 't',
-      groupId: 'g',
-      senderId: 's',
-      content: 'this has badword in it',
-    });
-    const lastCall =
-      mockPrisma.groupMessage.create.mock.calls[
-        mockPrisma.groupMessage.create.mock.calls.length - 1
-      ][0];
-    expect(lastCall.data.moderationStatus).toBe('pending');
-    expect(mockEvents.emit).toHaveBeenCalledWith(
-      'chat.moderation_pending',
-      expect.objectContaining({ messageId: 'msg-9' }),
-    );
   });
 
   it('approveMessage flips status to approved + emits chat.message_approved', async () => {

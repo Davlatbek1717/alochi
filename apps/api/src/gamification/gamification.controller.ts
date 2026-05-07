@@ -65,17 +65,21 @@ export class GamificationController {
     return this.certificates.getCertificateProgress(req.user.userId);
   }
 
-  /** Superadmin can override the threshold for each level. */
+  /**
+   * Superadmin / manager can override the threshold and template image
+   * for each certificate level. Each entry accepts either a bare number
+   * (legacy: `minLessons`) or an object `{ minLessons?, imageUrl? }`.
+   */
   @Put('certificate-levels')
-  @Roles(UserRole.superadmin)
+  @Roles(UserRole.superadmin, UserRole.manager)
   saveCertLevels(
     @Body()
-    body: {
-      bronze?: number;
-      silver?: number;
-      gold?: number;
-      diamond?: number;
-    },
+    body: Partial<
+      Record<
+        'bronze' | 'silver' | 'gold' | 'diamond',
+        number | { minLessons?: number; imageUrl?: string | null }
+      >
+    >,
   ) {
     return this.certificates.saveLevels(body);
   }
