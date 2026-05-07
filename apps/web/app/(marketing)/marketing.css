@@ -1,17 +1,13 @@
 /* Marketing-only animations and utility helpers.
- * The student panel keyframes (bounce-in, count-up-fade, flame-flicker, etc.)
- * already live in app/globals.css and are gated by the global
- * prefers-reduced-motion block — we re-use them here without redeclaration.
+ * Sits on top of the global design system in app/globals.css.
  *
- * What we add here are landing-specific behaviours:
- *  - subtle hover lift on cards
- *  - FAQ chevron rotate when <details> is open
- *  - hero floating cards drift loop
- *  - asymmetric layout helpers
+ * Marketing root uses the body sans (Manrope) by default and reaches for
+ * the display serif (Fraunces) on headlines via the `font-display` Tailwind
+ * utility — wired through @theme in globals.css.
  */
 
 .marketing-root {
-  font-family: var(--font-nunito), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   font-feature-settings: "ss01", "cv11";
 }
 
@@ -26,47 +22,81 @@
   transform: rotate(180deg);
 }
 .marketing-root .faq-chevron {
-  transition: transform 220ms ease-out;
+  transition: transform 220ms var(--ease-out-expo);
 }
 
-/* Float drift used by hero cards — subtle Y bob that doesn't fight motion-safe
- * gating because the global rule at globals.css line ~72 will collapse the
- * animation-duration to 0.01ms when the user prefers reduced motion. */
+/* Float drift used by hero cards — subtle Y bob.
+ * The global prefers-reduced-motion rule in globals.css will collapse
+ * animation-duration to 0.01ms when needed, so no extra gating here. */
 @keyframes drift-y {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50%      { transform: translateY(-10px); }
 }
 @keyframes drift-y-rev {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(8px); }
+  50%      { transform: translateY(8px); }
 }
 
-.marketing-root .drift-a { animation: drift-y 5.5s ease-in-out infinite; }
+.marketing-root .drift-a { animation: drift-y     5.5s ease-in-out infinite; }
 .marketing-root .drift-b { animation: drift-y-rev 6.2s ease-in-out infinite; }
-.marketing-root .drift-c { animation: drift-y 7.1s ease-in-out infinite; }
+.marketing-root .drift-c { animation: drift-y     7.1s ease-in-out infinite; }
 
-/* Hover lift used by feature cards. Kept here so individual cards stay clean. */
+/* Hover lift used by feature cards. */
 .marketing-root .lift {
-  transition: transform 220ms ease-out, box-shadow 220ms ease-out, border-color 220ms ease-out;
+  transition:
+    transform var(--dur-base) var(--ease-out-expo),
+    box-shadow var(--dur-base) var(--ease-out-expo),
+    border-color var(--dur-base) var(--ease-out-expo);
 }
 .marketing-root .lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 40px -18px rgba(109, 40, 217, 0.28);
+  transform: translateY(-6px);
+  box-shadow: 0 24px 48px -20px rgba(109, 40, 217, 0.28);
+  border-color: rgba(109, 40, 217, 0.35);
 }
 
-/* Soft brand radial — used as backdrop for hero. */
+/* Soft brand radial — used as backdrop for hero.
+ * Layered: warm saffron top-right, violet pool top-left, cream gradient base.
+ * Tuned for the Fraunces headline above it. */
 .marketing-root .hero-glow {
   background:
-    radial-gradient(80% 60% at 70% 20%, rgba(249, 115, 22, 0.18) 0%, rgba(249, 115, 22, 0) 60%),
-    radial-gradient(60% 50% at 20% 30%, rgba(109, 40, 217, 0.16) 0%, rgba(109, 40, 217, 0) 65%),
-    linear-gradient(180deg, #fffaf0 0%, #fffaf0 60%, #fff7e6 100%);
+    radial-gradient(80% 60% at 75% 18%, rgba(245, 158, 11, 0.16) 0%, rgba(245, 158, 11, 0) 62%),
+    radial-gradient(60% 55% at 18% 32%, rgba(109, 40, 217, 0.16) 0%, rgba(109, 40, 217, 0) 68%),
+    linear-gradient(180deg, #fffaf0 0%, #fffaf0 55%, #fdf6e3 100%);
 }
 
 .marketing-root .grid-mask {
   background-image:
-    linear-gradient(rgba(109, 40, 217, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(109, 40, 217, 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, #000 30%, transparent 70%);
-          mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, #000 30%, transparent 70%);
+    linear-gradient(rgba(30, 27, 75, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 27, 75, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, #000 30%, transparent 72%);
+          mask-image: radial-gradient(ellipse 60% 50% at 50% 30%, #000 30%, transparent 72%);
+}
+
+/* Editorial section eyebrow — a hairline + uppercase label combo used on
+ * landing section openers (Why, Pricing, FAQ). Pulls from the design
+ * tokens so admin pages can adopt the same pattern. */
+.marketing-root .section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.marketing-root .section-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1.5px;
+  background: var(--brand);
+}
+
+/* Marquee for trust strip */
+.marketing-root .marquee {
+  display: flex;
+  gap: 4rem;
+  animation: marquee 32s linear infinite;
+  width: max-content;
 }

@@ -248,11 +248,15 @@ export default function TopNav({ role }: Props) {
   return (
     <nav
       aria-label="Asosiy navigatsiya"
-      className="hidden md:block sticky top-[44px] z-40 bg-white border-b border-[#ede9e1]"
+      className={[
+        'hidden md:block sticky top-[44px] z-40',
+        'bg-[var(--surface)]/95 backdrop-blur-md',
+        'border-b border-[var(--line)]',
+      ].join(' ')}
     >
       <div className="max-w-7xl mx-auto px-4">
         {/* Row 1 — primary groups */}
-        <ul className="flex items-stretch gap-1 overflow-x-auto">
+        <ul className="flex items-stretch gap-0.5 overflow-x-auto">
           {items.map((entry) => (
             <PrimaryEntry
               key={entry.label}
@@ -261,16 +265,22 @@ export default function TopNav({ role }: Props) {
             />
           ))}
           <div className="ml-auto inline-flex items-center gap-3 shrink-0 px-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">{role}</span>
+            <span
+              className={[
+                'inline-flex items-center px-2.5 py-1 rounded-full',
+                'bg-[var(--brand-soft)] text-[var(--brand)]',
+                'text-[10px] font-extrabold uppercase tracking-[0.18em]',
+              ].join(' ')}
+            >
+              {role}
+            </span>
           </div>
         </ul>
 
-        {/* Row 2 — sub-pills for the active section. Only shown when
-            the active group has sub-items so dashboard and direct-link
-            destinations don't render an empty strip. */}
+        {/* Row 2 — sub-pills */}
         {activeEntry?.items && activeEntry.items.length > 0 && (
-          <div className="bg-[#fffaf0] -mx-4 px-4 border-t border-[#f3eedf]">
-            <ul className="flex items-center gap-1.5 overflow-x-auto py-2 max-w-7xl mx-auto">
+          <div className="bg-[var(--surface-2)] -mx-4 px-4 border-t border-[var(--line)]">
+            <ul className="flex items-center gap-1.5 overflow-x-auto py-2.5 max-w-7xl mx-auto">
               {activeEntry.items.map((sub) => {
                 const isSubActive =
                   pathname === sub.href ||
@@ -279,14 +289,23 @@ export default function TopNav({ role }: Props) {
                   <li key={sub.href} className="shrink-0">
                     <Link
                       href={sub.href}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-bold rounded-full transition-colors ${
+                      className={[
+                        'inline-flex items-center gap-1.5',
+                        'px-3.5 py-1.5 text-[13px] font-semibold rounded-full',
+                        'transition-all duration-150 ease-out',
                         isSubActive
-                          ? 'bg-[#0d9488] text-white'
-                          : 'bg-white text-[#64748b] border border-[#ede9e1] hover:text-[#0f172a] hover:border-[#0d9488]/40'
-                      }`}
+                          ? 'bg-[var(--ink)] text-white shadow-[var(--shadow-1)]'
+                          : 'bg-[var(--surface)] text-[var(--ink-2)] border border-[var(--line)] hover:text-[var(--ink)] hover:border-[var(--brand)]/35 hover:bg-[var(--surface)]',
+                      ].join(' ')}
                     >
                       {sub.icon && (
-                        <span className={isSubActive ? 'text-white' : 'text-[#94a3b8]'}>
+                        <span
+                          className={
+                            isSubActive
+                              ? 'text-white'
+                              : 'text-[var(--ink-4)]'
+                          }
+                        >
                           {sub.icon}
                         </span>
                       )}
@@ -359,22 +378,36 @@ function PrimaryEntry({
   entry: NavEntry;
   isActive: boolean;
 }) {
-  // For section groups, clicking the header navigates to the first
-  // sub-item (the section's "default page"). Direct-link entries
-  // (Bosh sahifa) just route to their href.
   const targetHref = entry.href ?? entry.items?.[0]?.href ?? '#';
   return (
-    <li className="shrink-0">
+    <li className="shrink-0 relative">
       <Link
         href={targetHref}
-        className={`inline-flex items-center gap-2 px-3 py-2.5 text-sm font-bold border-b-2 transition-colors ${
+        className={[
+          'inline-flex items-center gap-2',
+          'px-3.5 py-3 text-sm font-semibold',
+          'transition-all duration-150 ease-out',
+          'relative',
           isActive
-            ? 'border-[#0d9488] text-[#0f172a]'
-            : 'border-transparent text-[#64748b] hover:text-[#0f172a] hover:border-[#cbd5e1]'
-        }`}
+            ? 'text-[var(--ink)]'
+            : 'text-[var(--ink-3)] hover:text-[var(--ink)]',
+        ].join(' ')}
       >
-        {entry.icon}
+        <span className={isActive ? 'text-[var(--brand)]' : ''}>
+          {entry.icon}
+        </span>
         <span>{entry.label}</span>
+        {/* Animated underline */}
+        <span
+          aria-hidden
+          className={[
+            'absolute left-3 right-3 -bottom-px h-[2.5px] rounded-full',
+            'transition-all duration-200 ease-out',
+            isActive
+              ? 'bg-[var(--brand)] scale-x-100'
+              : 'bg-[var(--ink-4)] scale-x-0 group-hover:scale-x-50',
+          ].join(' ')}
+        />
       </Link>
     </li>
   );

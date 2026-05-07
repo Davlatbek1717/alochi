@@ -29,38 +29,61 @@ export function Header({ onDemoClick }: Props) {
   return (
     <header
       className={[
-        'sticky top-0 z-40 w-full transition-all',
+        'sticky top-0 z-40 w-full transition-all duration-300',
         scrolled
-          ? 'backdrop-blur-md bg-[#fffaf0]/85 border-b border-[#e8e0d0] shadow-[0_2px_18px_-12px_rgba(15,23,42,0.18)]'
+          ? 'backdrop-blur-xl bg-[var(--background)]/85 border-b border-[var(--line)] shadow-[0_2px_24px_-16px_rgba(30,27,75,0.20)]'
           : 'bg-transparent border-b border-transparent',
       ].join(' ')}
     >
-      <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-6 transition-all ${scrolled ? 'h-14' : 'h-16'}`}>
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 shrink-0 group" aria-label="A'lochi bosh sahifa">
-          <Image
-            src="/logo-mark.svg"
-            alt=""
-            aria-hidden
-            width={36}
-            height={36}
-            className="h-9 w-9 transition-transform group-hover:rotate-[-6deg]"
-            priority
-          />
-          <span className="text-xl font-extrabold text-[#1e1b4b] tracking-tight">
+      <div
+        className={[
+          'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8',
+          'flex items-center gap-6 transition-all duration-300',
+          scrolled ? 'h-14' : 'h-20',
+        ].join(' ')}
+      >
+        {/* Logo lockup */}
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 shrink-0 group"
+          aria-label="A'lochi bosh sahifa"
+        >
+          <span className="relative inline-flex items-center justify-center">
+            <span
+              aria-hidden
+              className="absolute inset-0 -m-1 rounded-full bg-[var(--brand)]/12 blur-lg opacity-0 group-hover:opacity-100 transition-opacity"
+            />
+            <Image
+              src="/logo-mark.svg"
+              alt=""
+              aria-hidden
+              width={36}
+              height={36}
+              className="relative h-9 w-9 transition-transform duration-300 group-hover:rotate-[-8deg]"
+              priority
+            />
+          </span>
+          <span className="font-display text-2xl font-extrabold text-[var(--ink)] tracking-tight leading-none">
             A&apos;lochi
           </span>
         </Link>
 
         {/* Center nav — desktop */}
-        <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Asosiy navigatsiya">
+        <nav
+          className="hidden lg:flex items-center gap-1 mx-auto"
+          aria-label="Asosiy navigatsiya"
+        >
           {NAV.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="px-3 py-2 text-sm font-bold text-[#1e1b4b]/80 hover:text-[#6d28d9] rounded-md hover:bg-[#6d28d9]/8 transition-colors"
+              className="relative px-3.5 py-2 text-sm font-semibold text-[var(--ink-2)] hover:text-[var(--brand)] rounded-lg transition-colors group"
             >
               {item.label}
+              <span
+                aria-hidden
+                className="absolute left-3.5 right-3.5 bottom-1 h-[2px] bg-[var(--brand)] origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-200 ease-out rounded-full"
+              />
             </a>
           ))}
         </nav>
@@ -69,14 +92,23 @@ export function Header({ onDemoClick }: Props) {
         <div className="hidden lg:flex items-center gap-2 ml-auto">
           <Link
             href="/login"
-            className="text-sm font-bold text-[#1e1b4b]/85 hover:text-[#6d28d9] px-3 py-2 rounded-md transition-colors"
+            className="text-sm font-semibold text-[var(--ink-2)] hover:text-[var(--brand)] px-3.5 py-2 rounded-lg transition-colors"
           >
             Kirish
           </Link>
           <button
             type="button"
             onClick={onDemoClick}
-            className="inline-flex items-center gap-2 bg-[#6d28d9] hover:bg-[#5b21b6] text-white font-extrabold text-sm px-4 py-2.5 rounded-xl shadow-[0_6px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffaf0]"
+            className={[
+              'inline-flex items-center gap-2',
+              'bg-[var(--brand)] text-white font-extrabold text-sm tracking-wide',
+              'px-4 py-2.5 rounded-xl',
+              'border-b-[3px] border-[var(--brand-deep)]',
+              'hover:bg-[var(--brand-strong)]',
+              'active:translate-y-[2px] active:border-b-[1px]',
+              'transition-all duration-150 ease-out',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]',
+            ].join(' ')}
           >
             Demo so&apos;rash
             <ArrowRight size={16} strokeWidth={2.75} />
@@ -87,7 +119,7 @@ export function Header({ onDemoClick }: Props) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="lg:hidden ml-auto p-2 rounded-md text-[#1e1b4b] hover:bg-[#6d28d9]/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6d28d9]"
+          className="lg:hidden ml-auto p-2 rounded-lg text-[var(--ink)] hover:bg-[var(--brand-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)]"
           aria-label={open ? 'Menyuni yopish' : 'Menyuni ochish'}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -100,7 +132,7 @@ export function Header({ onDemoClick }: Props) {
       {open && (
         <div
           id="mobile-menu"
-          className="lg:hidden border-t border-[#e8e0d0] bg-[#fffaf0]/98 backdrop-blur-md"
+          className="lg:hidden border-t border-[var(--line)] bg-[var(--background)]/98 backdrop-blur-xl"
         >
           <div className="px-4 py-4 flex flex-col gap-1">
             {NAV.map((item) => (
@@ -108,7 +140,7 @@ export function Header({ onDemoClick }: Props) {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="px-3 py-3 text-base font-bold text-[#1e1b4b] rounded-lg hover:bg-[#6d28d9]/8 hover:text-[#6d28d9]"
+                className="px-3 py-3 text-base font-semibold text-[var(--ink)] rounded-lg hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] transition-colors"
               >
                 {item.label}
               </a>
@@ -116,7 +148,7 @@ export function Header({ onDemoClick }: Props) {
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="px-3 py-3 text-base font-bold text-[#1e1b4b] rounded-lg hover:bg-[#6d28d9]/8 hover:text-[#6d28d9]"
+              className="px-3 py-3 text-base font-semibold text-[var(--ink)] rounded-lg hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] transition-colors"
             >
               Kirish
             </Link>
@@ -126,7 +158,14 @@ export function Header({ onDemoClick }: Props) {
                 setOpen(false);
                 onDemoClick();
               }}
-              className="mt-2 inline-flex items-center justify-center gap-2 bg-[#6d28d9] text-white font-extrabold text-base px-4 py-3 rounded-xl shadow-[0_6px_0_0_#4c1d95] active:translate-y-[2px] active:shadow-[0_2px_0_0_#4c1d95]"
+              className={[
+                'mt-2 inline-flex items-center justify-center gap-2',
+                'bg-[var(--brand)] text-white font-extrabold text-base',
+                'px-4 py-3 rounded-xl',
+                'border-b-[4px] border-[var(--brand-deep)]',
+                'active:translate-y-[2px] active:border-b-[1px]',
+                'transition-all',
+              ].join(' ')}
             >
               Demo so&apos;rash
               <ArrowRight size={18} strokeWidth={2.75} />

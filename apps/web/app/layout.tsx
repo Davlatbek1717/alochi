@@ -1,23 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Nunito } from "next/font/google";
+import { Manrope, Fraunces, JetBrains_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { DevServiceWorkerCleanup } from "@/components/DevServiceWorkerCleanup";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Body font — Manrope: humanist geometric sans with excellent Cyrillic
+// coverage. Reads beautifully at small sizes in both Uzbek and Russian.
+const manrope = Manrope({
+  variable: "--font-sans",
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+// Display font — Fraunces: a contemporary variable serif with optical
+// sizes. Feels editorial and trustworthy. Used for hero headlines,
+// marketing landings, and certificate titles. Loaded as variable font
+// (no weight prop) so we can sweep optical-size + softness in CSS.
+const fraunces = Fraunces({
+  variable: "--font-display",
+  subsets: ["latin", "latin-ext"],
+  axes: ["opsz", "SOFT", "WONK"],
+  display: "swap",
 });
 
-// Display font for the student panel (Duolingo-grade redesign).
-// Cyrillic + Latin coverage so Uzbek/Russian/English all render in the
-// same family. Wired through CSS variable so existing admin/teacher pages
-// (which still use Geist) are unaffected.
+// Code font — JetBrains Mono replaces Geist Mono. Reads better in
+// inline tokens, error messages, and keyboard hints.
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  display: "swap",
+});
+
+// Student panel keeps Nunito — the rounded, friendly tone is
+// intentional for the kids' experience.
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin", "cyrillic"],
@@ -26,8 +43,12 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "A'lochi",
-  description: "A'lochi Learning Platform",
+  title: {
+    default: "A'lochi — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
+    template: "%s · A'lochi",
+  },
+  description:
+    "3–7 sinf o'quvchilari uchun zamonaviy ta'lim platformasi: AI suhbat, kamera nazorati va ota-ona uchun Telegram hisobotlar.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -40,7 +61,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#6d28d9",
+  themeColor: "#1e1b4b",
 };
 
 export default function RootLayout({
@@ -50,11 +71,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uz">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
+      <body
+        className={`${manrope.variable} ${fraunces.variable} ${mono.variable} ${nunito.variable} antialiased`}
+      >
         <DevServiceWorkerCleanup />
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

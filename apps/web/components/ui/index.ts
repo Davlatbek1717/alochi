@@ -1,5 +1,5 @@
 export { Button } from './Button';
-export { Card, CardHeader, CardTitle, CardDescription } from './Card';
+export { Card, CardHeader, CardTitle, CardDescription, CardEyebrow } from './Card';
 export { Table } from './Table';
 export type { Column } from './Table';
 export { EmptyState } from './EmptyState';
