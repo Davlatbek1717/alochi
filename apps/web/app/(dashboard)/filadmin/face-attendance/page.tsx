@@ -74,17 +74,9 @@ export default function FaceAttendancePage() {
         prev.map((r) => r.userId === userId ? { ...r, confirmed: true } : r)
       );
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Tasdiqlashda xato');
+      setError(err instanceof Error ? err.message : 'Tasdiqlashda xato');
     } finally {
       setConfirming(null);
-    }
-  }
-
-  function formatTime(iso: string) {
-    try {
-      return formatTime(iso);
-    } catch {
-      return iso;
     }
   }
 
