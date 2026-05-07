@@ -136,8 +136,6 @@ export default function WarningsPage() {
         {
           method: 'POST',
           body: JSON.stringify({
-            tenantId: me.tenantId,
-            givenBy: me.userId,
             reasonType,
             reasonText,
           }),
@@ -148,6 +146,8 @@ export default function WarningsPage() {
       setSelectedStudent('');
       setReasonType('');
       setReasonText('');
+      // Refresh history so it's up-to-date on next tab switch
+      loadHistory();
     } catch (err) {
       toastError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {

@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -43,6 +44,39 @@ export class UsersController {
     @Request() req: any,
     @CurrentDelegation() delegationId: string | null,
   ) {
+    const callerRole: UserRole = req.user.role;
+
+    // Non-superadmin callers: derive tenantId and branchId from JWT; never trust body
+    if (callerRole !== UserRole.superadmin) {
+      const callerBranchId: string | null = req.user.branchId ?? null;
+
+      // filadmin/manager without a branch cannot create staff
+      if (!callerBranchId) {
+        throw new BadRequestException(
+          'Sizning hisobingiz biror filialga biriktirilmagan. Avval superadmin orqali filial tayinlash kerak.',
+        );
+      }
+
+      // Force tenant and branch from JWT — ignore whatever the client sent
+      delete (dto as any).tenantId;
+      delete (dto as any).branchId;
+      dto.tenantId = req.user.tenantId;
+      dto.branchId = callerBranchId;
+    }
+
+    // Roles that require a branch: reject if branchId is still null
+    const branchRequiredRoles: UserRole[] = [
+      UserRole.mentor,
+      UserRole.manager,
+      UserRole.tester,
+      UserRole.student,
+    ];
+    if (branchRequiredRoles.includes(dto.role) && !dto.branchId) {
+      throw new BadRequestException(
+        "Mentor, menejer, tester va o'quvchi rollari uchun filial majburiy.",
+      );
+    }
+
     return this.users.create(dto, {
       userId: req.user.userId,
       delegationId,

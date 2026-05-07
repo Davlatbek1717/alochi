@@ -68,6 +68,7 @@ export default function FiladminKpiPage() {
   const [branchHistory, setBranchHistory] = useState<BranchAward[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(20);
+  const [hasBranch, setHasBranch] = useState(true);
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -86,6 +87,7 @@ export default function FiladminKpiPage() {
     } catch {
       // malformed JSON — branchId stays empty
     }
+    setHasBranch(!!branchId);
 
     // Month-bounded ?from=&to= for the branch-wide award history.
     const now = new Date();
@@ -93,6 +95,12 @@ export default function FiladminKpiPage() {
     const toIso = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
     async function load() {
+      if (!branchId) {
+        setLoadingUsers(false);
+        setLoadingStats(false);
+        setHistoryLoading(false);
+        return;
+      }
       setHistoryLoading(true);
       const [usersRes, todayRes, recentRes, historyRes] = await Promise.allSettled([
         apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token),
@@ -138,6 +146,11 @@ export default function FiladminKpiPage() {
     setSubmitting(true);
     setAwardError(null);
     const token = localStorage.getItem('accessToken') ?? '';
+    let branchId = '';
+    try {
+      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
+      branchId = user.branchId ?? '';
+    } catch { /* ignore */ }
     try {
       await apiRequest(
         '/kpi/award',
@@ -152,6 +165,22 @@ export default function FiladminKpiPage() {
       setReason('');
       setTodayTotal((prev) => prev + score);
       successTimerRef.current = setTimeout(() => setSuccess(false), 3000);
+      // Refresh awards lists
+      const now = new Date();
+      const fromIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const toIso = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+      const [recentRes, historyRes] = await Promise.allSettled([
+        apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token),
+        branchId
+          ? apiRequest<BranchAward[]>(
+              `/kpi/by-branch/${branchId}?from=${encodeURIComponent(fromIso)}&to=${encodeURIComponent(toIso)}&limit=200`,
+              {},
+              token,
+            )
+          : Promise.reject(new Error('no branch')),
+      ]);
+      if (recentRes.status === 'fulfilled') setRecentAwards(recentRes.value.data ?? []);
+      if (historyRes.status === 'fulfilled') setBranchHistory(historyRes.value.data ?? []);
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
@@ -187,6 +216,15 @@ export default function FiladminKpiPage() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
+        {!hasBranch && !loadingUsers ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Today stat */}
         <div className="bg-[#162032] rounded-[18px] p-5">
           <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-widest mb-1">Bugun berilgan jami</p>
@@ -384,6 +422,8 @@ export default function FiladminKpiPage() {
             </>
           )}
         </div>
+        </>
+        )}
       </div>
     </div>
   );

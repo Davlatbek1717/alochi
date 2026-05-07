@@ -102,6 +102,13 @@ export default function FriendsPage() {
       setFriendId('');
       setBranchId('');
       setShowForm(false);
+      // Refetch pending and friends lists
+      const [friendsRes, pendingRes] = await Promise.all([
+        apiRequest<Friend[]>('/social/friends', {}, token),
+        apiRequest<PendingRequest[]>('/social/friends/pending', {}, token),
+      ]);
+      setFriends(friendsRes.data);
+      setPending(pendingRes.data);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xato yuz berdi');
     } finally {

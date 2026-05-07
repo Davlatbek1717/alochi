@@ -24,6 +24,7 @@ const LEVEL_LABEL: Record<string, string> = {
 export default function ManagerCertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasBranch, setHasBranch] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -36,6 +37,7 @@ export default function ManagerCertificatesPage() {
     } catch {
       /* ignore */
     }
+    setHasBranch(!!branchId);
 
     if (!branchId) {
       setLoading(false);
@@ -64,7 +66,14 @@ export default function ManagerCertificatesPage() {
         )}
       </div>
 
-      {loading ? (
+      {!hasBranch && !loading ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+          <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+          <p className="mt-1 text-sm text-rose-700">
+            Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+          </p>
+        </div>
+      ) : loading ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} theme="light" className="h-16 w-full rounded-[18px]" />

@@ -99,11 +99,7 @@ export class MarketingService {
       // Same privacy rounding as the detail endpoint — keeps faollik %
       // consistent between the showcase card and the profile page.
       const joinedMonth = new Date(
-        Date.UTC(
-          s.createdAt.getUTCFullYear(),
-          s.createdAt.getUTCMonth(),
-          1,
-        ),
+        Date.UTC(s.createdAt.getUTCFullYear(), s.createdAt.getUTCMonth(), 1),
       );
       return {
         id: s.id,

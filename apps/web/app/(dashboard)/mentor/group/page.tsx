@@ -172,12 +172,6 @@ export default function MentorGroupPage() {
 
     const snapshot = studentsRef.current;
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-      id?: string;
-      tenantId?: string;
-      branchId?: string;
-    };
-    const branchId = getBranchIdFromToken() ?? user.branchId ?? '';
     const today = new Date().toISOString().split('T')[0];
     try {
       await apiRequest(
@@ -188,9 +182,6 @@ export default function MentorGroupPage() {
             records: snapshot.map((s) => ({
               studentId: s.id,
               status: s.attendance ? 'present' : 'absent',
-              markedBy: user.id ?? '',
-              tenantId: user.tenantId ?? '',
-              branchId,
               date: today,
             })),
           }),

@@ -34,6 +34,7 @@ function NewDelegationForm() {
 
   const [staffUsers, setStaffUsers] = useState<BranchUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [myBranchId, setMyBranchId] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -43,6 +44,12 @@ function NewDelegationForm() {
       branchId = user.branchId ?? '';
     } catch {
       // malformed JSON — branchId stays empty
+    }
+    setMyBranchId(branchId);
+
+    if (!branchId) {
+      setLoadingUsers(false);
+      return;
     }
 
     apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token)
@@ -61,17 +68,11 @@ function NewDelegationForm() {
     setSubmitting(true);
 
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-      tenantId?: string; id?: string; branchId?: string;
-    };
 
     try {
       await apiRequest('/delegations', {
         method: 'POST',
         body: JSON.stringify({
-          tenantId: user.tenantId ?? '',
-          branchId: user.branchId ?? '',
-          fromUserId: user.id ?? '',
           toUserId: selectedRecipient,
           delegatedRole: 'manager',
           permissions: Object.entries(permissions)
@@ -113,6 +114,14 @@ function NewDelegationForm() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6">
+        {!myBranchId && !loadingUsers ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Recipient */}
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
@@ -212,6 +221,7 @@ function NewDelegationForm() {
             {submitting ? 'Yuborilmoqda...' : 'Yuborish'}
           </button>
         </form>
+        )}
       </div>
     </div>
   );

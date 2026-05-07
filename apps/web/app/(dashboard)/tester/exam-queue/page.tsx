@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   CheckCircle,
@@ -58,14 +58,6 @@ function getBranchIdFromToken(): string | null {
     const token = localStorage.getItem('accessToken') ?? '';
     const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
     return payload.branchId ?? null;
-  } catch { return null; }
-}
-
-function getTenantIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { tenantId?: string };
-    return payload.tenantId ?? null;
   } catch { return null; }
 }
 
@@ -167,13 +159,10 @@ export default function TesterExamQueuePage() {
 
   async function markPresent(studentId: string) {
     const token = localStorage.getItem('accessToken') ?? '';
-    const branchId = getBranchIdFromToken();
-    const tenantId = getTenantIdFromToken();
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
     try {
       await apiRequest('/attendance/students', {
         method: 'POST',
-        body: JSON.stringify({ date: today, records: [{ studentId, status: 'present', markedBy: user.id ?? '', tenantId, branchId }] }),
+        body: JSON.stringify({ date: today, records: [{ studentId, status: 'present' }] }),
       }, token);
       setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, attendance: 'present', queue: 'waiting' } : r));
       success('Davomat belgilandi');
@@ -187,15 +176,12 @@ export default function TesterExamQueuePage() {
     if (notArrived.length === 0) return;
     setBulkLoading(true);
     const token = localStorage.getItem('accessToken') ?? '';
-    const branchId = getBranchIdFromToken();
-    const tenantId = getTenantIdFromToken();
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
     try {
       await Promise.all(
         notArrived.map((s) =>
           apiRequest('/attendance/students', {
             method: 'POST',
-            body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present', markedBy: user.id ?? '', tenantId, branchId }] }),
+            body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present' }] }),
           }, token),
         ),
       );

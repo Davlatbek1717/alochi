@@ -260,7 +260,14 @@ export default function FiladminTasksPage() {
           ))}
         </div>
 
-        {loading ? (
+        {!me.branchId && !loading ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-[14px] border-[1.5px] border-[#ede9e1] p-4 space-y-2">

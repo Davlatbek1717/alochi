@@ -92,27 +92,12 @@ function PaymentsInner() {
 
   async function handleMarkPaid(studentId: string, amount: number) {
     const { token } = getBranchAndToken();
-    let tenantId = '';
-    let recordedBy = '';
-    try {
-      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-        tenantId?: string;
-        id?: string;
-      };
-      tenantId = user.tenantId ?? '';
-      recordedBy = user.id ?? '';
-    } catch {
-      // keep empty
-    }
     try {
       await apiRequest(
-        '/payments',
+        `/payments/${studentId}`,
         {
           method: 'POST',
           body: JSON.stringify({
-            tenantId,
-            studentId,
-            recordedBy,
             month,
             amount,
             paidAt: new Date().toISOString(),

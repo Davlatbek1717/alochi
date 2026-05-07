@@ -58,6 +58,8 @@ export default function ManagerRewardsPage() {
     }
   }
 
+  const [hasBranch, setHasBranch] = useState(true);
+
   useEffect(() => {
     let branchId = '';
     try {
@@ -68,6 +70,7 @@ export default function ManagerRewardsPage() {
     } catch {
       /* ignore */
     }
+    setHasBranch(!!branchId);
     if (branchId) {
       apiRequest<Student[]>(
         `/users/by-branch/${branchId}?role=student`,
@@ -175,6 +178,15 @@ export default function ManagerRewardsPage() {
         <Gift size={20} className="text-amber-500" />
         <h1 className="text-xl font-bold text-[#0f172a]">Sovgʻa va Kitob</h1>
       </div>
+
+      {!hasBranch && !loading ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+          <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+          <p className="mt-1 text-sm text-rose-700">
+            Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+          </p>
+        </div>
+      ) : null}
 
       <form
         onSubmit={submit}

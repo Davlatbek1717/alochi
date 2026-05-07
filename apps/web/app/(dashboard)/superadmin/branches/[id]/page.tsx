@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   Users,
@@ -64,17 +64,6 @@ export default function BranchStatsPage() {
 
   const token = () => localStorage.getItem('accessToken') ?? '';
 
-  const me = useMemo(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-        tenantId?: string;
-      };
-      return { tenantId: u.tenantId ?? '' };
-    } catch {
-      return { tenantId: '' };
-    }
-  }, []);
-
   function load() {
     if (!branchId) return;
     setLoading(true);
@@ -118,7 +107,7 @@ export default function BranchStatsPage() {
         `/branches/${branchId}/filadmin`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ filadminId, tenantId: me.tenantId }),
+          body: JSON.stringify({ filadminId }),
         },
         token(),
       );

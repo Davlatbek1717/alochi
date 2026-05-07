@@ -57,6 +57,7 @@ export default function ManagerKpiPage() {
   const [statsError, setStatsError] = useState(false);
 
   const [recentAwards, setRecentAwards] = useState<RecentAward[]>([]);
+  const [hasBranch, setHasBranch] = useState(true);
 
   const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,6 +75,7 @@ export default function ManagerKpiPage() {
     } catch {
       // malformed JSON — branchId stays empty
     }
+    setHasBranch(!!branchId);
 
     const token = localStorage.getItem('accessToken') ?? '';
 
@@ -124,6 +126,9 @@ export default function ManagerKpiPage() {
       setReason('');
       setTodayTotal((prev) => prev + score);
       successTimerRef.current = setTimeout(() => setSuccess(false), 3000);
+      // Refresh recent awards
+      const recentRes = await apiRequest<RecentAward[]>('/kpi/my?limit=10', {}, token).catch(() => null);
+      if (recentRes) setRecentAwards(recentRes.data ?? []);
     } catch (err) {
       setAwardError(err instanceof Error ? err.message : 'Xatolik yuz berdi');
     } finally {
@@ -159,6 +164,15 @@ export default function ManagerKpiPage() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
+        {!hasBranch && !loadingUsers ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Today stat */}
         <div className="bg-[#162032] rounded-[18px] p-5">
           <p className="text-[#94a3b8] text-xs font-semibold uppercase tracking-widest mb-1">Bugun berilgan jami</p>
@@ -301,6 +315,8 @@ export default function ManagerKpiPage() {
             <AlertCircle size={16} />
             <span>{awardError}</span>
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

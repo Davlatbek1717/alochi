@@ -138,8 +138,6 @@ export default function FiladminStaffPage() {
             password: form.password,
             role: form.role,
             phone: form.phone || undefined,
-            branchId: me.branchId,
-            tenantId: me.tenantId,
           }),
         },
         token(),
@@ -304,7 +302,14 @@ export default function FiladminStaffPage() {
           ))}
         </div>
 
-        {loading ? (
+        {!me.branchId && !loading ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
+            <p className="text-sm font-bold text-rose-800">Filial biriktirilmagan</p>
+            <p className="mt-1 text-sm text-rose-700">
+              Hisobingiz biror filialga biriktirilmagan. Superadmin orqali filial tayinlanishini so&apos;rang.
+            </p>
+          </div>
+        ) : loading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton
