@@ -9,13 +9,14 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Button, Mascot } from '@/components/ui';
-import { playSound } from '@/lib/sound';
+import { playSound, unlockAudio } from '@/lib/sound';
 import {
   getSpeechCapabilities,
   listen,
   similarityScore,
   speak,
   stopSpeaking,
+  unlockSpeech,
 } from '@/lib/speech';
 import { XpFloater } from './XpFloater';
 import type { SpeakWordsConfig } from './exercise-types';
@@ -88,6 +89,12 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
 
   const listenHandleRef = useRef<{ stop: () => void } | null>(null);
   const mountedRef = useRef(true);
+  // Mobile Chrome silently ignores `continuous: true` and ends the
+  // recognizer after the first utterance/silence. We track whether the
+  // most recent stop was user-triggered vs auto so we can transparently
+  // restart the recognizer when the student isn't done yet.
+  const manualStopRef = useRef(false);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Refs mirror state for the listen() callbacks, which capture stale
   // React state through closures.
   const statusesRef = useRef<WordStatus[]>([]);
@@ -126,6 +133,10 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     setSttAvailable(getSpeechCapabilities().stt);
     return () => {
       mountedRef.current = false;
+      if (restartTimerRef.current) {
+        clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = null;
+      }
       try {
         listenHandleRef.current?.stop();
       } catch {
@@ -264,31 +275,18 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     }
   }
 
-  function startListening() {
-    if (phase === 'listening') return;
-    setPermError('');
-    setInterimTranscript('');
-    setFinalScore(null);
-    finishedRef.current = false;
-    consumedSpokenIdxRef.current = 0;
-    missesOnCurrentRef.current = 0;
-    setMissCount(0);
-    // Reset to fresh-start statuses if previously failed/passed.
-    if (phase !== 'idle') {
-      const init: WordStatus[] = words.map((_, i) =>
-        i === 0 ? 'active' : 'pending',
-      );
-      statusesRef.current = init;
-      cursorRef.current = 0;
-      setStatuses(init);
-    }
-
-    stopSpeaking();
+  /** Start the underlying recognizer. Does NOT reset cursor/statuses —
+   *  use startListening() for a fresh attempt. Used both for the initial
+   *  start and for transparent restarts on mobile (where continuous
+   *  mode is ignored and recognition ends after each utterance). */
+  function startRecognizer() {
     try {
       const handle = listen({
         lang: 'en-US',
         // Continuous mode so the student can pause briefly mid-sentence
-        // without ending the recognition session.
+        // without ending the recognition session. Mobile browsers may
+        // ignore this flag and auto-end after each utterance — onEnd
+        // handles that case by restarting the recognizer.
         continuous: true,
         onInterim: (txt) => {
           // Live caption only — DON'T advance the cursor. Interim text
@@ -313,29 +311,55 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
             setPermError(
               'Mikrofon ruxsati berilmadi. Brauzer sozlamalarida ruxsat bering.',
             );
+            setPhase('idle');
           } else if (err === 'no-speech') {
-            setPermError("Ovoz eshitilmadi — qayta urinib ko'ring.");
-          } else if (typeof console !== 'undefined') {
-            console.warn('[SpeakWords] Web Speech STT error', err);
+            // Mobile browsers fire 'no-speech' when the user pauses too
+            // long. Don't surface this as an error — onEnd will restart.
+            if (typeof console !== 'undefined') {
+              console.debug('[SpeakWords] no-speech, will restart');
+            }
+          } else if (err === 'aborted') {
+            // We aborted on purpose (manual stop); ignore.
+          } else {
+            if (typeof console !== 'undefined') {
+              console.warn('[SpeakWords] Web Speech STT error', err);
+            }
+            setPhase('idle');
           }
-          setPhase('idle');
         },
         onEnd: () => {
           if (!mountedRef.current) return;
-          // Recognizer ended (silence / forced stop). If we haven't
-          // already finished from inside processTranscript, settle.
-          if (!finishedRef.current && cursorRef.current < words.length) {
-            // User stopped early — finish with whatever we got, mark
-            // remaining as wrong so they're shown in the fail panel.
+          listenHandleRef.current = null;
+
+          // If processTranscript already finished us, nothing to do.
+          if (finishedRef.current || cursorRef.current >= words.length) {
+            return;
+          }
+
+          // User pressed the stop button → finalize as the old behaviour.
+          if (manualStopRef.current) {
+            manualStopRef.current = false;
             finishExercise();
+            return;
           }
-          if (mountedRef.current) {
-            setPhase((prev) => (prev === 'listening' ? prev : prev));
-          }
+
+          // Mobile auto-end: recognizer stopped on its own but the
+          // student isn't done. Restart after a tiny delay so the
+          // browser settles before we start again.
+          if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+          restartTimerRef.current = setTimeout(() => {
+            if (
+              !mountedRef.current ||
+              finishedRef.current ||
+              cursorRef.current >= words.length
+            ) {
+              return;
+            }
+            startRecognizer();
+          }, 200);
         },
       });
       listenHandleRef.current = handle;
-      setPhase('listening');
     } catch (err) {
       if (typeof console !== 'undefined') {
         console.warn('[SpeakWords] listen() threw', err);
@@ -345,7 +369,44 @@ export function SpeakWords({ config, onPassed, onFailed }: SpeakWordsProps) {
     }
   }
 
+  function startListening() {
+    if (phase === 'listening') return;
+    setPermError('');
+    setInterimTranscript('');
+    setFinalScore(null);
+    finishedRef.current = false;
+    manualStopRef.current = false;
+    consumedSpokenIdxRef.current = 0;
+    missesOnCurrentRef.current = 0;
+    setMissCount(0);
+    // Reset to fresh-start statuses if previously failed/passed.
+    if (phase !== 'idle') {
+      const init: WordStatus[] = words.map((_, i) =>
+        i === 0 ? 'active' : 'pending',
+      );
+      statusesRef.current = init;
+      cursorRef.current = 0;
+      setStatuses(init);
+    }
+
+    // Mobile gesture-context unlocks: do these synchronously inside the
+    // click handler so iOS Safari + Android Chrome accept later non-
+    // gesture audio/speech calls (the recognition-result callback that
+    // plays "correct"/"wrong" chimes is not in a user gesture).
+    unlockAudio();
+    unlockSpeech();
+
+    stopSpeaking();
+    setPhase('listening');
+    startRecognizer();
+  }
+
   function stopListeningManually() {
+    manualStopRef.current = true;
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
     try {
       listenHandleRef.current?.stop();
     } catch {

@@ -148,3 +148,18 @@ export function setSoundEnabled(enabled: boolean): void {
 export function isSoundEnabled(): boolean {
   return isEnabled();
 }
+
+/**
+ * Unlock the AudioContext from a user-gesture handler. iOS Safari and
+ * Android Chrome create the context in `suspended` state until a real
+ * user gesture resumes it. After this is called once, subsequent
+ * playSound() calls (even from non-gesture paths like a speech-
+ * recognition callback) play correctly.
+ */
+export function unlockAudio(): void {
+  const context = getContext();
+  if (!context) return;
+  if (context.state === 'suspended') {
+    void context.resume().catch(() => {});
+  }
+}

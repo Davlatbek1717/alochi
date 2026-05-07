@@ -74,30 +74,60 @@ interface SpeakOptions {
   volume?: number;
 }
 
-/** Voice list resolves async on Chrome — wait once for `voiceschanged`
- *  if the synchronous list is empty. */
-function loadVoices(): Promise<SpeechSynthesisVoice[]> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      resolve([]);
-      return;
-    }
+// Cached voice list. Mobile browsers (iOS Safari + Android Chrome)
+// drop the user-gesture context across `await`, so any `synth.speak()`
+// scheduled after `await loadVoices()` is rejected silently. Caching
+// lets us call speak() synchronously inside the click handler.
+let cachedVoices: SpeechSynthesisVoice[] | null = null;
+
+function primeVoices() {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  const synth = window.speechSynthesis;
+  const initial = synth.getVoices();
+  if (initial.length > 0) {
+    cachedVoices = initial;
+    return;
+  }
+  // Some browsers populate the list async; capture them when they arrive.
+  synth.addEventListener?.(
+    'voiceschanged',
+    () => {
+      cachedVoices = synth.getVoices();
+    },
+    { once: true } as AddEventListenerOptions,
+  );
+}
+
+if (typeof window !== 'undefined') {
+  primeVoices();
+}
+
+function getVoicesSync(): SpeechSynthesisVoice[] {
+  if (cachedVoices && cachedVoices.length > 0) return cachedVoices;
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
+  const v = window.speechSynthesis.getVoices();
+  if (v.length > 0) cachedVoices = v;
+  return v;
+}
+
+/**
+ * Prime the speech synthesis engine with a near-silent utterance. iOS
+ * Safari only allows `speak()` from a user gesture; once it has been
+ * called once successfully, subsequent calls (even from non-gesture
+ * paths like a recognition callback) work. Call this from a button
+ * click handler before the first real speak().
+ */
+export function unlockSpeech(): void {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
     const synth = window.speechSynthesis;
-    const initial = synth.getVoices();
-    if (initial.length > 0) {
-      resolve(initial);
-      return;
-    }
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve(synth.getVoices());
-    };
-    synth.addEventListener('voiceschanged', finish, { once: true });
-    // Hard cap so we don't hang forever on browsers that never fire the event.
-    setTimeout(finish, 600);
-  });
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    u.rate = 10;
+    synth.speak(u);
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -130,41 +160,41 @@ export function speak(text: string, opts: SpeakOptions = {}): Promise<void> {
     }
 
     const lang = opts.lang ?? 'en-US';
+    // Synchronous voice lookup — see cachedVoices comment. Going async
+    // here would lose the iOS user-gesture context and silently fail.
+    const voices = getVoicesSync();
 
-    const start = (voices: SpeechSynthesisVoice[]) => {
-      const u = new SpeechSynthesisUtterance(trimmed);
-      u.lang = lang;
-      u.rate = opts.rate ?? 1;
-      u.pitch = opts.pitch ?? 1;
-      u.volume = opts.volume ?? 1;
+    const u = new SpeechSynthesisUtterance(trimmed);
+    u.lang = lang;
+    u.rate = opts.rate ?? 1;
+    u.pitch = opts.pitch ?? 1;
+    u.volume = opts.volume ?? 1;
 
-      // Voice picker: exact-match local voice → exact-match any voice →
-      // language-prefix match → first voice. Local voices are preferred
-      // because they're offline and low-latency.
-      if (voices.length > 0) {
-        const exactLocal = voices.find((v) => v.lang === lang && v.localService);
-        const exact = voices.find((v) => v.lang === lang);
-        const prefix = lang.split('-')[0];
-        const prefixMatch = voices.find((v) => v.lang.startsWith(prefix));
-        const chosen = exactLocal ?? exact ?? prefixMatch;
-        if (chosen) u.voice = chosen;
-      }
+    // Voice picker: exact-match local voice → exact-match any voice →
+    // language-prefix match → leave unset (browser default). Local voices
+    // are preferred because they're offline and low-latency. Leaving
+    // u.voice unset is fine on mobile — the OS picks a reasonable default.
+    if (voices.length > 0) {
+      const exactLocal = voices.find((v) => v.lang === lang && v.localService);
+      const exact = voices.find((v) => v.lang === lang);
+      const prefix = lang.split('-')[0];
+      const prefixMatch = voices.find((v) => v.lang.startsWith(prefix));
+      const chosen = exactLocal ?? exact ?? prefixMatch;
+      if (chosen) u.voice = chosen;
+    }
 
-      u.onend = () => resolve();
-      u.onerror = (e: SpeechSynthesisErrorEvent) => {
-        // 'canceled' / 'interrupted' aren't real errors — caller cancelled.
-        if (e.error === 'canceled' || e.error === 'interrupted') resolve();
-        else reject(new Error(e.error || 'speak failed'));
-      };
-
-      try {
-        synth.speak(u);
-      } catch (err) {
-        reject(err instanceof Error ? err : new Error('speak failed'));
-      }
+    u.onend = () => resolve();
+    u.onerror = (e: SpeechSynthesisErrorEvent) => {
+      // 'canceled' / 'interrupted' aren't real errors — caller cancelled.
+      if (e.error === 'canceled' || e.error === 'interrupted') resolve();
+      else reject(new Error(e.error || 'speak failed'));
     };
 
-    void loadVoices().then(start);
+    try {
+      synth.speak(u);
+    } catch (err) {
+      reject(err instanceof Error ? err : new Error('speak failed'));
+    }
   });
 }
 
