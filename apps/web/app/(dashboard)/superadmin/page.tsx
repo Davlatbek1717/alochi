@@ -12,12 +12,10 @@ import { formatDateLong } from '@/lib/date-uz';
 import { Skeleton } from '@/components/ui';
 
 const NAV_CARDS = [
-  { href: '/superadmin/tenants',     icon: <Building2 size={22} />, title: 'Markazlar',          desc: "A\'lochi markazlari ro'yxati va boshqaruv", color: 'hover:border-violet-300 hover:bg-violet-50' },
-  { href: '/superadmin/tenants/new', icon: <Building2 size={22} />, title: "Yangi Markaz", desc: 'Markaz + admin yaratish', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
   { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr',  color: 'hover:border-indigo-300 hover:bg-indigo-50' },
   { href: '/superadmin/payments', icon: <CreditCard size={22} />, title: "To'lovlar",            desc: 'Qarzdorlar, filial statistika', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
   { href: '/superadmin/users',    icon: <Users size={22} />,      title: 'Foydalanuvchilar',     desc: 'Yaratish, tahrirlash',          color: 'hover:border-violet-300 hover:bg-violet-50' },
-  { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "Qo'shish, boshqarish",          color: 'hover:border-blue-300 hover:bg-blue-50' },
+  { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "A'lochi filiallari va admin tayinlash", color: 'hover:border-blue-300 hover:bg-blue-50' },
   { href: '/superadmin/tournaments',icon: <Trophy size={22} />,   title: 'Turnirlar',            desc: 'Musobaqalar boshqaruvi',        color: 'hover:border-amber-300 hover:bg-amber-50' },
   { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate',           color: 'hover:border-purple-300 hover:bg-purple-50' },
   { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika',     color: 'hover:border-green-300 hover:bg-green-50' },
@@ -26,7 +24,7 @@ const NAV_CARDS = [
   { href: '/superadmin/certificate-design', icon: <Award size={22} />,      title: 'Sertifikat dizayni',   desc: 'Shablon va brending',           color: 'hover:border-amber-300 hover:bg-amber-50' },
   { href: '/superadmin/video-guides',    icon: <Video size={22} />,         title: "Video qo'llanmalar",    desc: "Foydalanuvchilar uchun video",  color: 'hover:border-blue-300 hover:bg-blue-50' },
   { href: '/superadmin/templates',       icon: <MessageSquare size={22} />, title: 'Bildirishnoma shablonlari', desc: 'Telegram/inapp/SMS shablonlar', color: 'hover:border-violet-300 hover:bg-violet-50' },
-  { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi, tenant',    color: 'hover:border-slate-300 hover:bg-slate-50' },
+  { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi',            color: 'hover:border-slate-300 hover:bg-slate-50' },
 ];
 
 type Stats = { branches: number; lessons: number; users: number };

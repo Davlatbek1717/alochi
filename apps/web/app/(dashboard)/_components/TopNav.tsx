@@ -53,14 +53,7 @@ const NAV: Record<string, NavEntry[]> = {
       href: '/superadmin',
       icon: <Home size={15} />,
     },
-    {
-      label: 'Markazlar',
-      icon: <Building2 size={15} />,
-      items: [
-        { href: '/superadmin/tenants', icon: <Building2 size={14} />, label: 'Markazlar' },
-        { href: '/superadmin/branches', icon: <Building2 size={14} />, label: 'Filiallar' },
-      ],
-    },
+    { label: 'Filiallar', href: '/superadmin/branches', icon: <Building2 size={15} /> },
     {
       label: 'Foydalanuvchilar',
       icon: <Users size={15} />,
@@ -339,8 +332,8 @@ export default function TopNav({ role }: Props) {
  * deeper sections that nest underneath them:
  *
  *   1. Prefer the group whose sub-item href matches the path. This
- *      catches the common case ("/superadmin/tenants" belongs to
- *      "Markazlar").
+ *      catches the common case (e.g. "/superadmin/branches/new" belongs to
+ *      "Filiallar").
  *   2. Fall back to a direct-link entry with an EXACT path match.
  *      Only exact — never a prefix — so "/superadmin" matches the
  *      dashboard entry but doesn't claim every nested route.

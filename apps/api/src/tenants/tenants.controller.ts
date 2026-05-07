@@ -8,6 +8,7 @@ import {
   Param,
   Request,
   UseGuards,
+  ForbiddenException,
 } from '@nestjs/common';
 import { TenantsService } from './tenants.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -26,14 +27,20 @@ export class TenantsController {
 
   @Post()
   @Roles(UserRole.superadmin)
-  create(@Body() dto: CreateTenantDto) {
-    return this.tenants.create(dto);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  create(@Body() _dto: CreateTenantDto): never {
+    throw new ForbiddenException(
+      "Yangi markaz qo'shish endi qo'llab-quvvatlanmaydi. Loyiha bitta markaz uchun mo'ljallangan.",
+    );
   }
 
   @Post('onboard')
   @Roles(UserRole.superadmin)
-  onboard(@Body() dto: OnboardTenantDto) {
-    return this.tenants.onboardTenant(dto);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onboard(@Body() _dto: OnboardTenantDto): never {
+    throw new ForbiddenException(
+      "Yangi markaz qo'shish endi qo'llab-quvvatlanmaydi. Loyiha bitta markaz uchun mo'ljallangan.",
+    );
   }
 
   @Get()

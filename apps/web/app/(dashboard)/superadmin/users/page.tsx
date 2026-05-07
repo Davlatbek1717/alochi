@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Users,
   Plus,
@@ -93,16 +93,6 @@ export default function SuperadminUsersPage() {
 
   const token = () =>
     typeof window === 'undefined' ? '' : localStorage.getItem('accessToken') ?? '';
-  const me = useMemo(() => {
-    try {
-      return JSON.parse(localStorage.getItem('user') ?? '{}') as {
-        tenantId?: string;
-      };
-    } catch {
-      return {};
-    }
-  }, []);
-
   async function loadBranches() {
     const res = await apiRequest<Branch[]>('/branches', {}, token());
     setBranches(res.data);
@@ -163,7 +153,6 @@ export default function SuperadminUsersPage() {
           method: 'POST',
           body: JSON.stringify({
             ...form,
-            tenantId: me.tenantId,
             branchId: form.branchId || undefined,
             phone: form.phone || undefined,
           }),
