@@ -122,7 +122,7 @@ export default function MentorDashboard() {
       href: '/mentor/attendance',
       icon: <BarChart2 size={20} />,
       title: 'Davomat tarixi',
-      desc: 'Kunlar bo&apos;yicha statistika',
+      desc: "Kunlar bo'yicha statistika",
       tint: 'text-blue-700 bg-blue-50 border-blue-200',
       hoverBorder: 'hover:border-blue-300',
     },
@@ -334,7 +334,7 @@ export default function MentorDashboard() {
                 tint={
                   pendingTasks > 0
                     ? 'text-rose-700 bg-rose-50 border-rose-200'
-                    : 'text-slate-700 bg-white border-[#ede9e1]'
+                    : 'text-[#64748b] bg-white border-[#ede9e1]'
                 }
               />
               <SnapshotTile

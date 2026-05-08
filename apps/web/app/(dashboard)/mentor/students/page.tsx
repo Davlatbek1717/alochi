@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
-import { Skeleton } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
@@ -153,7 +153,7 @@ export default function MentorStudentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="O'quvchini qidirish..."
-              className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-violet-400"
+              className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
             />
             {search && (
               <button
@@ -195,23 +195,22 @@ export default function MentorStudentsPage() {
             ))}
           </div>
         ) : students.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center border-[1.5px] border-[#ede9e1] space-y-3">
-            <GraduationCap size={40} className="text-[#cbd5e1] mx-auto" />
-            <p className="text-[#0f172a] font-extrabold">
-              O&apos;quvchilar topilmadi
-            </p>
-            <p className="text-[#64748b] text-xs font-bold leading-snug">
-              Bu filialda hali o&apos;quvchilar yo&apos;q
-            </p>
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              theme="light"
+              icon={<GraduationCap size={28} />}
+              title="O'quvchilar topilmadi"
+              description="Bu filialda hali o'quvchilar yo'q"
+            />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center border-[1.5px] border-[#ede9e1]">
-            <p className="text-sm font-bold text-[#0f172a]">
-              Mos o&apos;quvchi topilmadi
-            </p>
-            <p className="text-xs text-[#64748b] mt-1">
-              Qidiruvni o&apos;zgartirib ko&apos;ring
-            </p>
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              theme="light"
+              icon={<Users size={28} />}
+              title="Mos o'quvchi topilmadi"
+              description="Qidiruvni o'zgartirib ko'ring"
+            />
           </div>
         ) : (
           <ul className="space-y-2">

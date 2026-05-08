@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Video, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Skeleton } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/ui';
 
 interface HistoryRow {
   date: string;
@@ -88,25 +88,39 @@ export default function StudentVideoHistoryPage() {
   return (
     <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-4 pt-4 pb-6">
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-[#94a3b8] text-sm mb-3"
-        >
-          <ArrowLeft size={16} />
-          Orqaga
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center">
-            <Video size={20} className="text-[#0d9488]" />
-          </div>
-          <div>
-            <p className="text-white text-base font-extrabold">
-              {studentName || 'O\'quvchi'} — Video tarixi
-            </p>
-            <p className="text-[#94a3b8] text-xs">
-              Oxirgi 30 kun • {missedCount} ta tashlamagan
-            </p>
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)',
+            transform: 'translate(30%, -30%)',
+          }}
+        />
+        <div className="relative z-10">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-[#94a3b8] text-sm mb-4"
+          >
+            <ArrowLeft size={16} />
+            Orqaga
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center shrink-0">
+              <Video size={20} className="text-[#0d9488]" />
+            </div>
+            <div>
+              {loading && !studentName ? (
+                <Skeleton className="h-5 w-40 bg-white/10 mb-1" />
+              ) : (
+                <p className="text-white text-base font-extrabold">
+                  {studentName || "O'quvchi"} — Video tarixi
+                </p>
+              )}
+              <p className="text-[#94a3b8] text-xs">
+                Oxirgi 30 kun • {missedCount} ta o&apos;tkazilgan
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -120,8 +134,13 @@ export default function StudentVideoHistoryPage() {
             ))}
           </div>
         ) : rows.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] px-4 py-8 text-center">
-            <p className="text-[#94a3b8] text-sm">Hali video tarix yo&apos;q</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <EmptyState
+              theme="light"
+              icon={<Video size={28} />}
+              title="Hali video tarix yo'q"
+              description="O'quvchi hali video topshirmagan"
+            />
           </div>
         ) : (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">

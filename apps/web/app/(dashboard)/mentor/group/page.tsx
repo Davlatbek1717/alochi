@@ -390,6 +390,9 @@ export default function MentorGroupPage() {
               <p className="text-white text-lg font-extrabold leading-tight">
                 Guruh boshqaruvi
               </p>
+              <p className="text-[#475569] text-[11px] font-bold mt-0.5 font-mono">
+                {tashkentToday()}
+              </p>
             </div>
           </div>
 

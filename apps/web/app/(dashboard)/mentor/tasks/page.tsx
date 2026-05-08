@@ -314,7 +314,7 @@ export default function MentorTasksPage() {
                 setFilter('all');
                 setSearch('');
               }}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-colors ${
+              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-colors ${
                 isMine ? 'bg-white text-[#0f172a]' : 'text-[#94a3b8]'
               }`}
             >
@@ -327,7 +327,7 @@ export default function MentorTasksPage() {
                 setFilter('all');
                 setSearch('');
               }}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-lg transition-colors ${
+              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition-colors ${
                 !isMine ? 'bg-white text-[#0f172a]' : 'text-[#94a3b8]'
               }`}
             >
@@ -352,7 +352,7 @@ export default function MentorTasksPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Vazifa nomi bo'yicha qidirish..."
-                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400"
+                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
               />
               {search && (
                 <button
@@ -615,14 +615,17 @@ export default function MentorTasksPage() {
               O&apos;quvchi
             </label>
             {studentsLoading ? (
-              <div className="text-xs text-[#94a3b8]">Yuklanmoqda...</div>
+              <div className="space-y-1.5">
+                <Skeleton theme="light" className="h-9 rounded-xl" />
+              </div>
             ) : students.length === 0 ? (
               <p className="text-xs text-[#94a3b8]">Guruhda o&apos;quvchi yo&apos;q</p>
             ) : (
               <select
                 value={newAssignee}
                 onChange={(e) => setNewAssignee(e.target.value)}
-                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-amber-400"
+                aria-label="O'quvchini tanlang"
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
               >
                 <option value="">— tanlang —</option>
                 {students
@@ -644,7 +647,8 @@ export default function MentorTasksPage() {
               onChange={(e) => setNewTitle(e.target.value)}
               placeholder="Masalan: 5 yangi so'z yodlash"
               maxLength={140}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:border-amber-400"
+              aria-label="Vazifa sarlavhasi"
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
             />
           </div>
           <div>
@@ -656,25 +660,28 @@ export default function MentorTasksPage() {
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
               maxLength={500}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder-[#94a3b8] resize-none focus:outline-none focus:border-amber-400"
+              aria-label="Vazifa tavsifi"
+              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder-[#94a3b8] resize-none focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
             />
           </div>
-          <div>
-            <label className="block text-xs font-extrabold text-[#64748b] mb-1.5 uppercase tracking-wide">
-              KPI ball (ixtiyoriy, 0–50)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={50}
-              value={newKpi}
-              onChange={(e) =>
-                setNewKpi(
-                  Math.max(0, Math.min(50, Number(e.target.value) || 0)),
-                )
-              }
-              className="w-24 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-amber-400"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-extrabold text-[#64748b] mb-1.5 uppercase tracking-wide">
+                KPI ball (ixtiyoriy, 0–50)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                value={newKpi}
+                onChange={(e) =>
+                  setNewKpi(
+                    Math.max(0, Math.min(50, Number(e.target.value) || 0)),
+                  )
+                }
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
+              />
+            </div>
           </div>
         </div>
       </Modal>

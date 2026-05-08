@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, AlertTriangle, Send } from 'lucide-react';
+import { ArrowLeft, Sparkles, AlertTriangle, Send, Loader2 } from 'lucide-react';
 import { apiRequest, ApiError } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
-import { useToast } from '@/components/ui';
+import { Skeleton, useToast } from '@/components/ui';
 
 type AnalysisResult = {
   weakAreas: string[];
@@ -34,11 +34,11 @@ const STATUS_LABELS_UZ: Record<string, string> = {
 function statusChipColor(color: string | null | undefined): string {
   switch (color) {
     case 'yashil':
-      return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+      return 'bg-[#15803d]/10 text-[#15803d] border border-[#15803d]/20';
     case 'sariq':
-      return 'bg-amber-100 text-amber-800 border border-amber-200';
+      return 'bg-amber-50 text-amber-800 border border-amber-200';
     case 'qizil':
-      return 'bg-rose-100 text-rose-700 border border-rose-200';
+      return 'bg-rose-50 border-rose-200 text-rose-800 border';
     default:
       return 'bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]';
   }
@@ -189,7 +189,11 @@ export default function StudentDetailPage() {
             {studentName ? getInitials(studentName) : '?'}
           </div>
           <div>
-            <p className="text-white text-lg font-bold">{studentName || 'Yuklanmoqda...'}</p>
+            {studentName ? (
+            <p className="text-white text-lg font-bold">{studentName}</p>
+          ) : (
+            <Skeleton className="h-5 w-32 bg-white/10" />
+          )}
             <div className="flex flex-wrap gap-2 mt-2">
               <span className="text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-[#94a3b8]">
                 o&apos;quvchi
@@ -201,7 +205,7 @@ export default function StudentDetailPage() {
                   {STATUS_LABELS_UZ[personalStatus] ?? personalStatus}
                 </span>
               )}
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1]">
                 {lessonCount} ta dars
               </span>
             </div>
@@ -301,7 +305,7 @@ export default function StudentDetailPage() {
             maxLength={500}
             placeholder="Xabar matni..."
             aria-label="Ota-onaga yuboriladigan xabar"
-            className="w-full border border-[#ede9e1] rounded-xl p-3 text-sm text-[#0f172a] focus:outline-none focus:border-[#0d9488] bg-[#f7f4ef]"
+            className="w-full border border-[#ede9e1] rounded-xl p-3 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 bg-[#f7f4ef]"
           />
           <div className="flex items-center justify-between mt-2">
             <span className="text-[11px] text-[#94a3b8] font-mono">
@@ -316,9 +320,16 @@ export default function StudentDetailPage() {
               <button
                 onClick={sendToParent}
                 disabled={sending || !message.trim()}
-                className="px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] disabled:bg-[#94a3b8] disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] disabled:bg-[#94a3b8] disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
               >
-                {sending ? 'Yuborilmoqda...' : 'Telegramga yuborish'}
+                {sending ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Yuborilmoqda...
+                  </>
+                ) : (
+                  'Telegramga yuborish'
+                )}
               </button>
             </div>
           </div>
