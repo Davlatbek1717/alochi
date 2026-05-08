@@ -29,7 +29,7 @@ export class AnalyticsService {
         }>
       >(
         `SELECT lesson_id, lesson_title, pass_rate, total_students, passed, avg_sessions, feedback_avg
-         FROM lesson_stats_mv WHERE tenant_id = $1`,
+         FROM lesson_stats_mv WHERE tenant_id = $1::uuid`,
         tenantId,
       );
       return rows.map((r) => ({
@@ -65,7 +65,7 @@ export class AnalyticsService {
         }>
       >(
         `SELECT branch_id, branch_name, total_students, total_sessions, lessons_passed, pass_rate
-         FROM branch_stats_mv WHERE tenant_id = $1`,
+         FROM branch_stats_mv WHERE tenant_id = $1::uuid`,
         tenantId,
       );
       return rows.map((r) => ({
@@ -544,7 +544,12 @@ export class AnalyticsService {
     // Always compute Postgres-backed metrics (guaranteed data even without CH).
     let pgRows: PgAggRow[] = [];
     try {
-      const tenantIds = tenants.map((t) => t.id).join(',');
+      // Pass each tenant id as a parameter — concatenating raw UUIDs into
+      // the SQL string would have Postgres parse them as numeric literals
+      // (the leading hex digits before the first hyphen). $1::uuid casts
+      // each placeholder properly.
+      const placeholders = tenants.map((_, i) => `$${i + 1}::uuid`).join(',');
+      const params = tenants.map((t) => t.id);
       pgRows = await this.prisma.$queryRawUnsafe<PgAggRow[]>(
         `SELECT
            u.tenant_id::text,
@@ -560,8 +565,9 @@ export class AnalyticsService {
          FROM users u
          LEFT JOIN student_progress sp ON sp.student_id = u.id
          LEFT JOIN analytics_events  ae ON ae.tenant_id  = u.tenant_id
-         WHERE u.tenant_id = ANY(ARRAY[${tenantIds}]::uuid[])
+         WHERE u.tenant_id IN (${placeholders})
          GROUP BY u.tenant_id`,
+        ...params,
       );
     } catch (err) {
       this.logger.warn(
