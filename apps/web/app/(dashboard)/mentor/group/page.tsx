@@ -349,7 +349,15 @@ export default function MentorGroupPage() {
     return (
       <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center max-w-sm w-full space-y-3">
-          <p className="text-rose-800 text-sm font-bold">{error}</p>
+          <div className="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-2">
+            <p className="text-rose-800 text-sm font-bold">{error}</p>
+            <p className="text-rose-700 text-xs">
+              Filadmin orqali sizga guruh tayinlanishi kerak.{' '}
+              <a href="/filadmin/groups" className="underline font-semibold hover:text-rose-900">
+                Guruhlarni boshqarish →
+              </a>
+            </p>
+          </div>
           <button
             type="button"
             onClick={loadStudents}

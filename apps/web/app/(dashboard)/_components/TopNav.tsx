@@ -60,6 +60,7 @@ const NAV: Record<string, NavEntry[]> = {
       items: [
         { href: '/superadmin/users', icon: <Users size={14} />, label: 'Foydalanuvchilar' },
         { href: '/superadmin/blocked-students', icon: <AlertTriangle size={14} />, label: "Bloklangan o'quvchilar" },
+        { href: '/superadmin/groups', icon: <Users size={14} />, label: 'Guruhlar' },
       ],
     },
     {
@@ -147,6 +148,7 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/filadmin/students', icon: <Users size={14} />, label: "O'quvchilar" },
         { href: '/filadmin/blocked-students', icon: <AlertTriangle size={14} />, label: 'Bloklanganlar' },
         { href: '/filadmin/warnings', icon: <AlertTriangle size={14} />, label: 'Ogohlantirish' },
+        { href: '/filadmin/groups', icon: <Users size={14} />, label: 'Guruhlar' },
       ],
     },
     {

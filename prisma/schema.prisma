@@ -43,6 +43,7 @@ model Tenant {
   createdAt         DateTime @default(now()) @map("created_at")
 
   branches                 Branch[]
+  groups                   Group[]
   users                    User[]
   lessons                  Lesson[]
   certificates             Certificate[]
@@ -86,9 +87,27 @@ model Branch {
   tenant  Tenant         @relation(fields: [tenantId], references: [id])
   users   User[]
   devices BranchDevice[]
+  groups  Group[]
 
   @@index([tenantId])
   @@map("branches")
+}
+
+model Group {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  branchId  String   @map("branch_id") @db.Uuid
+  name      String
+  mentorId  String?  @map("mentor_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, name])
+  @@index([tenantId, branchId])
+  @@map("groups")
 }
 
 model User {

@@ -251,8 +251,14 @@ export default function MentorDashboard() {
       <div className="max-w-lg mx-auto px-4 pt-5 pb-6 space-y-5">
         {/* Group assignment error */}
         {groupError && (
-          <section className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+          <section className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-2">
             <p className="text-rose-800 text-sm font-bold">{groupError}</p>
+            <p className="text-rose-700 text-xs">
+              Filadmin orqali sizga guruh tayinlanishi kerak.{' '}
+              <a href="/filadmin/groups" className="underline font-semibold hover:text-rose-900">
+                Guruhlarni boshqarish →
+              </a>
+            </p>
           </section>
         )}
         {/* Today snapshot — attendance + group + tasks */}

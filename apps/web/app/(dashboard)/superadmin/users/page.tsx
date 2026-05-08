@@ -26,6 +26,7 @@ interface User {
   status: string;
   phone?: string;
   branchId?: string;
+  groupId?: string;
 }
 
 const ROLES = ['student', 'mentor', 'manager', 'filadmin', 'superadmin'];
@@ -83,6 +84,8 @@ export default function SuperadminUsersPage() {
     phone: '',
   });
   const [editSaving, setEditSaving] = useState(false);
+  const [groups, setGroups] = useState<{ id: string; name: string; branchId: string }[]>([]);
+  const [editGroupId, setEditGroupId] = useState('');
 
   // Password reset
   const [resetting, setResetting] = useState<User | null>(null);
@@ -96,6 +99,20 @@ export default function SuperadminUsersPage() {
   async function loadBranches() {
     const res = await apiRequest<Branch[]>('/branches', {}, token());
     setBranches(res.data);
+  }
+
+  async function loadGroupsForBranch(branchId: string) {
+    if (!branchId) { setGroups([]); return; }
+    try {
+      const res = await apiRequest<{ id: string; name: string; branchId: string }[]>(
+        `/groups?branchId=${branchId}`,
+        {},
+        token(),
+      );
+      setGroups(res.data ?? []);
+    } catch {
+      setGroups([]);
+    }
   }
 
   async function loadUsers(role = filterRole, branchId = filterBranch) {
@@ -117,6 +134,16 @@ export default function SuperadminUsersPage() {
     loadBranches().catch(() => {});
     loadUsers();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When role or branch changes in edit form, reload groups
+  useEffect(() => {
+    if (!editing) return;
+    if ((editForm.role === 'student' || editForm.role === 'mentor') && editForm.branchId) {
+      loadGroupsForBranch(editForm.branchId).catch(() => {});
+    } else {
+      setGroups([]);
+    }
+  }, [editForm.role, editForm.branchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function applyFilter(role: string, branchId: string) {
     setFilterRole(role);
@@ -178,6 +205,12 @@ export default function SuperadminUsersPage() {
       branchId: u.branchId ?? '',
       phone: u.phone ?? '',
     });
+    setEditGroupId(u.groupId ?? '');
+    if (u.branchId && (u.role === 'student' || u.role === 'mentor')) {
+      loadGroupsForBranch(u.branchId).catch(() => {});
+    } else {
+      setGroups([]);
+    }
   }
 
   async function saveEdit() {
@@ -197,6 +230,9 @@ export default function SuperadminUsersPage() {
             role: editForm.role,
             branchId: editForm.branchId || null,
             phone: editForm.phone || null,
+            groupId: (editForm.role === 'student' || editForm.role === 'mentor')
+              ? (editGroupId || null)
+              : null,
           }),
         },
         token(),
@@ -574,6 +610,24 @@ export default function SuperadminUsersPage() {
               </select>
             </div>
           </div>
+          {(editForm.role === 'student' || editForm.role === 'mentor') && (
+            <div>
+              <label className="block text-xs text-[#94a3b8] mb-1">Guruh</label>
+              <div className="relative">
+                <select
+                  value={editGroupId}
+                  onChange={(e) => setEditGroupId(e.target.value)}
+                  className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-8"
+                >
+                  <option value="">— guruhsiz —</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              </div>
+            </div>
+          )}
           <div>
             <label
               htmlFor="edit-uphone"
