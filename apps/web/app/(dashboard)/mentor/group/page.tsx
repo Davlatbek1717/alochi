@@ -449,7 +449,7 @@ export default function MentorGroupPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-4 pb-28 md:pb-16 space-y-3 max-w-lg mx-auto">
         {/* Search + bulk actions */}
         <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 space-y-3">
           <div className="relative">
@@ -557,8 +557,9 @@ export default function MentorGroupPage() {
       {/* Sticky auto-save status pill — replaces the manual save button.
           Edits persist automatically after a brief debounce, so the UI
           here is just a passive indicator. Compact + centred so it
-          doesn't dominate the bottom of the screen. */}
-      <div className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] px-4 pt-3 pointer-events-none">
+          doesn't dominate the bottom of the screen.
+          Sits above BottomNav on mobile (bottom-16 md:bottom-0). */}
+      <div className="fixed bottom-20 md:bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)] px-4 pt-3 pointer-events-none">
         <div className="max-w-lg mx-auto pb-2 flex justify-center">
           <SaveStatusPill state={saveState} error={saveError} onRetry={persist} />
         </div>
@@ -695,7 +696,7 @@ function StudentCard({
               aria-label={STATUS_LABEL[s]}
               aria-pressed={student.status === s}
               title={STATUS_LABEL[s]}
-              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
                 student.status === s
                   ? `ring-2 ${STATUS_BG[s]}`
                   : 'bg-[#f7f4ef] hover:bg-[#ede9e1]'

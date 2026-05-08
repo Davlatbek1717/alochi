@@ -184,13 +184,13 @@ export default function StudentDetailPage() {
           Guruhga qaytish
         </button>
 
-        <div className="flex items-center gap-4 relative z-10">
+        <div className="flex items-center gap-4 relative z-10 min-w-0">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-xl font-black shrink-0">
             {studentName ? getInitials(studentName) : '?'}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             {studentName ? (
-            <p className="text-white text-lg font-bold">{studentName}</p>
+            <p className="text-white text-lg font-bold truncate">{studentName}</p>
           ) : (
             <Skeleton className="h-5 w-32 bg-white/10" />
           )}
@@ -213,7 +213,7 @@ export default function StudentDetailPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-6 space-y-4">
+      <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
         {/* AI Analysis Card */}
         <div className="bg-gradient-to-br from-[#1e1b4b] to-[#1e293b] rounded-[18px] p-4 border border-purple-900/30 relative overflow-hidden">
           <div
@@ -307,20 +307,20 @@ export default function StudentDetailPage() {
             aria-label="Ota-onaga yuboriladigan xabar"
             className="w-full border border-[#ede9e1] rounded-xl p-3 text-sm text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 bg-[#f7f4ef]"
           />
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-2">
             <span className="text-[11px] text-[#94a3b8] font-mono">
               {message.length}/500
             </span>
             <div className="flex items-center gap-3">
               {sent && (
-                <span className="text-emerald-600 text-xs font-semibold">
+                <span className="text-emerald-600 text-xs font-semibold shrink-0">
                   Yuborildi ✓
                 </span>
               )}
               <button
                 onClick={sendToParent}
                 disabled={sending || !message.trim()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] disabled:bg-[#94a3b8] disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 w-full sm:w-auto min-h-[44px] px-4 py-2 bg-[#0d9488] hover:bg-[#0f766e] disabled:bg-[#94a3b8] disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
               >
                 {sending ? (
                   <>

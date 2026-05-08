@@ -105,15 +105,15 @@ export default function StudentVideoHistoryPage() {
             <ArrowLeft size={16} />
             Orqaga
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center shrink-0">
               <Video size={20} className="text-[#0d9488]" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               {loading && !studentName ? (
                 <Skeleton className="h-5 w-40 bg-white/10 mb-1" />
               ) : (
-                <p className="text-white text-base font-extrabold">
+                <p className="text-white text-base font-extrabold truncate">
                   {studentName || "O'quvchi"} — Video tarixi
                 </p>
               )}
@@ -126,7 +126,7 @@ export default function StudentVideoHistoryPage() {
       </div>
 
       {/* Content */}
-      <div className="px-4 pt-4 pb-8 space-y-3">
+      <div className="px-4 pt-4 pb-8 space-y-3 max-w-lg mx-auto">
         {loading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map((i) => (

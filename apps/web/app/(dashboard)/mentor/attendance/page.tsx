@@ -172,7 +172,7 @@ export default function MentorAttendancePage() {
   }, [students, search]);
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] pb-4">
+    <div className="min-h-full bg-[#f7f4ef] pb-4 md:pb-4">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative overflow-hidden">
         <div
@@ -238,7 +238,7 @@ export default function MentorAttendancePage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-4 pb-36 md:pb-24 space-y-3 max-w-lg mx-auto">
         {!branchId ? (
           <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center">
             <p className="text-rose-600 text-sm font-bold">
@@ -355,9 +355,9 @@ export default function MentorAttendancePage() {
         )}
       </div>
 
-      {/* Sticky save bar */}
+      {/* Sticky save bar — sits above BottomNav on mobile (md:bottom-0) */}
       {!loading && students.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#f7f4ef] via-[#f7f4ef] to-transparent pt-4 pb-[env(safe-area-inset-bottom)] px-4 pointer-events-none">
+        <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-gradient-to-t from-[#f7f4ef] via-[#f7f4ef] to-transparent pt-4 pb-[env(safe-area-inset-bottom)] px-4 pointer-events-none">
           <div className="max-w-lg mx-auto pointer-events-auto pb-2">
             <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 shadow-lg flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-full border bg-[#fffaf0] text-[#64748b] border-[#ede9e1] shrink-0">

@@ -360,7 +360,7 @@ export default function TesterExamQueuePage() {
   ];
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] pb-10">
+    <div className="min-h-full bg-[#f7f4ef] pb-10 md:pb-10">
       {/* Header — dark navy + amber accent (staff theme) */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
@@ -388,9 +388,9 @@ export default function TesterExamQueuePage() {
             </div>
           </div>
 
-          {/* Stats grid — 4 tiles */}
+          {/* Stats grid — 4 tiles (2-up on mobile, 4-up on md+) */}
           {loading ? (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-[#162032] rounded-[14px] p-3 space-y-1">
                   <Skeleton className="h-3 w-3" />
@@ -400,7 +400,7 @@ export default function TesterExamQueuePage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <StatTile icon={<Users size={13} className="text-[#f59e0b]" />} value={arrived.length} label="Keldi" />
               <StatTile icon={<CheckCircle size={13} className="text-emerald-400" />} value={doneCount} label="Topshirdi" />
               <StatTile icon={<Clock size={13} className="text-blue-400" />} value={waitingCount} label="Kutmoqda" />
@@ -508,7 +508,7 @@ export default function TesterExamQueuePage() {
                     Topshirayapti — <span className="text-white font-bold">{testingQuestionCount} ta savol bor</span>
                   </p>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     variant="success"
                     size="sm"
@@ -523,7 +523,7 @@ export default function TesterExamQueuePage() {
                     type="button"
                     onClick={() => cancelTesting(testingNow.id)}
                     disabled={pendingActions.has(testingNow.id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#94a3b8] bg-white/10 border border-white/10 px-3 py-2 rounded-xl hover:bg-white/15 transition-colors disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-extrabold text-[#94a3b8] bg-white/10 border border-white/10 px-3 py-2 rounded-xl hover:bg-white/15 transition-colors disabled:opacity-60 min-h-[44px]"
                   >
                     <XCircle size={13} />
                     Bekor qilish

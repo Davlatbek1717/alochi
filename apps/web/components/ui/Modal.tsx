@@ -126,7 +126,7 @@ export function Modal({
         {footer && (
           <div
             className={[
-              'flex justify-end gap-3 px-6 py-4 border-t rounded-b-3xl',
+              'flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-6 py-4 border-t rounded-b-3xl',
               t.border,
               t.footer,
             ].join(' ')}
