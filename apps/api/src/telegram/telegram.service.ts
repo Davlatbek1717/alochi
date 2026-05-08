@@ -44,6 +44,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     if (this.config.get('NODE_ENV') === 'production') {
       const webhookUrl = this.config.get<string>('TELEGRAM_WEBHOOK_URL');
       if (webhookUrl) {
+        // grammy webhook mode requires bot.init() — without it,
+        // handleUpdate() throws "Bot not initialized!" because the bot
+        // doesn't know its own identity (no api.getMe call yet) and the
+        // middleware chain refuses to dispatch.
+        await this.bot.init();
         await this.bot.api.setWebhook(webhookUrl);
         this.logger.log(`Telegram webhook: ${webhookUrl}`);
       }
