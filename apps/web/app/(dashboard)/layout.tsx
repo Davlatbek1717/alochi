@@ -49,6 +49,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname() ?? '';
   const [user, setUser] = useState<UserInfo | null>(null);
   const [brandName, setBrandName] = useState<string | null>(null);
+  // Two-stage gate: roleVerified flips true ONLY after the role-prefix
+  // effect has confirmed the URL matches the user's role. Children
+  // render only after that — without this gate, a wrong-role visitor
+  // would see one or two render cycles of the target page (and its
+  // useEffects firing data fetches) before the redirect completes.
+  const [roleVerified, setRoleVerified] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -84,14 +90,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!user || !pathname) return;
     const expectedPrefix = ROLE_PREFIX[user.role];
-    if (!expectedPrefix) return;
-    if (SHARED_PREFIXES.some((p) => pathname.startsWith(p))) return;
+    if (!expectedPrefix) {
+      // Unknown role — block rendering until the redirect (below) lands.
+      setRoleVerified(false);
+      return;
+    }
+    if (SHARED_PREFIXES.some((p) => pathname.startsWith(p))) {
+      setRoleVerified(true);
+      return;
+    }
     // Match prefix WITH a slash boundary so /student also covers
     // /student/lessons but /studentpolice (hypothetical) wouldn't
     // sneak through.
-    if (pathname === expectedPrefix) return;
-    if (pathname.startsWith(`${expectedPrefix}/`)) return;
-    // Wrong-role URL — pivot to the user's actual role home.
+    if (pathname === expectedPrefix || pathname.startsWith(`${expectedPrefix}/`)) {
+      setRoleVerified(true);
+      return;
+    }
+    // Wrong-role URL — pivot to the user's actual role home and keep
+    // the gate closed so the wrong-role children never mount.
+    setRoleVerified(false);
     const home = ROLE_HOME[user.role] ?? '/';
     router.replace(home);
   }, [user, pathname, router]);
@@ -163,12 +180,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             round-trip through tile menus. */}
         {user && <TopNav role={user.role} />}
 
-        {/* Main content */}
+        {/* Main content — only renders once role is verified. Until
+            then a thin skeleton placeholder sits in place so the
+            wrong-role page can't fire any of its data-fetch effects. */}
         <main
           id="main-content"
           className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0"
         >
-          {children}
+          {roleVerified ? (
+            children
+          ) : (
+            <div className="min-h-full bg-[#f7f4ef] p-5 space-y-4">
+              <div className="h-8 w-48 bg-[#ede9e1] rounded-xl animate-pulse" />
+              <div className="h-32 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] animate-pulse" />
+              <div className="h-32 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] animate-pulse" />
+            </div>
+          )}
         </main>
 
         {/* Bottom nav — mobile only */}

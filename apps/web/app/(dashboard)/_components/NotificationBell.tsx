@@ -1,8 +1,20 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { Bell, AlertTriangle, XCircle, ClipboardList, CheckCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Bell,
+  AlertTriangle,
+  XCircle,
+  ClipboardList,
+  CheckCircle,
+  Award,
+  Video,
+  Zap,
+  Trophy,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Button } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Notif = {
   id: string;
@@ -14,10 +26,14 @@ type Notif = {
 };
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  warning:    <AlertTriangle size={14} className="text-amber-400" />,
-  blocked:    <XCircle size={14} className="text-rose-400" />,
-  delegation: <ClipboardList size={14} className="text-blue-400" />,
-  task:       <CheckCircle size={14} className="text-emerald-400" />,
+  warning:       <AlertTriangle size={14} className="text-amber-400" />,
+  blocked:       <XCircle size={14} className="text-rose-400" />,
+  delegation:    <ClipboardList size={14} className="text-blue-400" />,
+  task:          <CheckCircle size={14} className="text-emerald-400" />,
+  cert_earned:   <Award size={14} className="text-amber-400" />,
+  video_missed:  <Video size={14} className="text-rose-400" />,
+  xp_updated:    <Zap size={14} className="text-amber-400" />,
+  challenge_win: <Trophy size={14} className="text-emerald-400" />,
 };
 
 export function NotificationBell() {
@@ -26,16 +42,35 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0);
   const dropRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const t = localStorage.getItem('accessToken') ?? '';
+  const load = useCallback(() => {
+    const t = typeof window !== 'undefined' ? localStorage.getItem('accessToken') ?? '' : '';
     if (!t) return;
     apiRequest<Notif[]>('/notifications/my', {}, t)
       .then((res) => {
         setNotifs(res.data.slice(0, 5));
         setUnread(res.data.filter((n) => !n.isRead).length);
       })
-      .catch(() => {});
+      .catch(() => {
+        // The bell is a passive surface — a transient API failure
+        // shouldn't toast. Stale-but-not-empty list survives until
+        // the next tab focus or socket event.
+      });
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh when the user comes back to the tab.
+  useFocusRevalidate(load);
+
+  // Live: socket events that produce a Notification row server-side
+  // also dispatch alochi:revalidate via DuelNotificationProvider, so
+  // the bell can pick up new items without polling.
+  useRevalidateOnEvent(
+    ['cert:earned', 'videocheckin:updated', 'status:updated', 'kpi:updated'],
+    load,
+  );
 
   useEffect(() => {
     function handler(e: MouseEvent) {
