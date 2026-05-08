@@ -15,7 +15,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { tashkentToday } from '@/lib/tashkent-date';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
@@ -42,10 +42,15 @@ export default function MentorDashboard() {
   const [branchIdForPanel, setBranchIdForPanel] = useState('');
   const [groupError, setGroupError] = useState('');
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const groupId = getGroupIdFromToken();
-    const branchId = getBranchIdFromToken();
+    // Use the live /users/my-profile lookup so a group reassignment
+    // takes effect immediately — without it the mentor would have to
+    // log out and back in to refresh their JWT's stale groupId.
+    const [groupId, branchId] = await Promise.all([
+      fetchMyGroupId(),
+      fetchMyBranchId(),
+    ]);
     if (branchId) setBranchIdForPanel(branchId);
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setMentorName(user.name ?? '');

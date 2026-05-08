@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getGroupIdFromToken } from '@/lib/jwt';
+import { fetchMyGroupId } from '@/lib/jwt';
 import { tashkentToday } from '@/lib/tashkent-date';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
@@ -92,7 +92,8 @@ export default function MentorGroupPage() {
   }, [students]);
 
   const loadStudents = useCallback(async () => {
-    const groupId = getGroupIdFromToken();
+    // Live lookup — JWT may be stale after a fresh group assignment.
+    const groupId = await fetchMyGroupId();
     if (!groupId) {
       setError('Guruh biriktirilmagan — superadmin orqali sizga guruh tayinlanishi kerak.');
       setLoading(false);

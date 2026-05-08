@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Sparkles, AlertTriangle, Send, Loader2 } from 'lucide-react';
 import { apiRequest, ApiError } from '@/lib/api';
-import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { Skeleton, useToast } from '@/components/ui';
 
 type AnalysisResult = {
@@ -68,26 +68,10 @@ export default function StudentDetailPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const groupId = getGroupIdFromToken();
-    const branchId = getBranchIdFromToken();
-    const rosterPath = groupId
-      ? `/users/group/${groupId}`
-      : branchId
-        ? `/users/by-branch/${branchId}`
-        : null;
 
-    const fetchStudentName = rosterPath
-      ? apiRequest<Student[]>(rosterPath, {}, token)
-          .then((res) => {
-            const found = res.data.find((u) => u.id === studentId);
-            if (found) setStudentName(found.name);
-          })
-          .catch(() => {
-            // Name fetch failure is non-fatal — page still shows analysis
-          })
-      : Promise.resolve();
-
-    const fetchAnalysis = apiRequest<AnalysisResult>(
+    // Tahlil / status / progress can fire immediately — they're keyed by
+    // studentId and don't need the mentor's group/branch.
+    apiRequest<AnalysisResult>(
       `/ai/analyze-errors?studentId=${studentId}`,
       {},
       token,
@@ -96,23 +80,39 @@ export default function StudentDetailPage() {
       .catch(() => setError("Tahlil ma'lumotlarini yuklab bo'lmadi"))
       .finally(() => setLoadingAnalysis(false));
 
-    const fetchStatus = apiRequest<LatestStatus>(`/status/${studentId}`, {}, token)
+    apiRequest<LatestStatus>(`/status/${studentId}`, {}, token)
       .then((res) => setLatestStatus(res.data))
       .catch(() => {
         // Status fetch failure is non-fatal
       });
 
-    const fetchProgress = apiRequest<ProgressSummary>(
-      `/progress/${studentId}/summary`,
-      {},
-      token,
-    )
+    apiRequest<ProgressSummary>(`/progress/${studentId}/summary`, {}, token)
       .then((res) => setProgressSummary(res.data))
       .catch(() => {
         // Progress fetch failure is non-fatal
       });
 
-    Promise.all([fetchStudentName, fetchAnalysis, fetchStatus, fetchProgress]);
+    // Roster lookup needs the live group/branch id — JWT may be stale
+    // after a recent reassignment, so we hit /users/my-profile first.
+    (async () => {
+      const [groupId, branchId] = await Promise.all([
+        fetchMyGroupId(),
+        fetchMyBranchId(),
+      ]);
+      const rosterPath = groupId
+        ? `/users/group/${groupId}`
+        : branchId
+          ? `/users/by-branch/${branchId}`
+          : null;
+      if (!rosterPath) return;
+      try {
+        const res = await apiRequest<Student[]>(rosterPath, {}, token);
+        const found = res.data.find((u) => u.id === studentId);
+        if (found) setStudentName(found.name);
+      } catch {
+        // Name fetch failure is non-fatal — page still shows analysis
+      }
+    })();
   }, [studentId]);
 
   // Pre-fill the parent message with the AI summary when it lands, but only

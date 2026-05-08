@@ -11,7 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
@@ -55,10 +55,12 @@ export default function MentorStudentsPage() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const groupId = getGroupIdFromToken();
-    const branchId = getBranchIdFromToken();
+    const [groupId, branchId] = await Promise.all([
+      fetchMyGroupId(),
+      fetchMyBranchId(),
+    ]);
     if (!groupId && !branchId) {
       setError("Filial yoki guruh topilmadi. Administrator bilan bog'laning.");
       setLoading(false);
