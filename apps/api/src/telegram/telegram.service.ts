@@ -65,14 +65,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const payload = ctx.match?.trim();
       const telegramId = ctx.from?.id;
 
-      // Student self-linking: /start link:<userId>
-      if (payload && payload.startsWith('link:') && telegramId) {
+      // Student self-linking: /start link_<userId>
+      // Underscore (not colon) — Telegram's `start` param only allows
+      // [A-Za-z0-9_-] and silently strips colons before they reach us.
+      if (payload && payload.startsWith('link_') && telegramId) {
         await this.videoCheckinHandler.handleStart(ctx, payload);
         return;
       }
 
-      if (payload && payload.includes(':') && telegramId) {
-        const [tenantId, studentId] = payload.split(':');
+      // Parent self-linking: /start <tenantId>_<studentId>
+      // Same constraint as above — colons drop, so we use underscore.
+      if (payload && payload.includes('_') && telegramId) {
+        const [tenantId, studentId] = payload.split('_');
         try {
           const student = await this.prisma.user.findFirst({
             where: { id: studentId, tenantId, role: 'student' },

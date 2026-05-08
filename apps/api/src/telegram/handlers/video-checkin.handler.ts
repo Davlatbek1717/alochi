@@ -17,14 +17,17 @@ export class VideoCheckinHandler {
   ) {}
 
   /**
-   * Handles `/start link:<userId>` payload — links the student's Telegram account.
+   * Handles `/start link_<userId>` payload — links the student's Telegram
+   * account. The underscore separator (instead of `:`) is mandatory:
+   * Telegram's deep-link `start` parameter only accepts `[A-Za-z0-9_-]`,
+   * and silently strips colons before the bot ever sees them.
    */
   async handleStart(ctx: Context, payload: string): Promise<void> {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
 
-    // payload is "link:<userId>"
-    const userId = payload.replace(/^link:/, '').trim();
+    // payload is "link_<userId>"
+    const userId = payload.replace(/^link_/, '').trim();
     if (!userId) {
       await ctx.reply("Havola noto'g'ri. Profilingizdan qayta urinib ko'ring.");
       return;

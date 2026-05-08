@@ -285,7 +285,7 @@ export default function StudentProfilePage() {
 
   const tgLink =
     profile && BOT_USERNAME
-      ? `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}:${profile.id}`
+      ? `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}_${profile.id}`
       : '';
 
   const totalXp = xp?.totalXp ?? 0;
@@ -570,7 +570,7 @@ export default function StudentProfilePage() {
                 Faqat bot ichida yozilgan video qabul qilinadi (forward qilinmagan).
               </p>
               <a
-                href={`https://t.me/${BOT_USERNAME}?start=link:${profile.id}`}
+                href={`https://t.me/${BOT_USERNAME}?start=link_${profile.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 bg-[#1cb0f6] text-white font-extrabold text-sm px-4 py-2.5 rounded-xl hover:bg-[#0ea5e9] transition-colors min-h-[44px]"

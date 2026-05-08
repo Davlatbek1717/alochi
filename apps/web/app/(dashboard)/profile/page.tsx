@@ -39,7 +39,7 @@ export default function ProfilePage() {
 
   function telegramDeepLink(): string {
     if (!profile || !BOT_USERNAME) return '';
-    return `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}:${profile.id}`;
+    return `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}_${profile.id}`;
   }
 
   if (loading) {
