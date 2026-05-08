@@ -41,3 +41,8 @@ export function getTenantIdFromToken(): string | null {
 export function getRoleFromToken(): string | null {
   return decodePayload()?.role ?? null;
 }
+
+/** Returns the authenticated user's own ID (JWT `sub` claim). */
+export function getSubFromToken(): string | null {
+  return decodePayload()?.sub ?? null;
+}

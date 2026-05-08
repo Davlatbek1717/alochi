@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { EnrollmentCamera } from './_components/EnrollmentCamera';
+import { apiRequest } from '@/lib/api';
 
 export default function EnrollPage() {
   const router = useRouter();
@@ -11,23 +12,14 @@ export default function EnrollPage() {
 
   async function handleEmbeddings(embeddings: number[][]) {
     setStage('uploading');
+    setError('');
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      let userId = '';
-      let tenantId = '';
-      if (token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userId = payload.userId || payload.sub || '';
-          tenantId = payload.tenantId || '';
-        } catch { /* JWT parse failed */ }
-      }
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/face/enroll`, {
+      // user_id and tenant_id are derived server-side from the JWT.
+      // We only send embeddings + enrolled_via — no stale localStorage IDs.
+      await apiRequest('/face/enroll', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ user_id: userId, tenant_id: tenantId, embeddings, enrolled_via: 'web' }),
+        body: JSON.stringify({ embeddings, enrolled_via: 'web' }),
       });
-      if (!res.ok) throw new Error("Ro'yxatdan o'tkazib bo'lmadi");
       setStage('done');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Xato yuz berdi');
@@ -76,7 +68,7 @@ export default function EnrollPage() {
             </div>
             <button
               onClick={() => setStage('camera')}
-              className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm"
+              className="w-full bg-[#0f172a] text-white py-4 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0f172a] focus:ring-offset-2"
             >
               Boshlash
             </button>
@@ -112,7 +104,7 @@ export default function EnrollPage() {
             </div>
             <button
               onClick={() => router.push('/profile')}
-              className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm"
+              className="w-full bg-[#0f172a] text-white py-3.5 rounded-xl font-bold text-sm hover:bg-[#1e293b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0f172a] focus:ring-offset-2"
             >
               Profilga qaytish
             </button>

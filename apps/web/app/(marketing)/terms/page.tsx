@@ -1,6 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: "Foydalanish shartlari — A'lochi",
@@ -9,13 +10,13 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="min-h-screen bg-[#fffaf0]">
+    <main className="min-h-screen bg-[#f7f4ef]">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 py-16 sm:py-24">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6d28d9] hover:text-[#5b21b6] mb-10 transition-colors"
         >
-          ← Bosh sahifaga
+          <ArrowLeft size={15} strokeWidth={2.75} /> Bosh sahifaga
         </Link>
 
         <h1 className="text-3xl sm:text-4xl font-extrabold text-[#1e1b4b] tracking-tight">

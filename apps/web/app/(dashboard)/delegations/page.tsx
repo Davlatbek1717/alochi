@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Circle,
@@ -10,9 +10,11 @@ import {
   Ban,
   ChevronRight,
   X as XIcon,
+  GitBranch,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Modal, useToast } from '@/components/ui';
+import { Modal, useToast, EmptyState } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { formatDateShort } from '@/lib/date-uz';
 
 type DelegationStatus =
@@ -96,10 +98,9 @@ export default function DelegationsPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
 
-  function load() {
-    const token = localStorage.getItem('accessToken') ?? '';
+  const load = useCallback(() => {
     setLoading(true);
-    apiRequest<ApiDelegation[]>('/delegations', {}, token)
+    apiRequest<ApiDelegation[]>('/delegations')
       .then((res) => {
         setDelegations(
           res.data.map((d) => ({
@@ -115,13 +116,16 @@ export default function DelegationsPage() {
           })),
         );
       })
-      .catch(() => {})
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Delegatsiyalar yuklanmadi'))
       .finally(() => setLoading(false));
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+
+  useFocusRevalidate(load);
 
   async function doCancel() {
     if (!cancelTarget) return;
@@ -131,14 +135,12 @@ export default function DelegationsPage() {
     }
     setCancelling(true);
     try {
-      const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest(
         `/delegations/${cancelTarget.id}`,
         {
           method: 'DELETE',
           body: JSON.stringify({ reason: cancelReason.trim() }),
         },
-        token,
       );
       toast.success('Delegatsiya bekor qilindi');
       setCancelTarget(null);
@@ -171,7 +173,7 @@ export default function DelegationsPage() {
         <div className="relative z-10 flex items-end justify-between">
           <div>
             <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">
-              Manager
+              Boshqaruv
             </p>
             <p className="text-white text-xl font-bold">Delegatsiyalar</p>
           </div>
@@ -219,8 +221,20 @@ export default function DelegationsPage() {
             <div className="w-7 h-7 border-[3px] border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-10 text-center">
-            <p className="text-[#64748b] text-sm">Delegatsiya topilmadi</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1]">
+            <EmptyState
+              icon={<GitBranch size={28} />}
+              title={
+                activeTab === 'all'
+                  ? "Delegatsiyalar yo‘q"
+                  : `${STATUS_CONFIG[activeTab as DelegationStatus]?.label ?? activeTab} delegatsiyalar yo‘q`
+              }
+              description={
+                activeTab === 'all'
+                  ? 'Yangi delegatsiya yaratish uchun "Yangi" tugmasini bosing.'
+                  : "Boshqa filtr tanlang yoki yangi delegatsiya qo‘shing."
+              }
+            />
           </div>
         ) : (
           <div className="space-y-3">

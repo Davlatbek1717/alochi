@@ -1,29 +1,40 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, XCircle, Trophy, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, EmptyState } from '@/components/ui';
+import { Button, Skeleton, EmptyState, useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type ReviewItem = { word: string; easeFactor: number; interval: number };
 
 export default function ReviewPage() {
   const router = useRouter();
+  const toast = useToast();
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [current, setCurrent] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [done, setDone] = useState(false);
   const [correct, setCorrect] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    setLoading(true);
+    setLoadError('');
     apiRequest<ReviewItem[]>('/ai/spaced-repetition/daily-review', {}, token)
       .then((res) => setItems(res.data ?? []))
-      .catch(() => {})
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Yuklanmadi'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
 
   async function answer(isCorrect: boolean) {
     if (submitting) return;
@@ -34,8 +45,8 @@ export default function ReviewPage() {
         method: 'POST',
         body: JSON.stringify({ word: items[current].word, correct: isCorrect }),
       }, token);
-    } catch {
-      // silently continue
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Javob saqlanmadi');
     }
     if (isCorrect) setCorrect((c) => c + 1);
     if (current + 1 >= items.length) {
@@ -61,6 +72,27 @@ export default function ReviewPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
+        <div className="bg-white rounded-[24px] border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
+          <p className="text-5xl" aria-hidden>📡</p>
+          <p className="text-[#0f172a] font-extrabold text-base">Yuklab bo&apos;lmadi</p>
+          <p className="text-[#64748b] text-sm">{loadError}</p>
+          <p className="text-[#94a3b8] text-xs">Internet aloqasini tekshiring</p>
+          <Button
+            variant="duo"
+            size="lg"
+            fullWidth
+            onClick={load}
+          >
+            Qayta urinish
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
@@ -72,9 +104,8 @@ export default function ReviewPage() {
             description="Darslarni bajarib so'z boyligingizni oshiring."
             action={
               <Button
-                variant="secondary"
+                variant="duo"
                 size="lg"
-                className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !rounded-2xl"
                 onClick={() => router.push('/student')}
               >
                 Bosh sahifaga
@@ -90,23 +121,25 @@ export default function ReviewPage() {
     const pct = Math.round((correct / items.length) * 100);
     return (
       <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6 text-center">
-        <Trophy size={56} className="text-amber-500 mb-4" />
-        <h2 className="text-2xl font-black text-gray-900 mb-1">Barakalla!</h2>
-        <p className="text-gray-500 text-sm mb-6">{items.length} ta so&apos;zdan {correct} tasini bildingiz</p>
-        <div className="w-full max-w-xs bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <Trophy size={56} className="text-[#fbbf24] mb-4" />
+        <h2 className="text-2xl font-black text-[#0f172a] mb-1" style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}>
+          Barakalla!
+        </h2>
+        <p className="text-[#64748b] text-sm mb-6">{items.length} ta so&apos;zdan {correct} tasini bildingiz</p>
+        <div className="w-full max-w-xs bg-white rounded-2xl p-5 shadow-sm border-[1.5px] border-[#ede9e1] mb-6">
           <div className="flex justify-between text-sm font-semibold mb-2">
-            <span className="text-emerald-600">To&apos;g&apos;ri</span>
+            <span className="text-[#58cc02]">To&apos;g&apos;ri</span>
             <span className="text-[#0f172a]">{correct}/{items.length}</span>
           </div>
-          <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div className="h-3 bg-[#f3eedf] rounded-full overflow-hidden">
+            <div className="h-full bg-[#58cc02] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-3xl font-black text-gray-900 mt-3">{pct}%</p>
+          <p className="text-3xl font-black text-[#0f172a] mt-3">{pct}%</p>
         </div>
         <Button
-          variant="primary"
+          variant="duo"
           size="lg"
-          className="!bg-indigo-600 hover:!bg-indigo-700 !border-indigo-600 !rounded-2xl !px-8"
+          className="!px-8"
           onClick={() => router.push('/student')}
         >
           Bosh sahifaga
@@ -116,7 +149,7 @@ export default function ReviewPage() {
   }
 
   const item = items[current];
-  const progress = ((current) / items.length) * 100;
+  const progress = (current / items.length) * 100;
 
   return (
     <div className="min-h-full bg-[#f7f4ef] flex flex-col">
@@ -125,7 +158,7 @@ export default function ReviewPage() {
         <div className="flex items-center justify-between mb-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl">
           <button
             onClick={() => router.push('/student')}
-            className="text-[#94a3b8] flex items-center gap-1 text-sm hover:text-white transition-colors"
+            className="text-[#94a3b8] flex items-center gap-1 text-sm hover:text-white transition-colors min-h-[44px]"
           >
             <ArrowLeft size={16} /> Chiqish
           </button>
@@ -133,7 +166,7 @@ export default function ReviewPage() {
         </div>
         <div className="max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#f59e0b] rounded-full transition-all duration-300"
+            className="h-full bg-[#fbbf24] rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -143,10 +176,11 @@ export default function ReviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <button
           onClick={() => setFlipped((f) => !f)}
-          className="w-full max-w-sm md:max-w-lg focus:outline-none"
+          className="w-full max-w-sm md:max-w-lg focus:outline-none focus:ring-2 focus:ring-[#58cc02] focus:ring-offset-2 rounded-[24px]"
+          aria-label={flipped ? 'Kartani yopish' : 'Kartani aylantirish'}
         >
           <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 md:p-14 text-center transition-all duration-200 ${
-            flipped ? 'bg-indigo-50 border-indigo-200' : 'border-[#ede9e1]'
+            flipped ? 'bg-[#ede9fe] border-[#a78bfa]' : 'border-[#ede9e1]'
           }`}>
             {!flipped ? (
               <>
@@ -158,7 +192,7 @@ export default function ReviewPage() {
               </>
             ) : (
               <>
-                <p className="text-sm font-semibold text-indigo-500 uppercase tracking-wider mb-3">Tarjima</p>
+                <p className="text-sm font-semibold text-[#6d28d9] uppercase tracking-wider mb-3">Tarjima</p>
                 <p className="text-2xl font-bold text-[#0f172a]">{item.word}</p>
                 <p className="text-[#94a3b8] text-sm mt-3">Bildingizmi?</p>
               </>
@@ -174,7 +208,7 @@ export default function ReviewPage() {
               fullWidth
               loading={submitting}
               icon={<XCircle size={18} />}
-              className="!bg-rose-50 !border-rose-200 !text-rose-600 hover:!bg-rose-100 !rounded-[18px] !py-4"
+              className="!bg-[#ff4b4b]/10 !border-[#ff4b4b]/30 !text-[#ff4b4b] hover:!bg-[#ff4b4b]/20 !rounded-[18px] !py-4 border-b-[3px]"
               onClick={() => answer(false)}
             >
               Bilmadim
@@ -185,7 +219,7 @@ export default function ReviewPage() {
               fullWidth
               loading={submitting}
               icon={<CheckCircle size={18} />}
-              className="!bg-emerald-50 !border-emerald-200 !text-emerald-600 hover:!bg-emerald-100 !rounded-[18px] !py-4"
+              className="!bg-[#58cc02]/10 !border-[#58cc02]/30 !text-[#58cc02] hover:!bg-[#58cc02]/20 !rounded-[18px] !py-4 border-b-[3px]"
               onClick={() => answer(true)}
             >
               Bildim

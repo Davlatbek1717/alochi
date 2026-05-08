@@ -1,9 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, UserPlus, Check, X, Swords, UserX } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, EmptyState, useToast } from '@/components/ui';
+import { Button, Skeleton, EmptyState, Mascot, useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Friend = { id: string; name: string; role: string; status: string };
 type PendingRequest = { id: string; name: string; role: string };
@@ -17,7 +19,7 @@ export default function FriendsPage() {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [friendId, setFriendId] = useState('');
@@ -28,24 +30,29 @@ export default function FriendsPage() {
   const [challenging, setChallenging] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    async function fetchData() {
-      try {
-        const [friendsRes, pendingRes] = await Promise.all([
-          apiRequest<Friend[]>('/social/friends', {}, token),
-          apiRequest<PendingRequest[]>('/social/friends/pending', {}, token),
-        ]);
-        setFriends(friendsRes.data);
-        setPending(pendingRes.data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Xato yuz berdi');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
+    setLoadError('');
+    Promise.all([
+      apiRequest<Friend[]>('/social/friends', {}, token),
+      apiRequest<PendingRequest[]>('/social/friends/pending', {}, token),
+    ])
+      .then(([friendsRes, pendingRes]) => {
+        setFriends(friendsRes.data ?? []);
+        setPending(pendingRes.data ?? []);
+      })
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Xato yuz berdi'))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh friend list when user returns to this tab
+  useFocusRevalidate(load);
+  // Refresh when duel or status events arrive (new challenge = new friend connection)
+  useRevalidateOnEvent(['status:updated'], load);
 
   async function handleRespond(id: string, accept: boolean) {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -80,15 +87,15 @@ export default function FriendsPage() {
       }, token);
       router.push(`/student/duel/${res.data.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Xato yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'Duel boshlashda xato');
     } finally {
       setChallenging(null);
     }
   }
 
   async function handleSendRequest() {
-    if (!friendId.trim() || !branchId.trim()) {
-      toast.warning("Barcha maydonlarni to'ldiring");
+    if (!friendId.trim()) {
+      toast.warning("Foydalanuvchi ID ni kiriting");
       return;
     }
     const token = localStorage.getItem('accessToken') ?? '';
@@ -96,21 +103,19 @@ export default function FriendsPage() {
     try {
       await apiRequest('/social/friends/request', {
         method: 'POST',
-        body: JSON.stringify({ friendId: friendId.trim(), branchId: branchId.trim() }),
+        body: JSON.stringify({
+          friendId: friendId.trim(),
+          ...(branchId.trim() ? { branchId: branchId.trim() } : {}),
+        }),
       }, token);
       toast.success("So'rov yuborildi!");
       setFriendId('');
       setBranchId('');
       setShowForm(false);
-      // Refetch pending and friends lists
-      const [friendsRes, pendingRes] = await Promise.all([
-        apiRequest<Friend[]>('/social/friends', {}, token),
-        apiRequest<PendingRequest[]>('/social/friends/pending', {}, token),
-      ]);
-      setFriends(friendsRes.data);
-      setPending(pendingRes.data);
+      // Refresh lists after sending request
+      load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Xato yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'So\'rov yuborilmadi');
     } finally {
       setSending(false);
     }
@@ -133,7 +138,7 @@ export default function FriendsPage() {
             variant="primary"
             size="sm"
             icon={<UserPlus size={14} />}
-            className="!bg-[#0d9488] hover:!bg-[#0f766e] !border-[#0d9488] !rounded-xl"
+            className="!bg-[#58cc02] hover:!bg-[#46a302] !border-[#46a302] !rounded-xl border-b-[3px]"
             onClick={() => setShowForm((v) => !v)}
           >
             Qo&apos;shish
@@ -142,36 +147,52 @@ export default function FriendsPage() {
       </div>
 
       <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-        {error && (
-          <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] px-4 py-3 rounded-[14px] text-sm">{error}</div>
+        {/* Load error */}
+        {loadError && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-rose-200 p-6 text-center space-y-3">
+            <Mascot expression="sad" size={80} className="mx-auto" />
+            <p className="text-[#0f172a] font-extrabold">Yuklab bo&apos;lmadi</p>
+            <p className="text-[#64748b] text-sm">{loadError}</p>
+            <p className="text-[#94a3b8] text-xs">Internet aloqasini tekshiring</p>
+            <Button variant="duo" size="md" onClick={load}>Qayta urinish</Button>
+          </div>
         )}
 
         {/* Add friend form */}
         {showForm && (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st</p>
-            <input
-              type="text"
-              placeholder="Foydalanuvchi ID"
-              aria-label="Do'st foydalanuvchi ID"
-              value={friendId}
-              onChange={(e) => setFriendId(e.target.value)}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-            />
-            <input
-              type="text"
-              placeholder="Filial ID"
-              aria-label="Filial ID"
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#0f172a]"
-            />
+            <div>
+              <label htmlFor="friend-id" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
+                Foydalanuvchi ID <span className="text-rose-500">*</span>
+              </label>
+              <input
+                id="friend-id"
+                type="text"
+                placeholder="Foydalanuvchi ID"
+                value={friendId}
+                onChange={(e) => setFriendId(e.target.value)}
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
+              />
+            </div>
+            <div>
+              <label htmlFor="branch-id" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
+                Filial ID <span className="text-[#94a3b8] font-normal">(ixtiyoriy)</span>
+              </label>
+              <input
+                id="branch-id"
+                type="text"
+                placeholder="Filial ID"
+                value={branchId}
+                onChange={(e) => setBranchId(e.target.value)}
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
+              />
+            </div>
             <Button
-              variant="secondary"
+              variant="duo"
               size="lg"
               fullWidth
               loading={sending}
-              className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
               onClick={handleSendRequest}
             >
               {sending ? 'Yuborilmoqda...' : "So'rov yuborish"}
@@ -203,7 +224,7 @@ export default function FriendsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {pending.map((req) => (
                     <div key={req.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 font-black text-sm shrink-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#fbbf24]/20 flex items-center justify-center text-[#92400e] font-black text-sm shrink-0">
                         {getInitials(req.name)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -213,15 +234,19 @@ export default function FriendsPage() {
                       <button
                         onClick={() => handleRespond(req.id, true)}
                         disabled={responding === req.id}
-                        className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-emerald-200 transition-colors"
+                        className="w-8 h-8 bg-[#58cc02]/15 text-[#46a302] rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-[#58cc02]/30 transition-colors"
                         aria-label="Qabul qilish"
                       >
-                        <Check size={15} />
+                        {responding === req.id ? (
+                          <span className="w-3 h-3 border border-[#46a302]/40 border-t-[#46a302] rounded-full animate-spin" />
+                        ) : (
+                          <Check size={15} />
+                        )}
                       </button>
                       <button
                         onClick={() => handleRespond(req.id, false)}
                         disabled={responding === req.id}
-                        className="w-8 h-8 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-rose-100 transition-colors"
+                        className="w-8 h-8 bg-[#ff4b4b]/10 text-[#ff4b4b] rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-[#ff4b4b]/20 transition-colors"
                         aria-label="Rad etish"
                       >
                         <X size={15} />
@@ -260,6 +285,7 @@ export default function FriendsPage() {
                         variant="secondary"
                         size="sm"
                         loading={challenging === f.id}
+                        disabled={!!challenging}
                         icon={<Swords size={12} />}
                         className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl !text-xs"
                         onClick={() => handleChallenge(f.id)}
@@ -275,11 +301,10 @@ export default function FriendsPage() {
             {/* Big add button if no friends and form not shown */}
             {friends.length === 0 && pending.length === 0 && !showForm && (
               <Button
-                variant="secondary"
+                variant="duo"
                 size="lg"
                 fullWidth
                 icon={<Users size={16} />}
-                className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl"
                 onClick={() => setShowForm(true)}
               >
                 Do&apos;st qo&apos;shish

@@ -3,6 +3,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, GitBranch, Calendar, ChevronDown } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken } from '@/lib/jwt';
+import { useToast } from '@/components/ui';
 
 type BranchUser = {
   id: string;
@@ -20,6 +22,7 @@ const ROLE_LABELS: Record<string, string> = {
 function NewDelegationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -37,14 +40,8 @@ function NewDelegationForm() {
   const [myBranchId, setMyBranchId] = useState<string>('');
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken') ?? '';
-    let branchId = '';
-    try {
-      const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { branchId?: string };
-      branchId = user.branchId ?? '';
-    } catch {
-      // malformed JSON — branchId stays empty
-    }
+    // branchId is derived from the JWT — no stale localStorage object needed.
+    const branchId = getBranchIdFromToken() ?? '';
     setMyBranchId(branchId);
 
     if (!branchId) {
@@ -52,10 +49,11 @@ function NewDelegationForm() {
       return;
     }
 
-    apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`, {}, token)
+    apiRequest<BranchUser[]>(`/users/by-branch/${branchId}`)
       .then((res) => setStaffUsers(res.data.filter((u) => u.role !== 'student')))
-      .catch(() => {})
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Xodimlar yuklanmadi'))
       .finally(() => setLoadingUsers(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,8 +64,6 @@ function NewDelegationForm() {
     }
     setError('');
     setSubmitting(true);
-
-    const token = localStorage.getItem('accessToken') ?? '';
 
     try {
       await apiRequest('/delegations', {
@@ -82,7 +78,7 @@ function NewDelegationForm() {
           startsAt,
           endsAt,
         }),
-      }, token);
+      });
       router.push('/delegations');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xatolik yuz berdi');

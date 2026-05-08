@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, GitBranch, Calendar, Shield, FileText, CheckCircle, XCircle, AlertTriangle, CreditCard, Users, Clock, Printer } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Skeleton } from '@/components/ui';
 import { formatDateShort, formatDateTime } from '@/lib/date-uz';
 
 type Delegation = {
@@ -75,18 +76,25 @@ export default function DelegationDetailPage() {
   const [delegation, setDelegation] = useState<Delegation | null>(null);
   const [audit, setAudit] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     if (!id) return;
-    const token = localStorage.getItem('accessToken') ?? '';
+    setLoading(true);
+    setLoadError('');
 
     async function fetchAll() {
       try {
         const [delRes, auditRes] = await Promise.allSettled([
-          apiRequest<Delegation>(`/delegations/${id}`, {}, token),
-          apiRequest<AuditLogEntry[]>(`/delegations/${id}/audit`, {}, token),
+          apiRequest<Delegation>(`/delegations/${id}`),
+          apiRequest<AuditLogEntry[]>(`/delegations/${id}/audit`),
         ]);
-        if (delRes.status === 'fulfilled') setDelegation(delRes.value.data);
+        if (delRes.status === 'fulfilled') {
+          setDelegation(delRes.value.data);
+        } else {
+          const err = delRes.reason as Error;
+          setLoadError(err?.message ?? 'Yuklanmadi');
+        }
         if (auditRes.status === 'fulfilled') setAudit(auditRes.value.data);
       } finally {
         setLoading(false);
@@ -118,8 +126,56 @@ export default function DelegationDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#0f172a]/20 border-t-[#0f172a] rounded-full animate-spin" />
+      <div className="min-h-full bg-[#f7f4ef]">
+        {/* Header skeleton */}
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <div className="h-5 w-24 bg-white/10 rounded-lg animate-pulse mb-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/10 animate-pulse" />
+            <div className="h-6 w-48 bg-white/10 rounded-lg animate-pulse" />
+          </div>
+        </div>
+        {/* Card skeletons */}
+        <div className="px-4 pt-5 pb-8 space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Not found / error state
+  if (!delegation) {
+    return (
+      <div className="min-h-full bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-6">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
+            <ArrowLeft size={16} /> Orqaga
+          </button>
+          <p className="text-white font-bold text-lg">Delegatsiya</p>
+        </div>
+        <div className="px-4 pt-5 space-y-3">
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-8 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 border-2 border-rose-100 flex items-center justify-center mx-auto">
+              <XCircle size={28} className="text-rose-500" />
+            </div>
+            <div>
+              <p className="font-bold text-[#0f172a]">Delegatsiya topilmadi</p>
+              {loadError && <p className="text-sm text-[#64748b] mt-1">{loadError}</p>}
+            </div>
+            <button
+              onClick={() => router.push('/delegations')}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f172a] bg-[#f7f4ef] border border-[#ede9e1] px-4 py-2.5 rounded-xl hover:bg-[#ede9e1] transition-colors focus:outline-none focus:ring-2 focus:ring-[#6d28d9] focus:ring-offset-2"
+            >
+              <ArrowLeft size={14} /> Delegatsiyalarga qaytish
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

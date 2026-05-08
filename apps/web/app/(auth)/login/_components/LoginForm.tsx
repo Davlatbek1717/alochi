@@ -1,9 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, ArrowRight, User, Lock } from 'lucide-react';
-import { apiRequest } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { Eye, EyeOff, ArrowRight, User, Lock, AlertCircle, Wifi } from 'lucide-react';
+import { apiRequest, ApiError } from '@/lib/api';
 
 interface LoginResponse {
   accessToken: string;
@@ -27,17 +26,22 @@ const ROLE_ROUTES: Record<string, string> = {
  * prefer superadmin → fall back to a globally-unique login → ambiguity
  * error if multiple matches. The user does not need to know their
  * markaz slug.
+ *
+ * Errors are shown inline (persistent rose banner) rather than as a
+ * toast so they remain visible and aren't missed by the user.
+ * Network failures get a distinct icon + message from credential errors.
  */
 export function LoginForm() {
   const router = useRouter();
-  const toast = useToast();
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<{ message: string; kind: 'auth' | 'network' } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     setLoading(true);
     try {
       const res = await apiRequest<LoginResponse>('/auth/login', {
@@ -49,9 +53,16 @@ export function LoginForm() {
       localStorage.setItem('user', JSON.stringify(res.data.user));
       router.push(ROLE_ROUTES[res.data.user.role] ?? '/');
     } catch (err: unknown) {
-      toast.error(
-        err instanceof Error ? err.message : "Login yoki parol noto'g'ri",
-      );
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403 || err.status === 400)) {
+        setFormError({ message: "Login yoki parol noto'g'ri. Qaytadan urinib ko'ring.", kind: 'auth' });
+      } else if (err instanceof TypeError || (err instanceof Error && err.message.toLowerCase().includes('fetch'))) {
+        setFormError({ message: "Internet aloqasini tekshiring va qaytadan urinib ko'ring.", kind: 'network' });
+      } else {
+        setFormError({
+          message: err instanceof Error ? err.message : "Noma'lum xato yuz berdi",
+          kind: 'auth',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -59,6 +70,24 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Persistent inline error — stays visible until user retries */}
+      {formError && (
+        <div
+          role="alert"
+          className={[
+            'flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm',
+            formError.kind === 'network'
+              ? 'bg-amber-50 border border-amber-200 text-amber-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-700',
+          ].join(' ')}
+        >
+          {formError.kind === 'network'
+            ? <Wifi size={16} className="shrink-0 mt-0.5" />
+            : <AlertCircle size={16} className="shrink-0 mt-0.5" />}
+          <span className="font-semibold">{formError.message}</span>
+        </div>
+      )}
+
       <Field label="Login" htmlFor="login-input">
         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-4)]">
           <User size={16} strokeWidth={2.5} />
@@ -67,7 +96,7 @@ export function LoginForm() {
           id="login-input"
           type="text"
           value={login}
-          onChange={(e) => setLogin(e.target.value)}
+          onChange={(e) => { setLogin(e.target.value); if (formError) setFormError(null); }}
           placeholder="loginingizni kiriting"
           required
           autoFocus
@@ -94,7 +123,7 @@ export function LoginForm() {
           id="password-input"
           type={showPwd ? 'text' : 'password'}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => { setPassword(e.target.value); if (formError) setFormError(null); }}
           placeholder="••••••••"
           required
           autoComplete="current-password"

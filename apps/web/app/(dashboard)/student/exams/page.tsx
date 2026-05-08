@@ -180,7 +180,7 @@ export default function StudentExamsPage() {
           resultsRef.current = Array(sorted.length).fill(false);
         }
       })
-      .catch(() => {})
+      .catch(() => { /* network error — no active exam found; stay on locked screen */ })
       .finally(() => setLoading(false));
   }, []);
 
@@ -495,7 +495,7 @@ export default function StudentExamsPage() {
                           }
                           className={`w-full text-left px-4 py-3 md:py-4 min-h-[44px] rounded-xl border-[1.5px] text-sm md:text-base font-medium transition-all duration-150 flex items-center gap-3 ${
                             selected
-                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                              ? 'border-[#6d28d9] bg-[#ede9fe] text-[#6d28d9]'
                               : 'border-[#ede9e1] bg-[#f7f4ef] text-[#0f172a] hover:border-[#0f172a]/40 hover:bg-white'
                           }`}
                         >

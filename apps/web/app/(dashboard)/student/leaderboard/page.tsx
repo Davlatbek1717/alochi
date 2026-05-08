@@ -51,6 +51,7 @@ export default function LeaderboardPage() {
   const [branch, setBranch] = useState<BranchEntry[]>([]);
   const [national, setNational] = useState<NationalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [myId, setMyId] = useState('');
 
   const load = useCallback(() => {
@@ -58,20 +59,26 @@ export default function LeaderboardPage() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1])) as { sub?: string };
       setMyId(payload.sub ?? '');
-    } catch {}
+    } catch { /* ignore malformed token */ }
 
+    setLoadError('');
     Promise.all([
-      apiRequest<BranchEntry[]>('/gamification/leaderboard/branch', {}, token),
+      apiRequest<BranchEntry[]>('/gamification/leaderboard/branch', {}, token).catch(
+        () => ({ data: [] as BranchEntry[] }),
+      ),
       apiRequest<NationalEntry[]>(
         `/gamification/leaderboard/national?period=${period}`,
         {},
         token,
-      ),
+      ).catch(() => ({ data: [] as NationalEntry[] })),
     ])
       .then(([b, n]) => {
         setBranch(b.data ?? []);
         setNational(n.data ?? []);
       })
+      .catch((err) =>
+        setLoadError(err instanceof Error ? err.message : 'Reyting yuklanmadi'),
+      )
       .finally(() => setLoading(false));
   }, [period]);
 
@@ -169,6 +176,18 @@ export default function LeaderboardPage() {
       </header>
 
       <div className="px-4 md:px-6 pt-4 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl md:space-y-5">
+        {loadError && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 text-sm">
+            <span className="text-rose-700 font-semibold">{loadError}</span>
+            <button
+              type="button"
+              onClick={load}
+              className="text-rose-700 font-extrabold text-xs underline hover:no-underline"
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
         {tab === 'national' && (
           <div className="flex gap-2">
             {(['weekly', 'monthly'] as const).map((p) => (
@@ -315,23 +334,23 @@ function MyRankHero({
   const tone =
     zone === 'promote'
       ? {
-          bg: 'from-emerald-500 to-emerald-700',
-          accent: 'bg-emerald-300/30',
+          bg: 'from-[#46a302] to-[#2d6a00]',
+          accent: 'bg-[#58cc02]/30',
           label: 'Yuqorilash zonasida',
           icon: <ArrowUp size={14} />,
           hint: "Hafta oxirigacha shu zonada qolsangiz, keyingi ligaga ko'tarilasiz",
         }
       : zone === 'demote'
         ? {
-            bg: 'from-rose-500 to-rose-700',
-            accent: 'bg-rose-300/30',
+            bg: 'from-[#ff4b4b] to-[#b91c1c]',
+            accent: 'bg-[#ff4b4b]/30',
             label: 'Pasayish xavfi',
             icon: <ArrowDown size={14} />,
-            hint: 'Ko\'proq dars tugatib, pastga tushib ketmang',
+            hint: "Ko'proq dars tugatib, pastga tushib ketmang",
           }
         : {
             bg: 'from-[#0f172a] to-[#1e293b]',
-            accent: 'bg-amber-300/20',
+            accent: 'bg-[#fbbf24]/20',
             label: "O'rta zona",
             icon: <Trophy size={14} />,
             hint: "Yuqorilash zonasiga chiqish uchun ko'proq dars tugating",
@@ -387,10 +406,10 @@ function MyRankHero({
 function ZoneLegend() {
   return (
     <div className="px-4 pb-3 -mt-2 flex items-center justify-between text-[10px] uppercase tracking-wider font-extrabold">
-      <span className="text-emerald-700 inline-flex items-center gap-1">
+      <span className="text-[#46a302] inline-flex items-center gap-1">
         <ArrowUp size={11} /> Yuqorilash {PROMOTE_TOP}
       </span>
-      <span className="text-rose-600 inline-flex items-center gap-1">
+      <span className="text-[#ff4b4b] inline-flex items-center gap-1">
         Pasayish {DEMOTE_BOTTOM} <ArrowDown size={11} />
       </span>
     </div>
@@ -413,16 +432,16 @@ function ZoneSection({
   if (entries.length === 0) return null;
   const labelColor =
     color === 'emerald'
-      ? 'text-emerald-700'
+      ? 'text-[#46a302]'
       : color === 'rose'
-        ? 'text-rose-600'
+        ? 'text-[#ff4b4b]'
         : 'text-[#64748b]';
   const dot =
     color === 'emerald'
-      ? 'bg-emerald-500'
+      ? 'bg-[#58cc02]'
       : color === 'rose'
-        ? 'bg-rose-500'
-        : 'bg-slate-400';
+        ? 'bg-[#ff4b4b]'
+        : 'bg-[#94a3b8]';
 
   return (
     <section className="space-y-2">
@@ -475,11 +494,11 @@ function RankRow({
     <div
       className={`bg-white rounded-2xl border-[1.5px] p-3 flex items-center gap-3 transition-colors ${
         isMe
-          ? 'border-[#58cc02] bg-[#f0fdf4] shadow-md ring-2 ring-[#58cc02]/20'
+          ? 'border-[#58cc02] bg-[#58cc02]/5 shadow-md ring-2 ring-[#58cc02]/20'
           : promotion
-            ? 'border-emerald-200 bg-emerald-50/30'
+            ? 'border-[#58cc02]/30 bg-[#58cc02]/5'
             : demotion
-              ? 'border-rose-200 bg-rose-50/30'
+              ? 'border-[#ff4b4b]/30 bg-[#ff4b4b]/5'
               : 'border-[#ede9e1]'
       } ${pinned ? 'shadow-2xl' : ''}`}
     >
@@ -488,9 +507,9 @@ function RankRow({
           rank === 1
             ? 'bg-gradient-to-br from-[#fde68a] to-[#fbbf24] border-[#fbbf24]'
             : rank === 2
-              ? 'bg-gradient-to-br from-slate-200 to-slate-400 border-slate-300'
+              ? 'bg-gradient-to-br from-[#e2e8f0] to-[#94a3b8] border-[#94a3b8]'
               : rank === 3
-                ? 'bg-gradient-to-br from-amber-200 to-amber-500 border-amber-400'
+                ? 'bg-gradient-to-br from-[#fde68a] to-[#d97706] border-[#d97706]'
                 : 'bg-[#fffaf0] border-[#ede9e1]'
         }`}
       >

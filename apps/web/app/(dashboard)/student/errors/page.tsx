@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, AlertTriangle, BookOpen } from 'lucide-react';
+import { ArrowLeft, Sparkles, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Mascot, Skeleton } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type AnalysisResult = { weakAreas: string[]; recommendation: string };
 
@@ -12,22 +14,39 @@ export default function ErrorAnalysisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
-    const studentId = user.id ?? '';
-    if (!studentId) { setLoading(false); return; }
-
-    apiRequest<AnalysisResult>(`/ai/analyze-errors?studentId=${studentId}`, {}, token)
+    // Backend derives studentId from JWT — no localStorage.user lookup needed
+    setLoading(true);
+    setError('');
+    apiRequest<AnalysisResult>('/ai/analyze-errors', {}, token)
       .then((res) => setAnalysis(res.data))
-      .catch(() => setError("Tahlil yuklanmadi"))
+      .catch((err) => setError(err instanceof Error ? err.message : 'Tahlil yuklanmadi'))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusRevalidate(load);
+
   const severityColor = (i: number) => {
-    if (i <= 1) return { dot: 'bg-rose-500', bar: 'bg-rose-500', badge: 'bg-rose-50 text-rose-600 border-rose-200' };
-    if (i === 2) return { dot: 'bg-amber-500', bar: 'bg-amber-500', badge: 'bg-amber-50 text-amber-600 border-amber-200' };
-    return { dot: 'bg-emerald-500', bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-600 border-emerald-200' };
+    if (i <= 1) return {
+      dot: 'bg-[#ff4b4b]',
+      bar: 'bg-[#ff4b4b]',
+      badge: 'bg-[#ff4b4b]/10 text-[#b91c1c] border-[#ff4b4b]/30',
+    };
+    if (i === 2) return {
+      dot: 'bg-[#fbbf24]',
+      bar: 'bg-[#fbbf24]',
+      badge: 'bg-[#fbbf24]/10 text-[#92400e] border-[#fbbf24]/30',
+    };
+    return {
+      dot: 'bg-[#58cc02]',
+      bar: 'bg-[#58cc02]',
+      badge: 'bg-[#58cc02]/10 text-[#166534] border-[#58cc02]/30',
+    };
   };
 
   const barWidth = (i: number) => {
@@ -40,7 +59,10 @@ export default function ErrorAnalysisPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 rounded-full opacity-10"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-        <button onClick={() => router.push('/student')} className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 min-h-[44px]">
+        <button
+          onClick={() => router.push('/student')}
+          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 min-h-[44px] hover:text-white transition-colors"
+        >
           <ArrowLeft size={16} /> Bosh sahifaga
         </button>
         <div className="relative z-10">
@@ -69,8 +91,20 @@ export default function ErrorAnalysisPage() {
             </div>
           ) : error ? (
             <div className="flex items-start gap-2 relative z-10">
-              <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-              <p className="text-amber-300/80 text-sm">{error}</p>
+              <AlertTriangle size={14} className="text-[#fbbf24] shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-[#fbbf24]/80 text-sm">
+                  {error.toLowerCase().includes('internet') || error.toLowerCase().includes('network') || error.toLowerCase().includes('fetch')
+                    ? 'Internet aloqasini tekshiring'
+                    : error}
+                </p>
+                <button
+                  onClick={load}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-white/70 hover:text-white transition-colors"
+                >
+                  <RefreshCw size={11} /> Qayta urinish
+                </button>
+              </div>
             </div>
           ) : analysis?.recommendation ? (
             <p className="text-white/85 text-sm leading-relaxed relative z-10">{analysis.recommendation}</p>
@@ -82,7 +116,7 @@ export default function ErrorAnalysisPage() {
         </div>
 
         {/* Weak areas */}
-        {!loading && analysis && analysis.weakAreas.length > 0 && (
+        {!loading && !error && analysis && analysis.weakAreas.length > 0 && (
           <div>
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Kuchsiz mavzular</p>
             <div className="space-y-2">
@@ -110,20 +144,21 @@ export default function ErrorAnalysisPage() {
         )}
 
         {/* Empty state */}
-        {!loading && !error && analysis?.weakAreas.length === 0 && (
+        {!loading && !error && (!analysis || analysis.weakAreas.length === 0) && (
           <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
-            <BookOpen size={40} className="text-indigo-300 mx-auto mb-3" />
-            <p className="text-[#0f172a] font-semibold">Hali yetarli ma&apos;lumot yo&apos;q</p>
-            <p className="text-[#64748b] text-sm mt-1">Kamida 5 ta savolga javob bering.</p>
+            <Mascot expression="happy" size={100} className="mx-auto mb-3" animated />
+            <p className="text-[#0f172a] font-extrabold">Yaxshi natija!</p>
+            <p className="text-[#64748b] text-sm mt-1">Kamida 5 ta savolga javob bering va AI tahlil qiladi.</p>
           </div>
         )}
 
         {/* CTA */}
         <button
           onClick={() => router.push('/student/lessons')}
-          className="w-full bg-indigo-600 text-white py-4 rounded-[18px] font-bold text-sm"
+          className="w-full bg-[#6d28d9] hover:brightness-105 text-white py-4 rounded-[18px] font-extrabold text-sm border-b-[4px] border-[#4c1d95] active:translate-y-[2px] active:border-b-[2px] transition-all flex items-center justify-center gap-2 min-h-[44px]"
+          style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
         >
-          📚 Darslarga o&apos;tish
+          <BookOpen size={16} /> Darslarga o&apos;tish
         </button>
       </div>
     </div>

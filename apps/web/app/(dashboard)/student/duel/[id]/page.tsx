@@ -1,8 +1,12 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Sword, Clock, Trophy, CheckCircle, XCircle, Zap, Timer } from 'lucide-react';
+import { Sword, Clock, Trophy, CheckCircle, XCircle, Zap, Timer, ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Mascot, Skeleton, useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
+import Link from 'next/link';
 
 type DuelQuestion = {
   text: string;
@@ -65,7 +69,7 @@ export default function DuelPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  void router;
+  const toast = useToast();
 
   const [duel, setDuel] = useState<Duel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +88,7 @@ export default function DuelPage() {
     try {
       const res = await apiRequest<Duel>(`/social/duels/${id}`, {}, token);
       setDuel(res.data);
+      setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Duel topilmadi');
     } finally {
@@ -94,6 +99,10 @@ export default function DuelPage() {
   useEffect(() => {
     fetchDuel();
   }, [fetchDuel]);
+
+  // Refresh when tab regains focus so score updates appear live
+  useFocusRevalidate(fetchDuel);
+  useRevalidateOnEvent(['status:updated'], fetchDuel);
 
   async function handleAnswer(optionIdx: number) {
     if (!duel || answering) return;
@@ -107,7 +116,7 @@ export default function DuelPage() {
       }, token);
       await fetchDuel();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'Xato yuz berdi');
     } finally {
       setAnswering(false);
       setSelectedAnswer(null);
@@ -125,7 +134,7 @@ export default function DuelPage() {
       }, token);
       await fetchDuel();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Xato yuz berdi');
+      toast.error(err instanceof Error ? err.message : 'Xato yuz berdi');
     } finally {
       setResponding(false);
     }
@@ -133,8 +142,24 @@ export default function DuelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center">
-        <p className="text-[#64748b]">Yuklanmoqda...</p>
+      <div className="min-h-full bg-[#f7f4ef]">
+        <div className="bg-[#0f172a] px-5 pt-5 pb-8">
+          <Skeleton className="h-5 w-24 mb-5 rounded" />
+          <div className="flex items-center justify-between">
+            <div className="flex-1 space-y-2 text-center">
+              <Skeleton className="h-4 w-20 mx-auto rounded" />
+              <Skeleton className="h-12 w-12 mx-auto rounded" />
+            </div>
+            <Skeleton className="h-8 w-10 rounded mx-4" />
+            <div className="flex-1 space-y-2 text-center">
+              <Skeleton className="h-4 w-20 mx-auto rounded" />
+              <Skeleton className="h-12 w-12 mx-auto rounded" />
+            </div>
+          </div>
+        </div>
+        <div className="px-4 pt-5">
+          <Skeleton theme="light" className="h-40 rounded-[18px] w-full" />
+        </div>
       </div>
     );
   }
@@ -142,7 +167,21 @@ export default function DuelPage() {
   if (error || !duel) {
     return (
       <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-4">
-        <p className="text-[#e11d48]">{error || 'Duel topilmadi'}</p>
+        <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
+          <Mascot expression="sad" size={96} className="mx-auto" />
+          <p className="text-[#0f172a] font-extrabold text-base">
+            {error || 'Duel topilmadi'}
+          </p>
+          <p className="text-[#64748b] text-sm">
+            Duel mavjud emas yoki sizga tegishli emas.
+          </p>
+          <Link
+            href="/student/duels"
+            className="inline-flex items-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+          >
+            <ArrowLeft size={14} /> Duellar ro&apos;yxati
+          </Link>
+        </div>
       </div>
     );
   }
@@ -172,6 +211,13 @@ export default function DuelPage() {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
+              <Link
+                href="/student/duels"
+                aria-label="Orqaga"
+                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[#94a3b8] hover:bg-white/20 transition-colors mr-1"
+              >
+                <ArrowLeft size={16} />
+              </Link>
               <Sword size={20} className="text-[#e11d48]" />
               <p className="text-white font-bold text-lg">Duel</p>
             </div>
@@ -220,14 +266,15 @@ export default function DuelPage() {
                 <button
                   onClick={() => handleRespond(true)}
                   disabled={responding}
-                  className="flex items-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold text-sm disabled:opacity-50 hover:bg-emerald-600 transition-colors"
+                  className="flex items-center gap-2 bg-[#58cc02] text-white px-6 py-3 rounded-xl font-extrabold text-sm border-b-[3px] border-[#46a302] disabled:opacity-50 hover:brightness-105 active:translate-y-[1px] active:border-b-[1px] transition-all min-h-[44px]"
                 >
-                  <CheckCircle size={16} /> Qabul qilish
+                  {responding ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={16} />}
+                  Qabul qilish
                 </button>
                 <button
                   onClick={() => handleRespond(false)}
                   disabled={responding}
-                  className="flex items-center gap-2 bg-[#f7f4ef] text-[#e11d48] border-[1.5px] border-[#e11d48]/30 px-6 py-3 rounded-xl font-bold text-sm disabled:opacity-50 hover:bg-[#e11d48]/10 transition-colors"
+                  className="flex items-center gap-2 bg-[#f7f4ef] text-[#e11d48] border-[1.5px] border-[#e11d48]/30 px-6 py-3 rounded-xl font-extrabold text-sm disabled:opacity-50 hover:bg-[#e11d48]/10 transition-colors min-h-[44px]"
                 >
                   <XCircle size={16} /> Rad etish
                 </button>
@@ -253,19 +300,19 @@ export default function DuelPage() {
                 {duel.questions.map((_, i) => (
                   <div
                     key={i}
-                    className={`h-1.5 w-6 rounded-full ${i < duel.currentQuestionIdx ? 'bg-emerald-400' : i === duel.currentQuestionIdx ? 'bg-[#e11d48]' : 'bg-[#ede9e1]'}`}
+                    className={`h-1.5 w-6 rounded-full ${i < duel.currentQuestionIdx ? 'bg-[#58cc02]' : i === duel.currentQuestionIdx ? 'bg-[#e11d48]' : 'bg-[#ede9e1]'}`}
                   />
                 ))}
               </div>
             </div>
             <p className="text-lg font-bold text-[#0f172a]">{currentQuestion.text}</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {currentQuestion.options.map((opt, i) => (
                 <button
                   key={i}
                   onClick={() => handleAnswer(i)}
                   disabled={answering}
-                  className={`py-3 px-4 rounded-xl border-[1.5px] text-sm font-semibold transition-all ${
+                  className={`py-3 px-4 rounded-xl border-[1.5px] text-sm font-extrabold transition-all min-h-[44px] ${
                     selectedAnswer === i
                       ? 'bg-[#0f172a] text-white border-[#0f172a]'
                       : 'bg-[#f7f4ef] text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]'
@@ -275,6 +322,20 @@ export default function DuelPage() {
                 </button>
               ))}
             </div>
+            {answering && (
+              <div className="flex justify-center">
+                <span className="w-5 h-5 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Active but no question — waiting for opponent */}
+        {duel.status === 'active' && !currentQuestion && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center space-y-3">
+            <Mascot expression="idle" size={88} className="mx-auto" />
+            <p className="font-semibold text-[#0f172a]">Raqibingizning javobini kutmoqdamiz</p>
+            <p className="text-sm text-[#94a3b8]">Savollar tez orada yangilanadi</p>
           </div>
         )}
 
@@ -284,10 +345,12 @@ export default function DuelPage() {
             <div className="w-16 h-16 rounded-full bg-[#f59e0b]/10 border-2 border-[#f59e0b]/30 flex items-center justify-center mx-auto">
               <Trophy size={28} className="text-[#f59e0b]" />
             </div>
-            <h2 className="text-xl font-bold text-[#0f172a]">Duel yakunlandi!</h2>
+            <h2 className="text-xl font-extrabold text-[#0f172a]">Duel yakunlandi!</h2>
             {duel.winner && (
-              <p className="text-[#0d9488] font-bold">
-                G&apos;olib: {duel.winner}
+              <p className={`font-extrabold ${duel.winner === currentUserId ? 'text-[#58cc02]' : 'text-[#64748b]'}`}>
+                {duel.winner === currentUserId
+                  ? '🏆 Siz g\'oldingiz!'
+                  : `G'olib: ${duel.challengerId === duel.winner ? duel.challengerName : duel.challengedName}`}
               </p>
             )}
             <div className="flex justify-center gap-8">
@@ -300,6 +363,12 @@ export default function DuelPage() {
                 <p className="text-xs text-[#64748b] mt-1">{duel.challengedName}</p>
               </div>
             </div>
+            <Link
+              href="/student/duels"
+              className="inline-flex items-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+            >
+              Duellar ro&apos;yxati
+            </Link>
           </div>
         )}
       </div>

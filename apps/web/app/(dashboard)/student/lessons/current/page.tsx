@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trophy, BookOpen } from 'lucide-react';
+import { Trophy, BookOpen, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot } from '@/components/ui';
 
@@ -10,9 +10,12 @@ type NextLesson = { id: string; title: string } | null;
 export default function CurrentLessonPage() {
   const router = useRouter();
   const [notFound, setNotFound] = useState(false);
+  const [networkError, setNetworkError] = useState('');
 
-  useEffect(() => {
+  function fetchNext() {
     const token = localStorage.getItem('accessToken') ?? '';
+    setNetworkError('');
+    setNotFound(false);
     apiRequest<NextLesson>('/lessons/next', {}, token)
       .then((res) => {
         if (res.data) {
@@ -21,8 +24,43 @@ export default function CurrentLessonPage() {
           setNotFound(true);
         }
       })
-      .catch(() => setNotFound(true));
-  }, [router]);
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : '';
+        // 404 = no active lesson (all done); other errors = network / server
+        if (msg.includes('404') || msg.toLowerCase().includes('topilmadi')) {
+          setNotFound(true);
+        } else {
+          setNetworkError(msg || 'Dars yuklanmadi');
+        }
+      });
+  }
+
+  useEffect(() => {
+    fetchNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (networkError) {
+    return (
+      <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
+          <Mascot expression="sad" size={100} className="mx-auto" />
+          <p className="text-[#0f172a] font-extrabold text-base">
+            Dars yuklanmadi
+          </p>
+          <p className="text-[#64748b] text-sm">{networkError}</p>
+          <p className="text-[#94a3b8] text-xs">Internet aloqasini tekshiring</p>
+          <button
+            type="button"
+            onClick={fetchNext}
+            className="w-full inline-flex items-center justify-center gap-2 bg-[#58cc02] hover:brightness-105 text-white font-extrabold uppercase tracking-wide py-3 rounded-2xl border-b-[4px] border-[#46a302] active:translate-y-[2px] active:border-b-[2px] min-h-[44px]"
+          >
+            <RefreshCw size={16} /> Qayta urinish
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
@@ -42,9 +80,9 @@ export default function CurrentLessonPage() {
           <button
             type="button"
             onClick={() => router.push('/student/lessons')}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[#58cc02] hover:brightness-105 text-white font-extrabold uppercase tracking-wide py-3 rounded-2xl border-b-[4px] border-[#46a302] active:translate-y-[2px] active:border-b-[2px]"
+            className="w-full inline-flex items-center justify-center gap-2 bg-[#58cc02] hover:brightness-105 text-white font-extrabold uppercase tracking-wide py-3 rounded-2xl border-b-[4px] border-[#46a302] active:translate-y-[2px] active:border-b-[2px] min-h-[44px]"
           >
-            <BookOpen size={16} /> Darslar roʻyxati
+            <BookOpen size={16} /> Darslar ro&apos;yxati
           </button>
         </div>
       </div>
@@ -58,7 +96,7 @@ export default function CurrentLessonPage() {
         role="status"
         aria-live="polite"
       >
-        <Mascot expression="idle" size={120} />
+        <Mascot expression="idle" size={120} animated />
         <p className="text-[#0f172a] font-extrabold text-base">Yuklanmoqda...</p>
         <p className="text-[#64748b] text-sm">Keyingi darsingiz tayyorlanyapti</p>
       </div>

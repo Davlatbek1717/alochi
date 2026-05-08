@@ -591,8 +591,8 @@ function WarningBanner({ warnings }: { warnings: Warning[] }) {
     <div
       className={`rounded-2xl p-4 flex items-start gap-3 border ${
         isBlocked
-          ? 'bg-red-50 border-red-200'
-          : 'bg-amber-50 border-amber-200'
+          ? 'bg-[#ff4b4b]/10 border-[#ff4b4b]/30'
+          : 'bg-[#fbbf24]/10 border-[#fbbf24]/30'
       }`}
     >
       <span className="text-2xl shrink-0" aria-hidden>
@@ -601,7 +601,7 @@ function WarningBanner({ warnings }: { warnings: Warning[] }) {
       <div className="flex-1">
         <p
           className={`font-extrabold text-sm ${
-            isBlocked ? 'text-red-700' : 'text-amber-700'
+            isBlocked ? 'text-[#b91c1c]' : 'text-[#92400e]'
           }`}
         >
           {isBlocked
@@ -656,7 +656,7 @@ function CertificatesCard({ certificates }: { certificates: Certificate[] }) {
   return (
     <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
       <div className="flex items-center gap-2 mb-3">
-        <Award size={18} className="text-amber-500" />
+        <Award size={18} className="text-[#fbbf24]" />
         <h2 className="font-extrabold text-[#3c3c3c] text-base">Sertifikatlar</h2>
         <span className="ml-auto text-xs text-[#777] font-bold">
           {certificates.length} ta

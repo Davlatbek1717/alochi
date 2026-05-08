@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Swords,
@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type DuelStatus = 'pending' | 'active' | 'completed' | 'expired';
 
@@ -33,8 +35,9 @@ type Duel = {
 
 function getMyId(): string {
   try {
-    const u = JSON.parse(localStorage.getItem('user') ?? '{}') as { id?: string };
-    return u.id ?? '';
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.userId ?? payload.sub ?? '') as string;
   } catch {
     return '';
   }
@@ -81,8 +84,9 @@ export default function StudentDuelsPage() {
   const [error, setError] = useState('');
   const myId = useMemo(() => getMyId(), []);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    setError('');
     apiRequest<Duel[]>('/social/duels', {}, token)
       .then((r) => setDuels(r.data ?? []))
       .catch((err) =>
@@ -90,6 +94,14 @@ export default function StudentDuelsPage() {
       )
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Refresh when user returns to the tab or duel state changes
+  useFocusRevalidate(load);
+  useRevalidateOnEvent(['status:updated'], load);
 
   const grouped = useMemo(() => {
     const active: Duel[] = [];
@@ -142,8 +154,9 @@ export default function StudentDuelsPage() {
 
       <div className="px-4 md:px-6 pt-5 pb-6 space-y-5 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl md:space-y-6">
         {error && (
-          <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 text-sm">
-            {error}
+          <div className="bg-[#ff4b4b]/10 border border-[#ff4b4b]/30 text-[#b91c1c] rounded-xl p-3 text-sm flex items-center justify-between gap-3">
+            <span>{error}</span>
+            <button type="button" onClick={load} className="font-extrabold underline hover:no-underline text-xs shrink-0">Qayta urinish</button>
           </div>
         )}
 
@@ -160,10 +173,10 @@ export default function StudentDuelsPage() {
                 <span
                   className={`inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                     stats.winRate >= 60
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      ? 'bg-[#58cc02]/10 text-[#46a302] border-[#58cc02]/30'
                       : stats.winRate >= 40
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                        ? 'bg-[#fbbf24]/10 text-[#92400e] border-[#fbbf24]/30'
+                        : 'bg-[#ff4b4b]/10 text-[#b91c1c] border-[#ff4b4b]/30'
                   }`}
                 >
                   <Trophy size={11} /> {stats.winRate}% gʻalaba
@@ -174,17 +187,17 @@ export default function StudentDuelsPage() {
               <StatPill
                 value={stats.won}
                 label="Gʻolib"
-                color="text-emerald-700 bg-emerald-50 border-emerald-200"
+                color="text-[#46a302] bg-[#58cc02]/10 border-[#58cc02]/30"
               />
               <StatPill
                 value={stats.lost}
                 label="Magʻlub"
-                color="text-rose-700 bg-rose-50 border-rose-200"
+                color="text-[#b91c1c] bg-[#ff4b4b]/10 border-[#ff4b4b]/30"
               />
               <StatPill
                 value={stats.draw}
                 label="Durang"
-                color="text-slate-700 bg-slate-50 border-slate-200"
+                color="text-[#64748b] bg-[#fffaf0] border-[#ede9e1]"
               />
             </div>
           </div>
@@ -319,13 +332,13 @@ function DuelRow({ duel, myId }: { duel: Duel; myId: string }) {
       className={`block rounded-3xl border-[1.5px] overflow-hidden transition-colors ${
         isActive
           ? remaining?.urgent
-            ? 'bg-white border-[#fecaca] shadow-md'
-            : 'bg-white border-[#a7f3d0] shadow-sm'
+            ? 'bg-white border-[#ff4b4b]/30 shadow-md'
+            : 'bg-white border-[#58cc02]/30 shadow-sm'
           : outcome === 'won'
-            ? 'bg-gradient-to-br from-emerald-50 to-white border-emerald-200'
+            ? 'bg-[#58cc02]/5 border-[#58cc02]/30'
             : outcome === 'lost'
-              ? 'bg-gradient-to-br from-rose-50 to-white border-rose-200'
-              : 'bg-white border-[#ede9e1] hover:border-[#cbd5e1]'
+              ? 'bg-[#ff4b4b]/5 border-[#ff4b4b]/30'
+              : 'bg-white border-[#ede9e1] hover:border-[#94a3b8]'
       }`}
     >
       <div className="p-3 flex items-center gap-3">
@@ -355,7 +368,7 @@ function DuelRow({ duel, myId }: { duel: Duel; myId: string }) {
             </p>
             <span
               className={`text-[10px] font-extrabold inline-flex items-center gap-1 ${
-                remaining?.urgent ? 'text-[#ef4444]' : 'text-[#1cb0f6]'
+                remaining?.urgent ? 'text-[#ff4b4b]' : 'text-[#1cb0f6]'
               }`}
             >
               {duel.status === 'completed' ? (
@@ -375,10 +388,10 @@ function DuelRow({ duel, myId }: { duel: Duel; myId: string }) {
         <div
           className={`px-4 py-1.5 text-[11px] font-extrabold uppercase tracking-widest text-center ${
             outcome === 'won'
-              ? 'bg-emerald-500 text-white'
+              ? 'bg-[#58cc02] text-white'
               : outcome === 'lost'
-                ? 'bg-rose-500 text-white'
-                : 'bg-slate-400 text-white'
+                ? 'bg-[#ff4b4b] text-white'
+                : 'bg-[#94a3b8] text-white'
           }`}
         >
           {outcome === 'won' && (
@@ -404,10 +417,10 @@ function OutcomeChip({ outcome }: { outcome: DuelOutcome }) {
     <span
       className={`ml-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded ${
         outcome === 'won'
-          ? 'bg-emerald-100 text-emerald-700'
+          ? 'bg-[#58cc02]/15 text-[#46a302]'
           : outcome === 'lost'
-            ? 'bg-rose-100 text-rose-700'
-            : 'bg-slate-100 text-slate-600'
+            ? 'bg-[#ff4b4b]/15 text-[#b91c1c]'
+            : 'bg-[#94a3b8]/15 text-[#64748b]'
       }`}
     >
       {outcome === 'won' ? '+' : outcome === 'lost' ? '−' : '='}
@@ -439,7 +452,7 @@ function Avatar({ name, winner }: { name: string; winner?: boolean }) {
       <div
         className={`w-10 h-10 rounded-full border-2 border-white shadow flex items-center justify-center text-white font-extrabold text-sm bg-gradient-to-br ${
           winner
-            ? 'from-emerald-400 to-emerald-600'
+            ? 'from-[#58cc02] to-[#46a302]'
             : 'from-[#fbbf24] to-[#d97706]'
         }`}
       >

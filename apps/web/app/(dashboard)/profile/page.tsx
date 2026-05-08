@@ -1,15 +1,16 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { User, ScanFace, Send, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
+import { User, ScanFace, Send, CheckCircle, XCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getTenantIdFromToken } from '@/lib/jwt';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type ProfileData = {
   id: string;
   name: string;
   login: string;
   role: string;
-  tenantId: string;
   faceEnrolled: boolean;
   parentTelegramLinked: boolean;
 };
@@ -29,17 +30,26 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken') ?? '';
-    apiRequest<ProfileData>('/users/my-profile', {}, token)
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
+    apiRequest<ProfileData>('/users/my-profile')
       .then((r) => setProfile(r.data))
       .catch((err) => setError(err instanceof Error ? err.message : "Yuklab bo'lmadi"))
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
+  // Refresh profile when user returns to the tab (e.g. after enrolling face ID)
+  useFocusRevalidate(load);
+
   function telegramDeepLink(): string {
     if (!profile || !BOT_USERNAME) return '';
-    return `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}_${profile.id}`;
+    // tenantId is scoped from the JWT — backend derives it from the token.
+    // We read it here only to build the Telegram deep-link for the parent.
+    const tenantId = getTenantIdFromToken() ?? '';
+    return `https://t.me/${BOT_USERNAME}?start=${tenantId}_${profile.id}`;
   }
 
   if (loading) {
@@ -85,10 +95,16 @@ export default function ProfilePage() {
         <div className="bg-[#0f172a] px-5 pt-5 pb-6">
           <p className="text-white font-bold text-lg mt-4">Mening Profilim</p>
         </div>
-        <div className="p-4">
+        <div className="p-4 space-y-3">
           <div className="bg-[#e11d48]/10 border border-[#e11d48]/20 text-[#e11d48] rounded-[18px] p-5 text-sm">
-            {error || 'Xato yuz berdi'}
+            {error || 'Profil yuklanmadi'}
           </div>
+          <button
+            onClick={load}
+            className="flex items-center gap-2 text-sm font-semibold text-[#0f172a] bg-white border border-[#ede9e1] px-4 py-2.5 rounded-xl hover:bg-[#f7f4ef] transition-colors focus:outline-none focus:ring-2 focus:ring-[#6d28d9] focus:ring-offset-2"
+          >
+            <RefreshCw size={14} /> Qaytadan urinish
+          </button>
         </div>
       </div>
     );
