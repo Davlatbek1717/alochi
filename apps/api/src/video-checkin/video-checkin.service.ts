@@ -1,5 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { tashkentDateString, dateStringToDate } from './lib/tashkent-time';
 
@@ -10,6 +16,8 @@ export interface TodayCheckinRow {
   evening: 'submitted' | 'missed' | 'pending';
   morningAt: string | null;
   eveningAt: string | null;
+  morningCheckinId: string | null;
+  eveningCheckinId: string | null;
   totalMissedDays: number;
 }
 
@@ -39,7 +47,84 @@ export class VideoCheckinService {
   constructor(
     private prisma: PrismaService,
     private events: EventEmitter2,
+    private config: ConfigService,
   ) {}
+
+  /**
+   * Auth-checked Telegram video proxy. Resolves the bot's file_id into
+   * the actual video bytes for playback in the dashboard. Bot token
+   * stays server-side — the caller never sees it.
+   *
+   * Authorization:
+   *  - superadmin: any check-in in their tenant
+   *  - filadmin:  any check-in for a student in their branch
+   *  - mentor:    any check-in for a student in their group
+   *  - student:   their own check-in (so /student/profile can replay)
+   */
+  async getVideoBytes(
+    checkinId: string,
+    caller: {
+      role: string;
+      userId: string;
+      tenantId: string;
+      branchId: string | null;
+      groupId: string | null;
+    },
+  ): Promise<{ buffer: Buffer; mimeType: string; durationSec: number | null }> {
+    const checkin = await this.prisma.videoCheckin.findUnique({
+      where: { id: checkinId },
+      include: {
+        student: {
+          select: { tenantId: true, branchId: true, groupId: true, id: true },
+        },
+      },
+    });
+    if (!checkin) throw new NotFoundException('Video topilmadi');
+    if (checkin.status !== 'submitted' || !checkin.telegramFileId) {
+      throw new NotFoundException("Bu vaqtga video tashlanmagan");
+    }
+    if (checkin.student.tenantId !== caller.tenantId) {
+      throw new ForbiddenException('Boshqa tenant');
+    }
+    const allowed =
+      caller.role === 'superadmin' ||
+      (caller.role === 'filadmin' &&
+        checkin.student.branchId === caller.branchId) ||
+      (caller.role === 'manager' &&
+        checkin.student.branchId === caller.branchId) ||
+      (caller.role === 'mentor' &&
+        checkin.student.groupId === caller.groupId) ||
+      (caller.role === 'student' && checkin.student.id === caller.userId);
+    if (!allowed) throw new ForbiddenException("Ruxsat yo'q");
+
+    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!token) throw new NotFoundException('Bot sozlanmagan');
+
+    // Step 1: resolve file_id → file_path via Telegram getFile.
+    const fileInfoRes = await fetch(
+      `https://api.telegram.org/bot${token}/getFile?file_id=${checkin.telegramFileId}`,
+    );
+    const fileInfo = (await fileInfoRes.json()) as {
+      ok: boolean;
+      result?: { file_path?: string };
+    };
+    if (!fileInfo.ok || !fileInfo.result?.file_path) {
+      throw new NotFoundException("Video Telegram'dan o'qib bo'lmadi");
+    }
+
+    // Step 2: download the bytes. Round-video and rectangular video
+    // both come back as small mp4 (≤ 10 MB for 60s round, more for
+    // rect but still bounded by the bot's 90s cap), so we buffer.
+    const fileRes = await fetch(
+      `https://api.telegram.org/file/bot${token}/${fileInfo.result.file_path}`,
+    );
+    if (!fileRes.ok) {
+      throw new NotFoundException("Video yuklab bo'lmadi");
+    }
+    const buffer = Buffer.from(await fileRes.arrayBuffer());
+    const mimeType = fileRes.headers.get('content-type') ?? 'video/mp4';
+    return { buffer, mimeType, durationSec: checkin.durationSec };
+  }
 
   /**
    * Records a video submission. Upserts so re-sends within the same window
@@ -288,6 +373,13 @@ export class VideoCheckinService {
         evening: resolveEvening(),
         morningAt: morningRow?.submittedAt?.toISOString() ?? null,
         eveningAt: eveningRow?.submittedAt?.toISOString() ?? null,
+        // Surface ids only when the student actually submitted — used
+        // by the dashboard to wire the play button. Missed/pending
+        // slots have nothing to play.
+        morningCheckinId:
+          morningRow?.status === 'submitted' ? morningRow.id : null,
+        eveningCheckinId:
+          eveningRow?.status === 'submitted' ? eveningRow.id : null,
         totalMissedDays: missedCountMap.get(s.id) ?? 0,
       };
     });

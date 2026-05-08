@@ -5,9 +5,11 @@ import {
   Query,
   UseGuards,
   Request,
+  Res,
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -20,6 +22,7 @@ interface JwtUser {
   tenantId: string;
   role: UserRole;
   branchId?: string | null;
+  groupId?: string | null;
 }
 
 @ApiTags('video-checkins')
@@ -117,5 +120,42 @@ export class VideoCheckinController {
     }
     const count = await this.service.getMissedCount(studentId, since);
     return { count };
+  }
+
+  /**
+   * GET /video-checkins/:id/video
+   *
+   * Streams the bot-recorded video back to the dashboard. Auth-checked
+   * inside the service: superadmin / filadmin (own branch) / manager
+   * (own branch) / mentor (own group) / the student themself.
+   * Bypasses the response envelope so a <video> blob fetch sees raw
+   * bytes; sets Content-Type so the player picks the right codec.
+   */
+  @Get(':id/video')
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
+  async streamVideo(
+    @Param('id') id: string,
+    @Request() req: { user: JwtUser },
+    @Res() res: Response,
+  ) {
+    const { buffer, mimeType } = await this.service.getVideoBytes(id, {
+      role: req.user.role,
+      userId: req.user.userId,
+      tenantId: req.user.tenantId,
+      branchId: req.user.branchId ?? null,
+      groupId: req.user.groupId ?? null,
+    });
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Length': String(buffer.length),
+      'Cache-Control': 'private, no-store',
+    });
+    res.send(buffer);
   }
 }

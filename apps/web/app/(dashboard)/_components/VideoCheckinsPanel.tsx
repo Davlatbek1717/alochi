@@ -1,11 +1,13 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Video, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Video, Clock, CheckCircle, XCircle, Play, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { Skeleton } from '@/components/ui';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export type CheckinStatus = 'submitted' | 'missed' | 'pending';
 
@@ -16,6 +18,8 @@ export interface VideoCheckinRow {
   evening: CheckinStatus;
   morningAt: string | null;
   eveningAt: string | null;
+  morningCheckinId: string | null;
+  eveningCheckinId: string | null;
   totalMissedDays: number;
 }
 
@@ -38,14 +42,43 @@ function formatTime(iso: string | null): string {
   }
 }
 
-function StatusCell({ status, submittedAt }: { status: CheckinStatus; submittedAt: string | null }) {
+function StatusCell({
+  status,
+  submittedAt,
+  checkinId,
+  studentName,
+  windowLabel,
+  onPlay,
+}: {
+  status: CheckinStatus;
+  submittedAt: string | null;
+  checkinId: string | null;
+  studentName: string;
+  windowLabel: string;
+  onPlay: (checkinId: string, studentName: string, windowLabel: string) => void;
+}) {
   if (status === 'submitted') {
     const time = formatTime(submittedAt);
     return (
-      <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-xs">
-        <CheckCircle size={13} className="shrink-0" />
-        Tashladi{time ? ` (${time})` : ''}
-      </span>
+      <div className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-xs">
+          <CheckCircle size={13} className="shrink-0" />
+          Tashladi{time ? ` (${time})` : ''}
+        </span>
+        {checkinId && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlay(checkinId, studentName, windowLabel);
+            }}
+            aria-label={`${studentName} — ${windowLabel} videoni ko'rish`}
+            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0d9488]/10 text-[#0d9488] hover:bg-[#0d9488]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30"
+          >
+            <Play size={11} fill="currentColor" />
+          </button>
+        )}
+      </div>
     );
   }
   if (status === 'missed') {
@@ -61,6 +94,75 @@ function StatusCell({ status, submittedAt }: { status: CheckinStatus; submittedA
       <Clock size={13} className="shrink-0" />
       Kutilmoqda
     </span>
+  );
+}
+
+interface PlayerState {
+  checkinId: string;
+  studentName: string;
+  windowLabel: string;
+  url: string | null;
+  loading: boolean;
+  error: string;
+}
+
+function VideoPlayerModal({
+  state,
+  onClose,
+}: {
+  state: PlayerState;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Video"
+    >
+      <div
+        className="relative bg-white rounded-2xl border-[1.5px] border-[#ede9e1] max-w-lg w-full overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#ede9e1]">
+          <div>
+            <p className="text-sm font-extrabold text-[#0f172a]">{state.studentName}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#94a3b8]">{state.windowLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Yopish"
+            className="w-8 h-8 rounded-full bg-[#f7f4ef] hover:bg-[#ede9e1] text-[#64748b] flex items-center justify-center transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-3 bg-black flex items-center justify-center min-h-[280px]">
+          {state.loading && (
+            <div className="text-white/70 text-sm font-semibold animate-pulse">
+              Yuklanmoqda…
+            </div>
+          )}
+          {state.error && (
+            <div className="text-rose-300 text-sm font-semibold text-center px-4">
+              {state.error}
+            </div>
+          )}
+          {state.url && !state.loading && !state.error && (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video
+              src={state.url}
+              controls
+              autoPlay
+              playsInline
+              className="max-h-[70vh] w-full rounded-xl"
+            />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -82,6 +184,64 @@ export default function VideoCheckinsPanel({
   const [rows, setRows] = useState<VideoCheckinRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+  // Object URLs created for blob playback — revoked on cleanup so we
+  // don't leak browser memory between successive plays.
+  const objectUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      for (const u of objectUrlsRef.current) URL.revokeObjectURL(u);
+      objectUrlsRef.current = [];
+    };
+  }, []);
+
+  const openPlayer = useCallback(
+    async (checkinId: string, studentName: string, windowLabel: string) => {
+      setPlayer({
+        checkinId,
+        studentName,
+        windowLabel,
+        url: null,
+        loading: true,
+        error: '',
+      });
+      try {
+        const token = localStorage.getItem('accessToken') ?? '';
+        const res = await fetch(`${API_BASE}/video-checkins/${checkinId}/video`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const msg =
+            body?.error?.message ?? body?.message ?? "Videoni yuklab bo'lmadi";
+          setPlayer((p) =>
+            p && p.checkinId === checkinId
+              ? { ...p, loading: false, error: msg }
+              : p,
+          );
+          return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        objectUrlsRef.current.push(url);
+        setPlayer((p) =>
+          p && p.checkinId === checkinId
+            ? { ...p, loading: false, url, error: '' }
+            : p,
+        );
+      } catch {
+        setPlayer((p) =>
+          p && p.checkinId === checkinId
+            ? { ...p, loading: false, error: "Internet aloqasini tekshiring" }
+            : p,
+        );
+      }
+    },
+    [],
+  );
+
+  const closePlayer = useCallback(() => setPlayer(null), []);
 
   const load = useCallback(() => {
     if (!branchId) return;
@@ -173,10 +333,24 @@ export default function VideoCheckinsPanel({
                     {row.name}
                   </td>
                   <td className="px-3 py-2.5">
-                    <StatusCell status={row.morning} submittedAt={row.morningAt} />
+                    <StatusCell
+                      status={row.morning}
+                      submittedAt={row.morningAt}
+                      checkinId={row.morningCheckinId}
+                      studentName={row.name}
+                      windowLabel="Ertalabki video"
+                      onPlay={openPlayer}
+                    />
                   </td>
                   <td className="px-3 py-2.5">
-                    <StatusCell status={row.evening} submittedAt={row.eveningAt} />
+                    <StatusCell
+                      status={row.evening}
+                      submittedAt={row.eveningAt}
+                      checkinId={row.eveningCheckinId}
+                      studentName={row.name}
+                      windowLabel="Kechki video"
+                      onPlay={openPlayer}
+                    />
                   </td>
                   <td className="px-3 py-2.5">
                     <MissedBadge count={row.totalMissedDays} />
@@ -187,6 +361,8 @@ export default function VideoCheckinsPanel({
           </table>
         </div>
       )}
+
+      {player && <VideoPlayerModal state={player} onClose={closePlayer} />}
     </div>
   );
 }
