@@ -253,7 +253,7 @@ export default function SuperadminBranchesPage() {
             <button
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>

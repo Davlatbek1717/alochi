@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -69,12 +69,18 @@ export function ExamEditor({ examId, initial }: Props) {
   const toast = useToast();
   const [form, setForm] = useState<ExamPayload>(initial);
   const [saving, setSaving] = useState(false);
+  const initialRef = useRef(JSON.stringify(initial));
+  const isDirty = JSON.stringify(form) !== initialRef.current;
 
   // Picker + configurator state (mirrors lesson editor pattern exactly)
   const [pickerOpen, setPickerOpen] = useState(false);
   const [configType, setConfigType] = useState<ComponentTypeKey | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
+
+  // Remove question confirmation
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
+  const [confirmRemoveIdx, setConfirmRemoveIdx] = useState<number | null>(null);
 
   const fieldLabel =
     'block text-xs font-bold uppercase tracking-widest text-[#64748b] mb-1.5';
@@ -137,13 +143,20 @@ export function ExamEditor({ examId, initial }: Props) {
   }
 
   function removeQuestion(idx: number) {
-    if (!window.confirm('Bu savolni oʻchirmoqchimisiz?')) return;
+    setConfirmRemoveIdx(idx);
+    setConfirmRemoveOpen(true);
+  }
+
+  function doRemoveQuestion() {
+    if (confirmRemoveIdx === null) return;
     setForm((prev) => ({
       ...prev,
       questions: prev.questions
-        .filter((_, i) => i !== idx)
+        .filter((_, i) => i !== confirmRemoveIdx)
         .map((q, i) => ({ ...q, orderIndex: i })),
     }));
+    setConfirmRemoveOpen(false);
+    setConfirmRemoveIdx(null);
   }
 
   function moveQuestion(idx: number, direction: -1 | 1) {
@@ -174,6 +187,10 @@ export function ExamEditor({ examId, initial }: Props) {
     }
     if (form.kind === 'ai_oral' && !form.aiPrompt.trim()) {
       toast.error("AI imtihon uchun yo'l-yo'riq matnini kiriting");
+      return;
+    }
+    if (form.kind === 'test' && form.questions.length === 0 && form.isPublished) {
+      toast.error("Bo'sh test imtihonini nashr qilib bo'lmaydi");
       return;
     }
 
@@ -618,6 +635,11 @@ export function ExamEditor({ examId, initial }: Props) {
             >
               Bekor
             </Link>
+            {isDirty && (
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                saqlanmagan
+              </span>
+            )}
             <button
               type="button"
               onClick={handleSave}
@@ -634,6 +656,31 @@ export function ExamEditor({ examId, initial }: Props) {
           </div>
         </div>
       </div>
+
+      {/* Confirm remove question modal */}
+      <Modal
+        open={confirmRemoveOpen}
+        onClose={() => { setConfirmRemoveOpen(false); setConfirmRemoveIdx(null); }}
+        title="Savolni o'chirish"
+        size="sm"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b]">Bu savolni o&apos;chirishni tasdiqlaysizmi?</p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => { setConfirmRemoveOpen(false); setConfirmRemoveIdx(null); }}
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef]"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={doRemoveQuestion}
+            className="text-sm px-4 py-2 rounded-xl bg-[#b91c1c] text-white font-semibold hover:bg-red-800"
+          >
+            O&apos;chirish
+          </button>
+        </div>
+      </Modal>
 
       {/* Type-picker modal */}
       <Modal

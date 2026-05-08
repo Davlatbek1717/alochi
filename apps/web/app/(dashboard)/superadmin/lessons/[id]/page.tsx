@@ -114,6 +114,9 @@ export default function EditLessonPage() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Delete component confirmation
+  const [confirmDeleteComp, setConfirmDeleteComp] = useState<ConfigComponent | null>(null);
+
   async function refreshComponents() {
     const token = localStorage.getItem('accessToken') ?? '';
     const compRes = await apiRequest<ConfigComponent[]>(
@@ -261,9 +264,13 @@ export default function EditLessonPage() {
   }
 
   async function handleDelete(comp: ConfigComponent) {
-    if (!window.confirm(`"${COMPONENT_LABELS[comp.type] ?? comp.type}" topshirig'ini o'chirmoqchimisiz?`)) {
-      return;
-    }
+    setConfirmDeleteComp(comp);
+  }
+
+  async function doConfirmDelete() {
+    const comp = confirmDeleteComp;
+    if (!comp) return;
+    setConfirmDeleteComp(null);
     setDeletingId(comp.id);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
@@ -505,6 +512,33 @@ export default function EditLessonPage() {
             saving={savingConfig}
           />
         )}
+      </Modal>
+
+      {/* Delete component confirmation modal */}
+      <Modal
+        open={confirmDeleteComp !== null}
+        onClose={() => setConfirmDeleteComp(null)}
+        title="Topshiriqni o'chirish"
+        size="sm"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b]">
+          &quot;{confirmDeleteComp ? (COMPONENT_LABELS[confirmDeleteComp.type] ?? confirmDeleteComp.type) : ''}&quot; topshirig&apos;ini o&apos;chirishni tasdiqlaysizmi?
+        </p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setConfirmDeleteComp(null)}
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef]"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={doConfirmDelete}
+            className="text-sm px-4 py-2 rounded-xl bg-[#b91c1c] text-white font-semibold hover:bg-red-800"
+          >
+            O&apos;chirish
+          </button>
+        </div>
       </Modal>
     </div>
   );

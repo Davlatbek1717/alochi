@@ -396,7 +396,7 @@ export default function SuperadminLessonsPage() {
                             <span
                               className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
                                 lesson.isPublished
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  ? 'bg-[#15803d]/10 text-[#15803d] border-[#15803d]/30'
                                   : 'bg-amber-50 text-amber-700 border-amber-200'
                               }`}
                             >

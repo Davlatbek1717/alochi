@@ -6,9 +6,10 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  Globe,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { Modal, Skeleton, useToast } from '@/components/ui';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,13 @@ function getToken() {
     ? (localStorage.getItem('accessToken') ?? '')
     : '';
 }
+
+// Module-level key arrays — stable references, no dependency issues
+const HERO_KEYS = ['hero.badge', 'hero.title', 'hero.tagline', 'hero.subtitle', 'hero.cta'];
+const CONTACT_KEYS = ['contact.phone', 'contact.email', 'contact.address', 'contact.telegram', 'contact.personal'];
+const CERT_KEYS = ['certificate.title', 'certificate.description'];
+const PRIZES_META_KEYS = ['prizes.title', 'prizes.subtitle'];
+const SPONSORS_META_KEYS = ['sponsors.title', 'sponsors.subtitle'];
 
 // ─── Input component ─────────────────────────────────────────────────────────
 
@@ -153,6 +161,7 @@ function ItemsSection({
     orderIndex: string;
   } | null>(null);
   const [addSaving, setAddSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const metaALabel = kind === 'prize' ? 'Dars soni' : 'Shahar';
   const metaBLabel = kind === 'prize' ? 'Ikonka (emoji)' : 'Emoji';
@@ -191,7 +200,6 @@ function ItemsSection({
   }
 
   async function deleteItem(id: string) {
-    if (!window.confirm("Bu elementni o'chirishni tasdiqlaysizmi?")) return;
     setDeleting((p) => ({ ...p, [id]: true }));
     try {
       const token = getToken();
@@ -268,7 +276,9 @@ function ItemsSection({
           </div>
         )}
         {loading ? (
-          <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+          <div className="space-y-3">
+            {[1, 2].map((i) => <Skeleton key={i} theme="light" className="h-32 rounded-xl" />)}
+          </div>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
@@ -282,7 +292,7 @@ function ItemsSection({
                 saving={!!saving[item.id]}
                 deleting={!!deleting[item.id]}
                 onSave={(patch) => patchItem(item.id, patch)}
-                onDelete={() => deleteItem(item.id)}
+                onDelete={() => setConfirmDeleteId(item.id)}
               />
             ))}
           </div>
@@ -362,6 +372,36 @@ function ItemsSection({
           </button>
         )}
       </div>
+
+      {/* Delete confirm modal */}
+      <Modal
+        open={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        title="Elementni o'chirish"
+        size="sm"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b]">Bu elementni o&apos;chirishni tasdiqlaysizmi?</p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setConfirmDeleteId(null)}
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef]"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={() => {
+              if (confirmDeleteId) {
+                deleteItem(confirmDeleteId);
+                setConfirmDeleteId(null);
+              }
+            }}
+            className="text-sm px-4 py-2 rounded-xl bg-[#b91c1c] text-white font-semibold hover:bg-red-800"
+          >
+            O&apos;chirish
+          </button>
+        </div>
+      </Modal>
     </SectionCard>
   );
 }
@@ -509,6 +549,7 @@ export default function SuperadminLandingPage() {
   const [savingContact, setSavingContact] = useState(false);
   const [savingCert, setSavingCert] = useState(false);
   const [savingPrizesMeta, setSavingPrizesMeta] = useState(false);
+  const [savingSponsorsMeta, setSavingSponsorsMeta] = useState(false);
 
   useEffect(() => {
     const token = getToken();
@@ -544,17 +585,35 @@ export default function SuperadminLandingPage() {
     [settings], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const HERO_KEYS = ['hero.badge', 'hero.title', 'hero.tagline', 'hero.subtitle', 'hero.cta'];
-  const CONTACT_KEYS = ['contact.phone', 'contact.email', 'contact.address', 'contact.telegram', 'contact.personal'];
-  const CERT_KEYS = ['certificate.title', 'certificate.description'];
-  const PRIZES_META_KEYS = ['prizes.title', 'prizes.subtitle'];
-
   return (
     <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #6d28d9 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#6d28d9]/20 flex items-center justify-center">
+            <Globe size={18} className="text-[#a78bfa]" />
+          </div>
+          <div>
+            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Superadmin</p>
+            <p className="text-white font-bold text-lg">Landing sahifasi</p>
+          </div>
+        </div>
+      </div>
+
       <div className="px-4 pt-5 pb-10 space-y-5 max-w-3xl">
         {loading ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">
-            <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton theme="light" className="h-4 w-32" />
+                <Skeleton theme="light" className="h-10 w-full" />
+              </div>
+            ))}
           </div>
         ) : (
           <>
@@ -601,6 +660,18 @@ export default function SuperadminLandingPage() {
               onSettingChange={handleChange}
               onSettingsSave={() => saveKeys(PRIZES_META_KEYS, setSavingPrizesMeta)}
               settingsSaving={savingPrizesMeta}
+            />
+
+            {/* ── Homiylar ──────────────────────────────────────────────── */}
+            <ItemsSection
+              kind="sponsor"
+              sectionTitle="Homiylar (Sponsors)"
+              titleKey="sponsors.title"
+              subtitleKey="sponsors.subtitle"
+              settings={settings}
+              onSettingChange={handleChange}
+              onSettingsSave={() => saveKeys(SPONSORS_META_KEYS, setSavingSponsorsMeta)}
+              settingsSaving={savingSponsorsMeta}
             />
 
           </>

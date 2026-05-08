@@ -60,16 +60,16 @@ export default function SuperadminTournamentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Tournament | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const token =
+  const token = () =>
     typeof window !== 'undefined'
-      ? localStorage.getItem('accessToken') ?? ''
+      ? (localStorage.getItem('accessToken') ?? '')
       : '';
 
   function load() {
     setLoading(true);
-    apiRequest<Tournament[]>('/tournaments', {}, token)
+    apiRequest<Tournament[]>('/tournaments', {}, token())
       .then((res) => setTournaments(res.data ?? []))
-      .catch(() => {})
+      .catch((err) => toast.error(err instanceof Error ? err.message : 'Yuklab bo\'lmadi'))
       .finally(() => setLoading(false));
   }
 
@@ -88,7 +88,7 @@ export default function SuperadminTournamentsPage() {
           method: 'POST',
           body: JSON.stringify(form),
         },
-        token,
+        token(),
       );
       setTournaments((prev) => [res.data, ...prev]);
       setShowForm(false);
@@ -102,13 +102,20 @@ export default function SuperadminTournamentsPage() {
     setSubmitting(false);
   }
 
+  function toLocalDatetimeInput(iso: string): string {
+    return new Date(iso)
+      .toLocaleString('sv-SE', { timeZone: 'Asia/Tashkent' })
+      .slice(0, 16)
+      .replace(' ', 'T');
+  }
+
   function startEdit(t: Tournament) {
     setEditing(t);
     setEditForm({
       title: t.title,
       type: t.type,
-      startsAt: t.startsAt.slice(0, 16),
-      endsAt: t.endsAt.slice(0, 16),
+      startsAt: toLocalDatetimeInput(t.startsAt),
+      endsAt: toLocalDatetimeInput(t.endsAt),
     });
   }
 
@@ -135,7 +142,7 @@ export default function SuperadminTournamentsPage() {
               : undefined,
           }),
         },
-        token,
+        token(),
       );
       setTournaments((prev) =>
         prev.map((t) =>
@@ -158,7 +165,7 @@ export default function SuperadminTournamentsPage() {
       await apiRequest(
         `/tournaments/${deleteTarget.id}`,
         { method: 'DELETE' },
-        token,
+        token(),
       );
       setTournaments((prev) =>
         prev.filter((t) => t.id !== deleteTarget.id),
@@ -216,14 +223,19 @@ export default function SuperadminTournamentsPage() {
               <CardTitle>Yangi turnir yaratish</CardTitle>
             </CardHeader>
             <form onSubmit={handleCreate} className="p-4 space-y-3">
-              <input
-                required
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder="Turnir nomi"
-                aria-label="Turnir nomi"
-                className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
-              />
+              <div>
+                <label htmlFor="t-title" className="block text-xs text-[#64748b] mb-1">
+                  Turnir nomi
+                </label>
+                <input
+                  id="t-title"
+                  required
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="Turnir nomi"
+                  className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
+                />
+              </div>
               <select
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
@@ -381,14 +393,20 @@ export default function SuperadminTournamentsPage() {
         theme="light"
       >
         <div className="space-y-3">
-          <input
-            value={editForm.title}
-            onChange={(e) =>
-              setEditForm({ ...editForm, title: e.target.value })
-            }
-            placeholder="Turnir nomi"
-            className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
-          />
+          <div>
+            <label htmlFor="et-title" className="block text-xs text-[#64748b] mb-1">
+              Turnir nomi
+            </label>
+            <input
+              id="et-title"
+              value={editForm.title}
+              onChange={(e) =>
+                setEditForm({ ...editForm, title: e.target.value })
+              }
+              placeholder="Turnir nomi"
+              className="w-full border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#f59e0b]"
+            />
+          </div>
           <select
             value={editForm.type}
             onChange={(e) =>
@@ -440,7 +458,7 @@ export default function SuperadminTournamentsPage() {
             <button
               onClick={() => setEditing(null)}
               disabled={editSaving}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>
@@ -473,7 +491,7 @@ export default function SuperadminTournamentsPage() {
           <button
             onClick={() => setDeleteTarget(null)}
             disabled={deleting}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
             Yo‘q
           </button>

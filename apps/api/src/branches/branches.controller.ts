@@ -71,12 +71,16 @@ export class BranchesController {
   assignFiladmin(
     @Param('id') id: string,
     @Body('filadminId') filadminId: string,
-    @Body('tenantId') bodyTenantId: string,
+    @Body('tenantId') bodyTenantId: string | undefined,
     @Request() req: any,
   ) {
-    // Superadmin passes tenantId in body; other roles use JWT tenantId
+    // Always fall back to JWT tenantId — the frontend forms now derive
+    // it from the token but legacy clients may still send it in body.
+    // For non-superadmin roles the JWT value wins outright.
     const tenantId =
-      req.user.role === UserRole.superadmin ? bodyTenantId : req.user.tenantId;
+      req.user.role === UserRole.superadmin
+        ? (bodyTenantId ?? req.user.tenantId)
+        : req.user.tenantId;
     return this.branches.assignFiladmin(id, filadminId, tenantId);
   }
 }

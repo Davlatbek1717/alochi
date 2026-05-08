@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Save, Upload, Trash2, Award } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
+import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
 type CertLevel = {
   level: 'bronze' | 'silver' | 'gold' | 'diamond';
@@ -18,7 +19,7 @@ interface Draft {
   imagePreview: string | null; // local preview (data URL)
 }
 
-const MAX_IMAGE_BYTES = 1024 * 1024; // 1 MB cap on the data-URL payload
+const MAX_IMAGE_BYTES = 700 * 1024; // 700 KB — keeps base64-encoded data-URL under 1 MB
 
 function getToken() {
   return typeof window !== 'undefined'
@@ -33,7 +34,7 @@ export default function CertificateDesignPage() {
   const [saving, setSaving] = useState(false);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  function loadLevels() {
+  const loadLevels = useCallback(() => {
     apiRequest<CertLevel[]>('/gamification/certificate-levels', {}, getToken())
       .then((res) => {
         const sorted = [...(res.data ?? [])].sort(
@@ -51,9 +52,11 @@ export default function CertificateDesignPage() {
         setDrafts(next);
       })
       .catch(() => toast.error('Levels yuklanmadi'));
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  useEffect(loadLevels, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadLevels(); }, [loadLevels]);
+  useFocusRevalidate(loadLevels);
 
   function handleFile(level: string, file: File) {
     if (!file.type.startsWith('image/')) {
@@ -61,7 +64,7 @@ export default function CertificateDesignPage() {
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error(`Fayl 1 MB dan kichik bo'lishi kerak (joriy: ${(file.size / 1024).toFixed(0)} KB)`);
+      toast.error(`Fayl 700 KB dan kichik bo'lishi kerak (joriy: ${(file.size / 1024).toFixed(0)} KB)`);
       return;
     }
     const reader = new FileReader();
@@ -156,46 +159,41 @@ export default function CertificateDesignPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] p-5">
-      <header className="flex items-start justify-between gap-4 mb-6">
-        <div className="flex items-start gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#fbbf24]/15 border border-[#fbbf24]/30 grid place-items-center text-[#b45309]">
-            <Award size={20} />
+    <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#f59e0b]/20 flex items-center justify-center">
+              <Award size={18} className="text-[#f59e0b]" />
+            </div>
+            <div>
+              <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Superadmin</p>
+              <p className="text-white font-bold text-lg">Sertifikat dizayni</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-extrabold text-[#0f172a]">
-              Sertifikat dizayni
-            </h1>
-            <p className="text-sm text-[#64748b] mt-0.5">
-              Har bir bosqich uchun sertifikat shaklini yuklang va o&apos;quvchi
-              nechinchi darsdan keyin uni olishini belgilang.
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={saveAll}
+            disabled={saving}
+            className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white text-sm font-bold px-4 py-2 rounded-xl border border-white/20 transition-colors disabled:opacity-60"
+          >
+            {saving ? (
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
+            {saving ? 'Saqlanmoqda…' : 'Saqlash'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={saveAll}
-          disabled={saving}
-          className={[
-            'inline-flex items-center gap-2',
-            'bg-[#0f172a] text-white font-extrabold text-sm tracking-wide',
-            'px-5 py-3 rounded-xl',
-            'border-b-[4px] border-[#0a0717]',
-            'hover:bg-[#1e293b]',
-            'active:translate-y-[2px] active:border-b-[1px]',
-            'disabled:opacity-60 disabled:cursor-not-allowed disabled:active:translate-y-0',
-            'transition-all duration-150',
-          ].join(' ')}
-        >
-          {saving ? (
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <Save size={16} />
-          )}
-          {saving ? 'Saqlanmoqda…' : 'Saqlash'}
-        </button>
-      </header>
+      </div>
 
+      <div className="p-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         {levels.map((lvl) => {
           const draft = drafts[lvl.level];
@@ -315,6 +313,7 @@ export default function CertificateDesignPage() {
           Allaqachon sertifikat olgan o&apos;quvchilar bekor bo&apos;lmaydi —
           yangi sozlama keyingi darslarni tugatuvchilarga tatbiq etiladi.
         </p>
+      </div>
       </div>
     </div>
   );

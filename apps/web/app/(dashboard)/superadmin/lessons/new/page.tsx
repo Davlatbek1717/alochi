@@ -139,12 +139,8 @@ export default function NewLessonPage() {
     setSaving(true);
 
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as {
-      tenantId?: string;
-    };
 
     const body: Record<string, unknown> = {
-      tenantId: user.tenantId,
       title: form.title.trim(),
       type: form.type,
       orderNumber: parseInt(form.orderNumber, 10),

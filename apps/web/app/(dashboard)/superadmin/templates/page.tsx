@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bell, RotateCcw, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { Skeleton, useToast } from '@/components/ui';
 
 interface Template {
   key: string;
@@ -18,13 +18,10 @@ export default function SuperadminTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const token = useMemo(
-    () => (typeof window === 'undefined' ? '' : localStorage.getItem('accessToken') ?? ''),
-    [],
-  );
+  const token = () => (typeof window !== 'undefined' ? localStorage.getItem('accessToken') ?? '' : '');
 
   useEffect(() => {
-    apiRequest<Template[]>('/notification-templates', {}, token)
+    apiRequest<Template[]>('/notification-templates', {}, token())
       .then((res) => {
         setTemplates(res.data);
         const map: Record<string, string> = {};
@@ -37,7 +34,8 @@ export default function SuperadminTemplatesPage() {
         setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function save(key: string) {
     setSavingKey(key);
@@ -48,7 +46,7 @@ export default function SuperadminTemplatesPage() {
           method: 'PUT',
           body: JSON.stringify({ body: drafts[key] }),
         },
-        token,
+        token(),
       );
       setTemplates((prev) =>
         prev.map((t) =>
@@ -69,12 +67,12 @@ export default function SuperadminTemplatesPage() {
       await apiRequest(
         `/notification-templates/${encodeURIComponent(key)}`,
         { method: 'DELETE' },
-        token,
+        token(),
       );
       const res = await apiRequest<Template[]>(
         '/notification-templates',
         {},
-        token,
+        token(),
       );
       setTemplates(res.data);
       const map: Record<string, string> = {};
@@ -108,8 +106,13 @@ export default function SuperadminTemplatesPage() {
 
       <div className="px-4 pt-5 pb-6 space-y-4">
         {loading ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">
-            <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton theme="light" className="h-4 w-32" />
+                <Skeleton theme="light" className="h-16 w-full" />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">

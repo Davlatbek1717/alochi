@@ -2,25 +2,14 @@
 import { useEffect, useState } from 'react';
 import { Settings, Save } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { useToast } from '@/components/ui';
+import { Skeleton, useToast } from '@/components/ui';
+import { getTenantIdFromToken } from '@/lib/jwt';
 
 interface TenantSettings {
   id: string;
   name: string;
   slug: string;
   warningBlockLimit: number;
-}
-
-function getTenantIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as {
-      tenantId?: string;
-    };
-    return payload.tenantId ?? null;
-  } catch {
-    return null;
-  }
 }
 
 export default function SuperadminSettingsPage() {
@@ -98,8 +87,10 @@ export default function SuperadminSettingsPage() {
 
       <div className="px-4 pt-5 pb-6 space-y-4">
         {loading ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">
-            <p className="text-sm text-[#94a3b8]">Yuklanmoqda...</p>
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 space-y-3">
+            <Skeleton theme="light" className="h-4 w-24" />
+            <Skeleton theme="light" className="h-6 w-48" />
+            <Skeleton theme="light" className="h-4 w-32" />
           </div>
         ) : error ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6">

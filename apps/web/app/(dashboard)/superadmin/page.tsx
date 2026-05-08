@@ -12,19 +12,19 @@ import { formatDateLong } from '@/lib/date-uz';
 import { Skeleton } from '@/components/ui';
 
 const NAV_CARDS = [
-  { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr',  color: 'hover:border-indigo-300 hover:bg-indigo-50' },
-  { href: '/superadmin/payments', icon: <CreditCard size={22} />, title: "To'lovlar",            desc: 'Qarzdorlar, filial statistika', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
-  { href: '/superadmin/users',    icon: <Users size={22} />,      title: 'Foydalanuvchilar',     desc: 'Yaratish, tahrirlash',          color: 'hover:border-violet-300 hover:bg-violet-50' },
-  { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "A'lochi filiallari va admin tayinlash", color: 'hover:border-blue-300 hover:bg-blue-50' },
-  { href: '/superadmin/tournaments',icon: <Trophy size={22} />,   title: 'Turnirlar',            desc: 'Musobaqalar boshqaruvi',        color: 'hover:border-amber-300 hover:bg-amber-50' },
-  { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate',           color: 'hover:border-purple-300 hover:bg-purple-50' },
-  { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika',     color: 'hover:border-green-300 hover:bg-green-50' },
-  { href: '/superadmin/blocked-students',icon: <UserX size={22} />,         title: "Bloklangan o'quvchilar", desc: "To'lov va ogohlantirish bloklari", color: 'hover:border-rose-300 hover:bg-rose-50' },
-  { href: '/superadmin/face-sla',        icon: <Camera size={22} />,        title: 'Face ID monitoring',   desc: "Face ID natijalari va SLA",     color: 'hover:border-cyan-300 hover:bg-cyan-50' },
-  { href: '/superadmin/certificate-design', icon: <Award size={22} />,      title: 'Sertifikat dizayni',   desc: 'Shablon va brending',           color: 'hover:border-amber-300 hover:bg-amber-50' },
-  { href: '/superadmin/video-guides',    icon: <Video size={22} />,         title: "Video qo'llanmalar",    desc: "Foydalanuvchilar uchun video",  color: 'hover:border-blue-300 hover:bg-blue-50' },
-  { href: '/superadmin/templates',       icon: <MessageSquare size={22} />, title: 'Bildirishnoma shablonlari', desc: 'Telegram/inapp/SMS shablonlar', color: 'hover:border-violet-300 hover:bg-violet-50' },
-  { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi',            color: 'hover:border-slate-300 hover:bg-slate-50' },
+  { href: '/superadmin/lessons',  icon: <BookMarked size={22} />, title: 'Darslar',              desc: 'Yaratish, tahrirlash, nashr' },
+  { href: '/superadmin/payments', icon: <CreditCard size={22} />, title: "To'lovlar",            desc: 'Qarzdorlar, filial statistika' },
+  { href: '/superadmin/users',    icon: <Users size={22} />,      title: 'Foydalanuvchilar',     desc: 'Yaratish, tahrirlash' },
+  { href: '/superadmin/branches', icon: <Building2 size={22} />,  title: 'Filiallar',            desc: "A'lochi filiallari va admin tayinlash" },
+  { href: '/superadmin/tournaments',icon: <Trophy size={22} />,   title: 'Turnirlar',            desc: 'Musobaqalar boshqaruvi' },
+  { href: '/superadmin/content-quality', icon: <BarChart2 size={22} />,     title: 'Kontent Sifati',       desc: 'A/B test, pass rate' },
+  { href: '/superadmin/analytics',       icon: <TrendingUp size={22} />,    title: 'Analytics',            desc: 'Filial va dars statistika' },
+  { href: '/superadmin/blocked-students',icon: <UserX size={22} />,         title: "Bloklangan o'quvchilar", desc: "To'lov va ogohlantirish bloklari" },
+  { href: '/superadmin/face-sla',        icon: <Camera size={22} />,        title: 'Face ID monitoring',   desc: "Face ID natijalari va SLA" },
+  { href: '/superadmin/certificate-design', icon: <Award size={22} />,      title: 'Sertifikat dizayni',   desc: 'Shablon va brending' },
+  { href: '/superadmin/video-guides',    icon: <Video size={22} />,         title: "Video qo'llanmalar",    desc: "Foydalanuvchilar uchun video" },
+  { href: '/superadmin/templates',       icon: <MessageSquare size={22} />, title: 'Bildirishnoma shablonlari', desc: 'Telegram/inapp/SMS shablonlar' },
+  { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi' },
 ];
 
 type Stats = { branches: number; lessons: number; users: number };
@@ -96,7 +96,7 @@ export default function SuperadminDashboard() {
             <button
               key={card.href}
               onClick={() => router.push(card.href)}
-              className={`relative bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
+              className="relative bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] hover:border-[#6d28d9] hover:bg-[#6d28d9]/5 text-left"
             >
               <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
                 {card.icon}

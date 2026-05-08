@@ -37,10 +37,10 @@ const ROLE_LABELS: Record<string, string> = {
   superadmin: 'Superadmin',
 };
 const ROLE_COLORS: Record<string, string> = {
-  student: 'bg-blue-50 text-blue-700 border-blue-100',
-  mentor: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  manager: 'bg-violet-50 text-violet-700 border-violet-100',
-  filadmin: 'bg-amber-50 text-amber-700 border-amber-100',
+  student: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  mentor: 'bg-[#15803d]/10 text-[#15803d] border-[#15803d]/30',
+  manager: 'bg-[#6d28d9]/10 text-[#6d28d9] border-[#6d28d9]/30',
+  filadmin: 'bg-[#0f172a]/[0.08] text-[#0f172a] border-[#ede9e1]',
   superadmin: 'bg-[#e11d48]/10 text-[#e11d48] border-[#e11d48]/20',
 };
 
@@ -203,7 +203,7 @@ export default function SuperadminUsersPage() {
       );
       toast.success('Saqlandi');
       setEditing(null);
-      loadUsers();
+      await loadUsers();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
@@ -594,7 +594,7 @@ export default function SuperadminUsersPage() {
             <button
               onClick={() => setEditing(null)}
               disabled={editSaving}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>
@@ -634,7 +634,7 @@ export default function SuperadminUsersPage() {
           <button
             onClick={() => setResetting(null)}
             disabled={resetSaving}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
             Bekor qilish
           </button>

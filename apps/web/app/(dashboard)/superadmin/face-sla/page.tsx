@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ScanFace, CheckCircle, AlertCircle, RefreshCw, Inbox } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { Skeleton } from '@/components/ui';
 
 type Sla = {
   totalAttempts: number;
@@ -35,28 +36,39 @@ export default function FaceSlaPage() {
   }, [load]);
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ScanFace size={20} />
-          <h1 className="text-xl font-bold text-[#0f172a]">Face SLA monitoringi</h1>
+    <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+              <ScanFace size={18} className="text-[#0d9488]" />
+            </div>
+            <div>
+              <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Superadmin</p>
+              <p className="text-white font-bold text-lg">Face SLA monitoringi</p>
+            </div>
+          </div>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Yangilash
+          </button>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="inline-flex items-center gap-1 bg-white border-[1.5px] border-[#ede9e1] hover:border-[#0d9488] text-[#0f172a] px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Yangilash
-        </button>
       </div>
 
+      <div className="p-5">
       {loading ? (
         <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 animate-pulse">
-              <div className="h-3 bg-[#f7f4ef] rounded w-2/3 mb-3" />
-              <div className="h-7 bg-[#f7f4ef] rounded w-1/2" />
-            </div>
+            <Skeleton key={i} theme="light" className="h-20 rounded-[18px]" />
           ))}
         </div>
       ) : error ? (
@@ -112,10 +124,13 @@ export default function FaceSlaPage() {
             <p className="text-xs text-[#64748b] uppercase tracking-wider font-semibold mb-2">
               O&apos;rtacha confidence
             </p>
-            <p className="text-2xl font-bold text-[#0f172a]">{sla.avgConfidence}</p>
+            <p className={`text-2xl font-bold ${sla.avgConfidence >= 0.8 ? 'text-[#15803d]' : 'text-rose-600'}`}>
+              {(sla.avgConfidence * 100).toFixed(1)}%
+            </p>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -9,9 +9,12 @@ import {
   Settings,
   UserCheck,
   Save,
+  ArrowLeft,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { Modal, Skeleton, useToast } from '@/components/ui';
+import { getTenantIdFromToken } from '@/lib/jwt';
 
 type Stats = {
   branchId: string;
@@ -45,6 +48,7 @@ interface User {
 export default function BranchStatsPage() {
   const params = useParams<{ id: string }>();
   const branchId = params?.id;
+  const router = useRouter();
   const toast = useToast();
   const [stats, setStats] = useState<Stats | null>(null);
   const [branch, setBranch] = useState<Branch | null>(null);
@@ -107,7 +111,7 @@ export default function BranchStatsPage() {
         `/branches/${branchId}/filadmin`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ filadminId }),
+          body: JSON.stringify({ filadminId, tenantId: getTenantIdFromToken() }),
         },
         token(),
       );
@@ -147,26 +151,50 @@ export default function BranchStatsPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] p-5 space-y-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-[#0f172a]">
-          {branch?.name ?? 'Filial'}
-        </h1>
-        <div className="flex gap-2">
+    <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 space-y-3">
           <button
-            onClick={() => setAssignOpen(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50 px-3 py-2 rounded-xl border border-[#ede9e1]"
+            onClick={() => router.push('/superadmin/branches')}
+            className="flex items-center gap-2 text-[#94a3b8] text-sm hover:text-white transition-colors"
           >
-            <UserCheck size={14} /> Filadmin tayinlash
+            <ArrowLeft size={16} /> Filiallar
           </button>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white text-[#64748b] hover:text-[#0f172a] hover:bg-slate-50 px-3 py-2 rounded-xl border border-[#ede9e1]"
-          >
-            <Settings size={14} /> Sozlamalar
-          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
+                <Users size={18} className="text-[#0d9488]" />
+              </div>
+              <div>
+                <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Filial</p>
+                <p className="text-white font-bold text-lg">{branch?.name ?? 'Yuklanmoqda...'}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAssignOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/10 text-white hover:bg-white/20 px-3 py-2 rounded-xl border border-white/20 transition-colors"
+              >
+                <UserCheck size={14} /> Filadmin tayinlash
+              </button>
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/10 text-white hover:bg-white/20 px-3 py-2 rounded-xl border border-white/20 transition-colors"
+              >
+                <Settings size={14} /> Sozlamalar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div className="p-5 space-y-5">
 
       {loading ? (
         <div className="grid grid-cols-2 gap-3">
@@ -269,8 +297,8 @@ export default function BranchStatsPage() {
         theme="light"
       >
         <p className="text-sm text-[#64748b] mb-3">
-          Bu filialda mavjud filadmin xodimlardan birini tanlang. Yo‘q
-          bo‘lsa, oldin foydalanuvchilar sahifasida filadmin yarating.
+          Bu filialda mavjud filadmin xodimlardan birini tanlang. Yo&apos;q
+          bo&apos;lsa, oldin foydalanuvchilar sahifasida filadmin yarating.
         </p>
         <select
           value={filadminId}
@@ -288,7 +316,7 @@ export default function BranchStatsPage() {
           <button
             onClick={() => setAssignOpen(false)}
             disabled={assignSaving}
-            className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
           >
             Bekor qilish
           </button>
@@ -345,7 +373,7 @@ export default function BranchStatsPage() {
             <button
               onClick={() => setSettingsOpen(false)}
               disabled={settingsSaving}
-              className="text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
             >
               Bekor qilish
             </button>
@@ -360,6 +388,7 @@ export default function BranchStatsPage() {
           </div>
         </div>
       </Modal>
+    </div>
     </div>
   );
 }

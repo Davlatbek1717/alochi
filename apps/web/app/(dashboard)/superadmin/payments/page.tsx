@@ -6,6 +6,7 @@ import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../_components/MonthPicker';
 import { Skeleton, EmptyState, useToast } from '@/components/ui';
 import { formatNumber } from '@/lib/date-uz';
+import { tashkentToday } from '@/lib/tashkent-date';
 
 interface BranchPaymentSummary {
   branchId: string;
@@ -125,7 +126,7 @@ function PaymentSettingsPanel() {
 }
 
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return tashkentToday().slice(0, 7);
 }
 
 function BranchCard({ summary, month }: { summary: BranchPaymentSummary; month: string }) {

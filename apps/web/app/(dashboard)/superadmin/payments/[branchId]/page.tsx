@@ -7,9 +7,10 @@ import { apiRequest } from '@/lib/api';
 import MonthPicker from '../../../_components/MonthPicker';
 import DebtorsTable, { BranchStudent } from '../../../_components/DebtorsTable';
 import { Skeleton, useToast } from '@/components/ui';
+import { tashkentToday } from '@/lib/tashkent-date';
 
 function currentMonth() {
-  return new Date().toISOString().slice(0, 7);
+  return tashkentToday().slice(0, 7);
 }
 
 function BranchDetailContent() {

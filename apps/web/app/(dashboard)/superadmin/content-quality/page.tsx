@@ -80,7 +80,7 @@ export default function ContentQualityPage() {
   const [variantSaving, setVariantSaving] = useState(false);
   const toast = useToast();
 
-  const token = () => localStorage.getItem('accessToken') ?? '';
+  const token = () => (typeof window !== 'undefined' ? localStorage.getItem('accessToken') ?? '' : '');
 
   useEffect(() => {
     apiRequest<LessonStat[]>('/content-quality/lessons', {}, token())
@@ -132,7 +132,10 @@ export default function ContentQualityPage() {
         token(),
       );
       toast.success('B variant yaratildi');
+      const lessonId = variantModal.lessonId;
       setVariantModal(null);
+      // Refresh A/B results for this lesson so user sees the new variant
+      viewABResults(lessonId);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Xato yuz berdi');
     } finally {
@@ -416,7 +419,10 @@ export default function ContentQualityPage() {
         theme="light"
       >
         {abLoading ? (
-          <p className="text-sm text-[#64748b] py-4 text-center">Yuklanmoqda...</p>
+          <div className="grid grid-cols-2 gap-3 py-2">
+            <Skeleton theme="light" className="h-24 rounded-2xl" />
+            <Skeleton theme="light" className="h-24 rounded-2xl" />
+          </div>
         ) : abResults && abResults.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {abResults.map((ab) => {
