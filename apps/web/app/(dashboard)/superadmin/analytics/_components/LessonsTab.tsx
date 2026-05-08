@@ -6,6 +6,7 @@ import { Table, Column, EmptyState, Skeleton, useToast } from '@/components/ui';
 
 interface LessonStat {
   lessonId: string;
+  lessonTitle: string;
   passRate: number;
   totalStudents: number;
   passed: number;
@@ -15,9 +16,18 @@ interface LessonStat {
 
 const columns: Column<LessonStat>[] = [
   {
-    key: 'lessonId',
-    label: 'Dars ID',
-    render: (row) => <span className="font-mono text-xs text-slate-400">{row.lessonId.slice(0, 8)}…</span>,
+    key: 'lessonTitle',
+    label: 'Dars',
+    render: (row) => (
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-[#0f172a]">
+          {row.lessonTitle}
+        </span>
+        <span className="font-mono text-[10px] text-[#94a3b8]">
+          {row.lessonId.slice(0, 8)}…
+        </span>
+      </div>
+    ),
   },
   {
     key: 'passRate',
@@ -25,7 +35,15 @@ const columns: Column<LessonStat>[] = [
     align: 'center',
     sortable: true,
     render: (row) => (
-      <span className={row.passRate >= 70 ? 'text-emerald-400 font-semibold' : row.passRate >= 50 ? 'text-yellow-400 font-semibold' : 'text-red-400 font-semibold'}>
+      <span
+        className={
+          row.passRate >= 70
+            ? 'text-emerald-600 font-semibold'
+            : row.passRate >= 50
+              ? 'text-amber-600 font-semibold'
+              : 'text-rose-600 font-semibold'
+        }
+      >
         {row.passRate}%
       </span>
     ),
@@ -35,14 +53,18 @@ const columns: Column<LessonStat>[] = [
     label: "O'quvchilar",
     align: 'center',
     sortable: true,
-    render: (row) => <span className="text-slate-300">{row.totalStudents}</span>,
+    render: (row) => (
+      <span className="text-[#0f172a] font-medium">{row.totalStudents}</span>
+    ),
   },
   {
     key: 'avgSessions',
     label: "O'rt. sessiya",
     align: 'center',
     sortable: true,
-    render: (row) => <span className="text-slate-300">{row.avgSessions}</span>,
+    render: (row) => (
+      <span className="text-[#64748b]">{Number(row.avgSessions).toFixed(1)}</span>
+    ),
   },
   {
     key: 'feedbackAvg',
@@ -50,7 +72,9 @@ const columns: Column<LessonStat>[] = [
     align: 'center',
     sortable: true,
     accessor: (row) => row.feedbackAvg ?? 0,
-    render: (row) => <span className="text-slate-300">{row.feedbackAvg ?? '—'}</span>,
+    render: (row) => (
+      <span className="text-[#64748b]">{row.feedbackAvg ?? '—'}</span>
+    ),
   },
 ];
 
@@ -63,27 +87,37 @@ export function LessonsTab() {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<LessonStat[]>('/analytics/lessons', {}, token)
       .then((r) => setLessons(r.data))
-      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'))
+      .catch((e: unknown) =>
+        toast.error(e instanceof Error ? e.message : 'Xatolik'),
+      )
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-6 w-56" />
-        <Table columns={columns as unknown as Column<Record<string, unknown>>[]} data={[]} keyField="lessonId" loading />
+        <Skeleton className="h-6 w-56" theme="light" />
+        <Table
+          columns={columns as unknown as Column<Record<string, unknown>>[]}
+          data={[]}
+          keyField="lessonId"
+          loading
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-white">Darslar Samaradorligi</h2>
+      <h2 className="text-lg font-semibold text-[#0f172a]">
+        Darslar Samaradorligi
+      </h2>
       {lessons.length === 0 ? (
         <EmptyState
           icon={<BookOpen size={24} />}
           title="Darslar statistikasi yo'q"
           description="Hali birorta dars uchun ma'lumot yig'ilmagan"
+          theme="light"
         />
       ) : (
         <Table

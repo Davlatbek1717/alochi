@@ -12,11 +12,15 @@ export class AnalyticsService {
     private clickhouse: ClickHouseService,
   ) {}
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Lesson stats — backed by lesson_stats_mv (Postgres materialized view).
+  // ───────────────────────────────────────────────────────────────────────────
   async getLessonStats(tenantId: string) {
     try {
       const rows = await this.prisma.$queryRawUnsafe<
         Array<{
           lesson_id: string;
+          lesson_title: string;
           pass_rate: number;
           total_students: number;
           passed: number;
@@ -24,12 +28,13 @@ export class AnalyticsService {
           feedback_avg: number | null;
         }>
       >(
-        `SELECT lesson_id, pass_rate, total_students, passed, avg_sessions, feedback_avg
+        `SELECT lesson_id, lesson_title, pass_rate, total_students, passed, avg_sessions, feedback_avg
          FROM lesson_stats_mv WHERE tenant_id = $1`,
         tenantId,
       );
       return rows.map((r) => ({
         lessonId: r.lesson_id,
+        lessonTitle: r.lesson_title,
         passRate: Number(r.pass_rate),
         totalStudents: Number(r.total_students),
         passed: Number(r.passed),
@@ -44,25 +49,32 @@ export class AnalyticsService {
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Branch stats — backed by branch_stats_mv (Postgres materialized view).
+  // ───────────────────────────────────────────────────────────────────────────
   async getBranchStats(tenantId: string) {
     try {
       const rows = await this.prisma.$queryRawUnsafe<
         Array<{
           branch_id: string;
-          active_students: number;
-          avg_streak: number;
-          avg_xp: number;
+          branch_name: string;
+          total_students: number;
+          total_sessions: number;
+          lessons_passed: number;
+          pass_rate: number;
         }>
       >(
-        `SELECT branch_id, active_students, avg_streak, avg_xp
+        `SELECT branch_id, branch_name, total_students, total_sessions, lessons_passed, pass_rate
          FROM branch_stats_mv WHERE tenant_id = $1`,
         tenantId,
       );
       return rows.map((r) => ({
         branchId: r.branch_id,
-        activeStudents: Number(r.active_students),
-        avgStreak: Number(r.avg_streak),
-        avgXp: Number(r.avg_xp),
+        branchName: r.branch_name,
+        totalStudents: Number(r.total_students),
+        totalSessions: Number(r.total_sessions),
+        lessonsPassed: Number(r.lessons_passed),
+        passRate: Number(r.pass_rate),
       }));
     } catch (err) {
       this.logger.warn(
@@ -72,8 +84,17 @@ export class AnalyticsService {
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Student activity — Postgres path when ClickHouse unavailable.
+  // Returns { day, count } for last 7 or 30 days.
+  // ───────────────────────────────────────────────────────────────────────────
   async getStudentActivity(tenantId: string, period: 'weekly' | 'monthly') {
     const days = period === 'weekly' ? 7 : 30;
+
+    if (!this.clickhouse.isReady()) {
+      return this.getStudentActivityFromPostgres(tenantId, days);
+    }
+
     try {
       const rows = await this.clickhouse.query<{ day: string; count: string }>(
         `SELECT toDate(created_at)::String AS day, count(DISTINCT student_id)::String AS count
@@ -87,22 +108,64 @@ export class AnalyticsService {
       return rows.map((r) => ({ day: r.day, count: Number(r.count) }));
     } catch (err) {
       this.logger.warn(
-        `getStudentActivity fallback to []: ${(err as Error).message}`,
+        `getStudentActivity ClickHouse failed, falling back to Postgres: ${(err as Error).message}`,
+      );
+      return this.getStudentActivityFromPostgres(tenantId, days);
+    }
+  }
+
+  private async getStudentActivityFromPostgres(
+    tenantId: string,
+    days: number,
+  ): Promise<Array<{ day: string; count: number }>> {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{ day: string; count: bigint }>
+      >(
+        Prisma.sql`
+          SELECT
+            to_char(
+              sp.last_activity_at AT TIME ZONE 'Asia/Tashkent',
+              'YYYY-MM-DD'
+            ) AS day,
+            COUNT(DISTINCT sp.student_id) AS count
+          FROM student_progress sp
+          JOIN users u ON u.id = sp.student_id
+          WHERE u.tenant_id = ${tenantId}::uuid
+            AND sp.last_activity_at >= now() - (${days} || ' days')::interval
+            AND sp.last_activity_at IS NOT NULL
+          GROUP BY 1
+          ORDER BY 1
+        `,
+      );
+      return rows.map((r) => ({ day: r.day, count: Number(r.count) }));
+    } catch (err) {
+      this.logger.warn(
+        `getStudentActivityFromPostgres failed: ${(err as Error).message}`,
       );
       return [];
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Cohort retention — ClickHouse only. Returns source:'unavailable' when CH
+  // is down so the frontend can show an honest empty state.
+  // ───────────────────────────────────────────────────────────────────────────
   async getCohortRetention(
     tenantId: string,
     weeks = 8,
   ): Promise<
-    Array<{
-      cohortWeek: string;
-      size: number;
-      retention: Record<string, number>;
-    }>
+    | { source: 'unavailable'; cohorts: [] }
+    | Array<{
+        cohortWeek: string;
+        size: number;
+        retention: Record<string, number>;
+      }>
   > {
+    if (!this.clickhouse.isReady()) {
+      return { source: 'unavailable', cohorts: [] };
+    }
+
     type Row = {
       cohort_week: string;
       week_offset: string;
@@ -110,11 +173,6 @@ export class AnalyticsService {
       active: string;
     };
     try {
-      // Reads from the `cohort_weekly` view (see migration 003) which joins
-      // events to the `cohort_first_event_mv` AggregatingMergeTree. Cheaper
-      // than the previous ad-hoc CTE/window approach; same response shape.
-      // cohort_size is taken from the row where return_week == cohort_week
-      // (week 0 — every member of the cohort is active by definition).
       const rows = await this.clickhouse.query<Row>(
         `SELECT
            toString(cw.cohort_week) AS cohort_week,
@@ -159,16 +217,24 @@ export class AnalyticsService {
       }));
     } catch (err) {
       this.logger.warn(
-        `getCohortRetention fallback to []: ${(err as Error).message}`,
+        `getCohortRetention ClickHouse failed: ${(err as Error).message}`,
       );
-      return [];
+      return { source: 'unavailable', cohorts: [] };
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Funnel — Postgres path when ClickHouse unavailable.
+  // Steps: started (session_count>=1), completed (home_completed), verified (academy_completed).
+  // ───────────────────────────────────────────────────────────────────────────
   async getFunnel(
     tenantId: string,
     lessonId: string,
   ): Promise<Array<{ step: string; count: number }>> {
+    if (!this.clickhouse.isReady()) {
+      return this.getFunnelFromPostgres(tenantId, lessonId);
+    }
+
     try {
       const rows = await this.clickhouse.query<{
         event_type: string;
@@ -186,32 +252,72 @@ export class AnalyticsService {
       for (const r of rows) counts[r.event_type] = Number(r.cnt);
 
       return [
-        { step: 'Sessiya boshlangan', count: counts['lesson_session'] ?? 0 },
+        { step: 'Boshlagan', count: counts['lesson_session'] ?? 0 },
         {
-          step: 'Test topshirgan',
+          step: 'Tugatgan',
           count:
             (counts['lesson_session'] ?? 0) - (counts['lesson_failed'] ?? 0),
         },
         {
-          step: 'Muvaffaqiyatli yakunlangan',
+          step: 'Tester tasdiqi',
           count: counts['lesson_completed'] ?? 0,
         },
       ];
     } catch (err) {
       this.logger.warn(
-        `getFunnel fallback to zeros: ${(err as Error).message}`,
+        `getFunnel ClickHouse failed, falling back to Postgres: ${(err as Error).message}`,
+      );
+      return this.getFunnelFromPostgres(tenantId, lessonId);
+    }
+  }
+
+  private async getFunnelFromPostgres(
+    tenantId: string,
+    lessonId: string,
+  ): Promise<Array<{ step: string; count: number }>> {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{ started: bigint; completed: bigint; verified: bigint }>
+      >(
+        Prisma.sql`
+          SELECT
+            COUNT(DISTINCT sp.student_id) FILTER (WHERE sp.session_count >= 1)           AS started,
+            COUNT(DISTINCT sp.student_id) FILTER (WHERE sp.home_completed = true)         AS completed,
+            COUNT(DISTINCT sp.student_id) FILTER (WHERE sp.academy_completed = true)      AS verified
+          FROM student_progress sp
+          JOIN users u ON u.id = sp.student_id
+          WHERE sp.lesson_id = ${lessonId}::uuid
+            AND u.tenant_id = ${tenantId}::uuid
+        `,
+      );
+      const r = rows[0] ?? { started: 0n, completed: 0n, verified: 0n };
+      return [
+        { step: 'Boshlagan', count: Number(r.started) },
+        { step: 'Tugatgan', count: Number(r.completed) },
+        { step: 'Tester tasdiqi', count: Number(r.verified) },
+      ];
+    } catch (err) {
+      this.logger.warn(
+        `getFunnelFromPostgres failed: ${(err as Error).message}`,
       );
       return [
-        { step: 'Sessiya boshlangan', count: 0 },
-        { step: 'Test topshirgan', count: 0 },
-        { step: 'Muvaffaqiyatli yakunlangan', count: 0 },
+        { step: 'Boshlagan', count: 0 },
+        { step: 'Tugatgan', count: 0 },
+        { step: 'Tester tasdiqi', count: 0 },
       ];
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Lifecycle (DAU/WAU/MAU) — Postgres path when ClickHouse unavailable.
+  // ───────────────────────────────────────────────────────────────────────────
   async getLifecycle(
     tenantId: string,
   ): Promise<{ dau: number; wau: number; mau: number; stickiness: number }> {
+    if (!this.clickhouse.isReady()) {
+      return this.getLifecycleFromPostgres(tenantId);
+    }
+
     try {
       const rows = await this.clickhouse.query<{
         dau: string;
@@ -234,12 +340,54 @@ export class AnalyticsService {
       return { dau, wau, mau, stickiness };
     } catch (err) {
       this.logger.warn(
-        `getLifecycle fallback to zeros: ${(err as Error).message}`,
+        `getLifecycle ClickHouse failed, falling back to Postgres: ${(err as Error).message}`,
+      );
+      return this.getLifecycleFromPostgres(tenantId);
+    }
+  }
+
+  private async getLifecycleFromPostgres(
+    tenantId: string,
+  ): Promise<{ dau: number; wau: number; mau: number; stickiness: number }> {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{ dau: bigint; wau: bigint; mau: bigint }>
+      >(
+        Prisma.sql`
+          SELECT
+            COUNT(DISTINCT sp.student_id) FILTER (
+              WHERE sp.last_activity_at >= now() - INTERVAL '1 day'
+            ) AS dau,
+            COUNT(DISTINCT sp.student_id) FILTER (
+              WHERE sp.last_activity_at >= now() - INTERVAL '7 days'
+            ) AS wau,
+            COUNT(DISTINCT sp.student_id) FILTER (
+              WHERE sp.last_activity_at >= now() - INTERVAL '30 days'
+            ) AS mau
+          FROM student_progress sp
+          JOIN users u ON u.id = sp.student_id
+          WHERE u.tenant_id = ${tenantId}::uuid
+            AND sp.last_activity_at IS NOT NULL
+        `,
+      );
+      const r = rows[0] ?? { dau: 0n, wau: 0n, mau: 0n };
+      const dau = Number(r.dau);
+      const wau = Number(r.wau);
+      const mau = Number(r.mau);
+      const stickiness = mau === 0 ? 0 : Math.round((dau * 100) / mau) / 100;
+      return { dau, wau, mau, stickiness };
+    } catch (err) {
+      this.logger.warn(
+        `getLifecycleFromPostgres failed: ${(err as Error).message}`,
       );
       return { dau: 0, wau: 0, mau: 0, stickiness: 0 };
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Top failures — Postgres path when ClickHouse unavailable.
+  // "Failed" = tried (session_count>=1) but home_completed=false.
+  // ───────────────────────────────────────────────────────────────────────────
   async getTopFailures(
     tenantId: string,
     limit = 10,
@@ -252,6 +400,10 @@ export class AnalyticsService {
       failureRate: number;
     }>
   > {
+    if (!this.clickhouse.isReady()) {
+      return this.getTopFailuresFromPostgres(tenantId, limit);
+    }
+
     try {
       const rows = await this.clickhouse.query<{
         lesson_id: string;
@@ -295,16 +447,82 @@ export class AnalyticsService {
       });
     } catch (err) {
       this.logger.warn(
-        `getTopFailures fallback to []: ${(err as Error).message}`,
+        `getTopFailures ClickHouse failed, falling back to Postgres: ${(err as Error).message}`,
+      );
+      return this.getTopFailuresFromPostgres(tenantId, limit);
+    }
+  }
+
+  private async getTopFailuresFromPostgres(
+    tenantId: string,
+    limit: number,
+  ): Promise<
+    Array<{
+      lessonId: string;
+      lessonTitle: string;
+      failedCount: number;
+      completedCount: number;
+      failureRate: number;
+    }>
+  > {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{
+          lesson_id: string;
+          lesson_title: string;
+          failed_count: bigint;
+          total_attempts: bigint;
+        }>
+      >(
+        Prisma.sql`
+          SELECT
+            sp.lesson_id,
+            l.title AS lesson_title,
+            COUNT(DISTINCT sp.student_id) FILTER (
+              WHERE sp.home_completed = false AND sp.session_count >= 1
+            ) AS failed_count,
+            COUNT(DISTINCT sp.student_id) FILTER (
+              WHERE sp.session_count >= 1
+            ) AS total_attempts
+          FROM student_progress sp
+          JOIN lessons l  ON l.id  = sp.lesson_id
+          JOIN users   u  ON u.id  = sp.student_id
+          WHERE u.tenant_id = ${tenantId}::uuid
+          GROUP BY sp.lesson_id, l.title
+          HAVING COUNT(DISTINCT sp.student_id) FILTER (
+            WHERE sp.home_completed = false AND sp.session_count >= 1
+          ) > 0
+          ORDER BY failed_count DESC
+          LIMIT ${limit}
+        `,
+      );
+      return rows.map((r) => {
+        const failed = Number(r.failed_count);
+        const total = Number(r.total_attempts);
+        return {
+          lessonId: r.lesson_id,
+          lessonTitle: r.lesson_title,
+          failedCount: failed,
+          completedCount: total - failed,
+          failureRate: total === 0 ? 0 : Math.round((failed * 100) / total),
+        };
+      });
+    } catch (err) {
+      this.logger.warn(
+        `getTopFailuresFromPostgres failed: ${(err as Error).message}`,
       );
       return [];
     }
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Tenant comparison — enriched with Postgres-backed DAU when CH unavailable.
+  // ───────────────────────────────────────────────────────────────────────────
   async getTenantComparison(): Promise<
     Array<{
       tenantId: string;
       tenantName: string;
+      activeStudents: number;
       dau: number;
       eventsLast30d: number;
     }>
@@ -316,43 +534,104 @@ export class AnalyticsService {
 
     if (tenants.length === 0) return [];
 
-    const tenantIds = tenants.map((t) => t.id);
-    const statsMap = new Map<string, { dau: number; eventsLast30d: number }>();
+    type PgAggRow = {
+      tenant_id: string;
+      active_students: bigint;
+      dau: bigint;
+      events_30d: bigint;
+    };
+
+    // Always compute Postgres-backed metrics (guaranteed data even without CH).
+    let pgRows: PgAggRow[] = [];
     try {
-      const rows = await this.clickhouse.query<{
-        tenant_id: string;
-        dau: string;
-        events_30d: string;
-      }>(
+      const tenantIds = tenants.map((t) => t.id).join(',');
+      pgRows = await this.prisma.$queryRawUnsafe<PgAggRow[]>(
         `SELECT
-           toString(tenant_id) AS tenant_id,
-           toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 1 DAY)) AS dau,
-           toString(countIf(created_at >= now() - INTERVAL 30 DAY)) AS events_30d
-         FROM events
-         WHERE tenant_id IN {tenantIds:Array(UUID)}
-         GROUP BY tenant_id`,
-        { tenantIds },
+           u.tenant_id::text,
+           COUNT(DISTINCT u.id) FILTER (
+             WHERE u.role = 'student' AND u.status = 'active'
+           ) AS active_students,
+           COUNT(DISTINCT sp.student_id) FILTER (
+             WHERE sp.last_activity_at >= now() - INTERVAL '1 day'
+           ) AS dau,
+           COUNT(ae.id) FILTER (
+             WHERE ae.created_at >= now() - INTERVAL '30 days'
+           ) AS events_30d
+         FROM users u
+         LEFT JOIN student_progress sp ON sp.student_id = u.id
+         LEFT JOIN analytics_events  ae ON ae.tenant_id  = u.tenant_id
+         WHERE u.tenant_id = ANY(ARRAY[${tenantIds}]::uuid[])
+         GROUP BY u.tenant_id`,
       );
-      for (const r of rows) {
-        statsMap.set(r.tenant_id, {
-          dau: Number(r.dau),
-          eventsLast30d: Number(r.events_30d),
-        });
-      }
     } catch (err) {
       this.logger.warn(
-        `getTenantComparison ClickHouse fallback to zeros: ${(err as Error).message}`,
+        `getTenantComparison Postgres aggregation failed: ${(err as Error).message}`,
       );
     }
 
-    return tenants.map((t) => ({
-      tenantId: t.id,
-      tenantName: t.name,
-      dau: statsMap.get(t.id)?.dau ?? 0,
-      eventsLast30d: statsMap.get(t.id)?.eventsLast30d ?? 0,
-    }));
+    const pgMap = new Map(
+      pgRows.map((r) => [
+        r.tenant_id,
+        {
+          activeStudents: Number(r.active_students),
+          dau: Number(r.dau),
+          eventsLast30d: Number(r.events_30d),
+        },
+      ]),
+    );
+
+    // Optionally overlay ClickHouse DAU if available.
+    const chMap = new Map<string, { dau: number; eventsLast30d: number }>();
+    if (this.clickhouse.isReady()) {
+      const tenantIds = tenants.map((t) => t.id);
+      try {
+        const rows = await this.clickhouse.query<{
+          tenant_id: string;
+          dau: string;
+          events_30d: string;
+        }>(
+          `SELECT
+             toString(tenant_id) AS tenant_id,
+             toString(uniqExactIf(student_id, created_at >= now() - INTERVAL 1 DAY)) AS dau,
+             toString(countIf(created_at >= now() - INTERVAL 30 DAY)) AS events_30d
+           FROM events
+           WHERE tenant_id IN {tenantIds:Array(UUID)}
+           GROUP BY tenant_id`,
+          { tenantIds },
+        );
+        for (const r of rows) {
+          chMap.set(r.tenant_id, {
+            dau: Number(r.dau),
+            eventsLast30d: Number(r.events_30d),
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          `getTenantComparison ClickHouse fallback to Postgres: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    return tenants.map((t) => {
+      const pg = pgMap.get(t.id) ?? {
+        activeStudents: 0,
+        dau: 0,
+        eventsLast30d: 0,
+      };
+      const ch = chMap.get(t.id);
+      return {
+        tenantId: t.id,
+        tenantName: t.name,
+        activeStudents: pg.activeStudents,
+        dau: ch?.dau ?? pg.dau,
+        eventsLast30d: ch?.eventsLast30d ?? pg.eventsLast30d,
+      };
+    });
   }
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Log analytics event (unchanged).
+  // ───────────────────────────────────────────────────────────────────────────
   async logEvent(params: {
     tenantId: string;
     eventType: string;
@@ -371,7 +650,7 @@ export class AnalyticsService {
       },
     });
 
-    // 2. ClickHouse — fire-and-forget; on success mark syncedAt, on failure leave null for retry
+    // 2. ClickHouse — fire-and-forget
     if (!this.clickhouse.isReady()) {
       this.logger.debug(
         `ClickHouse not ready — event ${event.id} queued for retry`,
