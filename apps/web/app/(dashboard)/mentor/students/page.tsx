@@ -11,21 +11,12 @@ import {
   Users,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
 import { Skeleton } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Student = { id: string; name: string; role: string };
-
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return payload.branchId ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function getInitials(name: string): string {
   return name
@@ -61,20 +52,29 @@ function avatarTintFor(name: string): string {
 export default function MentorStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
+    const groupId = getGroupIdFromToken();
     const branchId = getBranchIdFromToken();
-    if (!branchId) {
+    if (!groupId && !branchId) {
+      setError("Filial yoki guruh topilmadi. Administrator bilan bog'laning.");
       setLoading(false);
       return;
     }
-    apiRequest<Student[]>(`/users/by-branch/${branchId}`, {}, token)
+    setError('');
+    const path = groupId
+      ? `/users/group/${groupId}`
+      : `/users/by-branch/${branchId}`;
+    apiRequest<Student[]>(path, {}, token)
       .then((res) => {
         setStudents((res.data ?? []).filter((u) => u.role === 'student'));
       })
-      .catch(() => {})
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "O'quvchilarni yuklab bo'lmadi");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -168,7 +168,18 @@ export default function MentorStudentsPage() {
           </div>
         )}
 
-        {loading ? (
+        {error ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 space-y-3">
+            <p className="text-rose-800 text-sm font-bold">{error}</p>
+            <button
+              type="button"
+              onClick={load}
+              className="inline-flex items-center gap-2 bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-xl text-sm font-extrabold transition-colors"
+            >
+              Qayta urinish
+            </button>
+          </div>
+        ) : loading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
               <div

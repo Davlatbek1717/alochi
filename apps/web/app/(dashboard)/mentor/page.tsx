@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { tashkentToday } from '@/lib/tashkent-date';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { formatDateWeekday } from '@/lib/date-uz';
@@ -39,6 +40,7 @@ export default function MentorDashboard() {
   const [mentorName, setMentorName] = useState('');
   const [loading, setLoading] = useState(true);
   const [branchIdForPanel, setBranchIdForPanel] = useState('');
+  const [groupError, setGroupError] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -48,18 +50,25 @@ export default function MentorDashboard() {
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setMentorName(user.name ?? '');
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = tashkentToday();
     setAttendanceMarked(localStorage.getItem(`attendance_marked_${today}`) === '1');
+
+    if (!groupId) {
+      setGroupError('Guruh biriktirilmagan — superadmin orqali sizga guruh tayinlanishi kerak.');
+      setLoading(false);
+      return;
+    }
+    setGroupError('');
 
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    const studentsPromise: Promise<{ data: Student[] }> = groupId
-      ? apiRequest<Student[]>(`/users/group/${groupId}`, {}, token).catch(() => ({ data: [] as Student[] }))
-      : branchId
-        ? apiRequest<Student[]>(`/users/by-branch/${branchId}`, {}, token).catch(() => ({ data: [] as Student[] }))
-        : Promise.resolve({ data: [] as Student[] });
+    const studentsPromise: Promise<{ data: Student[] }> = apiRequest<Student[]>(
+      `/users/group/${groupId}`,
+      {},
+      token,
+    ).catch(() => ({ data: [] as Student[] }));
 
     Promise.all([
       apiRequest<number>('/kpi/daily', {}, token).catch(() => ({ data: 0 })),
@@ -240,6 +249,12 @@ export default function MentorDashboard() {
 
       {/* Body */}
       <div className="max-w-lg mx-auto px-4 pt-5 pb-6 space-y-5">
+        {/* Group assignment error */}
+        {groupError && (
+          <section className="bg-rose-50 border border-rose-200 rounded-2xl p-4">
+            <p className="text-rose-800 text-sm font-bold">{groupError}</p>
+          </section>
+        )}
         {/* Today snapshot — attendance + group + tasks */}
         <section>
           <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">

@@ -81,6 +81,8 @@ export default function MentorTasksPage() {
   const [newKpi, setNewKpi] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [myUserId, setMyUserId] = useState<string>('');
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function token() {
     return localStorage.getItem('accessToken') ?? '';
@@ -161,6 +163,10 @@ export default function MentorTasksPage() {
       toastError('Sarlavha kerak');
       return;
     }
+    if (!Number.isFinite(newKpi) || newKpi < 0 || newKpi > 50) {
+      toastError("KPI ball 0 dan 50 gacha bo'lishi kerak");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await apiRequest<Task>(
@@ -187,14 +193,18 @@ export default function MentorTasksPage() {
     }
   }
 
-  async function deleteTask(id: string) {
-    if (!confirm("Vazifani o'chirishni tasdiqlaysizmi?")) return;
+  async function confirmDelete() {
+    if (!deleteTargetId) return;
+    setDeleting(true);
     try {
-      await apiRequest(`/tasks/${id}`, { method: 'DELETE' }, token());
-      setSentTasks((prev) => prev.filter((t) => t.id !== id));
+      await apiRequest(`/tasks/${deleteTargetId}`, { method: 'DELETE' }, token());
+      setSentTasks((prev) => prev.filter((t) => t.id !== deleteTargetId));
       success("O'chirildi");
     } catch (e) {
       toastError(e instanceof Error ? e.message : "O'chirishda xato");
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
     }
   }
 
@@ -537,7 +547,7 @@ export default function MentorTasksPage() {
                           variant="danger"
                           size="sm"
                           icon={<Trash2 size={14} />}
-                          onClick={() => deleteTask(t.id)}
+                          onClick={() => setDeleteTargetId(t.id)}
                         >
                           O&apos;chirish
                         </Button>
@@ -550,6 +560,33 @@ export default function MentorTasksPage() {
           </ul>
         )}
       </div>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={!!deleteTargetId}
+        onClose={() => { if (!deleting) setDeleteTargetId(null); }}
+        title="Vazifani o'chirish"
+        description="Bu amalni bekor qilib bo'lmaydi."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTargetId(null)} disabled={deleting}>
+              Bekor qilish
+            </Button>
+            <Button
+              variant="danger"
+              onClick={confirmDelete}
+              loading={deleting}
+              disabled={deleting}
+            >
+              O&apos;chirish
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-[#64748b]">
+          Ushbu vazifani o&apos;chirishni tasdiqlaysizmi?
+        </p>
+      </Modal>
 
       <Modal
         open={openCreate}

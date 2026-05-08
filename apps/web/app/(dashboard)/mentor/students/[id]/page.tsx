@@ -82,7 +82,9 @@ export default function StudentDetailPage() {
             const found = res.data.find((u) => u.id === studentId);
             if (found) setStudentName(found.name);
           })
-          .catch(() => {})
+          .catch(() => {
+            // Name fetch failure is non-fatal — page still shows analysis
+          })
       : Promise.resolve();
 
     const fetchAnalysis = apiRequest<AnalysisResult>(
@@ -96,7 +98,9 @@ export default function StudentDetailPage() {
 
     const fetchStatus = apiRequest<LatestStatus>(`/status/${studentId}`, {}, token)
       .then((res) => setLatestStatus(res.data))
-      .catch(() => {});
+      .catch(() => {
+        // Status fetch failure is non-fatal
+      });
 
     const fetchProgress = apiRequest<ProgressSummary>(
       `/progress/${studentId}/summary`,
@@ -104,7 +108,9 @@ export default function StudentDetailPage() {
       token,
     )
       .then((res) => setProgressSummary(res.data))
-      .catch(() => {});
+      .catch(() => {
+        // Progress fetch failure is non-fatal
+      });
 
     Promise.all([fetchStudentName, fetchAnalysis, fetchStatus, fetchProgress]);
   }, [studentId]);
@@ -120,6 +126,10 @@ export default function StudentDetailPage() {
 
   const sendToParent = useCallback(async () => {
     if (!message.trim() || sending) return;
+    if (!studentId) {
+      toastError("O'quvchi ID topilmadi");
+      return;
+    }
     setSending(true);
     setSent(false);
     try {

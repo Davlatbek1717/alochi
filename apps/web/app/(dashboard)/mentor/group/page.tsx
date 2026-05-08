@@ -17,7 +17,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
+import { getGroupIdFromToken } from '@/lib/jwt';
+import { tashkentToday } from '@/lib/tashkent-date';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { EmptyState, Skeleton } from '@/components/ui';
@@ -91,27 +92,36 @@ export default function MentorGroupPage() {
   }, [students]);
 
   const loadStudents = useCallback(async () => {
+    const groupId = getGroupIdFromToken();
+    if (!groupId) {
+      setError('Guruh biriktirilmagan — superadmin orqali sizga guruh tayinlanishi kerak.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      const groupId = getGroupIdFromToken();
-      const branchId = getBranchIdFromToken();
-      if (!groupId && !branchId) throw new Error('Guruh yoki filial topilmadi');
-      const path = groupId
-        ? `/users/group/${groupId}`
-        : `/users/by-branch/${branchId}`;
-      const res = await apiRequest<ApiStudent[]>(path, {}, token);
-      const list = res.data
-        .filter((u) => u.role === 'student')
-        .map((s) => ({
-          ...s,
-          status: 'green' as Status,
-          note: '',
-          attendance: true,
-        }));
-      setStudents(list);
-      setOriginal(list);
+      const res = await apiRequest<ApiStudent[]>(`/users/group/${groupId}`, {}, token);
+      const incoming = res.data.filter((u) => u.role === 'student');
+      setStudents((prev) => {
+        const prevMap = new Map(prev.map((s) => [s.id, s]));
+        return incoming.map((s) => {
+          const existing = prevMap.get(s.id);
+          if (existing) {
+            return { ...existing, name: s.name };
+          }
+          return { ...s, status: 'green' as Status, note: '', attendance: true };
+        });
+      });
+      setOriginal((prev) => {
+        const prevMap = new Map(prev.map((s) => [s.id, s]));
+        return incoming.map((s) => {
+          const existing = prevMap.get(s.id);
+          if (existing) return existing;
+          return { ...s, status: 'green' as Status, note: '', attendance: true };
+        });
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
     } finally {
@@ -177,7 +187,7 @@ export default function MentorGroupPage() {
 
     const snapshot = studentsRef.current;
     const token = localStorage.getItem('accessToken') ?? '';
-    const today = new Date().toISOString().split('T')[0];
+    const today = tashkentToday();
     try {
       await apiRequest(
         '/attendance/students',
@@ -338,12 +348,12 @@ export default function MentorGroupPage() {
   if (error) {
     return (
       <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center max-w-sm w-full space-y-3">
-          <p className="text-rose-500 text-sm font-bold">{error}</p>
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center max-w-sm w-full space-y-3">
+          <p className="text-rose-800 text-sm font-bold">{error}</p>
           <button
             type="button"
             onClick={loadStudents}
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-extrabold transition-colors"
+            className="inline-flex items-center gap-2 bg-[#0f172a] hover:bg-[#1e293b] text-white px-4 py-2 rounded-xl text-sm font-extrabold transition-colors"
           >
             Qayta urinish
           </button>

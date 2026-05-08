@@ -155,7 +155,12 @@ export class UsersController {
   }
 
   @Get(':id')
-  @Roles(UserRole.superadmin, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.superadmin,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+  )
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.users.findById(id, req.user.tenantId);
   }

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -13,6 +13,8 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken } from '@/lib/jwt';
+import { tashkentToday } from '@/lib/tashkent-date';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
@@ -29,18 +31,6 @@ type StudentRow = {
   name: string;
   status: AttendanceStatus;
 };
-
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return typeof payload.branchId === 'string' ? payload.branchId : null;
-  } catch {
-    return null;
-  }
-}
-
-const TODAY = new Date().toISOString().split('T')[0];
 
 const STATUS_CONFIG: {
   status: AttendanceStatus;
@@ -75,11 +65,13 @@ const STATUS_CONFIG: {
 export default function MentorAttendancePage() {
   const { success, error: toastError } = useToast();
   const [students, setStudents] = useState<StudentRow[]>([]);
+  const [original, setOriginal] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [search, setSearch] = useState('');
+  const initialLoadRef = useRef(true);
 
   const branchId = getBranchIdFromToken();
 
@@ -103,6 +95,8 @@ export default function MentorAttendancePage() {
           status: 'present' as AttendanceStatus,
         }));
       setStudents(studentList);
+      setOriginal(studentList);
+      initialLoadRef.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Yuklab bo'lmadi");
     } finally {
@@ -116,6 +110,15 @@ export default function MentorAttendancePage() {
 
   useFocusRevalidate(loadStudents);
 
+  const isDirty = useMemo(() => {
+    if (loading) return false;
+    if (students.length !== original.length) return true;
+    return students.some((s) => {
+      const o = original.find((x) => x.id === s.id);
+      return !o || s.status !== o.status;
+    });
+  }, [students, original, loading]);
+
   function setStatus(id: string, status: AttendanceStatus) {
     setStudents((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
   }
@@ -126,6 +129,7 @@ export default function MentorAttendancePage() {
 
   async function saveAttendance() {
     setSaving(true);
+    const today = tashkentToday();
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest(
@@ -133,7 +137,7 @@ export default function MentorAttendancePage() {
         {
           method: 'POST',
           body: JSON.stringify({
-            date: TODAY,
+            date: today,
             records: students.map(({ id, status }) => ({
               studentId: id,
               status,
@@ -142,6 +146,8 @@ export default function MentorAttendancePage() {
         },
         token,
       );
+      localStorage.setItem(`attendance_marked_${today}`, '1');
+      setOriginal(students);
       setSaved(true);
       success('Davomat saqlandi');
       setTimeout(() => setSaved(false), 2000);
@@ -194,7 +200,7 @@ export default function MentorAttendancePage() {
                 Bugungi davomat
               </p>
               <p className="text-[#475569] text-[11px] font-bold mt-0.5 font-mono">
-                {TODAY}
+                {tashkentToday()}
               </p>
             </div>
           </div>
@@ -362,7 +368,7 @@ export default function MentorAttendancePage() {
                 variant="primary"
                 size="sm"
                 loading={saving}
-                disabled={saving}
+                disabled={saving || (!isDirty && !saved)}
                 icon={saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
                 onClick={saveAttendance}
                 className="ml-auto"
