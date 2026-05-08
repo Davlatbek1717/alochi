@@ -376,4 +376,27 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       branchId: payload.branchId,
     });
   }
+
+  /**
+   * Video check-in submitted or missed — pushed to the tenant room so all
+   * filadmin/mentor dashboards refetch the today-list in real time.
+   *
+   * Frontend hook: `useRevalidateOnEvent(['videocheckin:updated'], load)`
+   * The `alochi:revalidate` CustomEvent is dispatched by the socket client
+   * with `detail: { type: 'videocheckin:updated' }`.
+   */
+  @OnEvent('videocheckin.changed')
+  forwardVideoCheckinChanged(payload: {
+    tenantId: string;
+    studentId: string;
+    type: 'morning' | 'evening';
+    status: 'submitted' | 'missed';
+  }) {
+    this.emitToTenant(payload.tenantId, 'alochi:revalidate', {
+      type: 'videocheckin:updated',
+      studentId: payload.studentId,
+      checkinType: payload.type,
+      status: payload.status,
+    });
+  }
 }

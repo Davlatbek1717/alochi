@@ -50,6 +50,7 @@ import { MarketingModule } from './marketing/marketing.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SystemAuditModule } from './system-audit/system-audit.module';
 import { I18nModule } from './i18n/i18n.module';
+import { VideoCheckinModule } from './video-checkin/video-checkin.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -131,6 +132,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     SubscriptionsModule,
     SystemAuditModule,
     I18nModule,
+    VideoCheckinModule,
   ],
   providers: [
     // Throttler applied globally — individual controllers can override

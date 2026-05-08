@@ -322,7 +322,11 @@ export class UsersService {
         branchId: true,
         groupId: true,
         parentTelegramId: true,
+        telegramId: true,
+        birthDate: true,
         faceEmbeddings: { where: { isActive: true }, select: { id: true } },
+        branch: { select: { id: true, name: true } },
+        // group via groupId — users table stores groupId but no direct group relation
       },
     });
     return {
@@ -335,6 +339,12 @@ export class UsersService {
       groupId: user.groupId,
       faceEnrolled: user.faceEmbeddings.length > 0,
       parentTelegramLinked: user.parentTelegramId !== null,
+      parentTelegramId: user.parentTelegramId,
+      // Expose whether the student has linked their own Telegram (for video check-in)
+      telegramLinked: user.telegramId !== null,
+      telegramId: user.telegramId?.toString() ?? null,
+      birthDate: user.birthDate?.toISOString() ?? null,
+      branch: user.branch,
     };
   }
 

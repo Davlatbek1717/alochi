@@ -6,6 +6,7 @@ describe('TelegramService', () => {
   const mockParentHandler = {};
   const mockStudentHandler = {};
   const mockStaffHandler = {};
+  const mockVideoCheckinHandler = {};
   const mockTemplates = {};
 
   function makeService() {
@@ -15,6 +16,7 @@ describe('TelegramService', () => {
       mockParentHandler as any,
       mockStudentHandler as any,
       mockStaffHandler as any,
+      mockVideoCheckinHandler as any,
       mockTemplates as any,
     );
   }

@@ -9,6 +9,8 @@ import { NotificationTemplatesService } from '../notification-templates/notifica
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
 import { XpService, XP_AMOUNTS } from '../gamification/xp.service';
+import { VideoCheckinService } from '../video-checkin/video-checkin.service';
+import { VideoCheckinHandler } from '../telegram/handlers/video-checkin.handler';
 
 /**
  * Tunable thresholds for the filadmin monthly KPI cron (§8.3).
@@ -43,6 +45,8 @@ export class CronService {
     private templates: NotificationTemplatesService,
     private kpi: KpiService,
     private xp: XpService,
+    private videoCheckin: VideoCheckinService,
+    private videoCheckinHandler: VideoCheckinHandler,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -1148,6 +1152,171 @@ export class CronService {
       this.logger.error(`task_due_reminder.failed: ${(err as Error).message}`);
     }
   }
+
+  // ── Video check-in crons (Asia/Tashkent timezone) ──────────────────────────
+
+  /**
+   * 05:55 Tashkent — "Ertalabki video vaqti yetdi" reminder.
+   * Only sent to students who haven't submitted morning video yet.
+   */
+  @Cron('55 5 * * *', {
+    name: 'video_morning_start_reminder',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoMorningStartReminder() {
+    this.logger.log('Cron: video_morning_start_reminder');
+    const bot = this.telegram.getBot();
+    if (!bot) return;
+    try {
+      const recipients =
+        await this.videoCheckin.getReminderRecipients('morning');
+      const msg =
+        'Ertalabki video tashlash vaqti yetdi (06:00–06:30). Iltimos, video yuboring!';
+      await Promise.allSettled(
+        recipients.map((r) =>
+          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
+        ),
+      );
+      this.logger.log(
+        `video_morning_start_reminder: ${recipients.length} ta yuborildi`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `video_morning_start_reminder failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 06:25 Tashkent — "5 daqiqa qoldi" morning last-call reminder.
+   */
+  @Cron('25 6 * * *', {
+    name: 'video_morning_lastcall_reminder',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoMorningLastcallReminder() {
+    this.logger.log('Cron: video_morning_lastcall_reminder');
+    const bot = this.telegram.getBot();
+    if (!bot) return;
+    try {
+      const recipients =
+        await this.videoCheckin.getReminderRecipients('morning');
+      const msg =
+        'Ertalabki video vaqti tugayapti — 5 daqiqa qoldi! Tez video yuboring.';
+      await Promise.allSettled(
+        recipients.map((r) =>
+          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
+        ),
+      );
+      this.logger.log(
+        `video_morning_lastcall_reminder: ${recipients.length} ta yuborildi`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `video_morning_lastcall_reminder failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 06:31 Tashkent — mark all students who missed the morning window.
+   */
+  @Cron('31 6 * * *', {
+    name: 'video_morning_mark_missed',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoMorningMarkMissed() {
+    this.logger.log('Cron: video_morning_mark_missed');
+    try {
+      await this.videoCheckin.markAllMissedForWindow('morning');
+    } catch (err) {
+      this.logger.error(
+        `video_morning_mark_missed failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 17:55 Tashkent — "Kechki video vaqti yetdi" reminder.
+   */
+  @Cron('55 17 * * *', {
+    name: 'video_evening_start_reminder',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoEveningStartReminder() {
+    this.logger.log('Cron: video_evening_start_reminder');
+    const bot = this.telegram.getBot();
+    if (!bot) return;
+    try {
+      const recipients =
+        await this.videoCheckin.getReminderRecipients('evening');
+      const msg =
+        'Kechki video tashlash vaqti yetdi (18:00–22:00). Iltimos, video yuboring!';
+      await Promise.allSettled(
+        recipients.map((r) =>
+          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
+        ),
+      );
+      this.logger.log(
+        `video_evening_start_reminder: ${recipients.length} ta yuborildi`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `video_evening_start_reminder failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 21:55 Tashkent — "5 daqiqa qoldi" evening last-call reminder.
+   */
+  @Cron('55 21 * * *', {
+    name: 'video_evening_lastcall_reminder',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoEveningLastcallReminder() {
+    this.logger.log('Cron: video_evening_lastcall_reminder');
+    const bot = this.telegram.getBot();
+    if (!bot) return;
+    try {
+      const recipients =
+        await this.videoCheckin.getReminderRecipients('evening');
+      const msg =
+        'Kechki video vaqti tugayapti — 5 daqiqa qoldi! Tez video yuboring.';
+      await Promise.allSettled(
+        recipients.map((r) =>
+          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
+        ),
+      );
+      this.logger.log(
+        `video_evening_lastcall_reminder: ${recipients.length} ta yuborildi`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `video_evening_lastcall_reminder failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * 22:01 Tashkent — mark all students who missed the evening window.
+   */
+  @Cron('1 22 * * *', {
+    name: 'video_evening_mark_missed',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runVideoEveningMarkMissed() {
+    this.logger.log('Cron: video_evening_mark_missed');
+    try {
+      await this.videoCheckin.markAllMissedForWindow('evening');
+    } catch (err) {
+      this.logger.error(
+        `video_evening_mark_missed failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  // ── End video check-in crons ─────────────────────────────────────────────
 
   /**
    * Sundays at 04:00 — purge group chat messages older than 90 days,

@@ -21,6 +21,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel';
 
 const NAV_CARDS = [
   {
@@ -127,18 +128,21 @@ const INITIAL_STATS: DashboardStats = {
 
 export default function FiladminDashboard() {
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
+  const [branchId, setBranchId] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    let branchId = '';
+    let bid = '';
     try {
       const u = JSON.parse(localStorage.getItem('user') ?? '{}') as {
         branchId?: string;
       };
-      branchId = u.branchId ?? '';
+      bid = u.branchId ?? '';
     } catch {
       /* ignore */
     }
+    setBranchId(bid);
+    const branchId = bid;
 
     Promise.all([
       apiRequest<{ yashil: number; sariq: number; qizil: number }>(
@@ -251,6 +255,17 @@ export default function FiladminDashboard() {
             )}
           </div>
         </div>
+
+        {/* Video check-ins panel */}
+        {branchId && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Kunlik video</p>
+            <VideoCheckinsPanel
+              branchId={branchId}
+              studentBasePath="/filadmin/students"
+            />
+          </div>
+        )}
 
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>

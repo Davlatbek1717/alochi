@@ -7,6 +7,7 @@ import { Users, CreditCard, ClipboardList, Send, AlertCircle, AlertTriangle, Tre
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, Stat, useToast } from '@/components/ui';
 import { formatDateWeekday } from '@/lib/date-uz';
+import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel';
 
 type StatusStudent = {
   studentId: string;
@@ -34,11 +35,13 @@ export default function ManagerDashboard() {
   const [highPerformers, setHighPerformers] = useState<HighPerformer[]>([]);
   const [loading, setLoading] = useState(true);
   const [managerName, setManagerName] = useState('');
+  const [branchIdForPanel, setBranchIdForPanel] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
+    const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string; branchId?: string };
     setManagerName(user.name ?? '');
+    if (user.branchId) setBranchIdForPanel(user.branchId);
 
     Promise.allSettled([
       apiRequest<StatusStudent[]>('/status/red-students', {}, token),
@@ -283,6 +286,17 @@ export default function ManagerDashboard() {
                 </Link>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Video check-in panel */}
+        {branchIdForPanel && (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Kunlik video</p>
+            <VideoCheckinsPanel
+              branchId={branchIdForPanel}
+              studentBasePath="/manager/students"
+            />
           </div>
         )}
       </div>

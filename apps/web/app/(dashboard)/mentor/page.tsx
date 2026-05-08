@@ -20,6 +20,7 @@ import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { formatDateWeekday } from '@/lib/date-uz';
 import { Skeleton } from '@/components/ui';
+import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel';
 
 type Task = { id: string; status: string };
 type Student = { id: string; name: string; role: string };
@@ -37,11 +38,13 @@ export default function MentorDashboard() {
   const [attendanceMarked, setAttendanceMarked] = useState(false);
   const [mentorName, setMentorName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [branchIdForPanel, setBranchIdForPanel] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
     const groupId = getGroupIdFromToken();
     const branchId = getBranchIdFromToken();
+    if (branchId) setBranchIdForPanel(branchId);
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setMentorName(user.name ?? '');
 
@@ -380,6 +383,19 @@ export default function MentorDashboard() {
                 ishlang — har bir amal ball qo&apos;shadi.
               </p>
             </div>
+          </section>
+        )}
+
+        {/* Video check-in panel */}
+        {branchIdForPanel && (
+          <section>
+            <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
+              Kunlik video
+            </p>
+            <VideoCheckinsPanel
+              branchId={branchIdForPanel}
+              studentBasePath="/mentor/students"
+            />
           </section>
         )}
       </div>

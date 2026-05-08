@@ -9,6 +9,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import { ParentHandler } from './handlers/parent.handler';
 import { StudentHandler } from './handlers/student.handler';
 import { StaffHandler } from './handlers/staff.handler';
+import { VideoCheckinHandler } from './handlers/video-checkin.handler';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
 import { statusEmoji } from '../student-status/status.types';
@@ -24,6 +25,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private parentHandler: ParentHandler,
     private studentHandler: StudentHandler,
     private staffHandler: StaffHandler,
+    private videoCheckinHandler: VideoCheckinHandler,
     private templates: NotificationTemplatesService,
   ) {}
 
@@ -57,6 +59,12 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.command('start', async (ctx) => {
       const payload = ctx.match?.trim();
       const telegramId = ctx.from?.id;
+
+      // Student self-linking: /start link:<userId>
+      if (payload && payload.startsWith('link:') && telegramId) {
+        await this.videoCheckinHandler.handleStart(ctx, payload);
+        return;
+      }
 
       if (payload && payload.includes(':') && telegramId) {
         const [tenantId, studentId] = payload.split(':');
@@ -157,6 +165,29 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.command('vazifalar', async (ctx) => {
       const telegramId = BigInt(ctx.from?.id ?? 0);
       await this.staffHandler.handleVazifalar(ctx, telegramId);
+    });
+
+    // ── Video check-in handlers ──────────────────────────────────────────────
+    // Both video types route to the same handler which decides by ctx.message
+    this.bot.on('message:video_note', async (ctx) => {
+      await this.videoCheckinHandler.handleVideo(ctx);
+    });
+
+    this.bot.on('message:video', async (ctx) => {
+      await this.videoCheckinHandler.handleVideo(ctx);
+    });
+
+    // Fallback: any other message that isn't a command or video gets the
+    // "please send a video" reply. Commands are already handled above so
+    // grammy won't reach this handler for them. The video handlers above
+    // also fire first (grammy uses first-match per filter).
+    this.bot.on('message', async (ctx) => {
+      const msg = ctx.message;
+      // Skip if this message is a video (handled above already)
+      if (msg.video || msg.video_note) return;
+      // Skip slash commands
+      if (msg.text?.startsWith('/')) return;
+      await this.videoCheckinHandler.handleNonVideo(ctx);
     });
   }
 
