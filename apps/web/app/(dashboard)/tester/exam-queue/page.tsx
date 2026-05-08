@@ -20,6 +20,8 @@ import {
   FlaskConical,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getBranchIdFromToken } from '@/lib/jwt';
+import { tashkentToday } from '@/lib/tashkent-date';
 import { Button, EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
 
 interface Student { id: string; name: string; }
@@ -51,14 +53,6 @@ interface GrantedEntry {
   subjectKind: 'Katalog' | 'Dars';
   grantedAt: Date;
   result: 'Hisoblanmoqda' | 'Tugatdi';
-}
-
-function getBranchIdFromToken(): string | null {
-  try {
-    const token = localStorage.getItem('accessToken') ?? '';
-    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
-    return payload.branchId ?? null;
-  } catch { return null; }
 }
 
 function getInitials(name: string) {
@@ -119,7 +113,10 @@ export default function TesterExamQueuePage() {
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState('');
 
-  const today = new Date().toISOString().split('T')[0];
+  // Per-student action in-flight tracking (A9)
+  const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
+
+  const today = tashkentToday();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,24 +173,30 @@ export default function TesterExamQueuePage() {
     if (notArrived.length === 0) return;
     setBulkLoading(true);
     const token = localStorage.getItem('accessToken') ?? '';
-    try {
-      await Promise.all(
-        notArrived.map((s) =>
-          apiRequest('/attendance/students', {
-            method: 'POST',
-            body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present' }] }),
-          }, token),
-        ),
-      );
+    // A3: use Promise.allSettled so a single failure doesn't abort all UI updates
+    const results = await Promise.allSettled(
+      notArrived.map((s) =>
+        apiRequest('/attendance/students', {
+          method: 'POST',
+          body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present' }] }),
+        }, token),
+      ),
+    );
+
+    const succeeded = notArrived.filter((_, i) => results[i].status === 'fulfilled');
+    const failedCount = notArrived.length - succeeded.length;
+
+    if (succeeded.length > 0) {
+      const succeededIds = new Set(succeeded.map((s) => s.id));
       setRows((prev) => prev.map((r) =>
-        r.attendance !== 'present' ? { ...r, attendance: 'present', queue: 'waiting' } : r,
+        succeededIds.has(r.id) ? { ...r, attendance: 'present', queue: 'waiting' } : r,
       ));
-      success(`${notArrived.length} ta o'quvchi keldi deb belgilandi`);
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Xatolik');
-    } finally {
-      setBulkLoading(false);
+      success(`${succeeded.length} ta o'quvchi keldi deb belgilandi`);
     }
+    if (failedCount > 0) {
+      toastError(`${failedCount} ta o'quvchi saqlanmadi — qayta urinib ko'ring`);
+    }
+    setBulkLoading(false);
   }
 
   function openGrantModal(student: StudentRow) {
@@ -227,14 +230,16 @@ export default function TesterExamQueuePage() {
         grantSource === 'lesson'
           ? { studentId: grantModal.studentId, lessonId: targetId }
           : { studentId: grantModal.studentId, examId: targetId };
-      await apiRequest('/exams/grant', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }, token);
+      const grantRes = await apiRequest<{ id: string }>(
+        '/exams/grant',
+        { method: 'POST', body: JSON.stringify(body) },
+        token,
+      );
 
+      const activeExamId = grantRes.data?.id;
       const now = new Date();
       setRows((prev) => prev.map((r) =>
-        r.id === grantModal.studentId ? { ...r, queue: 'testing' } : r,
+        r.id === grantModal.studentId ? { ...r, queue: 'testing', activeExamId } : r,
       ));
       setTestingStartTime(now);
       setTestingSubjectTitle(subjectTitle);
@@ -263,20 +268,58 @@ export default function TesterExamQueuePage() {
     }
   }
 
-  function setDone(studentId: string) {
-    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'done' } : r));
-    // Mark the most recent history entry for this student as done
-    setGrantedHistory((prev) => {
-      const idx = prev.findIndex((e) => e.studentId === studentId && e.result === 'Hisoblanmoqda');
-      if (idx === -1) return prev;
-      return prev.map((e, i) => i === idx ? { ...e, result: 'Tugatdi' as const } : e);
-    });
-    setTestingStartTime(null);
+  async function setDone(studentId: string) {
+    const row = rows.find((r) => r.id === studentId);
+    if (!row?.activeExamId) {
+      // No activeExamId stored (e.g. page was refreshed) — just update local state
+      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'done' } : r));
+      setGrantedHistory((prev) => {
+        const idx = prev.findIndex((e) => e.studentId === studentId && e.result === 'Hisoblanmoqda');
+        if (idx === -1) return prev;
+        return prev.map((e, i) => i === idx ? { ...e, result: 'Tugatdi' as const } : e);
+      });
+      setTestingStartTime(null);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken') ?? '';
+    setPendingActions((prev) => new Set(prev).add(studentId));
+    try {
+      await apiRequest(`/exams/${row.activeExamId}/cancel`, { method: 'PATCH' }, token);
+      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'done', activeExamId: undefined } : r));
+      setGrantedHistory((prev) => {
+        const idx = prev.findIndex((e) => e.studentId === studentId && e.result === 'Hisoblanmoqda');
+        if (idx === -1) return prev;
+        return prev.map((e, i) => i === idx ? { ...e, result: 'Tugatdi' as const } : e);
+      });
+      setTestingStartTime(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Serverda xatolik — qayta urinib ko'ring");
+    } finally {
+      setPendingActions((prev) => { const s = new Set(prev); s.delete(studentId); return s; });
+    }
   }
 
-  function cancelTesting(studentId: string) {
-    setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'waiting' } : r));
-    setTestingStartTime(null);
+  async function cancelTesting(studentId: string) {
+    const row = rows.find((r) => r.id === studentId);
+    if (!row?.activeExamId) {
+      // No activeExamId stored — just reset locally
+      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'waiting' } : r));
+      setTestingStartTime(null);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken') ?? '';
+    setPendingActions((prev) => new Set(prev).add(studentId));
+    try {
+      await apiRequest(`/exams/${row.activeExamId}/cancel`, { method: 'PATCH' }, token);
+      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, queue: 'waiting', activeExamId: undefined } : r));
+      setTestingStartTime(null);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Serverda xatolik — qayta urinib ko'ring");
+    } finally {
+      setPendingActions((prev) => { const s = new Set(prev); s.delete(studentId); return s; });
+    }
   }
 
   // Computed groups
@@ -391,11 +434,13 @@ export default function TesterExamQueuePage() {
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
               <input
+                id="exam-queue-search"
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="O'quvchi ismi bo'yicha qidirish..."
-                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400"
+                aria-label="O'quvchi ismi bo'yicha qidirish"
+                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a]"
               />
               {search && (
                 <button
@@ -469,14 +514,16 @@ export default function TesterExamQueuePage() {
                     size="sm"
                     icon={<CheckCircle size={14} />}
                     onClick={() => setDone(testingNow.id)}
+                    disabled={pendingActions.has(testingNow.id)}
                     className="flex-1"
                   >
-                    Tugatdi
+                    {pendingActions.has(testingNow.id) ? 'Saqlanmoqda...' : 'Tugatdi'}
                   </Button>
                   <button
                     type="button"
                     onClick={() => cancelTesting(testingNow.id)}
-                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#94a3b8] bg-white/10 border border-white/10 px-3 py-2 rounded-xl hover:bg-white/15 transition-colors"
+                    disabled={pendingActions.has(testingNow.id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#94a3b8] bg-white/10 border border-white/10 px-3 py-2 rounded-xl hover:bg-white/15 transition-colors disabled:opacity-60"
                   >
                     <XCircle size={13} />
                     Bekor qilish
@@ -654,21 +701,21 @@ export default function TesterExamQueuePage() {
         }
       >
         <div className="space-y-4">
-          <div className="bg-slate-700/40 rounded-xl px-4 py-3">
-            <p className="text-xs text-slate-400 mb-0.5">O&apos;quvchi</p>
+          <div className="bg-[#162032] border border-white/10 rounded-xl px-4 py-3">
+            <p className="text-xs text-[#94a3b8] mb-0.5">O&apos;quvchi</p>
             <p className="text-white font-semibold">{grantModal?.name}</p>
           </div>
 
           {(lessons.length > 0 || catalogueExams.length > 0) && (
-            <div className="flex bg-slate-800/60 border border-slate-700 rounded-xl p-1 gap-1">
+            <div className="flex bg-[#162032] border border-white/10 rounded-xl p-1 gap-1">
               <button
                 type="button"
                 onClick={() => setGrantSource('catalogue')}
                 disabled={catalogueExams.length === 0}
                 className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg transition-colors ${
                   grantSource === 'catalogue'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                    ? 'bg-[#15803d]/20 text-[#15803d] border border-[#15803d]/40'
+                    : 'text-[#94a3b8] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
                 }`}
               >
                 <GraduationCap size={12} />
@@ -680,8 +727,8 @@ export default function TesterExamQueuePage() {
                 disabled={lessons.length === 0}
                 className={`flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg transition-colors ${
                   grantSource === 'lesson'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed'
+                    ? 'bg-[#15803d]/20 text-[#15803d] border border-[#15803d]/40'
+                    : 'text-[#94a3b8] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
                 }`}
               >
                 <BookOpen size={12} />
@@ -692,18 +739,23 @@ export default function TesterExamQueuePage() {
 
           {grantSource === 'lesson' ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Dars tanlang</p>
+              <label
+                htmlFor="grant-lesson-select"
+                className="block text-xs font-semibold text-[#94a3b8] uppercase tracking-widest"
+              >
+                Dars tanlang
+              </label>
               {lessons.length === 0 ? (
-                <p className="text-slate-400 text-xs">
+                <p className="text-[#94a3b8] text-xs">
                   Imtihonli darslar mavjud emas. Superadmin darsda &quot;Imtihon&quot; flagini yoqishi kerak.
                 </p>
               ) : (
                 <div className="relative">
                   <select
+                    id="grant-lesson-select"
                     value={selectedLesson}
                     onChange={(e) => setSelectedLesson(e.target.value)}
-                    aria-label="Dars tanlang"
-                    className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
+                    className="w-full appearance-none bg-[#162032] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-[#15803d] pr-10"
                   >
                     {lessons.map((l) => (
                       <option key={l.id} value={l.id}>
@@ -711,25 +763,30 @@ export default function TesterExamQueuePage() {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Imtihon tanlang</p>
+              <label
+                htmlFor="grant-exam-select"
+                className="block text-xs font-semibold text-[#94a3b8] uppercase tracking-widest"
+              >
+                Imtihon tanlang
+              </label>
               {catalogueExams.length === 0 ? (
-                <p className="text-slate-400 text-xs">
+                <p className="text-[#94a3b8] text-xs">
                   Nashr qilingan katalog imtihonlari mavjud emas. Superadmin /superadmin/exams sahifasida nashr qilishi kerak.
                 </p>
               ) : (
                 <>
                   <div className="relative">
                     <select
+                      id="grant-exam-select"
                       value={selectedExam}
                       onChange={(e) => setSelectedExam(e.target.value)}
-                      aria-label="Imtihon tanlang"
-                      className="w-full appearance-none bg-slate-700/40 border border-slate-600 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-emerald-400 pr-10"
+                      className="w-full appearance-none bg-[#162032] border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-medium focus:outline-none focus:border-[#15803d] pr-10"
                     >
                       {catalogueExams.map((e) => (
                         <option key={e.id} value={e.id}>
@@ -737,13 +794,13 @@ export default function TesterExamQueuePage() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
                   </div>
                   {(() => {
                     const picked = catalogueExams.find((e) => e.id === selectedExam);
                     if (!picked?.description) return null;
                     return (
-                      <p className="text-xs text-slate-400 bg-slate-800/40 border border-slate-700 rounded-lg px-3 py-2 line-clamp-3 overflow-hidden">
+                      <p className="text-xs text-[#94a3b8] bg-[#162032] border border-white/10 rounded-lg px-3 py-2 line-clamp-3 overflow-hidden">
                         {picked.description}
                       </p>
                     );

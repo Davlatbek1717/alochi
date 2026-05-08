@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -63,6 +64,12 @@ export class ExamsController {
       answers: body.answers,
       results: body.results,
     });
+  }
+
+  @Patch(':id/cancel')
+  @Roles(UserRole.tester, UserRole.filadmin)
+  cancelPermission(@Param('id') id: string) {
+    return this.exams.cancelPermission(id);
   }
 
   @Get('student/:studentId')

@@ -237,6 +237,21 @@ export class ExamsService {
     });
   }
 
+  /** Tester cancels a granted exam permission before the student submits. */
+  async cancelPermission(id: string) {
+    const permission = await this.prisma.examPermission.findUnique({
+      where: { id },
+    });
+    if (!permission) throw new NotFoundException('Ruxsat topilmadi');
+    if (permission.status !== ExamStatus.active) {
+      throw new BadRequestException('Bu ruxsat allaqachon tugagan');
+    }
+    return this.prisma.examPermission.update({
+      where: { id },
+      data: { status: ExamStatus.failed, completedAt: new Date() },
+    });
+  }
+
   async getPendingForBranch(branchId: string) {
     return this.prisma.examPermission.findMany({
       where: { status: ExamStatus.active, student: { branchId } },

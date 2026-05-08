@@ -46,6 +46,7 @@ export class ProgressController {
       lessonId,
       req.user.tenantId,
       typeof body?.accuracy === 'number' ? body.accuracy : undefined,
+      req.user.role,
     );
   }
 

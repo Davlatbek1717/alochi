@@ -102,6 +102,7 @@ export default function TesterTechIssuesPage() {
   const { success, error: toastError } = useToast();
   const [items, setItems] = useState<Issue[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
+  const [historyLoadError, setHistoryLoadError] = useState(false);
   const [category, setCategory] = useState<CategoryKey>('tablet');
   const [severity, setSeverity] = useState<SeverityKey>('medium');
   const [description, setDescription] = useState('');
@@ -114,7 +115,9 @@ export default function TesterTechIssuesPage() {
     try {
       const r = await apiRequest<Issue[]>('/tech-issues', {}, token());
       setItems(r.data);
-    } catch { /* ignore */ } finally {
+    } catch {
+      setHistoryLoadError(true);
+    } finally {
       setLoadingItems(false);
     }
   }
@@ -251,15 +254,17 @@ export default function TesterTechIssuesPage() {
 
           {/* Description textarea with char counter */}
           <div>
-            <label className="block text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
+            <label htmlFor="tech-issue-description" className="block text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">
               Tasvirlash
             </label>
             <textarea
+              id="tech-issue-description"
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, MAX_DESC))}
               rows={4}
               placeholder="Muammoni batafsil tasvirlab bering..."
-              className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] resize-none focus:outline-none focus:border-amber-400"
+              aria-label="Muammo tavsifi"
+              className="w-full bg-[#f7f4ef] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] resize-none focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a]"
             />
             <div className="flex justify-end mt-1">
               <span className={`text-[11px] font-bold tabular-nums ${description.length >= MAX_DESC ? 'text-rose-500' : 'text-[#94a3b8]'}`}>
@@ -307,6 +312,15 @@ export default function TesterTechIssuesPage() {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {/* A5: history load error notice */}
+          {historyLoadError && !loadingItems && (
+            <div className="bg-rose-50 border-[1.5px] border-rose-200 rounded-2xl px-4 py-3 mb-3">
+              <p className="text-rose-700 text-sm font-bold">
+                Tarix yuklanmadi. Sahifani yangilang yoki qayta urinib ko&apos;ring.
+              </p>
             </div>
           )}
 

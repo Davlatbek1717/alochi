@@ -14,6 +14,7 @@ import {
   Star,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { tashkentToday } from '@/lib/tashkent-date';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { formatDateShort } from '@/lib/date-uz';
 
@@ -53,25 +54,35 @@ const NEXT_STATUS: Record<string, string | null> = {
 
 type FilterMode = 'all' | 'pending' | 'done';
 
-const TODAY = new Date().toISOString().split('T')[0];
-
 export default function TesterTasksPage() {
   const { success, error: toastError } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [filter, setFilter] = useState<FilterMode>('all');
   const [search, setSearch] = useState('');
+  // A9: per-task pending set to prevent double-submit
+  const [pendingTasks, setPendingTaskIds] = useState<Set<string>>(new Set());
 
   function token() { return localStorage.getItem('accessToken') ?? ''; }
+
+  // A2: move TODAY inside component using tashkentToday()
+  const TODAY = tashkentToday();
 
   useEffect(() => {
     apiRequest<Task[]>('/tasks/my', {}, token())
       .then((res) => setTasks(res.data))
-      .catch(() => {})
+      .catch(() => {
+        setLoadError(true);
+        toastError("Vazifalar yuklanmadi — qayta urinib ko'ring");
+      })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function updateStatus(id: string, status: string) {
+    if (pendingTasks.has(id)) return;
+    setPendingTaskIds((prev) => new Set(prev).add(id));
     try {
       const res = await apiRequest<Task>(`/tasks/${id}/status`, {
         method: 'PATCH',
@@ -79,7 +90,11 @@ export default function TesterTasksPage() {
       }, token());
       setTasks((prev) => prev.map((t) => t.id === id ? res.data : t));
       success('Status yangilandi');
-    } catch (err) { toastError(err instanceof Error ? err.message : 'Xato'); }
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Xato');
+    } finally {
+      setPendingTaskIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    }
   }
 
   const counts = useMemo(() => {
@@ -183,6 +198,15 @@ export default function TesterTasksPage() {
           </>
         )}
 
+        {/* A5: load error retry card */}
+        {loadError && !loading && (
+          <div className="bg-rose-50 border-[1.5px] border-rose-200 rounded-2xl px-4 py-3">
+            <p className="text-rose-700 text-sm font-bold">
+              Vazifalar yuklanmadi. Sahifani yangilang yoki qayta urinib ko&apos;ring.
+            </p>
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -259,10 +283,11 @@ export default function TesterTasksPage() {
                       variant={next === 'done' ? 'success' : 'secondary'}
                       fullWidth
                       size="sm"
+                      disabled={pendingTasks.has(t.id)}
                       icon={next === 'done' ? <CheckCircle size={14} /> : <PlayCircle size={14} />}
                       onClick={() => updateStatus(t.id, next)}
                     >
-                      {next === 'done' ? 'Bajarildi' : 'Boshlash'}
+                      {pendingTasks.has(t.id) ? 'Saqlanmoqda...' : next === 'done' ? 'Bajarildi' : 'Boshlash'}
                     </Button>
                   )}
                 </li>

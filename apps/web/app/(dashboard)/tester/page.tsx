@@ -18,7 +18,8 @@ import {
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken } from '@/lib/jwt';
 import { formatDateWeekday } from '@/lib/date-uz';
-import { Skeleton } from '@/components/ui';
+import { tashkentToday } from '@/lib/tashkent-date';
+import { Skeleton, useToast } from '@/components/ui';
 
 type Task = { id: string; status: string; title: string; createdAt: string; senderName?: string };
 type Student = { id: string; name: string; role: string };
@@ -38,6 +39,7 @@ const KPI_TARGET_MONTHLY = 600;
 
 export default function TesterDashboard() {
   const router = useRouter();
+  const { error: toastError } = useToast();
   const [kpiToday, setKpiToday] = useState(0);
   const [kpiMonthly, setKpiMonthly] = useState(0);
   const [studentCount, setStudentCount] = useState(0);
@@ -46,6 +48,7 @@ export default function TesterDashboard() {
   const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
   const [testerName, setTesterName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -53,43 +56,63 @@ export default function TesterDashboard() {
     const user = JSON.parse(localStorage.getItem('user') ?? '{}') as { name?: string };
     setTesterName(user.name ?? '');
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = tashkentToday();
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
 
-    Promise.all([
-      apiRequest<number>('/kpi/daily', {}, token).catch(() => ({ data: 0 })),
-      apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token).catch(() => ({ data: 0 })),
+    // A5: use allSettled so individual failures show error banner, not swallowed silently
+    Promise.allSettled([
+      apiRequest<number>('/kpi/daily', {}, token),
+      apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token),
       branchId
-        ? apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token).catch(
-            () => ({ data: [] as Student[] }),
-          )
+        ? apiRequest<Student[]>(`/users?branchId=${branchId}&role=student`, {}, token)
         : Promise.resolve({ data: [] as Student[] }),
       branchId
-        ? apiRequest<AttendanceRow[]>(`/attendance/students/${branchId}/${today}`, {}, token).catch(
-            () => ({ data: [] as AttendanceRow[] }),
-          )
+        ? apiRequest<AttendanceRow[]>(`/attendance/students/${branchId}/${today}`, {}, token)
         : Promise.resolve({ data: [] as AttendanceRow[] }),
-      apiRequest<ActiveExam[]>('/exams/branch/active', {}, token).catch(
-        () => ({ data: [] as ActiveExam[] }),
-      ),
-      apiRequest<Task[]>('/tasks/my', {}, token).catch(() => ({ data: [] as Task[] })),
+      apiRequest<ActiveExam[]>('/exams/branch/active', {}, token),
+      apiRequest<Task[]>('/tasks/my', {}, token),
     ])
       .then(([kpiT, kpiM, studentsRes, attRes, examsRes, tasksRes]) => {
-        setKpiToday((kpiT as { data: number }).data ?? 0);
-        setKpiMonthly((kpiM as { data: number }).data ?? 0);
-        setStudentCount((studentsRes.data ?? []).length);
-        setPresentToday(
-          (attRes.data ?? []).filter((a) => a.status === 'present' || a.status === 'late').length,
-        );
-        setPendingExams(examsRes.data ?? []);
-        const incoming = (tasksRes.data ?? []).filter(
-          (t) => t.status !== 'done' && t.status !== 'confirmed',
-        );
-        setPendingTasks(incoming);
+        let anyFailed = false;
+
+        if (kpiT.status === 'fulfilled') {
+          setKpiToday((kpiT.value as { data: number }).data ?? 0);
+        } else { anyFailed = true; }
+
+        if (kpiM.status === 'fulfilled') {
+          setKpiMonthly((kpiM.value as { data: number }).data ?? 0);
+        } else { anyFailed = true; }
+
+        if (studentsRes.status === 'fulfilled') {
+          setStudentCount((studentsRes.value.data ?? []).length);
+        } else { anyFailed = true; }
+
+        if (attRes.status === 'fulfilled') {
+          setPresentToday(
+            (attRes.value.data ?? []).filter((a) => a.status === 'present' || a.status === 'late').length,
+          );
+        } else { anyFailed = true; }
+
+        if (examsRes.status === 'fulfilled') {
+          setPendingExams(examsRes.value.data ?? []);
+        } else { anyFailed = true; }
+
+        if (tasksRes.status === 'fulfilled') {
+          const incoming = (tasksRes.value.data ?? []).filter(
+            (t) => t.status !== 'done' && t.status !== 'confirmed',
+          );
+          setPendingTasks(incoming);
+        } else { anyFailed = true; }
+
+        if (anyFailed) {
+          setLoadError(true);
+          toastError("Ba'zi ma'lumotlar yuklanmadi — qayta urinib ko'ring");
+        }
       })
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dateStr = formatDateWeekday(new Date());
@@ -231,7 +254,7 @@ export default function TesterDashboard() {
               <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-[#f59e0b] to-[#fbbf24] rounded-full transition-all duration-500"
-                  style={{ width: `${monthlyPercent}%` }}
+                  style={{ width: `${kpiPercent}%` }}
                 />
               </div>
               <p className="text-[#94a3b8] text-[10px] mt-1 font-bold">
@@ -244,6 +267,15 @@ export default function TesterDashboard() {
 
       {/* Body */}
       <div className="max-w-lg mx-auto px-4 pt-5 pb-6 space-y-5">
+        {/* A5: partial load error banner */}
+        {loadError && !loading && (
+          <div className="bg-rose-50 border-[1.5px] border-rose-200 rounded-2xl px-4 py-3">
+            <p className="text-rose-700 text-sm font-bold">
+              Ba&apos;zi ma&apos;lumotlar yuklanmadi. Sahifani yangilang yoki qayta urinib ko&apos;ring.
+            </p>
+          </div>
+        )}
+
         {/* Today snapshot — exam queue lead, then 3 stat tiles */}
         <section>
           <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2.5 px-1">

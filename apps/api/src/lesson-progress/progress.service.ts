@@ -91,6 +91,10 @@ export class ProgressService {
      *  so older clients (and tests that don't care about status) keep
      *  working unchanged. */
     accuracy?: number,
+    /** Caller's role — gamification side-effects (XP, streak, quest,
+     *  city) only run for `student`. Testers run lessons without
+     *  accumulating student stats. */
+    callerRole?: string,
   ) {
     const effectiveN = await this.getEffectiveN(studentId, lessonId, tenantId);
 
@@ -136,10 +140,15 @@ export class ProgressService {
       this.cache.del(key).catch(() => undefined);
     }
 
+    // Gamification side-effects only apply when the caller is a student.
+    // Testers run lessons to validate content and must not accumulate
+    // student XP, streaks, quests, or city buildings.
+    const isStudent = !callerRole || callerRole === 'student';
+
     // Reward the student for completing this session. All four side-effects
     // are best-effort: a failure here must not roll back the progress row
     // the user just earned.
-    if (this.xp) {
+    if (isStudent && this.xp) {
       this.xp
         .award(studentId, 'LESSON_COMPLETE', {
           lessonId,
@@ -148,10 +157,10 @@ export class ProgressService {
         })
         .catch(() => {});
     }
-    if (this.streak) {
+    if (isStudent && this.streak) {
       this.streak.recordActivity(studentId).catch(() => {});
     }
-    if (this.quest) {
+    if (isStudent && this.quest) {
       this.quest.updateProgress(studentId, 'lesson_complete').catch(() => {});
       // 25.A.4: any session completion implicitly proves the video was
       // watched, so credit the daily "watch_video" quest too.
@@ -164,6 +173,7 @@ export class ProgressService {
     // must not roll back the lesson the student just earned. Mentor still
     // sees and can override the colour from the group page.
     if (
+      isStudent &&
       this.status &&
       typeof accuracy === 'number' &&
       Number.isFinite(accuracy)
@@ -182,7 +192,7 @@ export class ProgressService {
     // When the student finishes the home portion (sessionCount === N) emit a
     // social feed event so friends see the completion. Academy completion has
     // its own emit in markAcademyCompleted().
-    if (homeCompleted) {
+    if (isStudent && homeCompleted) {
       const lesson = await this.prisma.lesson.findUnique({
         where: { id: lessonId },
         select: { title: true, tenantId: true },
