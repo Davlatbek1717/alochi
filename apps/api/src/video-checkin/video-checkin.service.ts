@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { tashkentDateString, dateStringToDate } from './lib/tashkent-time';
 
 export interface TodayCheckinRow {
@@ -39,7 +38,6 @@ export class VideoCheckinService {
 
   constructor(
     private prisma: PrismaService,
-    private notifications: NotificationsService,
     private events: EventEmitter2,
   ) {}
 
@@ -135,8 +133,16 @@ export class VideoCheckinService {
         select: { id: true },
       });
       for (const fa of filadmins) {
-        await this.notifications
-          .send(fa.id, 'video_missed', notifTitle, notifBody, meta)
+        await this.prisma.notification
+          .create({
+            data: {
+              userId: fa.id,
+              type: 'video_missed',
+              title: notifTitle,
+              body: notifBody,
+              meta,
+            },
+          })
           .catch(() => undefined);
       }
     }
@@ -148,8 +154,16 @@ export class VideoCheckinService {
         select: { id: true },
       });
       if (mentor) {
-        await this.notifications
-          .send(mentor.id, 'video_missed', notifTitle, notifBody, meta)
+        await this.prisma.notification
+          .create({
+            data: {
+              userId: mentor.id,
+              type: 'video_missed',
+              title: notifTitle,
+              body: notifBody,
+              meta,
+            },
+          })
           .catch(() => undefined);
       }
     }
