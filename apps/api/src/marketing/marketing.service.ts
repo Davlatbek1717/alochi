@@ -83,7 +83,12 @@ export class MarketingService {
           createdAt: true,
           _count: {
             select: {
-              studentProgress: { where: { academyCompleted: true } },
+              // Public showcase counts what the student actually finished
+              // at home (passed the lesson with a passing score). The
+              // stricter academyCompleted gate requires an in-person tester
+              // sign-off and would leave the public count at zero for any
+              // tenant whose tester hasn't run a verification day yet.
+              studentProgress: { where: { homeCompleted: true } },
             },
           },
         },
@@ -137,6 +142,7 @@ export class MarketingService {
           select: {
             lessonId: true,
             sessionCount: true,
+            homeCompleted: true,
             academyCompleted: true,
             completedAt: true,
             lesson: { select: { title: true, orderNumber: true } },
@@ -151,8 +157,11 @@ export class MarketingService {
     const totalLessons = await this.prisma.lesson.count({
       where: { isPublished: true },
     });
+    // Counts the home-completed pass count (matches listStudents above);
+    // academyCompleted is still surfaced per row so the timeline can
+    // show a "tester verified" tick separately.
     const completed = student.studentProgress.filter(
-      (p) => p.academyCompleted,
+      (p) => p.homeCompleted,
     ).length;
     const progressPct =
       totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
@@ -224,7 +233,9 @@ export class MarketingService {
         // Scope both sides to active students.
         this.prisma.studentProgress.count({
           where: {
-            academyCompleted: true,
+            // Same metric the showcase uses — students who actually
+            // completed the lesson at home. See listStudents() comment.
+            homeCompleted: true,
             student: { status: 'active' },
           },
         }),
