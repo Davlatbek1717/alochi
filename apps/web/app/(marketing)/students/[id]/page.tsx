@@ -28,8 +28,13 @@ interface StudentDetail {
 
 async function fetchStudent(id: string): Promise<StudentDetail | null> {
   try {
+    // The backend already caches the marketing endpoints with a short
+    // TTL and busts them on lesson completion (Phase 3). Doubling that
+    // with Next.js's 60s data cache produced minute-long stale reads
+    // when a student finished a lesson — the public profile would
+    // still show 0 until both layers expired. Skip the framework cache.
     const res = await fetch(`${API_BASE}/marketing/students/${id}`, {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     });
     if (res.status === 404) return null;
     if (!res.ok) return null;
