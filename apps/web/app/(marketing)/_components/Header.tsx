@@ -6,8 +6,7 @@ import { ArrowRight, Menu, X } from 'lucide-react';
 
 const NAV = [
   { href: '#features', label: 'Imkoniyatlar' },
-  { href: '#roles', label: 'Rollar' },
-  { href: '#pricing', label: 'Narxlar' },
+  { href: '#how-it-works', label: 'Qanday ishlaydi' },
   { href: '#faq', label: 'Savollar' },
 ];
 

@@ -6,12 +6,8 @@ import { StatsStrip } from './StatsStrip';
 import { StudentsShowcase } from './StudentsShowcase';
 import { WhyAlochi } from './WhyAlochi';
 import { Features } from './Features';
-import { PrizesSection } from './PrizesSection';
-import { CertificateSection } from './CertificateSection';
-import { Roles } from './Roles';
 import { HowItWorks } from './HowItWorks';
 import { ForParents } from './ForParents';
-import { Pricing } from './Pricing';
 import { FAQ } from './FAQ';
 import { CTA } from './CTA';
 import { Footer } from './Footer';
@@ -27,6 +23,15 @@ interface Props {
  * Self-serve registration was removed — the only entry point is
  * the existing tenant superadmin signing in via /login. CTAs that
  * used to launch a demo/trial flow now route there.
+ *
+ * Sections intentionally NOT rendered on the public landing:
+ *   - Pricing      (prices are negotiated 1:1, not self-serve)
+ *   - Roles        (internal panel detail, irrelevant for visitors)
+ *   - PrizesSection / CertificateSection (motivational content the
+ *     superadmin sees inside the dashboard, not a public sales asset)
+ * The components stay in the codebase so the superadmin landing-CMS
+ * editor can still curate them, but they're omitted from the public
+ * page until the product needs them again.
  */
 export function LandingShell({ cms }: Props) {
   const router = useRouter();
@@ -41,12 +46,8 @@ export function LandingShell({ cms }: Props) {
         <StudentsShowcase />
         <WhyAlochi />
         <Features />
-        <PrizesSection cms={cms?.prizes ?? null} />
-        <CertificateSection cms={cms?.certificate ?? null} />
-        <Roles />
         <HowItWorks />
         <ForParents />
-        <Pricing onDemoClick={goLogin} />
         <FAQ />
         <CTA onDemoClick={goLogin} />
       </main>
