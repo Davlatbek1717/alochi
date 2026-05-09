@@ -13,9 +13,12 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
+import { getRoleFromToken } from '@/lib/jwt';
 import { Modal, useToast, EmptyState } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { formatDateShort } from '@/lib/date-uz';
+
+const CAN_CREATE_ROLES = new Set(['filadmin', 'superadmin']);
 
 type DelegationStatus =
   | 'active'
@@ -92,6 +95,12 @@ export default function DelegationsPage() {
   const [activeTab, setActiveTab] = useState<DelegationStatus | 'all'>('all');
   const [delegations, setDelegations] = useState<Delegation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [canCreate, setCanCreate] = useState(false);
+
+  useEffect(() => {
+    const role = getRoleFromToken();
+    setCanCreate(role !== null && CAN_CREATE_ROLES.has(role));
+  }, []);
 
   // Cancel
   const [cancelTarget, setCancelTarget] = useState<Delegation | null>(null);
@@ -177,12 +186,14 @@ export default function DelegationsPage() {
             </p>
             <p className="text-white text-xl font-bold">Delegatsiyalar</p>
           </div>
-          <Link
-            href="/delegations/new"
-            className="flex items-center gap-1.5 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold"
-          >
-            <Plus size={16} /> Yangi
-          </Link>
+          {canCreate && (
+            <Link
+              href="/delegations/new"
+              className="flex items-center gap-1.5 bg-[#0d9488] text-white px-4 py-2.5 rounded-xl text-sm font-bold"
+            >
+              <Plus size={16} /> Yangi
+            </Link>
+          )}
         </div>
       </div>
 
@@ -231,8 +242,12 @@ export default function DelegationsPage() {
               }
               description={
                 activeTab === 'all'
-                  ? 'Yangi delegatsiya yaratish uchun "Yangi" tugmasini bosing.'
-                  : "Boshqa filtr tanlang yoki yangi delegatsiya qo‘shing."
+                  ? canCreate
+                    ? 'Yangi delegatsiya yaratish uchun "Yangi" tugmasini bosing.'
+                    : 'Sizga delegatsiya berilmagan.'
+                  : canCreate
+                    ? "Boshqa filtr tanlang yoki yangi delegatsiya qo‘shing."
+                    : 'Boshqa filtr tanlang.'
               }
             />
           </div>

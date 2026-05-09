@@ -3,8 +3,10 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, GitBranch, Calendar, ChevronDown } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getBranchIdFromToken } from '@/lib/jwt';
+import { getBranchIdFromToken, getRoleFromToken } from '@/lib/jwt';
 import { useToast } from '@/components/ui';
+
+const CAN_CREATE_ROLES = new Set(['filadmin', 'superadmin']);
 
 type BranchUser = {
   id: string;
@@ -40,6 +42,12 @@ function NewDelegationForm() {
   const [myBranchId, setMyBranchId] = useState<string>('');
 
   useEffect(() => {
+    const role = getRoleFromToken();
+    if (role !== null && !CAN_CREATE_ROLES.has(role)) {
+      router.replace('/delegations');
+      return;
+    }
+
     // branchId is derived from the JWT — no stale localStorage object needed.
     const branchId = getBranchIdFromToken() ?? '';
     setMyBranchId(branchId);

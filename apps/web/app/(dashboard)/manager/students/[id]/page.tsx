@@ -178,11 +178,6 @@ export default function StudentProfilePage() {
     }
   }
 
-  function handleStart11() {
-    const encoded = encodeURIComponent(`1:1 sessiya: ${studentName}`);
-    router.push(`/delegations/new?reason=${encoded}`);
-  }
-
   async function submitStatus() {
     if (!studentId) return;
     setStatusSaving(true);
@@ -294,13 +289,6 @@ export default function StudentProfilePage() {
                 <p className="text-[#64748b] text-xs">O&apos;quvchi profili</p>
               </div>
             </div>
-            <button
-              onClick={handleStart11}
-              disabled={!studentName}
-              className="bg-[#7c3aed] text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center gap-1"
-            >
-              <Video size={14} /> 1:1
-            </button>
           </div>
         </div>
       </div>
@@ -308,7 +296,7 @@ export default function StudentProfilePage() {
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-4">
         {/* Quick actions */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => { setStatusModalOpen(true); setStatusColorPick('yashil'); setStatusNote(''); }}
             disabled={!studentName}
@@ -316,14 +304,6 @@ export default function StudentProfilePage() {
           >
             <Flag size={18} className="text-rose-500" />
             <span className="text-xs font-bold text-[#0f172a]">Status berish</span>
-          </button>
-          <button
-            onClick={handleStart11}
-            disabled={!studentName}
-            className="bg-white rounded-xl border-[1.5px] border-[#ede9e1] p-3 flex flex-col items-center justify-center gap-1 hover:bg-[#f7f4ef] disabled:opacity-50 transition-colors"
-          >
-            <Video size={18} className="text-violet-600" />
-            <span className="text-xs font-bold text-[#0f172a]">Delegatsiya</span>
           </button>
           <button
             onClick={() => { setKpiModalOpen(true); setKpiScore(10); setKpiReason(''); }}

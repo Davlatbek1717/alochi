@@ -25,7 +25,7 @@ export class DelegationsController {
   constructor(private delegations: DelegationsService) {}
 
   @Post()
-  @Roles(UserRole.filadmin, UserRole.manager, UserRole.superadmin)
+  @Roles(UserRole.filadmin, UserRole.superadmin)
   create(@Body() body: any, @Request() req: any) {
     // tenantId, branchId, fromUserId are always derived from JWT — never from body
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

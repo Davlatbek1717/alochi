@@ -5,7 +5,7 @@ import {
   BookMarked, CreditCard, Users, Building2,
   Trophy, ChevronRight, Shield,
   Settings, BarChart2, TrendingUp,
-  UserX, Camera, Award, Video, MessageSquare,
+  UserX, Camera, Award, Video, MessageSquare, Send,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateLong } from '@/lib/date-uz';
@@ -24,6 +24,7 @@ const NAV_CARDS = [
   { href: '/superadmin/certificate-design', icon: <Award size={22} />,      title: 'Sertifikat dizayni',   desc: 'Shablon va brending' },
   { href: '/superadmin/video-guides',    icon: <Video size={22} />,         title: "Video qo'llanmalar",    desc: "Foydalanuvchilar uchun video" },
   { href: '/superadmin/templates',       icon: <MessageSquare size={22} />, title: 'Bildirishnoma shablonlari', desc: 'Telegram/inapp/SMS shablonlar' },
+  { href: '/delegations',                icon: <Send size={22} />,          title: 'Delegatsiya',          desc: 'Vakolat berish va boshqarish' },
   { href: '/superadmin/settings',        icon: <Settings size={22} />,      title: 'Sozlamalar',           desc: 'Bloklash chegarasi' },
 ];
 

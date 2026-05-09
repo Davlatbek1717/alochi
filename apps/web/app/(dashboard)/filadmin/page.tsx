@@ -19,6 +19,7 @@ import {
   Video,
   Megaphone,
   UserCog,
+  Send,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel';
@@ -107,6 +108,13 @@ const NAV_CARDS = [
     title: 'Xodimlar',
     description: 'Mentor / menejer / tester boshqaruvi',
     color: 'hover:border-indigo-300 hover:bg-indigo-50',
+  },
+  {
+    href: '/delegations',
+    icon: <Send size={22} />,
+    title: 'Delegatsiya',
+    description: 'Vakolat berish va boshqarish',
+    color: 'hover:border-blue-300 hover:bg-blue-50',
   },
 ];
 

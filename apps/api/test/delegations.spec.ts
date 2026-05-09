@@ -96,14 +96,15 @@ describe('DelegationsService', () => {
 
 describe('DelegationsController — RBAC (Phase 5)', () => {
   // Per spec §2.3.4: superadmin gains delegation-create rights.
+  // Manager was removed: managers only execute delegations, not create them.
   const reflector = new Reflector();
-  it('POST /delegations allows filadmin, manager, superadmin', () => {
+  it('POST /delegations allows filadmin and superadmin only', () => {
     const roles = reflector.get<UserRole[]>(
       ROLES_KEY,
       DelegationsController.prototype.create,
     );
     expect(roles).toContain(UserRole.filadmin);
-    expect(roles).toContain(UserRole.manager);
     expect(roles).toContain(UserRole.superadmin);
+    expect(roles).not.toContain(UserRole.manager);
   });
 });

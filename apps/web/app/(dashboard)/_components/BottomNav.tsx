@@ -54,7 +54,7 @@ const NAV_TABS: Record<string, Tab[]> = {
     { href: '/manager/students', icon: <Users size={20} />, label: "O'quvchi" },
     { href: '/manager/payments', icon: <CreditCard size={20} />, label: "To'lov" },
     { href: '/manager/tasks', icon: <ClipboardList size={20} />, label: 'Vazifa' },
-    { href: '/manager/delegations', icon: <Send size={20} />, label: 'Vakolat' },
+    { href: '/delegations', icon: <Send size={20} />, label: 'Vakolat' },
   ],
   filadmin: [
     { href: '/filadmin', icon: <Home size={20} />, label: 'Bosh' },

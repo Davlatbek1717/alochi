@@ -73,7 +73,7 @@ export default function ManagerDashboard() {
     { href: '/manager/students',    icon: <Users size={20} />,        title: "O'quvchilar", desc: 'Status boshqaruv',  color: 'hover:border-violet-300 hover:bg-violet-50' },
     { href: '/manager/payments',    icon: <CreditCard size={20} />,   title: "To'lovlar",   desc: 'Qarzdorlar hisobi', color: 'hover:border-emerald-300 hover:bg-emerald-50' },
     { href: '/manager/tasks',       icon: <ClipboardList size={20} />,title: 'Vazifalar',   desc: "Mening topshiriqlarim", color: 'hover:border-orange-300 hover:bg-orange-50' },
-    { href: '/manager/delegations', icon: <Send size={20} />,         title: 'Delegatsiya', desc: 'Buyruq jo\'natish', color: 'hover:border-blue-300 hover:bg-blue-50' },
+    { href: '/delegations',         icon: <Send size={20} />,         title: 'Vakolatlar',  desc: "Menga berilgan vakolatlar", color: 'hover:border-blue-300 hover:bg-blue-50' },
     { href: '/manager/rewards',     icon: <Trophy size={20} />,       title: "Sovg'a/Kitob", desc: 'Ragʼbatlantirish',   color: 'hover:border-amber-300 hover:bg-amber-50' },
     { href: '/manager/sessions',    icon: <Calendar size={20} />,     title: '1:1 Sessiyalar', desc: 'Individual sessiyalarni rejalashtirish va kuzatish', color: 'hover:border-cyan-300 hover:bg-cyan-50' },
     { href: '/manager/certificates',icon: <Award size={20} />,        title: 'Sertifikat',   desc: "O'quvchilar sertifikatlari", color: 'hover:border-amber-300 hover:bg-amber-50' },
