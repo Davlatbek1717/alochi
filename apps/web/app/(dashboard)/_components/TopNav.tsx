@@ -108,6 +108,7 @@ const NAV: Record<string, NavEntry[]> = {
     { label: 'Davomat', href: '/mentor/attendance', icon: <BarChart2 size={15} /> },
     { label: 'Vazifalar', href: '/mentor/tasks', icon: <ClipboardList size={15} /> },
     { label: "O'quvchilar", href: '/mentor/students', icon: <Users size={15} /> },
+    { label: 'Reyting', href: '/mentor/leaderboard', icon: <Trophy size={15} /> },
   ],
 
   manager: [
@@ -149,6 +150,7 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/filadmin/blocked-students', icon: <AlertTriangle size={14} />, label: 'Bloklanganlar' },
         { href: '/filadmin/warnings', icon: <AlertTriangle size={14} />, label: 'Ogohlantirish' },
         { href: '/filadmin/groups', icon: <Users size={14} />, label: 'Guruhlar' },
+        { href: '/filadmin/leaderboard', icon: <Trophy size={14} />, label: 'Reyting' },
       ],
     },
     {

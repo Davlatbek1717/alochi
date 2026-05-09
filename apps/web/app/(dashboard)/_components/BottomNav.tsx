@@ -16,6 +16,7 @@ import {
   Send,
   FlaskConical,
   Swords,
+  Trophy,
 } from 'lucide-react';
 
 type Tab = {
@@ -41,6 +42,7 @@ const NAV_TABS: Record<string, Tab[]> = {
     { href: '/mentor/group', icon: <GraduationCap size={20} />, label: 'Guruh' },
     { href: '/mentor/attendance', icon: <BarChart2 size={20} />, label: 'Davomat' },
     { href: '/mentor/tasks', icon: <ClipboardList size={20} />, label: 'Vazifalar' },
+    { href: '/mentor/leaderboard', icon: <Trophy size={20} />, label: 'Reyting' },
   ],
   tester: [
     { href: '/tester', icon: <Home size={20} />, label: 'Bosh' },

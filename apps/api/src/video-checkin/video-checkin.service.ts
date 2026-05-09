@@ -81,7 +81,7 @@ export class VideoCheckinService {
     });
     if (!checkin) throw new NotFoundException('Video topilmadi');
     if (checkin.status !== 'submitted' || !checkin.telegramFileId) {
-      throw new NotFoundException("Bu vaqtga video tashlanmagan");
+      throw new NotFoundException('Bu vaqtga video tashlanmagan');
     }
     if (checkin.student.tenantId !== caller.tenantId) {
       throw new ForbiddenException('Boshqa tenant');

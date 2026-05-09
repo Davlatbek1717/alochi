@@ -127,4 +127,15 @@ export class GamificationController {
   ) {
     return this.leaderboard.getNationalLeaderboard(period, req.user.tenantId);
   }
+
+  @Get('leaderboard/group/:groupId')
+  @Roles(
+    UserRole.mentor,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
+  getGroupLeaderboard(@Param('groupId') groupId: string, @Request() req: any) {
+    return this.leaderboard.getGroupLeaderboard(groupId, req.user.tenantId);
+  }
 }
