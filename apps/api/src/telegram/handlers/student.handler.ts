@@ -34,43 +34,14 @@ export class StudentHandler {
     }
   }
 
-  async handleXp(ctx: Context, telegramId: bigint): Promise<void> {
-    try {
-      const student = await this.prisma.user.findFirst({
-        where: { telegramId },
-      });
-      if (!student) {
-        await ctx.reply('Profil topilmadi.');
-        return;
-      }
-
-      const xp = await this.prisma.studentXp.findFirst({
-        where: { studentId: student.id },
-      });
-
-      const totalXp = xp?.totalXp ?? 0;
-      const level = Math.floor(totalXp / 100);
-
-      await ctx.reply([`🏅 XP: ${totalXp}`, `📊 Daraja: ${level}`].join('\n'));
-    } catch {
-      await ctx.reply('Xatolik yuz berdi');
-    }
-  }
-
   /**
-   * Spec §6.6 — `/rating` bot command. Computes the caller's rank within
-   * their branch by total XP. Group-level ranking is deferred until the
-   * `User.groupId` field lands (Phase 7+).
+   * /rating — shows the caller's branch rank by completed lessons (home_completed).
    */
   async handleRating(ctx: Context, telegramId: bigint): Promise<void> {
     try {
       const student = await this.prisma.user.findFirst({
         where: { telegramId, role: 'student' },
-        select: {
-          id: true,
-          branchId: true,
-          tenantId: true,
-        },
+        select: { id: true, branchId: true },
       });
       if (!student) {
         await ctx.reply(
@@ -79,14 +50,10 @@ export class StudentHandler {
         return;
       }
 
-      const myXp = await this.prisma.studentXp.findUnique({
-        where: { studentId: student.id },
-        select: { totalXp: true },
+      const myCount = await this.prisma.studentProgress.count({
+        where: { studentId: student.id, homeCompleted: true },
       });
-      const myTotal = myXp?.totalXp ?? 0;
 
-      // Branch ranking by total XP. We compute over the StudentXp table
-      // joined to active branch students; a tie on XP keeps insertion order.
       const lines: string[] = ["📊 Sizning o'rningiz:"];
 
       if (student.branchId) {
@@ -96,20 +63,24 @@ export class StudentHandler {
             role: 'student',
             status: 'active',
           },
-          select: { id: true, studentXp: { select: { totalXp: true } } },
+          select: { id: true },
         });
-        const sorted = branchPeers
-          .map((p) => ({ id: p.id, xp: p.studentXp?.totalXp ?? 0 }))
-          .sort((a, b) => b.xp - a.xp);
-        const branchSize = sorted.length;
+        const counts = await Promise.all(
+          branchPeers.map((p) =>
+            this.prisma.studentProgress
+              .count({ where: { studentId: p.id, homeCompleted: true } })
+              .then((c) => ({ id: p.id, count: c })),
+          ),
+        );
+        const sorted = counts.sort((a, b) => b.count - a.count);
         const branchRank = sorted.findIndex((p) => p.id === student.id) + 1;
         if (branchRank > 0) {
-          lines.push(`• Filialda: ${branchRank}/${branchSize}`);
+          lines.push(`• Filialda: ${branchRank}/${sorted.length}`);
         }
       }
 
       lines.push('');
-      lines.push(`💪 XP: ${myTotal}`);
+      lines.push(`📚 Tugatilgan darslar: ${myCount}`);
       await ctx.reply(lines.join('\n'));
     } catch (err) {
       this.logger.error(`/rating handler xatosi: ${err}`);
@@ -127,16 +98,16 @@ export class StudentHandler {
         return;
       }
 
-      const xp = await this.prisma.studentXp.findFirst({
+      const streak = await this.prisma.studentStreak.findFirst({
         where: { studentId: student.id },
       });
 
       const shieldStatus =
-        (xp?.shieldCount ?? 0) > 0 ? 'mavjud' : 'ishlatilgan';
+        (streak?.shieldCount ?? 0) > 0 ? 'mavjud' : 'ishlatilgan';
 
       await ctx.reply(
         [
-          `🔥 Streak: ${xp?.currentStreak ?? 0} kun`,
+          `🔥 Streak: ${streak?.currentStreak ?? 0} kun`,
           `🛡 Shield: ${shieldStatus}`,
         ].join('\n'),
       );

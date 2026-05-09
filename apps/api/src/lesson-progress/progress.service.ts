@@ -11,7 +11,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FeedEventService } from '../social/feed-event.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { CityService } from '../gamification/city.service';
-import { XpService } from '../gamification/xp.service';
 import { StreakService } from '../gamification/streak.service';
 import { QuestService } from '../gamification/quest.service';
 import { CertificatesService } from '../gamification/certificates.service';
@@ -37,7 +36,6 @@ export class ProgressService {
     private analytics: AnalyticsService,
     @Inject(CACHE_MANAGER) private cache: Cache,
     @Optional() private city?: CityService,
-    @Optional() private xp?: XpService,
     @Optional() private streak?: StreakService,
     @Optional() private quest?: QuestService,
     @Optional() private status?: StatusService,
@@ -142,21 +140,12 @@ export class ProgressService {
 
     // Gamification side-effects only apply when the caller is a student.
     // Testers run lessons to validate content and must not accumulate
-    // student XP, streaks, quests, or city buildings.
+    // student streaks, quests, or city buildings.
     const isStudent = !callerRole || callerRole === 'student';
 
-    // Reward the student for completing this session. All four side-effects
+    // Reward the student for completing this session. All three side-effects
     // are best-effort: a failure here must not roll back the progress row
     // the user just earned.
-    if (isStudent && this.xp) {
-      this.xp
-        .award(studentId, 'LESSON_COMPLETE', {
-          lessonId,
-          sessionCount: newCount,
-          homeCompleted,
-        })
-        .catch(() => {});
-    }
     if (isStudent && this.streak) {
       this.streak.recordActivity(studentId).catch(() => {});
     }

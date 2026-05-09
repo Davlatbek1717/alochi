@@ -155,10 +155,7 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .emit('duel:challenged', { duelId, challengerName });
   }
 
-  emitDuelResult(
-    toUserId: string,
-    result: { won: boolean; xpEarned: number; score: string },
-  ) {
+  emitDuelResult(toUserId: string, result: { won: boolean; score: string }) {
     this.server?.to(`feed:${toUserId}`).emit('duel:result', result);
   }
 
@@ -328,23 +325,6 @@ export class SocialGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   // ── Gamification events → WebSocket forwarders ─────────────────────────
-
-  /** A1. xp:updated — emitted after XpService.award upserts studentXp. */
-  @OnEvent('xp.awarded')
-  forwardXpAwarded(payload: {
-    studentId: string;
-    totalXp: number;
-    delta: number;
-    tenantId: string;
-  }) {
-    const eventPayload = {
-      studentId: payload.studentId,
-      totalXp: payload.totalXp,
-      delta: payload.delta,
-    };
-    this.emitToUser(payload.studentId, 'xp:updated', eventPayload);
-    this.emitToTenant(payload.tenantId, 'xp:updated', eventPayload);
-  }
 
   /** A2. cert:earned — bridged from the EventEmitter2 event CertificatesService already emits. */
   @OnEvent('certificate.earned')

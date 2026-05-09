@@ -136,11 +136,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.studentHandler.handleLesson(ctx, telegramId);
     });
 
-    this.bot.command('xp', async (ctx) => {
-      const telegramId = BigInt(ctx.from?.id ?? 0);
-      await this.studentHandler.handleXp(ctx, telegramId);
-    });
-
     this.bot.command('streak', async (ctx) => {
       const telegramId = BigInt(ctx.from?.id ?? 0);
       await this.studentHandler.handleStreak(ctx, telegramId);
@@ -313,7 +308,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     criticalStatus: string;
     studyMinutes: number;
     streak: number;
-    totalXp: number;
   }): string {
     // Statuses arrive in Uzbek canonical (yashil/sariq/qizil); the
     // helper handles unknown / 'nomalum' values gracefully.
@@ -328,7 +322,6 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       `📊 Tanqidiy fikrl.: ${statusEmoji(data.criticalStatus)}`,
       `⏱ O'qish vaqti: ${data.studyMinutes} daqiqa`,
       `🔥 Streak: ${data.streak} kun ketma-ket`,
-      `🏅 Umumiy ball: ${data.totalXp} XP`,
     ].join('\n');
   }
 

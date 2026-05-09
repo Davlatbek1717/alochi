@@ -14,7 +14,6 @@ import {
   BookOpen,
   Trophy,
   Sparkles,
-  Crown,
   ChevronRight,
   LogOut,
   Mail,
@@ -50,7 +49,6 @@ type Profile = {
   createdAt?: string | null;
 };
 
-type XpData = { totalXp: number; level: string; nextLevelXp: number };
 type StreakData = { streak: number; hasShield: boolean };
 type Certificate = { id: string; level?: string };
 type LettersResp = Array<{ id: string; owned: boolean }>;
@@ -58,31 +56,6 @@ type CityData = { lessonsCompleted?: number };
 
 const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT ?? '';
 
-const LEAGUE_TIERS = [
-  { key: 'bronze', label: 'Bronza', minXp: 0, color: 'from-[#a16207] to-[#78350f]' },
-  { key: 'silver', label: 'Kumush', minXp: 300, color: 'from-[#94a3b8] to-[#475569]' },
-  { key: 'gold', label: 'Oltin', minXp: 1000, color: 'from-[#fbbf24] to-[#d97706]' },
-  { key: 'platinum', label: 'Platina', minXp: 2500, color: 'from-[#7dd3fc] to-[#0369a1]' },
-  { key: 'diamond', label: 'Olmos', minXp: 5000, color: 'from-[#67e8f9] to-[#155e75]' },
-] as const;
-
-type LeagueTier = (typeof LEAGUE_TIERS)[number];
-
-function pickLeague(totalXp: number): {
-  current: LeagueTier;
-  next: LeagueTier | null;
-} {
-  // Highest tier whose minXp threshold is met.
-  let current: LeagueTier = LEAGUE_TIERS[0];
-  let next: LeagueTier | null = null;
-  for (let i = 0; i < LEAGUE_TIERS.length; i++) {
-    if (totalXp >= LEAGUE_TIERS[i].minXp) {
-      current = LEAGUE_TIERS[i];
-      next = LEAGUE_TIERS[i + 1] ?? null;
-    }
-  }
-  return { current, next };
-}
 
 /**
  * Render the parent Telegram link as something a child can read at a
@@ -118,7 +91,6 @@ export default function StudentProfilePage() {
   const router = useRouter();
   const toast = useToast();
     const [profile, setProfile] = useState<Profile | null>(null);
-  const [xp, setXp] = useState<XpData | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [lessonsCompleted, setLessonsCompleted] = useState(0);
@@ -155,9 +127,6 @@ export default function StudentProfilePage() {
     const token = localStorage.getItem('accessToken') ?? '';
     Promise.all([
       apiRequest<Profile>('/users/my-profile', {}, token),
-      apiRequest<XpData>('/gamification/xp', {}, token).catch(
-        () => ({ data: null as XpData | null }),
-      ),
       apiRequest<StreakData>('/gamification/streak', {}, token).catch(
         () => ({ data: null as StreakData | null }),
       ),
@@ -171,9 +140,8 @@ export default function StudentProfilePage() {
         () => ({ data: null as CityData | null }),
       ),
     ])
-      .then(([p, x, s, c, l, city]) => {
+      .then(([p, s, c, l, city]) => {
         setProfile(p.data);
-        if (x.data) setXp(x.data);
         if (s.data) setStreak(s.data);
         setCerts(c.data ?? []);
         setLettersOwned((l.data ?? []).filter((it) => it.owned).length);
@@ -195,8 +163,8 @@ export default function StudentProfilePage() {
   // tab so the profile never shows stale gamification numbers.
   useFocusRevalidate(load);
 
-  // Real-time: revalidate on XP or certificate socket push.
-  useRevalidateOnEvent(['xp:updated', 'cert:earned'], load);
+  // Real-time: revalidate on certificate socket push.
+  useRevalidateOnEvent(['cert:earned'], load);
 
   async function saveEdit() {
     if (!profile) return;
@@ -288,14 +256,6 @@ export default function StudentProfilePage() {
       ? `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}_${profile.id}`
       : '';
 
-  const totalXp = xp?.totalXp ?? 0;
-  const { current: league, next: nextLeague } = pickLeague(totalXp);
-  const leagueProgress = nextLeague
-    ? Math.min(
-        1,
-        (totalXp - league.minXp) / (nextLeague.minXp - league.minXp),
-      )
-    : 1;
 
   // Achievements only show when they unlock — no empty section.
   const achievements: Achievement[] = [];
@@ -348,7 +308,7 @@ export default function StudentProfilePage() {
       <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 md:px-8 md:py-8 relative overflow-hidden">
         <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl">
           <div
-            className={`w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br ${league.color} border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl md:text-4xl shrink-0`}
+            className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-[#0ea5e9] to-[#0369a1] border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl md:text-4xl shrink-0"
             aria-hidden
           >
             {profile.name.charAt(0).toUpperCase()}
@@ -392,43 +352,24 @@ export default function StudentProfilePage() {
 
         {/* LEFT column — sticky on md+: league + stats */}
         <div className="md:w-72 lg:w-80 shrink-0 md:sticky md:top-20 space-y-5 mb-5 md:mb-0">
-        {/* League card with progress to next */}
-        <div
-          className={`relative rounded-3xl p-4 md:p-5 text-white bg-gradient-to-br ${league.color} shadow-lg overflow-hidden md:hover:-translate-y-0.5 transition-all`}
-        >
-          <div
-            aria-hidden
-            className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10"
-          />
+        {/* Lessons completed card */}
+        <div className="relative rounded-3xl p-4 md:p-5 text-white bg-gradient-to-br from-[#0ea5e9] to-[#0369a1] shadow-lg overflow-hidden md:hover:-translate-y-0.5 transition-all">
+          <div aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
           <div className="relative z-10 space-y-3">
             <div className="flex items-center gap-3">
-              <Crown size={28} fill="white" />
+              <BookOpen size={28} />
               <div className="flex-1">
                 <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
-                  Liga
+                  Tugatilgan darslar
                 </p>
                 <p className="text-2xl font-extrabold leading-tight">
-                  {league.label}
+                  {lessonsCompleted} ta dars
                 </p>
               </div>
             </div>
-            {nextLeague ? (
-              <>
-                <div className="h-1.5 bg-white/25 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-white rounded-full transition-all duration-500"
-                    style={{ width: `${Math.round(leagueProgress * 100)}%` }}
-                  />
-                </div>
-                <p className="text-[11px] font-bold opacity-90">
-                  {nextLeague.label} ligasiga ko&apos;tarilish uchun davom eting
-                </p>
-              </>
-            ) : (
-              <p className="text-[11px] font-bold opacity-90">
-                Eng yuqori liga — qoyilman! 🏆
-              </p>
-            )}
+            <p className="text-[11px] font-bold opacity-90">
+              Davom eting — har bir dars sizni oldinga olib boradi!
+            </p>
           </div>
         </div>
 

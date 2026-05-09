@@ -2,7 +2,7 @@ import { StreakService } from '../src/gamification/streak.service';
 
 describe('StreakService', () => {
   const mockPrisma = {
-    studentXp: {
+    studentStreak: {
       findUnique: jest.fn(),
       update: jest.fn().mockResolvedValue({}),
       upsert: jest.fn().mockResolvedValue({}),
@@ -17,7 +17,7 @@ describe('StreakService', () => {
   it('increments streak on consecutive day', async () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    mockPrisma.studentXp.findUnique.mockResolvedValue({
+    mockPrisma.studentStreak.findUnique.mockResolvedValue({
       currentStreak: 5,
       longestStreak: 5,
       shieldCount: 0,
@@ -25,7 +25,7 @@ describe('StreakService', () => {
     });
 
     await service.recordActivity('student-id');
-    expect(mockPrisma.studentXp.update).toHaveBeenCalledWith(
+    expect(mockPrisma.studentStreak.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ currentStreak: 6 }),
       }),
@@ -35,7 +35,7 @@ describe('StreakService', () => {
   it('uses shield when 1 day missed', async () => {
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    mockPrisma.studentXp.findUnique.mockResolvedValue({
+    mockPrisma.studentStreak.findUnique.mockResolvedValue({
       currentStreak: 10,
       longestStreak: 10,
       shieldCount: 1,
@@ -43,7 +43,7 @@ describe('StreakService', () => {
     });
 
     await service.recordActivity('student-id');
-    expect(mockPrisma.studentXp.update).toHaveBeenCalledWith(
+    expect(mockPrisma.studentStreak.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           currentStreak: 11,
@@ -56,7 +56,7 @@ describe('StreakService', () => {
   it('resets streak when 2+ days missed (no shield)', async () => {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    mockPrisma.studentXp.findUnique.mockResolvedValue({
+    mockPrisma.studentStreak.findUnique.mockResolvedValue({
       currentStreak: 7,
       longestStreak: 7,
       shieldCount: 0,
@@ -64,7 +64,7 @@ describe('StreakService', () => {
     });
 
     await service.recordActivity('student-id');
-    expect(mockPrisma.studentXp.update).toHaveBeenCalledWith(
+    expect(mockPrisma.studentStreak.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ currentStreak: 1 }),
       }),

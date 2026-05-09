@@ -5,54 +5,94 @@ import { PrismaService } from '../prisma/prisma.service';
 export class LeaderboardService {
   constructor(private prisma: PrismaService) {}
 
-  /** Compute weekly XP per student (sum of xpEvent.amount in last 7 days). */
-  private async getWeeklyXpDelta(
+  /**
+   * Count lessons completed (home_completed = true) in the last 7 days
+   * per student. Used as the "weekly" delta shown on leaderboard rows.
+   */
+  private async getWeeklyCompletedLessons(
     studentIds: string[],
-    tenantId: string,
   ): Promise<Map<string, number>> {
     if (studentIds.length === 0) return new Map();
     const since = new Date();
     since.setDate(since.getDate() - 7);
 
-    const rows = await this.prisma.xpEvent.groupBy({
+    const rows = await this.prisma.studentProgress.groupBy({
       by: ['studentId'],
       where: {
         studentId: { in: studentIds },
-        createdAt: { gte: since },
-        student: { tenantId },
+        homeCompleted: true,
+        completedAt: { gte: since },
       },
-      _sum: { amount: true },
+      _count: { id: true },
     });
 
     const map = new Map<string, number>();
     for (const r of rows) {
-      map.set(r.studentId, r._sum.amount ?? 0);
+      map.set(r.studentId, r._count.id);
+    }
+    return map;
+  }
+
+  /**
+   * Count total lessons where home_completed = true per student.
+   * Returned as the primary ranking metric.
+   */
+  private async getTotalCompletedLessons(
+    studentIds: string[],
+  ): Promise<Map<string, number>> {
+    if (studentIds.length === 0) return new Map();
+
+    const rows = await this.prisma.studentProgress.groupBy({
+      by: ['studentId'],
+      where: {
+        studentId: { in: studentIds },
+        homeCompleted: true,
+      },
+      _count: { id: true },
+    });
+
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      map.set(r.studentId, r._count.id);
     }
     return map;
   }
 
   async getBranchLeaderboard(branchId: string | null | undefined) {
     if (!branchId) return [];
-    const rows = await this.prisma.studentXp.findMany({
-      where: { student: { branchId, role: 'student', status: 'active' } },
-      orderBy: [{ totalXp: 'desc' }, { currentStreak: 'desc' }],
-      take: 50,
-      include: {
-        student: {
-          select: { id: true, name: true, tenantId: true, groupId: true },
-        },
+
+    const students = await this.prisma.user.findMany({
+      where: { branchId, role: 'student', status: 'active' },
+      select: {
+        id: true,
+        name: true,
+        tenantId: true,
+        groupId: true,
+        studentStreak: { select: { currentStreak: true } },
       },
     });
 
-    const studentIds = rows.map((r) => r.student.id);
-    const tenantId = rows[0]?.student.tenantId ?? '';
-    const weeklyMap = await this.getWeeklyXpDelta(studentIds, tenantId);
+    if (students.length === 0) return [];
 
-    // Fetch group names for groupId values present in this batch.
+    const studentIds = students.map((s) => s.id);
+    const [totalMap, weeklyMap] = await Promise.all([
+      this.getTotalCompletedLessons(studentIds),
+      this.getWeeklyCompletedLessons(studentIds),
+    ]);
+
+    // Sort by completedLessons desc, then streak desc
+    const sorted = [...students].sort((a, b) => {
+      const aLessons = totalMap.get(a.id) ?? 0;
+      const bLessons = totalMap.get(b.id) ?? 0;
+      if (bLessons !== aLessons) return bLessons - aLessons;
+      const aStreak = a.studentStreak?.currentStreak ?? 0;
+      const bStreak = b.studentStreak?.currentStreak ?? 0;
+      return bStreak - aStreak;
+    });
+
+    // Fetch group names
     const groupIds = [
-      ...new Set(
-        rows.map((r) => r.student.groupId).filter(Boolean) as string[],
-      ),
+      ...new Set(sorted.map((s) => s.groupId).filter(Boolean) as string[]),
     ];
     const groupNameMap = new Map<string, string>();
     if (groupIds.length > 0) {
@@ -63,41 +103,51 @@ export class LeaderboardService {
       for (const g of groups) groupNameMap.set(g.id, g.name);
     }
 
-    return rows.map((r, idx) => ({
+    return sorted.map((s, idx) => ({
       rank: idx + 1,
-      id: r.student.id,
-      name: r.student.name,
-      totalXp: r.totalXp,
-      currentStreak: r.currentStreak,
-      weeklyXp: weeklyMap.get(r.student.id) ?? 0,
-      groupName: r.student.groupId
-        ? (groupNameMap.get(r.student.groupId) ?? null)
-        : null,
+      id: s.id,
+      name: s.name,
+      completedLessons: totalMap.get(s.id) ?? 0,
+      currentStreak: s.studentStreak?.currentStreak ?? 0,
+      weeklyCompletedLessons: weeklyMap.get(s.id) ?? 0,
+      groupName: s.groupId ? (groupNameMap.get(s.groupId) ?? null) : null,
     }));
   }
 
   async getGroupLeaderboard(groupId: string, tenantId: string) {
-    const rows = await this.prisma.studentXp.findMany({
-      where: {
-        student: { groupId, tenantId, role: 'student', status: 'active' },
-      },
-      orderBy: [{ totalXp: 'desc' }, { currentStreak: 'desc' }],
-      take: 100,
-      include: {
-        student: { select: { id: true, name: true } },
+    const students = await this.prisma.user.findMany({
+      where: { groupId, tenantId, role: 'student', status: 'active' },
+      select: {
+        id: true,
+        name: true,
+        studentStreak: { select: { currentStreak: true } },
       },
     });
 
-    const studentIds = rows.map((r) => r.student.id);
-    const weeklyMap = await this.getWeeklyXpDelta(studentIds, tenantId);
+    if (students.length === 0) return [];
 
-    return rows.map((r, idx) => ({
+    const studentIds = students.map((s) => s.id);
+    const [totalMap, weeklyMap] = await Promise.all([
+      this.getTotalCompletedLessons(studentIds),
+      this.getWeeklyCompletedLessons(studentIds),
+    ]);
+
+    const sorted = [...students].sort((a, b) => {
+      const aLessons = totalMap.get(a.id) ?? 0;
+      const bLessons = totalMap.get(b.id) ?? 0;
+      if (bLessons !== aLessons) return bLessons - aLessons;
+      const aStreak = a.studentStreak?.currentStreak ?? 0;
+      const bStreak = b.studentStreak?.currentStreak ?? 0;
+      return bStreak - aStreak;
+    });
+
+    return sorted.map((s, idx) => ({
       rank: idx + 1,
-      id: r.student.id,
-      name: r.student.name,
-      totalXp: r.totalXp,
-      currentStreak: r.currentStreak,
-      weeklyXp: weeklyMap.get(r.student.id) ?? 0,
+      id: s.id,
+      name: s.name,
+      completedLessons: totalMap.get(s.id) ?? 0,
+      currentStreak: s.studentStreak?.currentStreak ?? 0,
+      weeklyCompletedLessons: weeklyMap.get(s.id) ?? 0,
       groupName: null,
     }));
   }
@@ -107,24 +157,22 @@ export class LeaderboardService {
     if (period === 'weekly') since.setDate(since.getDate() - 7);
     else since.setMonth(since.getMonth() - 1);
 
-    const tenantStudentIds = await this.prisma.user.findMany({
-      where: { tenantId, role: 'student' },
-      select: { id: true },
-    });
-    const studentIds = tenantStudentIds.map((u) => u.id);
-
-    const rows = await this.prisma.xpEvent.groupBy({
+    const rows = await this.prisma.studentProgress.groupBy({
       by: ['studentId'],
-      where: { createdAt: { gte: since }, studentId: { in: studentIds } },
-      _sum: { amount: true },
-      orderBy: { _sum: { amount: 'desc' } },
+      where: {
+        homeCompleted: true,
+        completedAt: { gte: since },
+        student: { tenantId, role: 'student' },
+      },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } },
       take: 100,
     });
 
     return rows.map((r, idx) => ({
       rank: idx + 1,
       alias: `O'quvchi #${r.studentId.slice(-4).toUpperCase()}`,
-      xp: r._sum.amount ?? 0,
+      completedLessons: r._count.id,
     }));
   }
 }

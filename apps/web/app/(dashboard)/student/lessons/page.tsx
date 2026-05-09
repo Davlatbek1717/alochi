@@ -20,7 +20,6 @@ type Lesson = {
   orderNumber: number;
   isPublished: boolean;
   estimatedMinutes?: number;
-  xpReward?: number;
   type?: string;
 };
 
@@ -32,7 +31,6 @@ type Progress = {
 };
 
 type StreakData = { streak: number; hasShield: boolean };
-type XpData = { todayXp?: number };
 
 /** Zig-zag column positions (in % of container width) for nodes 1..5 in a unit. */
 const ZIGZAG_X: ReadonlyArray<number> = [50, 25, 50, 75, 50];
@@ -56,7 +54,6 @@ export default function LessonsPathPage() {
   const [progress, setProgress] = useState<Record<string, Progress>>({});
   const [streak, setStreak] = useState(0);
   const [hasShield, setHasShield] = useState(false);
-  const [todayXp, setTodayXp] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   // Bumping reloadKey re-runs the load effect — used by the retry button.
@@ -87,20 +84,16 @@ export default function LessonsPathPage() {
     async function load() {
       setError('');
       try {
-        // Lessons is the only blocking call — progress / streak / xp are
+        // Lessons is the only blocking call — progress / streak are
         // best-effort so a transient gamification failure doesn't blank the
-        // path. Previously a 5xx on any of those four would surface as
-        // "Xato yuz berdi" even though lessons themselves loaded fine.
+        // path.
         const lessonsRes = await apiRequest<Lesson[]>('/lessons', {}, token);
-        const [progressRes, streakRes, xpRes] = await Promise.all([
+        const [progressRes, streakRes] = await Promise.all([
           apiRequest<Progress[]>('/progress/my', {}, token).catch(
             () => ({ data: [] as Progress[] }),
           ),
           apiRequest<StreakData>('/gamification/streak', {}, token).catch(
             () => ({ data: { streak: 0, hasShield: false } as StreakData }),
-          ),
-          apiRequest<XpData>('/gamification/xp', {}, token).catch(
-            () => ({ data: { todayXp: 0 } as XpData }),
           ),
         ]);
         if (cancelled) return;
@@ -113,7 +106,6 @@ export default function LessonsPathPage() {
         setProgress(map);
         setStreak(streakRes.data?.streak ?? 0);
         setHasShield(streakRes.data?.hasShield ?? false);
-        setTodayXp(xpRes.data?.todayXp ?? 0);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Xato yuz berdi');
@@ -230,7 +222,6 @@ export default function LessonsPathPage() {
       orderNumber: lesson.orderNumber,
       unitName: `${unitIdx + 1}-bo'lim · ${theme.title}`,
       estimatedMinutes: lesson.estimatedMinutes,
-      xpReward: lesson.xpReward,
       type: lesson.type,
     });
     setSheetState(state === 'completed' ? 'completed' : 'current');
@@ -276,9 +267,6 @@ export default function LessonsPathPage() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <StreakFlame streak={streak} hasShield={hasShield} size={24} showLabel={false} />
-              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-[#46a302]">
-                <Sparkles size={14} className="text-[#fbbf24]" /> {todayXp}
-              </span>
             </div>
           </div>
           {/* Progress ribbon */}
@@ -370,14 +358,14 @@ export default function LessonsPathPage() {
               </div>
               <div
                 className={`flex items-center gap-1.5 text-sm font-extrabold ${
-                  todayXp > 0 ? 'text-[#46a302]' : 'text-[#94a3b8]'
+                  streak > 0 ? 'text-[#46a302]' : 'text-[#94a3b8]'
                 }`}
               >
                 <Sparkles
                   size={14}
-                  className={todayXp > 0 ? 'text-[#fbbf24]' : 'text-[#cbd5e1]'}
+                  className={streak > 0 ? 'text-[#fbbf24]' : 'text-[#cbd5e1]'}
                 />
-                <span>{todayXp > 0 ? 'Bugun faol!' : 'Bugun faolsiz'}</span>
+                <span>{streak > 0 ? 'Bugun faol!' : 'Bugun faolsiz'}</span>
               </div>
             </div>
           </aside>

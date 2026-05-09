@@ -8,7 +8,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService } from '../kpi/kpi.service';
-import { XpService } from '../gamification/xp.service';
 
 const mockPrisma = {
   paymentSetting: {
@@ -71,7 +70,6 @@ const mockTelegram = {
   sendTemplate: jest.fn(),
 };
 const mockNotifications = { send: jest.fn() };
-const mockXp = { award: jest.fn() };
 const mockTemplates = {};
 const mockClickhouse = {
   isReady: jest.fn(() => false),
@@ -95,7 +93,6 @@ describe('CronService', () => {
         { provide: ConfigService, useValue: mockConfig },
         { provide: EventEmitter2, useValue: mockEvents },
         { provide: KpiService, useValue: mockKpi },
-        { provide: XpService, useValue: mockXp },
       ],
     }).compile();
     service = module.get(CronService);

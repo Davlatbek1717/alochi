@@ -21,7 +21,7 @@ calm enough to use every day for years.
 | `--alc-correct`    | `#10b981` | Correct-answer banner, checkmarks            |
 | `--alc-wrong`      | `#ef4444` | Wrong-answer banner, hearts                  |
 | `--alc-streak`     | `#ff9500` | Streak flame (7–13 day tier)                 |
-| `--alc-xp`         | `#ce82ff` | XP floaters, legendary streak tier           |
+| `--alc-accent`     | `#ce82ff` | Legendary streak tier, achievement badges    |
 | `--alc-gold`       | `#fbbf24` | Daily goal hit, perfect-lesson halo, certs   |
 | `--alc-bg`         | `#fffaf0` | Page background ("cream")                    |
 | `--alc-surface`    | `#ffffff` | Cards                                        |
@@ -75,7 +75,7 @@ solid black borders — softness is part of the kid-friendly tone.
 | Component             | Purpose                                                              |
 | --------------------- | -------------------------------------------------------------------- |
 | `MascotGreeting`      | Animated mascot with speech bubble on the dashboard                  |
-| `DailyGoalRing`       | Circular SVG progress ring for daily XP target                       |
+| `DailyGoalRing`       | Circular SVG progress ring for daily lesson completion target         |
 | `StreakFlame`         | Tiered flame icon (5 colour tiers by streak depth)                   |
 | `StudentDailyQuests`  | Horizontal quest cards with bounce-in on completion                  |
 | `LessonPathPreview`   | First 5 nodes of the lesson path on the dashboard                    |
@@ -92,7 +92,7 @@ solid black borders — softness is part of the kid-friendly tone.
 | `ProgressBar`    | Single unified Duo-green bar at the top                        |
 | `McqTest`        | Multiple-choice tile buttons + check CTA                       |
 | `WordOrderTest`  | Drag-tap word-bank to slot row                                 |
-| `XpFloater`      | "+N XP" chip that floats up and fades                          |
+| `XpFloater`      | No-op stub (XP removed). Calls `onDone` immediately, renders nothing. |
 | `Confetti`       | Pure-CSS celebration rain on completion                        |
 | `CompletionScreen` | Final stats + level-up callout                               |
 
@@ -131,7 +131,7 @@ All keyframe animations are protected at two levels:
 | `bounce-in`     | Card mount, mascot becoming happy, MCQ option select    |
 | `pop`           | Daily goal ring on goal-hit, hearts on loss             |
 | `shake`         | Wrong MCQ option, wrong word-order slot                 |
-| `float-up`      | XP floater after a correct answer                       |
+| `float-up`      | (Unused — XP removed)                                   |
 | `pulse-ring`    | Active lesson node attracting attention                 |
 | `flame-flicker` | Streak flame, mascot idle/sleep gentle sway             |
 | `confetti-fall` | Lesson complete screen                                  |
@@ -148,7 +148,7 @@ All keyframe animations are protected at two levels:
 | `correct` | `/sounds/correct.mp3` | MCQ / word-order correct answer           |
 | `wrong`   | `/sounds/wrong.mp3`   | MCQ / word-order wrong answer             |
 | `complete`| `/sounds/complete.mp3`| Daily goal ring hit, lesson finished      |
-| `xp`      | `/sounds/xp.mp3`      | XP earned (chime over the floater)        |
+| `correct` | `/sounds/correct.mp3` | Correct answer chime                      |
 | `levelup` | `/sounds/levelup.mp3` | Level-up celebration on completion screen |
 
 ### User control
@@ -206,7 +206,7 @@ every joyful moment of the student panel.
 | `StreakFlame`        | `role="img" aria-label="N kunlik zanjir"`          |
 | `LessonNode`         | `aria-label="Title, state"` (locked/current/completed) |
 | `Confetti`           | `aria-hidden="true"` (decorative)                  |
-| `XpFloater`          | `role="status" aria-live="polite"`                 |
+| `XpFloater`          | No-op stub — no DOM rendered                       |
 | `Switch`             | `role="switch" aria-checked` + Space/Enter toggle  |
 
 ### Keyboard navigation

@@ -135,7 +135,7 @@ export default function MentorGroupPage() {
   }, [loadStudents]);
 
   useFocusRevalidate(loadStudents);
-  useRevalidateOnEvent(['status:updated', 'xp:updated'], loadStudents);
+  useRevalidateOnEvent(['status:updated'], loadStudents);
 
   function updateStatus(id: string, status: Status) {
     setStudents((prev) =>

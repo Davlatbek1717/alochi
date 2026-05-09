@@ -4,7 +4,7 @@ import { Crown } from 'lucide-react';
 export interface PodiumEntry {
   id: string;
   name: string;
-  xp: number;
+  completedLessons: number;
   rank: number;
 }
 

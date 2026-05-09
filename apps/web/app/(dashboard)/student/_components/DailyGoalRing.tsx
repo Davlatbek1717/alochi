@@ -3,39 +3,32 @@ import { useEffect, useRef, useState, type FC } from 'react';
 import { playSound } from '@/lib/sound';
 
 interface DailyGoalRingProps {
-  /** XP earned today. */
-  todayXp: number;
-  /** Daily XP target — defaults to 30 (Duolingo standard). */
+  /** Number of lessons completed today. */
+  todayLessons: number;
+  /** Daily lesson target — defaults to 1. */
   goal?: number;
-  /** Fires once when the goal is hit (rising edge). Useful for parent-side mascot reactions. */
+  /** Fires once when the goal is hit (rising edge). */
   onGoalHit?: () => void;
   /** Diameter in px. */
   size?: number;
 }
 
 /**
- * DailyGoalRing — circular SVG progress ring tracking today's XP towards
- * the daily goal. Stroke fills clockwise, animated via stroke-dashoffset
- * transition. When the goal is hit:
- *   - ring colour shifts to gold (`--alc-gold`)
- *   - `complete.mp3` plays once
- *   - `onGoalHit` fires once (parent typically swaps mascot to 'happy')
- *
- * The "rising edge" semantics matter — every render with `todayXp >= goal`
- * would otherwise spam the sound effect and the parent callback. We keep
- * a `hitFiredRef` that resets if the user's XP drops below goal again
- * (rare but possible across day boundaries).
+ * DailyGoalRing — circular SVG progress ring tracking today's completed
+ * lessons towards the daily goal. Previously tracked XP; now uses lesson
+ * counts instead. Behaviour is identical: stroke fills clockwise, gold
+ * when goal is reached, plays a sound effect once.
  */
 export const DailyGoalRing: FC<DailyGoalRingProps> = ({
-  todayXp,
-  goal = 30,
+  todayLessons,
+  goal = 1,
   onGoalHit,
   size = 140,
 }) => {
   const safeGoal = Math.max(1, goal);
-  const safeXp = Math.max(0, todayXp);
-  const pct = Math.min(1, safeXp / safeGoal);
-  const reached = safeXp >= safeGoal;
+  const safeCount = Math.max(0, todayLessons);
+  const pct = Math.min(1, safeCount / safeGoal);
+  const reached = safeCount >= safeGoal;
 
   const radius = size / 2 - 10;
   const circumference = 2 * Math.PI * radius;
@@ -54,7 +47,6 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
       return () => window.clearTimeout(t);
     }
     if (!reached && hitFiredRef.current) {
-      // edge reset — rare but possible across midnight rollovers
       hitFiredRef.current = false;
     }
   }, [reached, onGoalHit]);
@@ -69,10 +61,10 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
       }`}
       style={{ width: size, height: size }}
       role="meter"
-      aria-valuenow={safeXp}
+      aria-valuenow={safeCount}
       aria-valuemin={0}
       aria-valuemax={safeGoal}
-      aria-label={`Bugungi maqsad: ${safeXp} / ${safeGoal}`}
+      aria-label={`Bugungi maqsad: ${safeCount} / ${safeGoal} dars`}
     >
       <svg width={size} height={size} className="-rotate-90">
         <circle
@@ -101,10 +93,10 @@ export const DailyGoalRing: FC<DailyGoalRingProps> = ({
           className="text-3xl font-extrabold leading-none"
           style={{ color: reached ? '#b45309' : '#3c3c3c' }}
         >
-          {safeXp}
+          {safeCount}
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-wider text-[#777] mt-1">
-          / {safeGoal}
+          / {safeGoal} dars
         </span>
         {reached && (
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 mt-0.5">

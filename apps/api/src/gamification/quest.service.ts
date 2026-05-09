@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const QUEST_TEMPLATES = [
-  { questType: 'learn_words', targetValue: 3, xpReward: 75 },
-  { questType: 'watch_video', targetValue: 1, xpReward: 50 },
-  { questType: 'ask_tutor', targetValue: 3, xpReward: 100 },
-  { questType: 'lesson_complete', targetValue: 1, xpReward: 75 },
+  { questType: 'learn_words', targetValue: 3 },
+  { questType: 'watch_video', targetValue: 1 },
+  { questType: 'ask_tutor', targetValue: 3 },
+  { questType: 'lesson_complete', targetValue: 1 },
 ] as const;
 
 @Injectable()

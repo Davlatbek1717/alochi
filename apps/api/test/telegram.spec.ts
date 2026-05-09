@@ -36,7 +36,6 @@ describe('TelegramService', () => {
       criticalStatus: 'sariq',
       studyMinutes: 45,
       streak: 12,
-      totalXp: 2340,
     });
 
     expect(report).toContain('Alibek Rahimov');

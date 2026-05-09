@@ -7,7 +7,6 @@ import {
   Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { XpService } from '../gamification/xp.service';
 import { FeedEventService } from './feed-event.service';
 import { SocialGateway } from './social.gateway';
 
@@ -15,7 +14,6 @@ import { SocialGateway } from './social.gateway';
 export class DuelService {
   constructor(
     private prisma: PrismaService,
-    private xp: XpService,
     private feedEvent: FeedEventService,
     @Inject(forwardRef(() => SocialGateway)) private gateway: SocialGateway,
   ) {}
@@ -229,21 +227,14 @@ export class DuelService {
             data: { winnerId },
           });
 
-          await Promise.all([
-            this.xp.award(winnerId, 'DUEL_WIN'),
-            this.xp.award(loserId, 'DUEL_PARTICIPATE'),
-          ]);
-
           const score = `${challengerFinal}-${challengedFinal}`;
 
           this.gateway.emitDuelResult(winnerId, {
             won: true,
-            xpEarned: 150,
             score,
           });
           this.gateway.emitDuelResult(loserId, {
             won: false,
-            xpEarned: 30,
             score,
           });
 
@@ -293,23 +284,12 @@ export class DuelService {
           ? duel.challenged.name
           : null;
 
-    let xpEarned: number | undefined;
-    if (duel.status === 'completed' && duel.winnerId) {
-      const isWinner = requesterId === duel.winnerId;
-      const isParticipant =
-        requesterId === duel.challengerId || requesterId === duel.challengedId;
-      if (isParticipant) {
-        xpEarned = isWinner ? 150 : 30; // DUEL_WIN : DUEL_PARTICIPATE (from XP_AMOUNTS)
-      }
-    }
-
     return {
       ...duel,
       challengerName: duel.challenger.name,
       challengedName: duel.challenged.name,
       currentQuestionIdx: myAnswers,
       winner: winnerName,
-      xpEarned,
     };
   }
 
@@ -345,29 +325,10 @@ export class DuelService {
         data: { status: 'expired' },
       });
 
-      await Promise.all(
-        expiredActive.map(async (duel) => {
-          const [cCount, dCount] = await Promise.all([
-            this.prisma.duelAnswer.count({
-              where: { duelId: duel.id, userId: duel.challengerId },
-            }),
-            this.prisma.duelAnswer.count({
-              where: { duelId: duel.id, userId: duel.challengedId },
-            }),
-          ]);
-          const awards: Promise<unknown>[] = [];
-          if (cCount > 0)
-            awards.push(this.xp.award(duel.challengerId, 'DUEL_PARTICIPATE'));
-          if (dCount > 0)
-            awards.push(this.xp.award(duel.challengedId, 'DUEL_PARTICIPATE'));
-          await Promise.all(awards);
-        }),
-      );
+      // No XP awards — just expire the duels.
     }
 
-    // Pending duels — defender never played within 24h (expiresAt elapsed
-    // and challenger had been waiting at least 24h since createdAt).
-    // Award the challenger DUEL_NO_SHOW (+50 XP) and flip status='expired'.
+    // Pending duels past expiresAt — just expire (no XP rewards).
     const cutoff24h = new Date(now.getTime() - 24 * 3_600_000);
     const noShowDuels = await this.prisma.duel.findMany({
       where: {
@@ -375,7 +336,7 @@ export class DuelService {
         expiresAt: { lt: now },
         createdAt: { lt: cutoff24h },
       },
-      select: { id: true, challengerId: true },
+      select: { id: true },
     });
 
     if (noShowDuels.length > 0) {
@@ -383,17 +344,9 @@ export class DuelService {
         where: { id: { in: noShowDuels.map((d) => d.id) } },
         data: { status: 'expired' },
       });
-      await Promise.all(
-        noShowDuels.map((d) =>
-          this.xp
-            .award(d.challengerId, 'DUEL_NO_SHOW', { duelId: d.id })
-            .catch(() => undefined),
-        ),
-      );
     }
 
-    // Any other lingering pending duels past their expiresAt — just expire,
-    // no XP (e.g. challenger never followed through somehow).
+    // Any other lingering pending duels past their expiresAt — just expire.
     await this.prisma.duel.updateMany({
       where: { status: 'pending', expiresAt: { lt: now } },
       data: { status: 'expired' },

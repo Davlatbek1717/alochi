@@ -1,5 +1,5 @@
 'use client';
-import { Crown, Trophy, Medal, Flame, Zap } from 'lucide-react';
+import { Crown, Trophy, Medal, Flame, BookOpen } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest } from '@/lib/api';
 import { Skeleton, EmptyState } from '@/components/ui';
@@ -10,9 +10,9 @@ export type LeaderboardRow = {
   rank: number;
   id: string;
   name: string;
-  totalXp: number;
+  completedLessons: number;
   currentStreak: number;
-  weeklyXp?: number;
+  weeklyCompletedLessons?: number;
   groupName?: string | null;
 };
 
@@ -114,10 +114,10 @@ function LeaderboardRowItem({
 
       {/* Chips */}
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-        {/* Weekly XP badge */}
-        {typeof row.weeklyXp === 'number' && row.weeklyXp > 0 && (
+        {/* Weekly completed lessons badge */}
+        {typeof row.weeklyCompletedLessons === 'number' && row.weeklyCompletedLessons > 0 && (
           <span className="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-            +{row.weeklyXp} XP/hafta
+            +{row.weeklyCompletedLessons} dars/hafta
           </span>
         )}
 
@@ -129,10 +129,10 @@ function LeaderboardRowItem({
           </span>
         )}
 
-        {/* Total XP chip */}
-        <span className="inline-flex items-center gap-1 text-[13px] font-extrabold text-[#f59e0b] tabular-nums">
-          <Zap size={13} fill="currentColor" />
-          {row.totalXp.toLocaleString()}
+        {/* Total completed lessons chip */}
+        <span className="inline-flex items-center gap-1 text-[13px] font-extrabold text-[#0ea5e9] tabular-nums">
+          <BookOpen size={13} />
+          {row.completedLessons.toLocaleString()} dars
         </span>
       </div>
     </div>
@@ -170,7 +170,7 @@ export default function LeaderboardTable({
   }, [load]);
 
   useFocusRevalidate(load);
-  useRevalidateOnEvent(['xp:updated', 'cert:earned'], load);
+  useRevalidateOnEvent(['cert:earned'], load);
 
   if (loading) {
     return (

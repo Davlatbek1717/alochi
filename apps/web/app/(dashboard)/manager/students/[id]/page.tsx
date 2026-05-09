@@ -137,8 +137,8 @@ export default function StudentProfilePage() {
   // this tab so changes made by other staff are immediately visible.
   useFocusRevalidate(load);
 
-  // Real-time: revalidate on socket push for status, XP, or cert changes.
-  useRevalidateOnEvent(['status:updated', 'xp:updated', 'cert:earned'], load);
+  // Real-time: revalidate on socket push for status or cert changes.
+  useRevalidateOnEvent(['status:updated', 'cert:earned'], load);
 
   async function loadHistory() {
     if (historyLoading || history.length > 0) { setShowHistory(true); return; }

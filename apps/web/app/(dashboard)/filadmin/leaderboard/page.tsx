@@ -84,7 +84,7 @@ export default function FiladminLeaderboardPage() {
                 Filial reytingi
               </h1>
               <p className="text-[#475569] text-[11px] font-bold mt-0.5">
-                Eng faol o&apos;quvchilar (XP bo&apos;yicha)
+                Eng faol o&apos;quvchilar (tugatilgan darslar bo&apos;yicha)
               </p>
             </div>
           </div>

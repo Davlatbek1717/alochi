@@ -47,26 +47,31 @@ export class ParentHandler {
         return;
       }
 
-      const xp = await this.prisma.studentXp.findFirst({
+      const streak = await this.prisma.studentStreak.findFirst({
         where: { studentId: child.id },
       });
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lessonsCount = await this.prisma.studentProgress.count({
-        where: {
-          studentId: child.id,
-          academyCompleted: true,
-          completedAt: { gte: startOfMonth },
-        },
-      });
+      const [lessonsCount, totalLessons] = await Promise.all([
+        this.prisma.studentProgress.count({
+          where: {
+            studentId: child.id,
+            homeCompleted: true,
+            completedAt: { gte: startOfMonth },
+          },
+        }),
+        this.prisma.studentProgress.count({
+          where: { studentId: child.id, homeCompleted: true },
+        }),
+      ]);
 
       await ctx.reply(
         [
           `📈 Farzand: ${child.name}`,
-          `🏅 XP: ${xp?.totalXp ?? 0}`,
-          `🔥 Streak: ${xp?.currentStreak ?? 0} kun`,
+          `🔥 Streak: ${streak?.currentStreak ?? 0} kun`,
           `📚 Bu oy: ${lessonsCount} dars`,
+          `📖 Jami: ${totalLessons} dars tugatildi`,
         ].join('\n'),
       );
     } catch {

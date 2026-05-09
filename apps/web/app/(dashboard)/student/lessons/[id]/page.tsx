@@ -87,7 +87,6 @@ type Lesson = {
   orderNumber?: number;
   description?: string;
   estimatedMinutes?: number;
-  xpReward?: number;
 };
 
 type ProgressEntry = {
@@ -95,13 +94,6 @@ type ProgressEntry = {
   sessionCount: number;
   homeCompleted: boolean;
   academyCompleted: boolean;
-};
-
-type XpData = {
-  totalXp: number;
-  level: string;
-  todayXp?: number;
-  dailyGoal?: number;
 };
 
 type StreakData = {
@@ -215,12 +207,8 @@ export default function LessonPage() {
   const [hearts, setHearts] = useState(HEARTS_MAX);
   const [heartsModalOpen, setHeartsModalOpen] = useState(false);
 
-  // XP / streak / level — captured pre-completion so we can detect a level-up
-  // and play levelup.mp3 inside the celebration screen, plus show streak/xp
-  // values in the stat tiles. These are best-effort: a fetch failure simply
-  // hides the relevant tile rather than blocking the lesson.
-  const [xpBefore, setXpBefore] = useState<XpData | null>(null);
-  const [xpAfter, setXpAfter] = useState<XpData | null>(null);
+  // Streak — captured post-completion to show in the stat tiles.
+  // Best-effort: a fetch failure just hides the streak tile.
   const [streakAfter, setStreakAfter] = useState<number | null>(null);
 
   // Refetcher for the initial-load flow. Pulled out of useEffect so the
@@ -231,12 +219,11 @@ export default function LessonPage() {
     setLoading(true);
     setError('');
     try {
-      // Lesson is required; progress/xp/variant are best-effort so a
+      // Lesson is required; progress/variant are best-effort so a
       // temporary outage doesn't block opening the lesson.
       const lessonRes = await apiRequest<Lesson>(`/lessons/${id}`, {}, token);
-      const [progressRes, xpRes, variantRes] = await Promise.all([
+      const [progressRes, variantRes] = await Promise.all([
         apiRequest<ProgressEntry[]>('/progress/my', {}, token).catch(() => null),
-        apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
         apiRequest<{
           variant: 'A' | 'B';
           config: { maxComponents?: number; visibleTypes?: string[] } | null;
@@ -269,7 +256,6 @@ export default function LessonPage() {
           progressRes.data.find((p) => p.lessonId === id) ?? null;
         setProgress(myProgress);
       }
-      if (xpRes) setXpBefore(xpRes.data);
     } catch (err) {
       // Map common HTTP statuses to friendlier Uzbek copy. The fallback is
       // the raw API message so backend-supplied detail still surfaces.
@@ -313,17 +299,15 @@ export default function LessonPage() {
         },
         token,
       );
-      // Refetch progress + XP + streak in parallel so the celebration screen
-      // shows fresh numbers. All three are best-effort — a failure on any one
-      // just hides that stat in the completion tiles.
-      const [progressRes, xpRes, streakRes] = await Promise.all([
+      // Refetch progress + streak in parallel so the celebration screen
+      // shows fresh numbers. Both are best-effort — a failure just hides
+      // the relevant stat in the completion tiles.
+      const [progressRes, streakRes] = await Promise.all([
         apiRequest<ProgressEntry[]>('/progress/my', {}, token),
-        apiRequest<XpData>('/gamification/xp', {}, token).catch(() => null),
         apiRequest<StreakData>('/gamification/streak', {}, token).catch(() => null),
       ]);
       const updated = progressRes.data.find((p) => p.lessonId === lesson.id);
       if (updated) setProgress(updated);
-      if (xpRes) setXpAfter(xpRes.data);
       if (streakRes) setStreakAfter(streakRes.data.streak);
       setStep('done');
     } catch {
@@ -716,12 +700,7 @@ export default function LessonPage() {
   const speakSentenceConfigs = getSpeakSentenceConfigs();
   const speakWordsConfigs = getSpeakWordsConfigs();
 
-  // Compute level-up + accuracy + xp delta for the completion screen.
-  const xpEarned =
-    xpAfter && xpBefore ? Math.max(0, xpAfter.totalXp - xpBefore.totalXp) : (lesson.xpReward ?? 30);
-  const leveledUp = Boolean(
-    xpAfter && xpBefore && xpAfter.level !== xpBefore.level,
-  );
+  // Compute accuracy for the completion screen.
   const accuracy = Math.round((hearts / HEARTS_MAX) * 100);
 
   // ─── Intro screen ─────────────────────────────────────────────────────────
@@ -763,10 +742,8 @@ export default function LessonPage() {
     return (
       <>
         <CompletionScreen
-          xpEarned={xpEarned}
           streak={streakAfter ?? undefined}
           accuracy={accuracy}
-          leveledUp={leveledUp}
           notice={
             lesson.hasExam && lessonHomeCompleted
               ? 'Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.'

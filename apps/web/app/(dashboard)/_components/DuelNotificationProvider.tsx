@@ -20,7 +20,6 @@ interface DuelChallenge {
 
 interface DuelResult {
   won: boolean;
-  xpEarned: number;
   score: string;
 }
 
@@ -51,7 +50,6 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
     // Revalidation bridge — forward server-push events as window CustomEvents
     // so any page using useRevalidateOnEvent can refetch without polling.
     const REVALIDATE_EVENTS = [
-      'xp:updated',
       'cert:earned',
       'status:updated',
       'kpi:updated',

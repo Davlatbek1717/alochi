@@ -3,7 +3,6 @@ interface Quest {
   targetValue: number;
   progress: number;
   completed: boolean;
-  xpReward: number;
 }
 
 const QUEST_LABELS: Record<string, string> = {

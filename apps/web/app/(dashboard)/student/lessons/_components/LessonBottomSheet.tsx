@@ -10,7 +10,6 @@ export interface SheetLesson {
   orderNumber: number;
   unitName: string;
   estimatedMinutes?: number;
-  xpReward?: number;
   type?: string;
 }
 
@@ -65,7 +64,7 @@ export const LessonBottomSheet: FC<Props> = ({
   const isCompleted = state === 'completed';
 
   const handleStart = () => {
-    playSound('xp', 0.5);
+    playSound('complete', 0.5);
     onStart(lesson.id);
   };
 

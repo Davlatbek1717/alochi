@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Sword, Clock, Trophy, CheckCircle, XCircle, Zap, Timer, ArrowLeft } from 'lucide-react';
+import { Sword, Clock, Trophy, CheckCircle, XCircle, Timer, ArrowLeft, Zap } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton, useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
@@ -26,7 +26,6 @@ type Duel = {
   currentQuestionIdx: number;
   expiresAt: string;
   winner?: string;
-  xpEarned?: number;
 };
 
 function useCountdown(expiresAt: string | undefined) {

@@ -15,7 +15,6 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { XpService } from './xp.service';
 import { StreakService } from './streak.service';
 import { QuestService } from './quest.service';
 import { CertificatesService } from './certificates.service';
@@ -29,18 +28,12 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class GamificationController {
   constructor(
-    private xp: XpService,
     private streak: StreakService,
     private quest: QuestService,
     private certificates: CertificatesService,
     private cityService: CityService,
     private leaderboard: LeaderboardService,
   ) {}
-
-  @Get('xp')
-  getMyXp(@Request() req: any) {
-    return this.xp.getStudentXp(req.user.userId);
-  }
 
   @Get('quests')
   getMyQuests(@Request() req: any) {

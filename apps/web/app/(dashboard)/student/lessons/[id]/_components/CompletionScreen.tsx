@@ -6,8 +6,6 @@ import { playSound } from '@/lib/sound';
 import { Confetti } from './Confetti';
 
 interface CompletionScreenProps {
-  /** XP awarded for this session. Falls back to 30. */
-  xpEarned?: number;
   /** Current streak (post-session). */
   streak?: number;
   /** Accuracy 0..100. Derived from hearts remaining or wrongs by parent. */
@@ -47,7 +45,6 @@ interface CompletionScreenProps {
  * animation.
  */
 export const CompletionScreen: FC<CompletionScreenProps> = ({
-  xpEarned,
   streak,
   accuracy,
   leveledUp,
@@ -75,7 +72,7 @@ export const CompletionScreen: FC<CompletionScreenProps> = ({
     if (isSessionOnly) {
       // Lighter sound — we don't want to keep firing the big "complete"
       // chime on every one of N sessions.
-      playSound('xp', 0.5);
+      playSound('correct', 0.5);
       return undefined;
     }
     playSound('complete', 0.55);

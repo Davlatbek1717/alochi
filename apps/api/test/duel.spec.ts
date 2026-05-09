@@ -41,7 +41,6 @@ describe('DuelService', () => {
     },
   };
 
-  const mockXp = { award: jest.fn().mockResolvedValue({}) };
   const mockFeedEvent = { emit: jest.fn().mockResolvedValue({}) };
 
   const mockGateway = {
@@ -50,7 +49,6 @@ describe('DuelService', () => {
   };
   const service = new DuelService(
     mockPrisma as any,
-    mockXp as any,
     mockFeedEvent as any,
     mockGateway as any,
   );
@@ -107,7 +105,6 @@ describe('DuelService', () => {
     };
     const svc = new DuelService(
       localPrisma as never,
-      mockXp as never,
       mockFeedEvent as never,
       mockGateway as never,
     );
@@ -119,8 +116,7 @@ describe('DuelService', () => {
     );
   });
 
-  it('expireOverdue awards challenger DUEL_NO_SHOW for 24h+ pending duels', async () => {
-    const xpAward = jest.fn().mockResolvedValue({});
+  it('expireOverdue expires pending no-show duels without XP', async () => {
     const localPrisma = {
       duel: {
         findMany: jest
@@ -136,20 +132,15 @@ describe('DuelService', () => {
     };
     const svc = new DuelService(
       localPrisma as never,
-      { award: xpAward } as never,
       mockFeedEvent as never,
       mockGateway as never,
     );
     await svc.expireOverdue();
-    expect(xpAward).toHaveBeenCalledWith(
-      'c-1',
-      'DUEL_NO_SHOW',
-      expect.any(Object),
-    );
-    expect(xpAward).toHaveBeenCalledWith(
-      'c-2',
-      'DUEL_NO_SHOW',
-      expect.any(Object),
+    // Just verifies status was flipped — no XP assertion
+    expect(localPrisma.duel.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'expired' },
+      }),
     );
   });
 });

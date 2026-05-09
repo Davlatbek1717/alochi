@@ -6,7 +6,6 @@ import {
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TaskStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { XpService } from '../gamification/xp.service';
 
 interface CreateTaskDto {
   tenantId: string;
@@ -24,7 +23,6 @@ interface CreateTaskDto {
 export class TasksService {
   constructor(
     private prisma: PrismaService,
-    private xp: XpService,
     private events: EventEmitter2,
   ) {}
 
@@ -256,7 +254,7 @@ export class TasksService {
           date: new Date(),
         },
       });
-      await this.xp.award(task.assignedTo, 'daily_quest', { taskId: task.id });
+      // No XP award — task rewards KPI only.
     }
 
     return updated;

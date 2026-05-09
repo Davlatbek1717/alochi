@@ -7,7 +7,6 @@ export interface Quest {
   targetValue: number;
   progress: number;
   completed: boolean;
-  xpReward: number;
 }
 
 interface StudentDailyQuestsProps {
@@ -35,8 +34,8 @@ const QUEST_ICONS: Record<string, string> = {
  *
  * Visual metaphor: each quest is a treasure chest. Locked quests show the
  * chest closed in muted brass; the moment a quest flips to completed we
- * play `xp.mp3`, bounce-in the chest, swap it to its open/gold state and
- * float a `+{xp}` XP label upwards.
+ * play `correct.mp3`, bounce-in the chest, swap it to its open/gold state and
+ * show a completion indicator.
  *
  * The "rising edge" detection uses a ref — we only fire effects when a
  * quest flips false→true, never on initial mount with already-completed
@@ -61,7 +60,7 @@ export const StudentDailyQuests: FC<StudentDailyQuestsProps> = ({ quests }) => {
       }
     }
     if (newlyCompleted.length > 0) {
-      playSound('xp', 0.5);
+      playSound('correct', 0.5);
       setPoppingKeys((s) => {
         const out = new Set(s);
         for (const q of newlyCompleted) out.add(q.questType);

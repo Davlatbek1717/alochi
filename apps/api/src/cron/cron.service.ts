@@ -8,7 +8,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationTemplatesService } from '../notification-templates/notification-templates.service';
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
-import { XpService, XP_AMOUNTS } from '../gamification/xp.service';
 import { VideoCheckinService } from '../video-checkin/video-checkin.service';
 import { VideoCheckinHandler } from '../telegram/handlers/video-checkin.handler';
 
@@ -44,7 +43,6 @@ export class CronService {
     private events: EventEmitter2,
     private templates: NotificationTemplatesService,
     private kpi: KpiService,
-    private xp: XpService,
     private videoCheckin: VideoCheckinService,
     private videoCheckinHandler: VideoCheckinHandler,
   ) {}
@@ -300,7 +298,7 @@ export class CronService {
         id: true,
         name: true,
         parentTelegramId: true,
-        studentXp: { select: { totalXp: true, currentStreak: true } },
+        studentStreak: { select: { currentStreak: true } },
         studentStatuses: {
           where: { date: { gte: today, lt: tomorrow } },
           orderBy: { date: 'desc' },
@@ -333,8 +331,7 @@ export class CronService {
         personalStatus: status?.personalStatus ?? 'nomalum',
         criticalStatus: status?.criticalStatus ?? 'nomalum',
         studyMinutes: student.studentProgress.length * 15,
-        streak: student.studentXp?.currentStreak ?? 0,
-        totalXp: student.studentXp?.totalXp ?? 0,
+        streak: student.studentStreak?.currentStreak ?? 0,
       });
       await this.telegram
         .sendMessage(student.parentTelegramId, message)
@@ -1378,46 +1375,6 @@ export class CronService {
           c.groupAXp >= c.groupBXp ? c.groupAId : c.groupBId;
         const loserGroupId = c.groupAXp >= c.groupBXp ? c.groupBId : c.groupAId;
 
-        const [winners, losers] = await Promise.all([
-          this.prisma.user.findMany({
-            where: {
-              tenantId: c.tenantId,
-              branchId: winnerGroupId,
-              role: 'student',
-              status: 'active',
-            },
-            select: { id: true },
-          }),
-          this.prisma.user.findMany({
-            where: {
-              tenantId: c.tenantId,
-              branchId: loserGroupId,
-              role: 'student',
-              status: 'active',
-            },
-            select: { id: true },
-          }),
-        ]);
-
-        for (const w of winners) {
-          await this.xp
-            .award(w.id, 'challenge_winner', { challengeId: c.id })
-            .catch((err) =>
-              this.logger.warn(
-                `challenge_winner XP failed user=${w.id}: ${(err as Error).message}`,
-              ),
-            );
-        }
-        for (const l of losers) {
-          await this.xp
-            .award(l.id, 'challenge_consolation', { challengeId: c.id })
-            .catch((err) =>
-              this.logger.warn(
-                `challenge_consolation XP failed user=${l.id}: ${(err as Error).message}`,
-              ),
-            );
-        }
-
         await this.prisma.groupChallenge.update({
           where: { id: c.id },
           data: { winnerGroupId, status: 'completed' },
@@ -1446,8 +1403,6 @@ export class CronService {
           loserGroupId,
           winnerGroupName: winnerBranch?.name ?? winnerGroupId,
           loserGroupName: loserBranch?.name ?? loserGroupId,
-          winnerXp: XP_AMOUNTS.CHALLENGE_WINNER,
-          loserXp: XP_AMOUNTS.CHALLENGE_CONSOLATION,
         });
 
         processed++;

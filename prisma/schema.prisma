@@ -149,8 +149,7 @@ model User {
   delegationsTo            Delegation[]               @relation("DelegationTo")
   faceEmbeddings           FaceEmbedding[]            @relation("FaceEmbeddings")
   faceRecognitionLogs      FaceRecognitionLog[]       @relation("FaceRecognitionLogs")
-  studentXp                StudentXp?                 @relation("StudentXp")
-  xpEvents                 XpEvent[]                  @relation("XpEvents")
+  studentStreak            StudentStreak?             @relation("StudentStreak")
   examPermissions          ExamPermission[]           @relation("ExamStudent")
   examsGranted             ExamPermission[]           @relation("ExamGranter")
   dailyQuests              DailyQuest[]               @relation("DailyQuests")
@@ -547,33 +546,18 @@ model BranchDevice {
 
 // ---- GAMIFICATION ----
 
-model StudentXp {
+model StudentStreak {
   id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   studentId     String    @unique @map("student_id") @db.Uuid
-  totalXp       Int       @default(0) @map("total_xp")
   currentStreak Int       @default(0) @map("current_streak")
   longestStreak Int       @default(0) @map("longest_streak")
   shieldCount   Int       @default(0) @map("shield_count")
   lastActivity  DateTime? @map("last_activity")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  student User @relation("StudentXp", fields: [studentId], references: [id])
+  student User @relation("StudentStreak", fields: [studentId], references: [id])
 
-  @@map("student_xp")
-}
-
-model XpEvent {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  studentId String   @map("student_id") @db.Uuid
-  amount    Int
-  reason    String
-  metadata  Json?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  student User @relation("XpEvents", fields: [studentId], references: [id])
-
-  @@index([studentId])
-  @@map("xp_events")
+  @@map("student_streak")
 }
 
 model DailyQuest {
@@ -584,7 +568,6 @@ model DailyQuest {
   targetValue Int      @map("target_value")
   progress    Int      @default(0)
   completed   Boolean  @default(false)
-  xpReward    Int      @map("xp_reward")
 
   student User @relation("DailyQuests", fields: [studentId], references: [id])
 

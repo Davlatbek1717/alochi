@@ -13,6 +13,7 @@ import {
   TimerReset,
   ArrowLeft,
   Crown,
+  BookOpen,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Mascot } from '@/components/ui';
@@ -22,10 +23,11 @@ type BranchEntry = {
   rank: number;
   id: string;
   name: string;
-  totalXp: number;
-  streak: number;
+  completedLessons: number;
+  currentStreak: number;
+  weeklyCompletedLessons?: number;
 };
-type NationalEntry = { rank: number; alias: string; xp: number };
+type NationalEntry = { rank: number; alias: string; completedLessons: number };
 
 const PROMOTE_TOP = 7;
 const DEMOTE_BOTTOM = 7;
@@ -90,8 +92,8 @@ export default function LeaderboardPage() {
   // rank changes made by peers are visible without a full page reload.
   useFocusRevalidate(load);
 
-  // Real-time: revalidate when any student earns XP so rankings update live.
-  useRevalidateOnEvent(['xp:updated'], load);
+  // Real-time: revalidate when a cert is earned (lesson completions changed).
+  useRevalidateOnEvent(['cert:earned'], load);
 
   const reset = weeklyResetIn();
 
@@ -102,7 +104,7 @@ export default function LeaderboardPage() {
         .map((e) => ({
           id: e.id,
           name: e.name,
-          xp: e.totalXp,
+          completedLessons: e.completedLessons,
           rank: e.rank,
         })),
     [branch],
@@ -280,8 +282,8 @@ export default function LeaderboardPage() {
                   <RankRow
                     rank={myRow.rank}
                     name={myRow.name}
-                    xp={myRow.totalXp}
-                    streak={myRow.streak}
+                    completedLessons={myRow.completedLessons}
+                    streak={myRow.currentStreak}
                     isMe
                     pinned
                   />
@@ -298,7 +300,7 @@ export default function LeaderboardPage() {
                 entries={national.slice(0, 3).map((e) => ({
                   id: e.alias,
                   name: e.alias,
-                  xp: e.xp,
+                  completedLessons: e.completedLessons,
                   rank: e.rank,
                 }))}
               />
@@ -311,7 +313,7 @@ export default function LeaderboardPage() {
                     key={`${e.rank}-${e.alias}`}
                     rank={e.rank}
                     name={e.alias}
-                    xp={e.xp}
+                    completedLessons={e.completedLessons}
                   />
                 ))}
             </div>
@@ -393,7 +395,7 @@ function MyRankHero({
                 Streak
               </p>
               <p className="text-base font-extrabold tabular-nums">
-                {entry.streak}
+                {entry.currentStreak}
               </p>
             </div>
           </div>
@@ -459,8 +461,8 @@ function ZoneSection({
             key={e.id}
             rank={e.rank}
             name={e.name}
-            xp={e.totalXp}
-            streak={e.streak}
+            completedLessons={e.completedLessons}
+            streak={e.currentStreak}
             isMe={e.id === myId}
             promotion={zone === 'promote'}
             demotion={zone === 'demote'}
@@ -474,7 +476,7 @@ function ZoneSection({
 function RankRow({
   rank,
   name,
-  xp,
+  completedLessons,
   streak,
   isMe,
   pinned,
@@ -483,7 +485,7 @@ function RankRow({
 }: {
   rank: number;
   name: string;
-  xp: number;
+  completedLessons: number;
   streak?: number;
   isMe?: boolean;
   pinned?: boolean;
@@ -537,9 +539,10 @@ function RankRow({
           </div>
         )}
       </div>
-      <div className="text-right">
-        <p className="text-[#fbbf24] font-extrabold text-base font-mono tabular-nums">
-          #{rank}
+      <div className="text-right flex items-center gap-1">
+        <BookOpen size={12} className="text-[#0ea5e9]" />
+        <p className="text-[#0ea5e9] font-extrabold text-sm tabular-nums">
+          {completedLessons}
         </p>
       </div>
     </div>

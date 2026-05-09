@@ -53,7 +53,7 @@ describe('Auth + Lesson flow (e2e)', () => {
     await request(app.getHttpServer()).get('/lessons').expect(401);
   });
 
-  it('GET /gamification/xp — student can access own XP', async () => {
+  it('GET /gamification/streak — student can access own streak', async () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .set('x-tenant-slug', 'demo-markaz')
@@ -62,11 +62,11 @@ describe('Auth + Lesson flow (e2e)', () => {
 
     const studentToken = loginRes.body.data.accessToken;
 
-    const xpRes = await request(app.getHttpServer())
-      .get('/gamification/xp')
+    const streakRes = await request(app.getHttpServer())
+      .get('/gamification/streak')
       .set('Authorization', `Bearer ${studentToken}`)
       .expect(200);
 
-    expect(xpRes.body.data).toHaveProperty('totalXp');
+    expect(streakRes.body.data).toHaveProperty('streak');
   });
 });

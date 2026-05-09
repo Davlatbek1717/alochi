@@ -30,14 +30,6 @@ import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
 import { Mascot, Skeleton, SkeletonCard } from '@/components/ui';
 
-type XpData = {
-  totalXp: number;
-  level: string;
-  nextLevelXp: number;
-  todayXp?: number;
-  dailyGoal?: number;
-};
-
 type StreakData = {
   streak: number;
   hasShield: boolean;
@@ -72,7 +64,6 @@ type LessonInfo = {
   title?: string;
   orderNumber?: number;
   estimatedMinutes?: number;
-  xpReward?: number;
   nRepetitions?: number;
 };
 
@@ -121,11 +112,6 @@ const STATUS_VISUAL: Record<
 
 export default function StudentDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [xpData, setXpData] = useState<XpData>({
-    totalXp: 0,
-    level: 'Novice',
-    nextLevelXp: 5000,
-  });
   const [streak, setStreak] = useState(0);
   const [hasShield, setHasShield] = useState(false);
   const [lessonProgress, setLessonProgress] = useState(0);
@@ -153,7 +139,6 @@ export default function StudentDashboard() {
     try {
       const [
         profileRes,
-        xpRes,
         streakRes,
         progressRes,
         warningsRes,
@@ -163,7 +148,6 @@ export default function StudentDashboard() {
         statusRes,
       ] = await Promise.all([
         apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
-        apiRequest<XpData>('/gamification/xp', {}, token),
         apiRequest<StreakData>('/gamification/streak', {}, token),
         apiRequest<ProgressRow[]>('/progress/my', {}, token),
         apiRequest<Warning[]>('/warnings/my', {}, token).catch(() => ({ data: [] as Warning[] })),
@@ -173,7 +157,6 @@ export default function StudentDashboard() {
         apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
       ]);
       if (profileRes.data) setProfile(profileRes.data);
-      setXpData(xpRes.data);
       setStreak(streakRes.data.streak);
       setHasShield(streakRes.data.hasShield);
       setLessonProgress(progressRes.data.length);
@@ -221,9 +204,9 @@ export default function StudentDashboard() {
   // all pages use the same hook instead of duplicating listener wiring.
   useFocusRevalidate(load);
 
-  // Real-time: revalidate on socket push so XP, certs, and status changes
+  // Real-time: revalidate on socket push so certs and status changes
   // appear without the student having to switch tabs.
-  useRevalidateOnEvent(['xp:updated', 'cert:earned', 'status:updated'], load);
+  useRevalidateOnEvent(['cert:earned', 'status:updated'], load);
 
   const firstName = useMemo(() => {
     const n = (profile?.name ?? '').trim();
