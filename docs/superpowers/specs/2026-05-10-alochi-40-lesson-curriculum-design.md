@@ -218,16 +218,30 @@ Total ~14-18 components/lesson. `nRepetitions: 3`. No video.
 Type: `personal_development`. No vocab/grammar. Pure reading +
 reflection in Uzbek.
 
+The Lesson schema has no `description` column, so the essay text
+itself rides inside the MCQ component's `question.text`. That's the
+single component the student sees: it renders the full essay (~250
+words of UZ prose) followed by the comprehension/scenario question
+and answer options. Long question text is supported by the MCQ
+renderer; this avoids a schema migration just for a tagline field.
+
 Per-lesson fields:
-- `description`: 1-2 line tagline of the essay's main idea, shown on
-  the intro screen.
-- `aiTutorContext`: full essay text (~250 words) + the AI persona
-  instruction (Uzbek-language Aloqush who asks 3 reflection questions).
+- `title`: more descriptive than other lessons so the lessons-list
+  preview communicates the topic — e.g. "STEP 5 — Aqlli fikrlash
+  boshlash".
+- `aiTutorContext`: AI persona instruction (Uzbek-language Aloqush who
+  asks 3 reflection questions) plus a one-paragraph essay summary so
+  the AI can refer back to it.
 
 Components:
-1. One `mcq` — a scenario question that requires applying the essay's
-   idea, not just remembering it. Example for STEP 5:
-   > "Telefonni qo'lga olishdan oldin o'zingdan nima so'rashing kerak?"
+1. One `mcq` whose `text` field contains the full essay text followed
+   by a scenario question that requires applying the idea — not just
+   remembering it. Example for STEP 5 (essay text trimmed for brevity
+   here; full text in the seed script):
+   > "[Essay paragraphs about asking questions, slowing down, daily
+   > small change ...]
+   >
+   > Telefonni qo'lga olishdan oldin o'zingdan nima so'rashing kerak?"
    > A) "Hozir nima yangiliklar?" B) **"Bu meni aqlli va boy
    > qiladimi?"** C) "Do'stlarim nima qilyapti?"
 2. `ai_tutor` enabled. The AI greets in Uzbek and walks through 3
@@ -236,9 +250,9 @@ Components:
    - "O'zingda qanday kichik o'zgartirish qilmoqchisan?"
    - "Bu fikrni kimga yetkazmoqchisan?"
 
-`nRepetitions: 1`. No video. The "oilaga treyning" instruction is
-mentioned in the intro/description; we do not enforce it (offline
-honor-system).
+`nRepetitions: 1`. No video. The "oilaga treyning" instruction
+appears as a closing line of the essay text; we do not enforce it
+(offline honor-system).
 
 ### Archetype F — TAKRORLASH checkpoints (4 lessons)
 
