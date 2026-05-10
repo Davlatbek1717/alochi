@@ -743,10 +743,10 @@ export default function SuperadminUsersPage() {
       >
         <p className="text-sm text-[#0f172a] mb-2">
           <span className="font-semibold">{deleting?.name}</span>
-          {` (${deleting?.login ?? ''}) ni o'chirmoqchimisiz?`}
+          {` (${deleting?.login ?? ''}) ni o’chirmoqchimisiz?`}
         </p>
         <p className="text-xs text-rose-600 mb-3">
-          {"Bu amal qaytarilmaydi. Foydalanuvchining barcha bog'liq ma'lumotlari (darslar progressi, davomat, to'lovlar, ogohlantirishlar va h.k.) ham birga o'chiriladi."}
+          {'Bu amal qaytarilmaydi. Foydalanuvchining barcha bog’liq ma’lumotlari (darslar progressi, davomat, to’lovlar, ogohlantirishlar va h.k.) ham birga o’chiriladi.'}
         </p>
         <div className="flex gap-2 mt-4 justify-end">
           <button
