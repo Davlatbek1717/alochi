@@ -123,13 +123,52 @@ export class FriendsService {
     return friendships.map((f) => (f.userId === userId ? f.friend : f.user));
   }
 
-  async getPendingRequests(userId: string): Promise<Friendship[]> {
-    return this.prisma.friendship.findMany({
+  async getPendingRequests(
+    userId: string,
+  ): Promise<{ id: string; name: string; role: string }[]> {
+    const rows = await this.prisma.friendship.findMany({
       where: { friendId: userId, status: 'pending' },
-      include: {
-        user: { select: { id: true, name: true } },
+      include: { user: { select: { id: true, name: true, role: true } } },
+    });
+    return rows
+      .filter((r): r is typeof r & { user: NonNullable<typeof r.user> } =>
+        r.user != null,
+      )
+      .map((r) => ({
+        id: r.id,
+        name: r.user.name,
+        role: r.user.role,
+      }));
+  }
+
+  /**
+   * Typeahead search for the friends form: match users in the same tenant
+   * whose login or name contains the query (case-insensitive). Excludes the
+   * caller themselves and capped at 10 results.
+   */
+  async searchCandidates(
+    senderId: string,
+    senderTenantId: string,
+    query: string,
+  ): Promise<
+    { id: string; name: string; login: string; role: string }[]
+  > {
+    const trimmed = query.trim();
+    if (trimmed.length < 2) return [];
+
+    return this.prisma.user.findMany({
+      where: {
+        tenantId: senderTenantId,
+        id: { not: senderId },
+        OR: [
+          { login: { contains: trimmed, mode: 'insensitive' } },
+          { name: { contains: trimmed, mode: 'insensitive' } },
+        ],
       },
-    }) as unknown as Friendship[];
+      select: { id: true, name: true, login: true, role: true },
+      orderBy: [{ login: 'asc' }],
+      take: 10,
+    });
   }
 
   async getFeed(userId: string, tenantId: string): Promise<object[]> {

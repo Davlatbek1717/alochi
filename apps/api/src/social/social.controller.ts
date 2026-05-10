@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
   ForbiddenException,
@@ -196,6 +197,15 @@ export class SocialController {
   @Get('friends/pending')
   getPendingRequests(@Request() req: any) {
     return this.friends.getPendingRequests(req.user.userId);
+  }
+
+  @Get('friends/search')
+  searchFriendCandidates(@Query('q') q: string, @Request() req: any) {
+    return this.friends.searchCandidates(
+      req.user.userId,
+      req.user.tenantId,
+      q ?? '',
+    );
   }
 
   @Post('challenges')

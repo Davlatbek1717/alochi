@@ -1,7 +1,7 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, UserPlus, Check, X, Swords, UserX } from 'lucide-react';
+import { Users, UserPlus, Check, X, Swords, UserX, Search, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Button, Skeleton, EmptyState, Mascot, useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
@@ -9,8 +9,10 @@ import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Friend = { id: string; name: string; role: string; status: string };
 type PendingRequest = { id: string; name: string; role: string };
+type Candidate = { id: string; name: string; login: string; role: string };
 
-function getInitials(name: string) {
+function getInitials(name: string | null | undefined) {
+  if (!name) return '?';
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
@@ -22,8 +24,11 @@ export default function FriendsPage() {
   const [loadError, setLoadError] = useState('');
 
   const [showForm, setShowForm] = useState(false);
-  const [friendLogin, setFriendLogin] = useState('');
-  const [sending, setSending] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [responding, setResponding] = useState<string | null>(null);
   const [challenging, setChallenging] = useState<string | null>(null);
@@ -92,27 +97,54 @@ export default function FriendsPage() {
     }
   }
 
-  async function handleSendRequest() {
-    if (!friendLogin.trim()) {
-      toast.warning("Foydalanuvchi loginini kiriting");
+  // Debounced typeahead: 300ms after the user stops typing, fetch matching
+  // users. Less than 2 chars clears the list immediately.
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setCandidates([]);
+      setSearching(false);
       return;
     }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      const token = localStorage.getItem('accessToken') ?? '';
+      try {
+        const res = await apiRequest<Candidate[]>(
+          `/social/friends/search?q=${encodeURIComponent(q)}`,
+          {},
+          token,
+        );
+        setCandidates(res.data ?? []);
+      } catch {
+        setCandidates([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchQuery]);
+
+  async function handleSendRequestTo(candidate: Candidate) {
     const token = localStorage.getItem('accessToken') ?? '';
-    setSending(true);
+    setSendingTo(candidate.id);
     try {
       await apiRequest('/social/friends/request', {
         method: 'POST',
-        body: JSON.stringify({ friendLogin: friendLogin.trim() }),
+        body: JSON.stringify({ friendLogin: candidate.login }),
       }, token);
-      toast.success("So'rov yuborildi!");
-      setFriendLogin('');
+      toast.success(`${candidate.name} ga so'rov yuborildi!`);
+      setSearchQuery('');
+      setCandidates([]);
       setShowForm(false);
-      // Refresh lists after sending request
       load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'So\'rov yuborilmadi');
+      toast.error(err instanceof Error ? err.message : "So'rov yuborilmadi");
     } finally {
-      setSending(false);
+      setSendingTo(null);
     }
   }
 
@@ -156,32 +188,63 @@ export default function FriendsPage() {
         {/* Add friend form */}
         {showForm && (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st</p>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st qidirish</p>
             <div>
-              <label htmlFor="friend-login" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
-                Foydalanuvchi logini <span className="text-rose-500">*</span>
+              <label htmlFor="friend-search" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
+                Login yoki ism
               </label>
-              <input
-                id="friend-login"
-                type="text"
-                placeholder="masalan: odilov"
-                value={friendLogin}
-                onChange={(e) => setFriendLogin(e.target.value)}
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
-              />
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+                <input
+                  id="friend-search"
+                  type="text"
+                  placeholder="masalan: odilov"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoFocus
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl pl-10 pr-10 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
+                />
+                {searching && (
+                  <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] animate-spin" />
+                )}
+              </div>
+              <p className="text-[11px] text-[#94a3b8] mt-1.5">Kamida 2 ta belgi yozing</p>
             </div>
-            <Button
-              variant="duo"
-              size="lg"
-              fullWidth
-              loading={sending}
-              onClick={handleSendRequest}
-            >
-              {sending ? 'Yuborilmoqda...' : "So'rov yuborish"}
-            </Button>
+
+            {/* Search results */}
+            {searchQuery.trim().length >= 2 && !searching && candidates.length === 0 && (
+              <p className="text-sm text-[#64748b] text-center py-4">
+                Hech kim topilmadi
+              </p>
+            )}
+            {candidates.length > 0 && (
+              <div className="space-y-2">
+                {candidates.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSendRequestTo(c)}
+                    disabled={sendingTo !== null}
+                    className="w-full flex items-center gap-3 bg-[#f7f4ef] hover:bg-[#ede9e1] disabled:opacity-50 rounded-xl px-3 py-2.5 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#58cc02]/15 flex items-center justify-center text-[#46a302] font-black text-sm shrink-0">
+                      {getInitials(c.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate">{c.name}</p>
+                      <p className="text-[11px] text-[#94a3b8] truncate">@{c.login} · {c.role}</p>
+                    </div>
+                    {sendingTo === c.id ? (
+                      <Loader2 size={16} className="text-[#46a302] animate-spin shrink-0" />
+                    ) : (
+                      <UserPlus size={16} className="text-[#46a302] shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
