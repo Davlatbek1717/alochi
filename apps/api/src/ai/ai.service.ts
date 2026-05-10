@@ -7,14 +7,19 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { GoogleGenAI } from '@google/genai';
+import {
+  chatJson,
+  chatText,
+  geminiHistoryToOpenAi,
+  NVIDIA_NIM_MODEL,
+} from './llm-client';
 import { StatusService } from '../student-status/status.service';
 import { StatusColor } from '../student-status/status.types';
 
-// Gemini 2.5 Flash — fast, cheap, multilingual (good Uzbek), supports
-// system instructions + JSON mode. We use it for tutor chat, translation
-// grading, wrong-answer explanations, and error pattern analysis.
-const GEMINI_MODEL = 'gemini-2.5-flash';
+// Active LLM model — set in apps/api/.env via NVIDIA_NIM_MODEL or defaults
+// to MiniMax-M2.7. Used for tutor chat, translation grading, wrong-answer
+// explanations, and error pattern analysis. (Replaced Gemini 2.5 Flash.)
+const LLM_MODEL = NVIDIA_NIM_MODEL;
 
 /**
  * Phase 21.1: retry transient failures (5xx, network errors, timeouts) for
@@ -51,7 +56,6 @@ export async function withRetry<T>(
 @Injectable()
 export class AiService {
   private readonly aiServiceUrl: string;
-  private genai: GoogleGenAI;
   private readonly logger = new Logger(AiService.name);
 
   constructor(
@@ -64,9 +68,6 @@ export class AiService {
       'AI_SERVICE_URL',
       'http://localhost:8000',
     );
-    this.genai = new GoogleGenAI({
-      apiKey: this.config.get('GEMINI_API_KEY', ''),
-    });
   }
 
   async askTutor(
@@ -100,38 +101,31 @@ export class AiService {
       }
     }
 
-    // Direct Gemini fallback. Encourages short, friendly Uzbek answers
-    // appropriate for 3-7 graders and stays within the lesson context so
-    // the tutor doesn't drift off-topic. Gemini's chat format uses
-    // role: 'model' for assistant turns (not 'assistant').
-    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] =
-      [];
-    for (const turn of history) {
-      if (!turn.content) continue;
-      const role: 'user' | 'model' =
-        turn.role === 'assistant' || turn.role === 'model' ? 'model' : 'user';
-      contents.push({ role, parts: [{ text: turn.content }] });
-    }
-    contents.push({ role: 'user', parts: [{ text: question }] });
+    // Direct LLM fallback (NVIDIA NIM / MiniMax-M2.7). Encourages short,
+    // friendly Uzbek answers appropriate for 3-7 graders and stays within
+    // the lesson context so the tutor doesn't drift off-topic.
+    const messages = [
+      {
+        role: 'system' as const,
+        content:
+          "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
+          "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
+          'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
+          'Faqat darsdagi mavzuga oid javob ber.\n\n' +
+          `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
+      },
+      ...geminiHistoryToOpenAi(history),
+      { role: 'user' as const, content: question },
+    ];
 
     try {
-      const response = await withRetry(() =>
-        this.genai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents,
-          config: {
-            systemInstruction:
-              "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
-              "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
-              'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
-              'Faqat darsdagi mavzuga oid javob ber.\n\n' +
-              `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
-            maxOutputTokens: 350,
-            temperature: 0.7,
-          },
+      const text = await withRetry(() =>
+        chatText(messages, {
+          model: LLM_MODEL,
+          maxTokens: 350,
+          temperature: 0.7,
         }),
       );
-      const text = response.text ?? '';
       return {
         answer:
           text || 'Kechirasiz, hozir javob bera olmayman. Yana savol bering.',
@@ -143,7 +137,7 @@ export class AiService {
       // a key flakes. Return the same soft fallback the empty-response
       // branch above uses; client treats this as a normal turn.
       this.logger.error(
-        `askTutor: Gemini fallback also failed. ${(err as Error).message}`,
+        `askTutor: NVIDIA NIM fallback also failed. ${(err as Error).message}`,
       );
       return {
         answer:
@@ -329,24 +323,27 @@ export class AiService {
       .join('\n');
 
     try {
-      const response = await withRetry(() =>
-        this.genai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents:
-            `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
-            `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
-            `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
-          config: {
-            responseMimeType: 'application/json',
-            maxOutputTokens: 300,
+      const raw = await withRetry(() =>
+        chatJson(
+          [
+            {
+              role: 'user',
+              content:
+                `O'quvchining quyidagi savollarda xatolari bor:\n${errorList}\n\n` +
+                `Qisqa tahlil qil: 1) Zaif tomonlari (3 ta kalit so'z bilan), 2) Bitta tavsiya. ` +
+                `Javobni JSON formatida ber: {"weakAreas": ["...", "..."], "recommendation": "..."}`,
+            },
+          ],
+          {
+            model: LLM_MODEL,
+            maxTokens: 300,
             temperature: 0.4,
           },
-        }),
+        ),
       );
-      const raw = response.text ?? '{}';
-      // responseMimeType: 'application/json' usually returns clean JSON, but
-      // be defensive in case the model wraps it in fences or stray text.
-      const parsed = AiService.parseAnalyzeErrorsJson(raw);
+      // The wrapper requests json_object mode, but stay defensive in case
+      // the model wraps its output in fences or stray text.
+      const parsed = AiService.parseAnalyzeErrorsJson(raw || '{}');
       if (parsed) return parsed;
     } catch (err) {
       this.logger.warn(
@@ -516,19 +513,17 @@ export class AiService {
       `- accepted_answers: 2-3 alternative valid translations of source`;
 
     try {
-      const response = await withRetry(() =>
-        this.genai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            maxOutputTokens: 200,
+      const text = await withRetry(() =>
+        chatJson(
+          [{ role: 'user', content: prompt }],
+          {
+            model: LLM_MODEL,
+            maxTokens: 200,
             temperature: 0.2,
           },
-        }),
+        ),
       );
-      const text = response.text ?? '{}';
-      const parsed = AiService.parseGraderJson(text);
+      const parsed = AiService.parseGraderJson(text || '{}');
       if (parsed) return parsed;
     } catch (err) {
       this.logger.warn(
@@ -688,19 +683,17 @@ export class AiService {
       `Tone: encouraging, kid-friendly. NEVER scold or use complex linguistics.`;
 
     try {
-      const response = await withRetry(() =>
-        this.genai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            maxOutputTokens: 250,
+      const text = await withRetry(() =>
+        chatJson(
+          [{ role: 'user', content: prompt }],
+          {
+            model: LLM_MODEL,
+            maxTokens: 250,
             temperature: 0.4,
           },
-        }),
+        ),
       );
-      const text = response.text ?? '{}';
-      const parsed = AiService.parseExplainJson(text);
+      const parsed = AiService.parseExplainJson(text || '{}');
       if (parsed) return parsed;
     } catch (err) {
       this.logger.warn(

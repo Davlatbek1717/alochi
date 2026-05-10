@@ -7,11 +7,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenAI } from '@google/genai';
 import { ExamStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { chatJson, NVIDIA_NIM_MODEL } from '../ai/llm-client';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const LLM_MODEL = NVIDIA_NIM_MODEL;
 
 export interface ConversationTurn {
   role: 'ai' | 'student';
@@ -45,13 +45,10 @@ export interface AiTurnResponse {
 export class OralExamService {
   private readonly logger = new Logger(OralExamService.name);
   /**
-   * Pool of Gemini API keys. The free tier is 20 RPD per project, so
-   * a single key is easy to exhaust during testing or a busy exam day.
-   * `GEMINI_API_KEY` accepts a comma-separated list — every key gets
-   * its own quota bucket and we rotate through them as each hits its
-   * limit. With 3 free-tier keys you get 60 RPD; with 5, 100; etc.
-   * Set them up at https://aistudio.google.com/apikey on different
-   * Google accounts (or paid keys, which raises the per-key cap).
+   * Pool of NVIDIA NIM API keys. `NVIDIA_API_KEY` accepts a comma-separated
+   * list — every key gets its own quota bucket and we rotate through them
+   * as each hits its limit. Set up additional keys at
+   * https://build.nvidia.com on separate accounts to raise the cap.
    */
   private apiKeys: string[];
   /** Last key that succeeded — start the next call there to keep
@@ -62,21 +59,21 @@ export class OralExamService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    const raw = this.config.get<string>('GEMINI_API_KEY', '') ?? '';
+    const raw = this.config.get<string>('NVIDIA_API_KEY', '') ?? '';
     this.apiKeys = raw
       .split(',')
       .map((k) => k.trim())
       .filter(Boolean);
     if (this.apiKeys.length === 0) {
       this.logger.warn(
-        'GEMINI_API_KEY is empty — oral exam start will return 503 until set.',
+        'NVIDIA_API_KEY is empty — oral exam start will return 503 until set.',
       );
       // Keep one empty entry so the rest of the code path is uniform;
       // it'll fail with a clear "no key" error when a request comes in.
       this.apiKeys = [''];
     } else {
       this.logger.log(
-        `Oral exam Gemini pool configured with ${this.apiKeys.length} key(s).`,
+        `Oral exam NVIDIA NIM pool configured with ${this.apiKeys.length} key(s).`,
       );
     }
   }
@@ -487,7 +484,7 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
   }
 
   /**
-   * One Gemini call. Sends the system prompt + full conversation +
+   * One NVIDIA NIM call. Sends the system prompt + full conversation +
    * the latest user turn, parses the model's JSON output.
    *
    * Robustness: if the model wraps the JSON in markdown fences, we
@@ -499,15 +496,16 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     history: ConversationTurn[],
     userTurn: string,
   ): Promise<AiTurnResponse> {
-    const contents: { role: 'user' | 'model'; parts: { text: string }[] }[] =
-      [];
+    const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+      { role: 'system', content: systemInstruction },
+    ];
     for (const t of history) {
-      contents.push({
-        role: t.role === 'ai' ? 'model' : 'user',
-        parts: [{ text: t.text }],
+      messages.push({
+        role: t.role === 'ai' ? 'assistant' : 'user',
+        content: t.text,
       });
     }
-    contents.push({ role: 'user', parts: [{ text: userTurn }] });
+    messages.push({ role: 'user', content: userTurn });
 
     // Try every configured key in rotation, starting from the last
     // one that worked. The first key whose call doesn't trip a quota
@@ -521,36 +519,32 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         continue;
       }
       try {
-        const genai = new GoogleGenAI({ apiKey: key });
-        const resp = await genai.models.generateContent({
-          model: GEMINI_MODEL,
-          contents,
-          config: {
-            systemInstruction,
+        const raw = (
+          await chatJson(messages, {
+            model: LLM_MODEL,
+            apiKey: key,
             temperature: 0.6,
             // 1500 leaves enough room for the full final JSON
             // (message + 3-5 strengths + weaknesses + recommendations)
-            // without truncation. The previous 600 cap chopped final
-            // verdicts halfway and fell into the raw-text fallback.
-            maxOutputTokens: 1500,
-            // Hint Gemini to return JSON. Some models honor strictly.
-            responseMimeType: 'application/json',
-          },
-        });
-        const raw = (resp.text ?? '').trim();
+            // without truncation.
+            maxTokens: 1500,
+          })
+        ).trim();
         this.lastGoodIdx = idx;
         return this.parseAiResponse(raw);
       } catch (err) {
         const msg = (err as Error).message ?? '';
         const isQuota =
-          msg.includes('RESOURCE_EXHAUSTED') ||
+          msg.includes('rate_limit') ||
+          msg.includes('rate limit') ||
           msg.includes('quota') ||
           msg.includes('429');
         const isAuth =
           msg.includes('401') ||
           msg.includes('403') ||
           msg.includes('API key') ||
-          msg.includes('PERMISSION_DENIED');
+          msg.includes('Unauthorized') ||
+          msg.includes('invalid_api_key');
 
         // Quota / auth on this key → try the next one. Other failures
         // (network, parse) bubble out — retrying probably won't help
@@ -558,14 +552,14 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         // every project alike.
         if (isQuota || isAuth) {
           this.logger.warn(
-            `Gemini key#${idx} ${isQuota ? 'quota' : 'auth'} fail — trying next.`,
+            `NVIDIA NIM key#${idx} ${isQuota ? 'quota' : 'auth'} fail — trying next.`,
           );
           errors.push(
             `key#${idx}: ${isQuota ? 'quota' : 'auth'} (${msg.slice(0, 80)})`,
           );
           continue;
         }
-        this.logger.error(`Gemini call failed (non-rotating): ${msg}`);
+        this.logger.error(`NVIDIA NIM call failed (non-rotating): ${msg}`);
         throw new ServiceUnavailableException(
           'AI imtihon servisi vaqtincha ishlamayapti. Birozdan keyin urinib ' +
             "ko'ring.",
@@ -575,12 +569,12 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
 
     // All keys tripped quota or auth.
     this.logger.error(
-      `All ${this.apiKeys.length} Gemini key(s) exhausted: ${errors.join('; ')}`,
+      `All ${this.apiKeys.length} NVIDIA NIM key(s) exhausted: ${errors.join('; ')}`,
     );
     const allQuota = errors.every((e) => e.includes('quota'));
     throw new ServiceUnavailableException(
       allQuota
-        ? "AI imtihon barcha API kalitlar kunlik chegaraga yetgan. Administratorga GEMINI_API_KEY ga yana bir kalit qo'shish haqida xabar bering."
+        ? "AI imtihon barcha API kalitlar chegaraga yetgan. Administratorga NVIDIA_API_KEY ga yana bir kalit qo'shish haqida xabar bering."
         : 'AI imtihon servisining kalitlari yaroqsiz. Administratorga xabar bering.',
     );
   }

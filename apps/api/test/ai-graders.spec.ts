@@ -4,18 +4,18 @@ import { ConfigService } from '@nestjs/config';
 import { AiService } from '../src/ai/ai.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { StatusService } from '../src/student-status/status.service';
+import * as llmClient from '../src/ai/llm-client';
 
 /**
  * Pass 1: unit tests for the new AI graders.
  *
- * The Gemini client is wholly mocked at the instance level so we don't
- * make real API calls. We verify both the happy path (Gemini returns
- * well-formed JSON) and the fallback paths (network error / malformed JSON
- * → strict-match for translation, generic Uzbek hint for explain-answer).
+ * The LLM client is mocked at the module level so we don't make real API
+ * calls. We verify both the happy path (model returns well-formed JSON)
+ * and the fallback paths (network error / malformed JSON → strict-match
+ * for translation, generic Uzbek hint for explain-answer).
  *
- * NOTE: service was migrated from Anthropic → Gemini (GoogleGenAI). The mock
- * now targets `service.genai.models.generateContent` instead of the old
- * `service.anthropic.messages.create`.
+ * NOTE: service was migrated Anthropic → Gemini → NVIDIA NIM (MiniMax-M2.7).
+ * Mocks now target `chatJson` from `src/ai/llm-client.ts`.
  */
 describe('AiService — graders (Pass 1)', () => {
   let service: AiService;
@@ -23,7 +23,7 @@ describe('AiService — graders (Pass 1)', () => {
   const mockConfig = { get: jest.fn().mockReturnValue('') };
   const mockPrisma = {} as unknown as PrismaService;
   const mockStatusService = { setEnglishStatus: jest.fn() };
-  const geminiGenerateContent = jest.fn();
+  const chatJsonSpy = jest.spyOn(llmClient, 'chatJson');
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -36,15 +36,6 @@ describe('AiService — graders (Pass 1)', () => {
       ],
     }).compile();
     service = module.get(AiService);
-    // Replace the internal Gemini client with a stub so no real API calls
-    // escape during tests. The service uses this.genai.models.generateContent.
-    (
-      service as unknown as {
-        genai: { models: { generateContent: jest.Mock } };
-      }
-    ).genai = {
-      models: { generateContent: geminiGenerateContent },
-    };
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -123,14 +114,14 @@ describe('AiService — graders (Pass 1)', () => {
 
   describe('gradeTranslation', () => {
     it('returns the parsed Gemini response on success', async () => {
-      geminiGenerateContent.mockResolvedValue({
-        text: JSON.stringify({
+      chatJsonSpy.mockResolvedValue(
+        JSON.stringify({
           correct: true,
           score: 92,
           feedback: 'Yaxshi javob',
           accepted_answers: ['I am happy', "I'm happy"],
         }),
-      });
+      );
       const out = await service.gradeTranslation({
         sourceText: 'Men xursandman',
         targetLanguage: 'en',
@@ -142,8 +133,8 @@ describe('AiService — graders (Pass 1)', () => {
       expect(out.accepted_answers).toEqual(['I am happy', "I'm happy"]);
     });
 
-    it('falls back to strict-match when Gemini throws', async () => {
-      geminiGenerateContent.mockRejectedValue(new Error('network down'));
+    it('falls back to strict-match when the LLM throws', async () => {
+      chatJsonSpy.mockRejectedValue(new Error('network down'));
       const out = await service.gradeTranslation({
         sourceText: 'Olma',
         targetLanguage: 'en',
@@ -156,10 +147,8 @@ describe('AiService — graders (Pass 1)', () => {
       expect(out.correct).toBe(true);
     });
 
-    it('falls back gracefully when Gemini returns malformed JSON', async () => {
-      geminiGenerateContent.mockResolvedValue({
-        text: 'I cannot grade this right now',
-      });
+    it('falls back gracefully when the LLM returns malformed JSON', async () => {
+      chatJsonSpy.mockResolvedValue('I cannot grade this right now');
       const out = await service.gradeTranslation({
         sourceText: 'Hello',
         targetLanguage: 'en',
@@ -173,13 +162,13 @@ describe('AiService — graders (Pass 1)', () => {
 
   describe('explainAnswer', () => {
     it('returns the parsed Gemini response on success', async () => {
-      geminiGenerateContent.mockResolvedValue({
-        text: JSON.stringify({
+      chatJsonSpy.mockResolvedValue(
+        JSON.stringify({
           explanation: "Bu yerda 'is' kerak edi",
           hint: "Subyektga mos fe'l tanlang",
           examples: ['He is happy'],
         }),
-      });
+      );
       const out = await service.explainAnswer({
         exerciseType: 'translate',
         question: 'Translate: U xursand',
@@ -191,8 +180,8 @@ describe('AiService — graders (Pass 1)', () => {
       expect(out.examples).toEqual(['He is happy']);
     });
 
-    it('falls back to a generic Uzbek hint on Gemini failure', async () => {
-      geminiGenerateContent.mockRejectedValue(new Error('rate limited'));
+    it('falls back to a generic Uzbek hint on LLM failure', async () => {
+      chatJsonSpy.mockRejectedValue(new Error('rate limited'));
       const out = await service.explainAnswer({
         exerciseType: 'mcq',
         question: 'q',
