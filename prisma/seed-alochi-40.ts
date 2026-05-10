@@ -483,6 +483,36 @@ const LESSONS: LessonSpec[] = [
       ]),
     ],
   },
+
+  // ── STEP 11 — About myself (Composition — Archetype D) ────────────────────
+  {
+    orderNumber: 11,
+    title: 'STEP 11 — About myself',
+    type: LessonType.english,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "You are a friendly English coach for a young Uzbek learner.",
+      "The student just composed an 'About myself' paragraph.",
+      "Ask 3 short follow-up questions in English, one at a time, to extend the topic.",
+      "Be encouraging. Keep responses to 1-2 sentences.",
+      "English only — they are practising English.",
+    ].join('\n'),
+    components: [
+      fillBlank('Hello! My name is ___.', 'Anvar', ['Anvar', 'Aziza', 'Bekzod', 'Nodira']),
+      fillBlank('My family is ___.', 'small', ['small', 'big', 'happy', 'kind']),
+      fillBlank('I am ___ years old.', '10', ['8', '9', '10', '11', '12']),
+      fillBlank('I am from ___.', 'Bukhara', ['Bukhara', 'Tashkent', 'Samarqand', 'Khiva']),
+      fillBlank('I live in ___.', 'Gijduvan', ['Gijduvan', 'Bukhara', 'Tashkent', 'Andijan']),
+      fillBlank('I am a ___ at school.', 'pupil', ['pupil', 'teacher', 'student']),
+      fillBlank('My favourite subject is ___.', 'English', ['English', 'Math', 'Music', 'PE']),
+      fillBlank('My favourite color is ___.', 'red', ['red', 'blue', 'green', 'yellow']),
+      fillBlank('My favourite car is ___.', 'BMW', ['BMW', 'Cobalt', 'Tesla', 'Toyota']),
+      speakWords(
+        "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I live in Gijduvan. I am a pupil at school. My favourite subject is English. My favourite color is red. My favourite car is BMW.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
