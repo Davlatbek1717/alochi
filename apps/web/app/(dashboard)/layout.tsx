@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import BottomNav from './_components/BottomNav';
 import TopNav from './_components/TopNav';
+import Sidebar from './_components/Sidebar';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
 import { NotificationBell } from './_components/NotificationBell';
 import { InstallPrompt } from '@/components/InstallPrompt';
@@ -118,6 +119,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login');
   }
 
+  // Prototype: only superadmin gets the new sidebar layout for now. The
+  // identity bar + TopNav stays for every other role until we extend
+  // the rollout. On mobile (<md) every role still uses the top
+  // identity bar + BottomNav.
+  const useSidebar = user?.role === 'superadmin';
+
   return (
     <ToastProvider>
     <DuelNotificationProvider>
@@ -129,13 +136,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           Asosiy kontentga o&apos;tish
         </a>
-        {/* Top identity bar — deep ink. Sits above per-role top nav. */}
+
+        {/* Sidebar — desktop only, currently superadmin only. */}
+        {useSidebar && user && (
+          <Sidebar
+            role={user.role}
+            userName={user.name}
+            brandName={brandName}
+            onLogout={handleLogout}
+          />
+        )}
+
+        {/* Top identity bar — deep ink. Sits above per-role top nav.
+            Hidden on desktop when the sidebar takes over identity. */}
         <header
           className={[
             'sticky top-0 z-50',
             'bg-[#0f0c2d] border-b border-white/[0.06]',
             'px-3 sm:px-5 py-2.5',
             'flex items-center justify-between gap-2 min-w-0',
+            useSidebar ? 'md:hidden' : '',
           ].join(' ')}
         >
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -173,19 +193,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Per-role top nav — desktop only. Mobile users navigate via the
-            BottomNav at the bottom of the viewport. The desktop nav drops
-            into a horizontal strip with grouped dropdowns so reaching
-            any sub-section is a one-click hover, not a dashboard
-            round-trip through tile menus. */}
-        {user && <TopNav role={user.role} />}
+        {/* Per-role top nav — desktop only. Hidden for roles that have
+            been moved to the new Sidebar layout (currently superadmin). */}
+        {user && !useSidebar && <TopNav role={user.role} />}
 
         {/* Main content — only renders once role is verified. Until
             then a thin skeleton placeholder sits in place so the
-            wrong-role page can't fire any of its data-fetch effects. */}
+            wrong-role page can't fire any of its data-fetch effects.
+            On the sidebar layout, the left margin shifts to make room
+            for the fixed sidebar (md+); on mobile no shift. */}
         <main
           id="main-content"
-          className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0"
+          className={[
+            'flex-1 min-w-0 overflow-y-auto overflow-x-hidden pb-20 md:pb-0',
+            useSidebar ? 'md:ml-64' : '',
+          ].join(' ')}
         >
           {roleVerified ? (
             children
