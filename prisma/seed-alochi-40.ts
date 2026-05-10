@@ -514,6 +514,322 @@ const LESSONS: LessonSpec[] = [
     ],
   },
 
+  // ── STEP 12 — Oila a'zolari (3) ───────────────────────────────────────────
+  {
+    orderNumber: 13,
+    title: "STEP 12 — Oila a'zolari (3)",
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'amma; xola', en: 'aunt', distractors: ['uncle', 'cousin', 'nephew'] }),
+      ...vocabBlock({ uz: 'amakivachcha', en: 'cousin', distractors: ['aunt', 'niece', 'nephew'] }),
+      ...vocabBlock({ uz: "o'g'il jiyan", en: 'nephew', distractors: ['aunt', 'cousin', 'niece'] }),
+      ...vocabBlock({ uz: 'qiz jiyan', en: 'niece', distractors: ['aunt', 'cousin', 'nephew'] }),
+      ...vocabBlock({ uz: 'bobo-buvi', en: 'grandparents', distractors: ['cousin', 'nephew', 'niece'] }),
+      ...phraseBlock("Keyinroq ko'rishguncha", 'See you later'),
+      ...phraseBlock("Ertaga ko'rishguncha", 'See you tomorrow'),
+      ...phraseBlock("Tezda orada ko'rishguncha", 'See you soon'),
+      matchPairs([
+        { left: 'aunt', right: 'amma; xola' },
+        { left: 'cousin', right: 'amakivachcha' },
+        { left: 'nephew', right: "o'g'il jiyan" },
+        { left: 'niece', right: 'qiz jiyan' },
+        { left: 'grandparents', right: 'bobo-buvi' },
+      ]),
+    ],
+  },
+
+  // ── STEP 13 — He (o'g'il bola) ────────────────────────────────────────────
+  {
+    orderNumber: 14,
+    title: "STEP 13 — He (o'g'il bola)",
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: '"U" (o\'g\'il bola) subjekti uchun "to be" fe\'lining qaysi shakli ishlatiladi?',
+          options: ['am', 'is', 'are', 'be'],
+          correct: 1,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: "U o't o'chiruvchi", en: 'He is a firefighter', words: ['He', 'is', 'a', 'firefighter'] }),
+      ...topicSentenceBlock({ uz: 'U Avstraliyadan', en: 'He is from Australia', words: ['He', 'is', 'from', 'Australia'] }),
+      ...topicSentenceBlock({ uz: 'U kelishgan', en: 'He is well-built', words: ['He', 'is', 'well-built'] }),
+      ...topicSentenceBlock({ uz: "U mening do'stim", en: 'He is my friend', words: ['He', 'is', 'my', 'friend'] }),
+      ...phraseBlock('Raxmat', 'Thank you'),
+      ...phraseBlock('Katta rahmat', 'Thanks a lot'),
+      ...phraseBlock('Arzimaydi', 'You are welcome'),
+      matchPairs([
+        { left: 'He is a firefighter', right: "U o't o'chiruvchi" },
+        { left: 'He is from Australia', right: 'U Avstraliyadan' },
+        { left: 'He is well-built', right: 'U kelishgan' },
+        { left: "He is my friend", right: "U mening do'stim" },
+        { left: 'Thank you', right: 'Raxmat' },
+      ]),
+    ],
+  },
+
+  // ── STEP 14 — Uy qismlari (1) ─────────────────────────────────────────────
+  {
+    orderNumber: 15,
+    title: 'STEP 14 — Uy qismlari (1)',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'uy', en: 'house', distractors: ['door', 'window', 'wall'] }),
+      ...vocabBlock({ uz: 'eshik', en: 'door', distractors: ['house', 'window', 'wall'] }),
+      ...vocabBlock({ uz: 'deraza', en: 'window', distractors: ['house', 'door', 'wall'] }),
+      ...vocabBlock({ uz: 'devor', en: 'wall', distractors: ['house', 'door', 'window'] }),
+      ...phraseBlock('Kechirasiz', 'I am sorry'),
+      ...phraseBlock('Hammasi joyida', 'That is okay'),
+      ...phraseBlock("Muammo yo'q", 'No problem.'),
+      matchPairs([
+        { left: 'house', right: 'uy' },
+        { left: 'door', right: 'eshik' },
+        { left: 'window', right: 'deraza' },
+        { left: 'wall', right: 'devor' },
+        { left: 'I am sorry', right: 'Kechirasiz' },
+      ]),
+    ],
+  },
+
+  // ── STEP 15 — O'zini solishtirmaslik (Personal Dev) ───────────────────────
+  {
+    orderNumber: 16,
+    title: "STEP 15 — O'zini solishtirmaslik",
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"O'zingni boshqalar bilan solishtirmaslik\"",
+      "",
+      "Asosiy g'oya: O'zingni boshqalar bilan emas, kechagi o'zing bilan solishtir. O'z o'zi bilan raqobatlashish — doimiy rivojlanishdir.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Kechagi o'zingdan qanday yaxshi bo'lding bugun?\"",
+      "3) \"O'zingga qanday gap aytmoqchisan?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — O'zingni boshqalar bilan solishtirmaslik",
+            "",
+            "Hech o'zingizni boshqalar bilan solishtirganmisiz? Masalan: \"U mendan yaxshi o'qiydi\", \"U ko'proq 'like' oladi\", \"Men unchalik zo'r emasman...\" — deb?",
+            "",
+            "Lekin aslida bu noto'g'ri! Chunki har bir bola o'zining yo'lida yuradi. Kimdir yugurib ketadi, kimdir asta yuradi...",
+            "",
+            "O'zingni solishtirish kerak bo'lsa, kechagi o'zing bilan solishtir. O'z o'zi bilan raqobatlashish doimiy RIVOJLANISHDIR! Kecha dangasa edimmi? Bugun harakat qildimmi? Kecha adashdimmi? Bugun tuzatdimmi?",
+            "",
+            "YODINGDA TUT: sening kuching — boshqa hech kimda yo'q! Sening ovozing, fikring, orzularing — bu yagona.",
+            "",
+            "Shuning uchun o'zinga shunchaki bir gapni ayt: \"Men o'z yo'limdaman. Bugun men kechagi o'zimdan zo'r bolaman!\"",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Sinfdoshing sendan ko'proq baho oldi. Sen nima qilishing kerak?",
+          ].join('\n'),
+          options: [
+            '"Men hech narsaga yaramayman" deb xafa bo\'lish',
+            "Sinfdoshim bilan emas, kechagi o'zim bilan solishtirib, bugun nima yaxshilanganimni so'rash",
+            "Sinfdoshimga g'azablanish",
+            "O'qishni tashlab qo'yish",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
+  // ── STEP 16 — It (predmet, hayvon) ────────────────────────────────────────
+  {
+    orderNumber: 17,
+    title: 'STEP 16 — It (predmet, hayvon)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: 'Predmet va hayvonlar uchun qaysi olmosh ishlatiladi?',
+          options: ['I', 'he', 'it', 'they'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'U mening partam', en: 'It is my desk', words: ['It', 'is', 'my', 'desk'] }),
+      ...topicSentenceBlock({ uz: 'U uy hayvoni', en: 'It is a pet', words: ['It', 'is', 'a', 'pet'] }),
+      ...topicSentenceBlock({ uz: 'U politsiya mashinasi', en: 'It is a police car', words: ['It', 'is', 'a', 'police', 'car'] }),
+      ...topicSentenceBlock({ uz: 'U juda katta', en: 'It is very big', words: ['It', 'is', 'very', 'big'] }),
+      ...phraseBlock('Ha albatta', 'Yes, of course'),
+      ...phraseBlock('Men roziman', 'I agree'),
+      ...phraseBlock('Siz haqsiz', 'You are right'),
+      matchPairs([
+        { left: 'It is my desk', right: 'U mening partam' },
+        { left: 'It is a pet', right: 'U uy hayvoni' },
+        { left: 'It is a police car', right: 'U politsiya mashinasi' },
+        { left: 'It is very big', right: 'U juda katta' },
+        { left: 'Yes, of course', right: 'Ha albatta' },
+      ]),
+    ],
+  },
+
+  // ── STEP 17 — Uy qismlari (2) ─────────────────────────────────────────────
+  {
+    orderNumber: 18,
+    title: 'STEP 17 — Uy qismlari (2)',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'tom', en: 'roof', distractors: ['chimney', 'bedroom', 'bathroom'] }),
+      ...vocabBlock({ uz: "mo'ri", en: 'chimney', distractors: ['roof', 'bedroom', 'bathroom'] }),
+      ...vocabBlock({ uz: 'yotoqxona', en: 'bedroom', distractors: ['roof', 'chimney', 'bathroom'] }),
+      ...vocabBlock({ uz: 'yuvinish xonasi', en: 'bathroom', distractors: ['roof', 'chimney', 'bedroom'] }),
+      ...phraseBlock('Kirsam maylimi?', 'May I come in?'),
+      ...phraseBlock('Kiring, iltimos', 'Come in, please.'),
+      ...phraseBlock("O'tiring, iltimos", 'Sit down, please.'),
+      matchPairs([
+        { left: 'roof', right: 'tom' },
+        { left: 'chimney', right: "mo'ri" },
+        { left: 'bedroom', right: 'yotoqxona' },
+        { left: 'bathroom', right: 'yuvinish xonasi' },
+        { left: 'May I come in?', right: 'Kirsam maylimi?' },
+      ]),
+    ],
+  },
+
+  // ── STEP 18 — We (biz) ────────────────────────────────────────────────────
+  {
+    orderNumber: 19,
+    title: 'STEP 18 — We (biz)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: '"Biz" subjekti uchun "to be" fe\'lining qaysi shakli ishlatiladi?',
+          options: ['am', 'are', 'is', 'be'],
+          correct: 1,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'Biz Yaponiyadanmiz', en: 'We are from Japan', words: ['We', 'are', 'from', 'Japan'] }),
+      ...topicSentenceBlock({ uz: "Biz futbol o'yinchilarimiz", en: 'We are football players', words: ['We', 'are', 'football', 'players'] }),
+      ...topicSentenceBlock({ uz: 'Biz 25 yoshdamiz', en: 'We are 25 years old', words: ['We', 'are', '25', 'years', 'old'] }),
+      ...topicSentenceBlock({ uz: 'Biz aqllimiz', en: 'We are clever', words: ['We', 'are', 'clever'] }),
+      ...phraseBlock('Chiqsam maylimi?', 'May I go out?'),
+      ...phraseBlock('Tashqariga chiqing, iltimos', 'Go out, please.'),
+      ...phraseBlock('Meni kutib turing', 'Wait for me.'),
+      matchPairs([
+        { left: 'We are from Japan', right: 'Biz Yaponiyadanmiz' },
+        { left: 'We are football players', right: "Biz futbol o'yinchilarimiz" },
+        { left: 'We are 25 years old', right: 'Biz 25 yoshdamiz' },
+        { left: 'We are clever', right: 'Biz aqllimiz' },
+        { left: 'May I go out?', right: 'Chiqsam maylimi?' },
+      ]),
+    ],
+  },
+
+  // ── STEP 19 — Xonalar ─────────────────────────────────────────────────────
+  {
+    orderNumber: 20,
+    title: 'STEP 19 — Xonalar',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'mehmon xona', en: 'living room', distractors: ['dining room', 'kitchen', 'garden'] }),
+      ...vocabBlock({ uz: 'ovqatlanish xonasi', en: 'dining room', distractors: ['living room', 'kitchen', 'garden'] }),
+      ...vocabBlock({ uz: 'oshxona', en: 'kitchen', distractors: ['living room', 'dining room', 'garden'] }),
+      ...vocabBlock({ uz: "bog'", en: 'garden', distractors: ['living room', 'dining room', 'kitchen'] }),
+      ...phraseBlock('Kechirasiz', 'Excuse me.'),
+      ...phraseBlock('Menga quloq soling', 'Listen to me.'),
+      ...phraseBlock('Menga qarang', 'Look at me.'),
+      matchPairs([
+        { left: 'living room', right: 'mehmon xona' },
+        { left: 'dining room', right: 'ovqatlanish xonasi' },
+        { left: 'kitchen', right: 'oshxona' },
+        { left: 'garden', right: "bog'" },
+        { left: 'Excuse me.', right: 'Kechirasiz' },
+      ]),
+    ],
+  },
+
+  // ── STEP 20 — Xatolardan qo'rqmaslik (Personal Dev) ───────────────────────
+  {
+    orderNumber: 21,
+    title: "STEP 20 — Xatolardan qo'rqmaslik",
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Xatolardan qo'rqmaslik\"",
+      "",
+      "Asosiy g'oya: Xato qilish yomon emas — harakat qilmaslik yomon. Har bir xato — yangi dars.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Oxirgi qilgan xatongdan nima o'rganding?\"",
+      "3) \"Keyingi safar xato qilsang, o'zingdan nima so'rayssan?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Xatolardan qo'rqmaslik",
+            "",
+            "Do'stlar, xatoni kim qilmaydi? Hamma qiladi! Hatto eng zo'rlar ham. Faqat farqi shundaki — ular xatodan qo'rqmaydi, undan o'rganadi.",
+            "",
+            "Ba'zida xatolar bizni uyaltiradi, ichimizdan: \"Odamlar nima deydi?\" degan ovoz chiqadi. Lekin esla: xato qilish — bu yomon emas, harakat qilmaslik — mana bu yomon!",
+            "",
+            "Qachonki sen adashsang, bu sen harakat qilganingni bildiradi. Demak, sen o'rganayapsan, o'sayapsan. Har bir xato — bu yangi dars!",
+            "",
+            "Bir mashhur gap bor: \"Eng yaxshi ustozlar — bu xatolar\"",
+            "",
+            "Shuning uchun do'stim, xatodan qochma. Uni tan ol va o'zingdan so'ra: \"Bu safar nima o'rgandim?\"",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Yangi o'rgangan ish paytida xato qilding. Eng yaxshi javob nima?",
+          ].join('\n'),
+          options: [
+            "Yashirib qo'yish, hech kim bilmasin",
+            '"Bu safar nima o\'rgandim?" deb o\'zingdan so\'rash',
+            "Boshqa hech qachon urinib ko'rmaslik",
+            "Xato qilganim uchun o'zimni ayblayman",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
+  // ── STEP 21 — About my family (Composition — Archetype D) ─────────────────
+  {
+    orderNumber: 22,
+    title: 'STEP 21 — About my family',
+    type: LessonType.english,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "You are a friendly English coach for a young Uzbek learner.",
+      "The student just composed an 'About my family' paragraph.",
+      "Ask 3 short follow-up questions in English, one at a time, to extend the topic.",
+      "Be encouraging. Keep responses to 1-2 sentences.",
+      "English only — they are practising English.",
+    ].join('\n'),
+    components: [
+      fillBlank('Hello! I have a ___ family.', 'small', ['small', 'big', 'happy', 'large']),
+      fillBlank('There are ___ people in my family.', '4', ['2', '3', '4', '5', '6']),
+      fillBlank("My father's name is ___.", 'Anvar', ['Anvar', 'Aziz', 'Bobur', 'Jasur']),
+      fillBlank("My mother's name is ___.", 'Nilufar', ['Nilufar', 'Malika', 'Zulfiya', 'Sarvinoz']),
+      fillBlank("My sister's name is ___.", 'Aziza', ['Aziza', 'Kamola', 'Shahlo', 'Dilnoza']),
+      fillBlank('I ___ my family.', 'love', ['love', 'like', 'miss', 'help']),
+      speakWords(
+        "Hello! I have a small family. There are 4 people in my family. My father's name is Anvar. My mother's name is Nilufar. My sister's name is Aziza. I love my family.",
+        70,
+      ),
+    ],
+  },
+
   // ── TAKRORLASH 1-11 — Checkpoint (Archetype F) ────────────────────────────
   {
     orderNumber: 12,
