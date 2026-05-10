@@ -515,6 +515,105 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+
+  // ── orderNumber 56 — TAKRORLASH 41-51 (Checkpoint — Archetype F) ─────────────
+  {
+    orderNumber: 56,
+    title: 'TAKRORLASH 41-51',
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab match-pairs (3 rounds covering clothes/accessories + greetings) ──
+      matchPairs([
+        { left: 'gloves', right: "qo'lqoplar" },
+        { left: 'hat', right: 'shlyapa' },
+        { left: 'scarf', right: 'sharf' },
+        { left: 'boots', right: 'etik' },
+        { left: 'shoes', right: 'oyoq kiyim' },
+        { left: 'handbag', right: 'sumka' },
+      ]),
+      matchPairs([
+        { left: 'greeting', right: 'salomlashuv' },
+        { left: 'how are you?', right: 'ahvolingiz yaxshimi' },
+        { left: 'I am fine', right: 'Men yaxshiman' },
+        { left: 'I am great', right: "Men zo'rman" },
+        { left: 'I am not good', right: 'Men yaxshi emasman' },
+        { left: 'Hello', right: 'Salom' },
+      ]),
+      matchPairs([
+        { left: 'good morning', right: 'xayrli tong' },
+        { left: 'good afternoon', right: 'xayrli kun' },
+        { left: 'good evening', right: 'xayrli kech' },
+        { left: 'good night', right: 'xayrli tun' },
+      ]),
+      // ── Phrase translates (UZ → EN) covering STEPs 41-51 functional phrases ──
+      translate('Menga anavi ruchkani ber', 'Give me that pen'),
+      translate('Bu kitobni ol', 'Take this book'),
+      translate("Kitob o'qi", 'Read a book'),
+      translate("Buni hozir to'xtat", 'Stop it right now'),
+      translate('Qimirlama', 'Do not move'),
+      translate("Tinch bo'ling", 'Be quiet'),
+      translate("Stulga o'tiring", 'Sit on chair'),
+      translate('Oshxonani tozala', 'Clean the kitchen'),
+      translate('Derazani och', 'Open the window'),
+      translate('Men tayyorman', 'I am ready'),
+      translate("Keling, uyga", "Let's go home"),
+      translate('Menga ergashing', 'Follow me'),
+      translate("Ehtiyot bo'l", 'Be careful'),
+      translate('Menga yordam ber', 'Help me'),
+      translate('Bu qancha turadi?', 'How much is it?'),
+      translate('Bu non arzon', 'This bread is cheap'),
+      translate('U juda qimmat', 'It is very expensive'),
+      translate('Buni sotib oling', 'Buy this one'),
+      translate('davom eting', 'go on'),
+      translate('Eshikni oching', 'Open the door'),
+      translate('Eshikni yoping', 'Close the door'),
+      translate("Chiroqni o'chiring", 'Turn off the light'),
+      translate('Chiroqni yoqing', 'Turn on the light'),
+      // ── Topic-sentence drills (am 3 / is 3 / are 3 / am not 1) ──
+      wordOrder([
+        { words: ['clever', 'very', 'am', 'I'], correct: 'I am very clever' },
+        { words: ['astronaut', 'an', 'am', 'I'], correct: 'I am an astronaut' },
+        { words: ['China', 'from', 'am', 'I'], correct: 'I am from China' },
+        { words: ['sister', 'his', 'am', 'I'], correct: 'I am his sister' },
+      ]),
+      wordOrder([
+        { words: ['beautiful', 'very', 'is', 'Sofia'], correct: 'Sofia is very beautiful' },
+        { words: ['player', 'football', 'is', 'Imronbek'], correct: 'Imronbek is football player' },
+        { words: ['pupil', 'a', 'is', 'Muhammadali'], correct: 'Muhammadali is a pupil' },
+        { words: ['baby', 'a', 'is', 'Yasemin'], correct: 'Yasemin is a baby' },
+      ]),
+      wordOrder([
+        { words: ['friends', 'best', 'are', 'We'], correct: 'We are best friends' },
+        { words: ['lazy', 'are', 'You'], correct: 'You are lazy' },
+        { words: ['students', 'are', 'Dilnoza', 'and', 'Gulnoza'], correct: 'Gulnoza and Dilnoza are students' },
+      ]),
+      wordOrder([
+        { words: ['English', 'not', 'am', 'I'], correct: 'I am not English' },
+        { words: ['old', 'years', 'ten', 'not', 'am', 'I'], correct: 'I am not ten years old' },
+        { words: ['Tashkent', 'from', 'not', 'am', 'I'], correct: 'I am not from Tashkent' },
+        { words: ['old', 'not', 'am', 'I'], correct: 'I am not old' },
+      ]),
+      // ── Speak-aloud key sentences ──
+      speakSentence('I am very clever', 70),
+      speakSentence('Sofia is very beautiful', 70),
+      speakSentence('We are best friends', 70),
+      speakSentence('I am not English', 70),
+      speakSentence('Good morning', 70),
+      speakSentence('How are you?', 70),
+      speakSentence("Let's go home", 70),
+      // ── Composition recall (My house + Daily Routine) ──
+      speakWords(
+        'I want to talk about my house. My house is big and clean. There are five rooms. I love my house.',
+        70,
+      ),
+      speakWords(
+        "I want to talk about my daily routine. I wake up at six o'clock. I have breakfast at seven. After school, I do my homework. I go to bed at nine o'clock.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
