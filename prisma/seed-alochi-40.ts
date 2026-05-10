@@ -431,6 +431,58 @@ const LESSONS: LessonSpec[] = [
       ]),
     ],
   },
+
+  // ── STEP 10 — Qo'rqmaslik kuchining siri ──────────────────────────────────
+  {
+    orderNumber: 10,
+    title: "STEP 10 — Qo'rqmaslik kuchining siri",
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Qo'rqmaslik — kuchli bo'lishning siri\"",
+      "",
+      "Asosiy g'oya: Qo'rqib turganda baribir urinib ko'rish — aynan shu kuch beradi.",
+      "Har bir kuchli inson avval qo'rqqan, lekin to'xtamagan.",
+      "",
+      "Boladan 3 ta savol so'ra:",
+      "1) \"Sen bu darsdan nima o'rganding?\"",
+      "2) \"Hozir nimadan qo'rqayapsan? Qaysi kichik qadamni qo'yishing mumkin?\"",
+      "3) \"Bu fikrni kimga yetkazmoqchisan?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Qo'rqmaslik — kuchli bo'lishning siri",
+            "",
+            "Do'stlar, men ilgari odamlar oldida gapirishdan juda qo'rqardim. Yuragim tez urardi, ovozim qaltirardi, ichim titrardi. Lekin bir gapni o'rgandim: qo'rqmaslik — bu hech narsadan qo'rqmaslik emas, balki qo'rqib turganda qadam tashlashdir!",
+            "",
+            "Qachonki sen qo'rqib turgan bo'lsang, lekin baribir urinib ko'rsang — aynan shunda sen kuchliroq bo'lasan. Masalan, birinchi marta yozishni o'rganganingda qanday edi? Hozir esa bemalol yoza olasan, to'g'rimi?",
+            "",
+            "Har bir kuchli inson — avval qo'rqqan, lekin to'xtamagan. Shuning uchun agar yangi narsani o'rganishdan, savol berishdan yoki xatoga yo'l qo'yishdan qo'rqayotgan bo'lsang, YODINGDA TUT: sening kuching — qo'rqib turib ham sinab ko'rishingda.",
+            "",
+            "Endi sening navbating — o'sha birinchi qadamni qo'y!",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Kuchli inson kim?",
+          ].join('\n'),
+          options: [
+            "Hech narsadan qo'rqmaydigan inson",
+            "Qo'rqib turganda ham urinib ko'radigan inson",
+            "Hech qachon adashmaydigan inson",
+            "Hammadan kuchli ko'ringan inson",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
