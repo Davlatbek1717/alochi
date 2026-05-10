@@ -266,6 +266,65 @@ const LESSONS: LessonSpec[] = [
       ]),
     ],
   },
+
+  // ── STEP 5 — Aqlli fikrlash boshlash (Personal Development) ────────────────
+  {
+    orderNumber: 5,
+    title: "STEP 5 — Aqlli fikrlash boshlash",
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Qanday qilib aqlli fikrlashni boshlash mumkin?\"",
+      "Asosiy uch g'oya:",
+      "1) Har doim savol ber: 'Nega bu ishni qilayapman?', 'Yaxshiroq yo'li bormi?'",
+      "2) Shoshilmaslik — telefonni qo'lga olishdan oldin 'Bu meni aqlli va boy qiladimi?' deb so'ra.",
+      "3) Har kuni bitta kichik o'zgarish qil — kitobdan, ota-onadan, o'zingdan.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Sen bu darsdan nima o'rganding?\"",
+      "2) \"O'zingda qanday kichik o'zgartirish qilmoqchisan?\"",
+      "3) \"Bu fikrni kimga yetkazmoqchisan?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla javob ber.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          // The MCQ text carries the full essay so the student reads it
+          // in-place. After the essay we close with the comprehension /
+          // scenario question. Keep paragraphs short — single \n between
+          // them — so the renderer wraps cleanly on mobile.
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Qanday qilib aqlli fikrlashni boshlash mumkin?",
+            "",
+            "Hech o'ylab ko'rganmisiz, nega ba'zi bolalar har doim to'g'ri qaror qiladi? Ular shunchaki aqlliroq emas — ular umuman boshqacha fikrlaydi!",
+            "",
+            "Aqlli fikrlashni boshlash uchun birinchi qadam — har doim savol berish! Masalan: \"Nega bu ishni qilayapman?\", \"Buni qilsam nima bo'ladi?\", \"Yaxshiroq yo'li bormi?\" Bu savollar sizni kreativ fikrlashga majbur qiladi.",
+            "",
+            "Ikkinchi qadam — shoshilmaslik. Har bir gap yoki ishni darrov qabul qilish emas, avval biroz o'ylab ko'rish kerak. Telefon o'ynashdan oldin, \"Bu meni aqlli va boy qiladimi?\" deb o'zingdan so'ra.",
+            "",
+            "Uchinchisi va eng muhimi — har kuni kichik o'zgarish qil. Kitobdan bitta yangi fikr ol, telefondan bitta yangilik o'rgan, ota-onangdan bitta maslahat yoki o'zingdan biror nima yarat.",
+            "",
+            "Aqlli odam bo'lish — bu tug'ma qobiliyat emas. Bu — o'rganiladigan odat! Shunday ekan fikrla do'stim, fikrla...",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Telefonni qo'lga olishdan oldin o'zingdan nima so'rashing kerak?",
+          ].join('\n'),
+          options: [
+            'Hozir nima yangiliklar?',
+            'Bu meni aqlli va boy qiladimi?',
+            "Do'stlarim nima qilyapti?",
+            "Eng ko'p like olgan video qaysi?",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
