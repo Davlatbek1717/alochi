@@ -160,9 +160,9 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
   // Maximum playback position reached so far. Forward seeks past this point
   // are reverted; rewinds (seek backward) are allowed.
   const maxAllowedTimeRef = useRef(0);
-  // SEEK_TOLERANCE_S — natural 1× playback advances ~0.5s per tick, so 2s
-  // gives plenty of headroom while still catching even small forward drags.
-  const SEEK_TOLERANCE_S = 2;
+  // 1.5s tolerance is enough for 1× playback drift (~0.2s per 200ms tick)
+  // and catches anything bigger including YouTube's +10s double-tap gesture.
+  const SEEK_TOLERANCE_S = 1.5;
 
   // Pass 5: surface % watched so the progress bar updates live.
   const [percentWatched, setPercentWatched] = useState(0);
@@ -179,6 +179,26 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
     // Prune stale (>30 d) entries on mount to bound localStorage usage.
     pruneOldVideoProgress();
 
+    // Local helper used both by the 200ms poll and by onStateChange to catch
+    // YouTube's double-tap +10s gesture as soon as the state event fires,
+    // typically a few hundred ms before the next poll tick would catch it.
+    const enforceForwardSeekBlock = (): boolean => {
+      if (!playerRef.current) return false;
+      const current = playerRef.current.getCurrentTime();
+      if (
+        current > maxAllowedTimeRef.current + SEEK_TOLERANCE_S &&
+        typeof playerRef.current.seekTo === 'function'
+      ) {
+        playerRef.current.seekTo(maxAllowedTimeRef.current, true);
+        setSeekBlockedAt(Date.now());
+        return true;
+      }
+      if (current > maxAllowedTimeRef.current) {
+        maxAllowedTimeRef.current = current;
+      }
+      return false;
+    };
+
     const initPlayer = () => {
       playerRef.current = new window.YT.Player(containerRef.current!, {
         videoId,
@@ -190,6 +210,9 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
               if (rate !== 1) {
                 playerRef.current.setPlaybackRate(1);
               }
+              // Catch double-tap +10s and progress-bar drag immediately —
+              // YouTube fires a state-change for both before the next poll.
+              enforceForwardSeekBlock();
             }
           },
           onReady: () => {
@@ -226,21 +249,14 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
               if (!playerRef.current) return;
               const state = playerRef.current.getPlayerState();
               const duration = playerRef.current.getDuration();
-              const current = playerRef.current.getCurrentTime();
 
-              // Forward-seek block: if the playhead jumped past the highest
-              // point reached so far (plus a small tolerance for natural
-              // playback drift), snap it back. Rewinds — current below max —
-              // are left alone.
-              if (
-                current > maxAllowedTimeRef.current + SEEK_TOLERANCE_S &&
-                typeof playerRef.current.seekTo === 'function'
-              ) {
-                playerRef.current.seekTo(maxAllowedTimeRef.current, true);
-                setSeekBlockedAt(Date.now());
-              } else if (current > maxAllowedTimeRef.current) {
-                maxAllowedTimeRef.current = current;
-              }
+              // Forward-seek block runs first so the rest of the tick uses
+              // the corrected position (otherwise a +10s skip would briefly
+              // count toward percentWatched before the next poll snapped it).
+              const wasSnapped = enforceForwardSeekBlock();
+              const current = wasSnapped
+                ? maxAllowedTimeRef.current
+                : playerRef.current.getCurrentTime();
 
               if (duration > 0) {
                 const percent = (current / duration) * 100;
@@ -259,7 +275,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
                 const rate = playerRef.current.getPlaybackRate();
                 if (rate !== 1) playerRef.current.setPlaybackRate(1);
               }
-            }, 500);
+            }, 200);
 
             // Phase 21.3: save progress every 5s.
             if (storageKey) {
