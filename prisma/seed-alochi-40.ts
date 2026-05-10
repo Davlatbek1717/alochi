@@ -897,6 +897,92 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+  {
+    orderNumber: 23,
+    title: 'TAKRORLASH 12-21',
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab match-pair recall (17 vocab in 3 rounds) ─────────────
+      matchPairs([
+        { left: 'aunt', right: 'amma' },
+        { left: 'cousin', right: 'amakivachcha' },
+        { left: "nephew", right: "o'g'il jiyan" },
+        { left: 'niece', right: 'qiz jiyan' },
+        { left: 'grandparents', right: 'bobo-buvi' },
+      ]),
+      matchPairs([
+        { left: 'house', right: 'uy' },
+        { left: 'door', right: 'eshik' },
+        { left: 'window', right: 'deraza' },
+        { left: 'wall', right: 'devor' },
+        { left: 'roof', right: 'tom' },
+        { left: 'chimney', right: "mo'ri" },
+      ]),
+      matchPairs([
+        { left: 'bedroom', right: 'yotoqxona' },
+        { left: 'bathroom', right: 'yuvinish xonasi' },
+        { left: 'living room', right: 'mehmon xona' },
+        { left: 'dining room', right: 'ovqatlanish xonasi' },
+        { left: 'kitchen', right: 'oshxona' },
+        { left: 'garden', right: "bog'" },
+      ]),
+      // ── Phrase translates (UZ → EN) ───────────────────────────────
+      translate("Keyinroq ko'rishguncha", 'See you later'),
+      translate("Ertaga ko'rishguncha", 'See you tomorrow'),
+      translate("Tezda orada ko'rishguncha", 'See you soon'),
+      translate('Raxmat', 'Thank you'),
+      translate('Katta rahmat', 'Thanks a lot'),
+      translate('Arzimaydi', 'You are welcome'),
+      translate('Kechirasiz', 'I am sorry'),
+      translate('Hammasi joyida', 'That is okay'),
+      translate("Muammo yo'q", 'No problem'),
+      translate('Ha albatta', 'Yes of course'),
+      translate('Men roziman', 'I agree'),
+      translate('Siz haqsiz', 'You are right'),
+      translate('Kirsam maylimi?', 'May I come in?'),
+      translate('Kiring, iltimos', 'Come in, please'),
+      translate("O'tiring, iltimos", 'Sit down, please'),
+      translate('Chiqsam maylimi?', 'May I go out?'),
+      translate('Tashqariga chiqing, iltimos', 'Go out, please'),
+      translate('Meni kutib turing', 'Wait for me'),
+      translate('Menga quloq soling', 'Listen to me'),
+      translate('Menga qarang', 'Look at me'),
+      // ── Topic sentence drills (he, it, we) ────────────────────────
+      wordOrder([
+        { words: ['firefighter', 'a', 'is', 'He'], correct: 'He is a firefighter' },
+        { words: ['Australia', 'from', 'is', 'He'], correct: 'He is from Australia' },
+        { words: ['well-built', 'is', 'He'], correct: 'He is well-built' },
+        { words: ['friend', 'my', 'is', 'He'], correct: 'He is my friend' },
+      ]),
+      wordOrder([
+        { words: ['desk', 'my', 'is', 'It'], correct: 'It is my desk' },
+        { words: ['pet', 'a', 'is', 'It'], correct: 'It is a pet' },
+        { words: ['car', 'police', 'a', 'is', 'It'], correct: 'It is a police car' },
+        { words: ['big', 'very', 'is', 'It'], correct: 'It is very big' },
+      ]),
+      wordOrder([
+        { words: ['Japan', 'from', 'are', 'We'], correct: 'We are from Japan' },
+        { words: ['players', 'football', 'are', 'We'], correct: 'We are football players' },
+        { words: ['old', 'years', '25', 'are', 'We'], correct: 'We are 25 years old' },
+        { words: ['clever', 'are', 'We'], correct: 'We are clever' },
+      ]),
+      // ── Speak-aloud key phrases ──────────────────────────────────
+      speakSentence('See you later', 70),
+      speakSentence('Thank you', 70),
+      speakSentence('I am sorry', 70),
+      speakSentence('Yes, of course', 70),
+      speakSentence('Excuse me', 70),
+      speakSentence('May I come in?', 70),
+      speakSentence('Wait for me', 70),
+      // ── 'About my family' composition recall ────────────────────
+      speakWords(
+        "Hello! I have a small family. There are 4 people in my family. My father's name is Ali. My mother's name is Dilnoza. I love my family.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
