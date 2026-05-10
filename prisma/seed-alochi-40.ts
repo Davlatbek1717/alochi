@@ -325,6 +325,112 @@ const LESSONS: LessonSpec[] = [
       ]),
     ],
   },
+
+  // ── STEP 6 — Oila a'zolari (1) ────────────────────────────────────────────
+  {
+    orderNumber: 6,
+    title: "STEP 6 — Oila a'zolari (1)",
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'ona', en: 'mother', distractors: ['father', 'brother', 'sister'] }),
+      ...vocabBlock({ uz: 'ota', en: 'father', distractors: ['mother', 'brother', 'sister'] }),
+      ...vocabBlock({ uz: 'aka', en: 'brother', distractors: ['mother', 'father', 'sister'] }),
+      ...vocabBlock({ uz: 'opa', en: 'sister', distractors: ['mother', 'father', 'brother'] }),
+      ...phraseBlock('Mening ismim ...', 'My name is ...'),
+      ...phraseBlock('Men Anvarman', 'I am Anvar'),
+      ...phraseBlock('Tanishganimdan xursandman', 'Nice to meet you'),
+      matchPairs([
+        { left: 'How are you?', right: 'Qalaysiz?' },
+        { left: 'I am fine', right: 'Men yaxshiman' },
+        { left: 'I am sleepy', right: 'Uyqum kelyapti' },
+        { left: 'Good night', right: 'Xayrli tun' },
+        { left: 'Goodbye', right: 'Xayr' },
+      ]),
+    ],
+  },
+
+  // ── STEP 7 — I (men) ───────────────────────────────────────────────────────
+  {
+    orderNumber: 7,
+    title: 'STEP 7 — I (men)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: '"Men" subjekti uchun "to be" fe\'lining qaysi shakli ishlatiladi?',
+          options: ['am', 'is', 'are', 'be'],
+          correct: 0,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: "Men o'quvchiman", en: 'I am a pupil', words: ['I', 'am', 'a', 'pupil'] }),
+      ...topicSentenceBlock({ uz: "Men O'zbekistondanman", en: 'I am from Uzbekistan', words: ['I', 'am', 'from', 'Uzbekistan'] }),
+      ...topicSentenceBlock({ uz: 'Men 10 yoshdaman', en: 'I am 10 years old', words: ['I', 'am', '10', 'years', 'old'] }),
+      ...topicSentenceBlock({ uz: 'Men kuchliman', en: 'I am strong', words: ['I', 'am', 'strong'] }),
+      ...phraseBlock('Qaerdasan?', 'Where are you?'),
+      ...phraseBlock('Men bu yerdaman', 'I am here'),
+      ...phraseBlock('Bu yerga kel', 'Come here'),
+      matchPairs([
+        { left: 'mother', right: 'ona' },
+        { left: 'father', right: 'ota' },
+        { left: 'brother', right: 'aka' },
+        { left: 'sister', right: 'opa' },
+        { left: 'My name is ...', right: 'Mening ismim ...' },
+      ]),
+    ],
+  },
+
+  // ── STEP 8 — Oila a'zolari (2) ────────────────────────────────────────────
+  {
+    orderNumber: 8,
+    title: "STEP 8 — Oila a'zolari (2)",
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'buvajon', en: 'grandfather', distractors: ['grandmother', 'parents', 'uncle'] }),
+      ...vocabBlock({ uz: 'buvijon', en: 'grandmother', distractors: ['grandfather', 'parents', 'uncle'] }),
+      ...vocabBlock({ uz: 'ota-ona', en: 'parents', distractors: ['grandfather', 'grandmother', 'uncle'] }),
+      ...vocabBlock({ uz: 'amaki', en: 'uncle', distractors: ['grandfather', 'grandmother', 'parents'] }),
+      ...phraseBlock("Kuningiz qanday o'tyapti?", 'How is your day?'),
+      ...phraseBlock('U yaxshi', 'It is good'),
+      ...phraseBlock('Men xursandman', 'I am happy'),
+      matchPairs([
+        { left: 'mother', right: 'ona' },
+        { left: 'father', right: 'ota' },
+        { left: 'I am a pupil', right: "Men o'quvchiman" },
+        { left: 'I am strong', right: 'Men kuchliman' },
+        { left: 'Where are you?', right: 'Qaerdasan?' },
+      ]),
+    ],
+  },
+
+  // ── STEP 9 — She (qiz bola) ────────────────────────────────────────────────
+  {
+    orderNumber: 9,
+    title: 'STEP 9 — She (qiz bola)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: '"U" (qiz bola) subjekti uchun "to be" fe\'lining qaysi shakli ishlatiladi?',
+          options: ['am', 'is', 'are', 'be'],
+          correct: 1,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'U shifokor', en: 'She is a doctor', words: ['She', 'is', 'a', 'doctor'] }),
+      ...topicSentenceBlock({ uz: "U past bo'yli", en: 'She is short', words: ['She', 'is', 'short'] }),
+      ...topicSentenceBlock({ uz: 'U 30 yoshda', en: 'She is 30 years old', words: ['She', 'is', '30', 'years', 'old'] }),
+      ...topicSentenceBlock({ uz: 'U mening onam', en: 'She is my mother', words: ['She', 'is', 'my', 'mother'] }),
+      ...phraseBlock("Sizni sog'indim", 'I missed you'),
+      ...phraseBlock('Xush kelibsiz', 'Welcome'),
+      ...phraseBlock("Keyinroq ko'rishguncha", 'See you later'),
+      matchPairs([
+        { left: 'grandfather', right: 'buvajon' },
+        { left: 'grandmother', right: 'buvijon' },
+        { left: 'parents', right: 'ota-ona' },
+        { left: 'uncle', right: 'amaki' },
+        { left: 'How is your day?', right: "Kuningiz qanday o'tyapti?" },
+      ]),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
