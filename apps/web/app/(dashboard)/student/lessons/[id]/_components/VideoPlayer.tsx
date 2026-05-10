@@ -157,9 +157,18 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
   // Phase 21.3: separate 5s save loop, restore-on-mount, prune old entries.
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const restoredRef = useRef(false);
+  // Maximum playback position reached so far. Forward seeks past this point
+  // are reverted; rewinds (seek backward) are allowed.
+  const maxAllowedTimeRef = useRef(0);
+  // SEEK_TOLERANCE_S — natural 1× playback advances ~0.5s per tick, so 2s
+  // gives plenty of headroom while still catching even small forward drags.
+  const SEEK_TOLERANCE_S = 2;
 
   // Pass 5: surface % watched so the progress bar updates live.
   const [percentWatched, setPercentWatched] = useState(0);
+  // Brief banner shown when a forward seek is blocked so the user
+  // understands why the playhead snapped back.
+  const [seekBlockedAt, setSeekBlockedAt] = useState(0);
 
   const videoId = extractVideoId(youtubeUrl);
   const storageKey = lessonId ? `${VIDEO_PROGRESS_PREFIX}${lessonId}` : null;
@@ -198,6 +207,9 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
                     typeof playerRef.current.seekTo === 'function'
                   ) {
                     playerRef.current.seekTo(data.position, true);
+                    // Restored position counts as already-watched: don't snap
+                    // the user back to 0 just because we resumed mid-video.
+                    maxAllowedTimeRef.current = data.position;
                     if (typeof data.percent === 'number') {
                       watchedRef.current = data.percent;
                       setPercentWatched(data.percent);
@@ -215,6 +227,20 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
               const state = playerRef.current.getPlayerState();
               const duration = playerRef.current.getDuration();
               const current = playerRef.current.getCurrentTime();
+
+              // Forward-seek block: if the playhead jumped past the highest
+              // point reached so far (plus a small tolerance for natural
+              // playback drift), snap it back. Rewinds — current below max —
+              // are left alone.
+              if (
+                current > maxAllowedTimeRef.current + SEEK_TOLERANCE_S &&
+                typeof playerRef.current.seekTo === 'function'
+              ) {
+                playerRef.current.seekTo(maxAllowedTimeRef.current, true);
+                setSeekBlockedAt(Date.now());
+              } else if (current > maxAllowedTimeRef.current) {
+                maxAllowedTimeRef.current = current;
+              }
 
               if (duration > 0) {
                 const percent = (current / duration) * 100;
@@ -288,12 +314,21 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
 
   const clampedPercent = Math.max(0, Math.min(100, percentWatched));
   const reachedThreshold = clampedPercent >= 90;
+  // Banner stays visible for ~2s after the latest blocked seek attempt.
+  const seekBlockedRecently = seekBlockedAt > 0 && Date.now() - seekBlockedAt < 2000;
 
   return (
     <div className="space-y-3">
       <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] p-2 relative">
         <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden">
           <div ref={containerRef} className="w-full h-full" />
+          {seekBlockedRecently && (
+            <div className="absolute inset-x-0 top-0 flex justify-center pt-3 pointer-events-none">
+              <div className="bg-[#0f172a]/90 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                Oldinga o&apos;tkazib bo&apos;lmaydi
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
