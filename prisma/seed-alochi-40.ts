@@ -1716,6 +1716,186 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+  // ─── Lesson 44: TAKRORLASH 1-40 — Yakuniy ───────────────────────────────
+  {
+    orderNumber: 44,
+    title: "TAKRORLASH 1-40 — Yakuniy",
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab match-pairs: 6 rounds covering all family / house / numbers / clothes ──
+      matchPairs([
+        { left: 'mother', right: 'ona' },
+        { left: 'father', right: 'ota' },
+        { left: 'brother', right: 'aka' },
+        { left: 'sister', right: 'opa' },
+        { left: 'parents', right: 'ota-ona' },
+        { left: 'uncle', right: 'amaki' },
+      ]),
+      matchPairs([
+        { left: 'grandfather', right: 'buvajon' },
+        { left: 'grandmother', right: 'buvijon' },
+        { left: 'aunt', right: 'amma' },
+        { left: 'cousin', right: 'amakivachcha' },
+        { left: 'nephew', right: "o'g'il jiyan" },
+        { left: 'niece', right: 'qiz jiyan' },
+      ]),
+      matchPairs([
+        { left: 'house', right: 'uy' },
+        { left: 'door', right: 'eshik' },
+        { left: 'window', right: 'deraza' },
+        { left: 'wall', right: 'devor' },
+        { left: 'roof', right: 'tom' },
+        { left: 'bedroom', right: 'yotoqxona' },
+      ]),
+      matchPairs([
+        { left: 'kitchen', right: 'oshxona' },
+        { left: 'living room', right: 'mehmon xona' },
+        { left: 'dining room', right: 'ovqatlanish xonasi' },
+        { left: 'garden', right: "bog'" },
+        { left: 'bathroom', right: 'yuvinish xonasi' },
+        { left: 'chimney', right: "mo'ri" },
+      ]),
+      matchPairs([
+        { left: 'one', right: 'bir' },
+        { left: 'five', right: 'besh' },
+        { left: 'ten', right: "o'n" },
+        { left: 'twenty', right: 'yigirma' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'hundred', right: 'yuz' },
+      ]),
+      matchPairs([
+        { left: 'T-shirt', right: 'futbolka' },
+        { left: 'jeans', right: 'jinsi shim' },
+        { left: 'dress', right: "ko'ylak" },
+        { left: 'jacket', right: 'jaket' },
+        { left: 'coat', right: 'palto' },
+        { left: 'cap', right: 'bosh kiyim' },
+      ]),
+      // ── Phrase translates: 30 representative across all categories ─────
+      // Greetings
+      translate('Xayrli tong!', 'Good morning!'),
+      translate('Xayrli kech', 'Good evening'),
+      translate('Xayrli tun', 'Good night'),
+      translate('Qalaysiz?', 'How are you?'),
+      translate('Men yaxshiman', 'I am fine'),
+      translate('Tanishganimdan xursandman', 'Nice to meet you'),
+      translate("Keyinroq ko'rishguncha", 'See you later'),
+      translate('Xush kelibsiz', 'Welcome'),
+      // Family / movement / room
+      translate('Raxmat', 'Thank you'),
+      translate('Arzimaydi', 'You are welcome'),
+      translate('Kechirasiz', 'I am sorry'),
+      translate("Muammo yo'q", 'No problem'),
+      translate('Kirsam maylimi?', 'May I come in?'),
+      translate('Chiqsam maylimi?', 'May I go out?'),
+      translate('Menga quloq soling', 'Listen to me'),
+      // Food / health
+      translate('Men ochman', 'I am hungry'),
+      translate('Men chanqadim', 'I am thirsty'),
+      translate('Suv, iltimos', 'Water, please'),
+      translate("Boshim og'riyapti", 'My head hurts'),
+      translate('Men kasalman', 'I am sick'),
+      translate("Tezroq sog'ayib keting", 'Get well soon'),
+      // Opinion / agreement
+      translate('Ha albatta', 'Yes, of course'),
+      translate('Men roziman', 'I agree'),
+      translate('Siz haqsiz', 'You are right'),
+      translate('Menga bu yoqadi', 'I like it'),
+      translate('Menga bu yoqmaydi', 'I do not like it'),
+      // Action
+      translate('Buni hozir qil', 'Do it now'),
+      translate('Hozir bandman', 'I am busy now'),
+      translate('Darsni boshlang', 'Start the lesson'),
+      translate('Hozir emas', 'Not now'),
+      // ── Topic sentence drills: 12 patterns, 3 sentences each ────────────
+      wordOrder([
+        { words: ['pupil', 'a', 'I', 'am'], correct: 'I am a pupil' },
+        { words: ['Uzbekistan', 'from', 'I', 'am'], correct: 'I am from Uzbekistan' },
+        { words: ['strong', 'am', 'I'], correct: 'I am strong' },
+      ]),
+      wordOrder([
+        { words: ['firefighter', 'a', 'is', 'He'], correct: 'He is a firefighter' },
+        { words: ['Australia', 'from', 'is', 'He'], correct: 'He is from Australia' },
+        { words: ['friend', 'my', 'is', 'He'], correct: 'He is my friend' },
+      ]),
+      wordOrder([
+        { words: ['doctor', 'a', 'is', 'She'], correct: 'She is a doctor' },
+        { words: ['short', 'is', 'She'], correct: 'She is short' },
+        { words: ['mother', 'my', 'is', 'She'], correct: 'She is my mother' },
+      ]),
+      wordOrder([
+        { words: ['desk', 'my', 'is', 'It'], correct: 'It is my desk' },
+        { words: ['pet', 'a', 'is', 'It'], correct: 'It is a pet' },
+        { words: ['big', 'very', 'is', 'It'], correct: 'It is very big' },
+      ]),
+      wordOrder([
+        { words: ['Japan', 'from', 'are', 'We'], correct: 'We are from Japan' },
+        { words: ['players', 'football', 'are', 'We'], correct: 'We are football players' },
+        { words: ['clever', 'are', 'We'], correct: 'We are clever' },
+      ]),
+      wordOrder([
+        { words: ['student', 'a', 'are', 'You'], correct: 'You are a student' },
+        { words: ['friend', 'my', 'are', 'You'], correct: 'You are my friend' },
+        { words: ['beautiful', 'are', 'You'], correct: 'You are beautiful' },
+      ]),
+      wordOrder([
+        { words: ['pilots', 'are', 'They'], correct: 'They are pilots' },
+        { words: ['classmates', 'my', 'are', 'They'], correct: 'They are my classmates' },
+        { words: ['toys', 'are', 'They'], correct: 'They are toys' },
+      ]),
+      wordOrder([
+        { words: ['tall', 'am', 'I'], correct: 'I am tall' },
+        { words: ['young', 'am', 'I'], correct: 'I am young' },
+        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+      ]),
+      wordOrder([
+        { words: ['polite', 'is', 'He'], correct: 'He is polite' },
+        { words: ['dog', 'a', 'is', 'It'], correct: 'It is a dog' },
+        { words: ['doctor', 'a', 'is', 'She'], correct: 'She is a doctor' },
+      ]),
+      wordOrder([
+        { words: ['doctors', 'are', 'We'], correct: 'We are doctors' },
+        { words: ['famous', 'are', 'You'], correct: 'You are famous' },
+        { words: ['Uzbek', 'are', 'You'], correct: 'You are Uzbek' },
+      ]),
+      wordOrder([
+        { words: ['artist', 'an', 'am', 'I'], correct: 'I am an artist' },
+        { words: ['twelve', 'am', 'I'], correct: 'I am twelve' },
+        { words: ['seller', 'a', 'is', 'She'], correct: 'She is a seller' },
+      ]),
+      wordOrder([
+        { words: ['Poland', 'from', 'are', 'We'], correct: 'We are from Poland' },
+        { words: ['nurse', 'a', 'are', 'You'], correct: 'You are a nurse' },
+        { words: ['old', 'very', 'are', 'They'], correct: 'They are very old' },
+      ]),
+      // ── Speak-aloud: 10 representative sentences across pronouns ────────
+      speakSentence('I am a pupil', 70),
+      speakSentence('He is my friend', 70),
+      speakSentence('She is my mother', 70),
+      speakSentence('We are clever', 70),
+      speakSentence('You are my friend', 70),
+      speakSentence('They are my classmates', 70),
+      speakSentence('I am happy', 70),
+      speakSentence('I love my family', 70),
+      speakSentence('Thank you', 70),
+      speakSentence('See you later', 70),
+      // ── Composition recall: 3 paragraphs ────────────────────────────────
+      speakWords(
+        "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I live in Gijduvan. I am a pupil at school. My favourite subject is English.",
+        70,
+      ),
+      speakWords(
+        "Hello! I have a small family. There are 4 people in my family. My father's name is Ali. My mother's name is Dilnoza. I love my family.",
+        70,
+      ),
+      speakWords(
+        "Hello! I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
