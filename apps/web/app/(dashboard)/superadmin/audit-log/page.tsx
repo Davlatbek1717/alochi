@@ -83,7 +83,7 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      <div className="px-4 pt-5 pb-10 max-w-4xl space-y-4">
+      <div className="px-4 pt-5 pb-10 max-w-4xl mx-auto space-y-4">
         {/* Action filter */}
         {!loading && !error && (
           <div className="relative inline-flex items-center">

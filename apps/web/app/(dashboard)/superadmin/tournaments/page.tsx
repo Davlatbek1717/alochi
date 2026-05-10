@@ -246,7 +246,7 @@ export default function SuperadminTournamentsPage() {
                 <option value="team">Jamoaviy</option>
                 <option value="group">Guruh</option>
               </select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label
                     htmlFor="t-starts-at"

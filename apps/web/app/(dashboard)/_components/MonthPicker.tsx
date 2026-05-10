@@ -8,7 +8,7 @@ interface MonthPickerProps {
 export default function MonthPicker({ value, onChange }: MonthPickerProps) {
   const max = new Date().toISOString().slice(0, 7);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full sm:w-auto">
       <label className="text-sm font-medium text-gray-600">Oy:</label>
       <input
         type="month"

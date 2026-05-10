@@ -92,7 +92,7 @@ export default function SuperadminDashboard() {
 
       <div className="px-4 pt-8 pb-6">
         <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Navigatsiya</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {NAV_CARDS.map((card) => (
             <button
               key={card.href}

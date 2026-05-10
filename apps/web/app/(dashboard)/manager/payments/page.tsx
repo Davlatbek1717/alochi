@@ -80,7 +80,7 @@ export default function ManagerPaymentsPage() {
           <button onClick={() => router.push('/manager')} className="flex items-center gap-2 text-[#94a3b8] mb-4 text-sm">
             <ArrowLeft size={16} /> Manager
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
                 <CreditCard size={18} className="text-[#0d9488]" />

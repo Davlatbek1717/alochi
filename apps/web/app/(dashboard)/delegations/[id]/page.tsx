@@ -297,7 +297,7 @@ export default function DelegationDetailPage() {
               </div>
               <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Muddat</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-[#f7f4ef] rounded-xl p-3">
                 <p className="text-xs text-[#94a3b8] mb-1">Boshlanish</p>
                 <p className="text-sm font-semibold text-[#0f172a]">{formatDate(delegation.startsAt)}</p>

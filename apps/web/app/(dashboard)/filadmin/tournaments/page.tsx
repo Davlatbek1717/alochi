@@ -112,7 +112,7 @@ export default function FiladminTournamentsPage() {
                 <option value="team">Jamoaviy</option>
                 <option value="group">Guruh</option>
               </select>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
                   <label htmlFor="tournament-starts-at" className="text-xs text-[#64748b] mb-1 block">Boshlanish</label>
                   <input

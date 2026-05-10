@@ -166,7 +166,7 @@ export default function BranchStatsPage() {
           >
             <ArrowLeft size={16} /> Filiallar
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
                 <Users size={18} className="text-[#0d9488]" />
@@ -176,7 +176,7 @@ export default function BranchStatsPage() {
                 <p className="text-white font-bold text-lg">{branch?.name ?? 'Yuklanmoqda...'}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setAssignOpen(true)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold bg-white/10 text-white hover:bg-white/20 px-3 py-2 rounded-xl border border-white/20 transition-colors"

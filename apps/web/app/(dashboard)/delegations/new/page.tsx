@@ -157,7 +157,7 @@ function NewDelegationForm() {
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest flex items-center gap-2">
               <Calendar size={12} /> Muddat
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-[#94a3b8] mb-1">Boshlanish</label>
                 <input
