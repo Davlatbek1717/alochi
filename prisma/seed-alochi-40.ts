@@ -513,6 +513,74 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+
+  // ── TAKRORLASH 1-11 — Checkpoint (Archetype F) ────────────────────────────
+  {
+    orderNumber: 12,
+    title: 'TAKRORLASH 1-11',
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab matched-pair recall (8 vocab in two rounds of 4) ──────────
+      matchPairs([
+        { left: 'mother', right: 'ona' },
+        { left: 'father', right: 'ota' },
+        { left: 'brother', right: 'aka' },
+        { left: 'sister', right: 'opa' },
+      ]),
+      matchPairs([
+        { left: 'grandfather', right: 'buvajon' },
+        { left: 'grandmother', right: 'buvijon' },
+        { left: 'parents', right: 'ota-ona' },
+        { left: 'uncle', right: 'amaki' },
+      ]),
+      // ── Phrase translate (UZ → EN) for every greeting/functional phrase ─
+      translate('Xayrli tong!', 'Good morning!'),
+      translate('Xayrli kun', 'Good afternoon'),
+      translate('Xayrli kech', 'Good evening'),
+      translate('Xayrli tun', 'Good night'),
+      translate('Yaxshi dam oling', 'Sleep well'),
+      translate('Xayr', 'Goodbye'),
+      translate('Qalaysiz?', 'How are you?'),
+      translate('Men yaxshiman', 'I am fine'),
+      translate('Uyqum kelyapti', 'I am sleepy'),
+      translate('Tanishganimdan xursandman', 'Nice to meet you'),
+      translate("Kuningiz qanday o'tyapti?", 'How is your day?'),
+      translate('Men xursandman', 'I am happy'),
+      translate("Sizni sog'indim", 'I missed you'),
+      translate('Xush kelibsiz', 'Welcome'),
+      translate("Keyinroq ko'rishguncha", 'See you later'),
+      translate('Qaerdasan?', 'Where are you?'),
+      translate('Men bu yerdaman', 'I am here'),
+      translate('Bu yerga kel', 'Come here'),
+      // ── Topic sentence drills (word_order for I- and she- patterns) ─────
+      wordOrder([
+        { words: ['pupil', 'a', 'I', 'am'], correct: 'I am a pupil' },
+        { words: ['Uzbekistan', 'from', 'I', 'am'], correct: 'I am from Uzbekistan' },
+        { words: ['old', 'I', 'years', '10', 'am'], correct: 'I am 10 years old' },
+        { words: ['strong', 'am', 'I'], correct: 'I am strong' },
+      ]),
+      wordOrder([
+        { words: ['doctor', 'a', 'is', 'She'], correct: 'She is a doctor' },
+        { words: ['short', 'is', 'She'], correct: 'She is short' },
+        { words: ['old', 'years', '30', 'is', 'She'], correct: 'She is 30 years old' },
+        { words: ['mother', 'is', 'my', 'She'], correct: 'She is my mother' },
+      ]),
+      // ── Speak-aloud the 6 most common functional phrases ────────────────
+      speakSentence('Good morning!', 70),
+      speakSentence('How are you?', 70),
+      speakSentence('I am fine', 70),
+      speakSentence('Nice to meet you', 70),
+      speakSentence('Where are you?', 70),
+      speakSentence('See you later', 70),
+      // ── 'About myself' composition recall ────────────────────────────────
+      speakWords(
+        "Hello! My name is Anvar. I am 10 years old. I am from Bukhara. I am a pupil at school.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
