@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -13,6 +14,38 @@ export class FriendsService {
   private readonly logger = new Logger(FriendsService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  /**
+   * Resolve a login (within the sender's tenant) to a user id, then send
+   * a friend request. Logins are tenant-unique per the User schema, so
+   * lookup is deterministic.
+   */
+  async sendRequestByLogin(
+    senderId: string,
+    senderTenantId: string,
+    friendLogin: string,
+    scope: FriendshipScope = 'branch',
+  ): Promise<Friendship> {
+    const trimmed = friendLogin.trim();
+    if (!trimmed) {
+      throw new BadRequestException('Foydalanuvchi loginini kiriting');
+    }
+
+    const friend = await this.prisma.user.findUnique({
+      where: { tenantId_login: { tenantId: senderTenantId, login: trimmed } },
+      select: { id: true },
+    });
+    if (!friend) {
+      throw new NotFoundException(
+        `"${trimmed}" loginli foydalanuvchi topilmadi`,
+      );
+    }
+    if (friend.id === senderId) {
+      throw new BadRequestException("O'zingizga do'st so'rovi yubora olmaysiz");
+    }
+
+    return this.sendRequest(senderId, friend.id, scope);
+  }
 
   async sendRequest(
     userId: string,

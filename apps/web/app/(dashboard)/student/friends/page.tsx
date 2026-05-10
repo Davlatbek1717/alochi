@@ -22,8 +22,7 @@ export default function FriendsPage() {
   const [loadError, setLoadError] = useState('');
 
   const [showForm, setShowForm] = useState(false);
-  const [friendId, setFriendId] = useState('');
-  const [branchId, setBranchId] = useState('');
+  const [friendLogin, setFriendLogin] = useState('');
   const [sending, setSending] = useState(false);
 
   const [responding, setResponding] = useState<string | null>(null);
@@ -94,8 +93,8 @@ export default function FriendsPage() {
   }
 
   async function handleSendRequest() {
-    if (!friendId.trim()) {
-      toast.warning("Foydalanuvchi ID ni kiriting");
+    if (!friendLogin.trim()) {
+      toast.warning("Foydalanuvchi loginini kiriting");
       return;
     }
     const token = localStorage.getItem('accessToken') ?? '';
@@ -103,14 +102,10 @@ export default function FriendsPage() {
     try {
       await apiRequest('/social/friends/request', {
         method: 'POST',
-        body: JSON.stringify({
-          friendId: friendId.trim(),
-          ...(branchId.trim() ? { branchId: branchId.trim() } : {}),
-        }),
+        body: JSON.stringify({ friendLogin: friendLogin.trim() }),
       }, token);
       toast.success("So'rov yuborildi!");
-      setFriendId('');
-      setBranchId('');
+      setFriendLogin('');
       setShowForm(false);
       // Refresh lists after sending request
       load();
@@ -163,28 +158,18 @@ export default function FriendsPage() {
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st</p>
             <div>
-              <label htmlFor="friend-id" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
-                Foydalanuvchi ID <span className="text-rose-500">*</span>
+              <label htmlFor="friend-login" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
+                Foydalanuvchi logini <span className="text-rose-500">*</span>
               </label>
               <input
-                id="friend-id"
+                id="friend-login"
                 type="text"
-                placeholder="Foydalanuvchi ID"
-                value={friendId}
-                onChange={(e) => setFriendId(e.target.value)}
-                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
-              />
-            </div>
-            <div>
-              <label htmlFor="branch-id" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
-                Filial ID <span className="text-[#94a3b8] font-normal">(ixtiyoriy)</span>
-              </label>
-              <input
-                id="branch-id"
-                type="text"
-                placeholder="Filial ID"
-                value={branchId}
-                onChange={(e) => setBranchId(e.target.value)}
+                placeholder="masalan: odilov"
+                value={friendLogin}
+                onChange={(e) => setFriendLogin(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-4 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
               />
             </div>

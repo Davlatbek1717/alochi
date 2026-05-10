@@ -173,12 +173,13 @@ export class SocialController {
 
   @Post('friends/request')
   sendFriendRequest(
-    @Body() body: { friendId: string; scope?: 'group' | 'branch' },
+    @Body() body: { friendLogin: string; scope?: 'group' | 'branch' },
     @Request() req: any,
   ) {
-    return this.friends.sendRequest(
+    return this.friends.sendRequestByLogin(
       req.user.userId,
-      body.friendId,
+      req.user.tenantId,
+      body.friendLogin,
       body.scope ?? 'branch',
     );
   }
