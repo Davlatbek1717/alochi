@@ -830,6 +830,328 @@ const LESSONS: LessonSpec[] = [
     ],
   },
 
+  // ── STEP 22 — You (sen, siz) ──────────────────────────────────────────────
+  {
+    orderNumber: 24,
+    title: 'STEP 22 — You (sen, siz)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "'Sen' yoki 'Siz' subjekti uchun 'to be'ning qaysi shakli ishlatiladi?",
+          options: ['am', 'is', 'are', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: "Sen talabasan", en: 'You are a student', words: ['You', 'are', 'a', 'student'] }),
+      ...topicSentenceBlock({ uz: "Sen mening do'stimsan", en: 'You are my friend', words: ['You', 'are', 'my', 'friend'] }),
+      ...topicSentenceBlock({ uz: 'Sen chiroylisan', en: 'You are beautiful', words: ['You', 'are', 'beautiful'] }),
+      ...topicSentenceBlock({ uz: 'Siz Rossiyadansiz', en: 'You are from Russia', words: ['You', 'are', 'from', 'Russia'] }),
+      ...phraseBlock('U mening onam', 'She is my mom'),
+      ...phraseBlock('Onam mehribon', 'Mom is kind'),
+      ...phraseBlock("Onamni yaxshi ko'raman", 'I love mom'),
+      matchPairs([
+        { left: 'living room', right: 'mehmon xona' },
+        { left: 'kitchen', right: 'oshxona' },
+        { left: 'garden', right: "bog'" },
+        { left: 'Excuse me.', right: 'Kechirasiz' },
+        { left: 'Look at me.', right: 'Menga qarang' },
+      ]),
+    ],
+  },
+
+  // ── STEP 23 — Sonlar 1-12 ─────────────────────────────────────────────────
+  {
+    orderNumber: 25,
+    title: 'STEP 23 — Sonlar 1-12',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'bir', en: 'one', distractors: ['two', 'three', 'four'] }),
+      ...vocabBlock({ uz: 'olti', en: 'six', distractors: ['seven', 'eight', 'five'] }),
+      ...vocabBlock({ uz: "o'n", en: 'ten', distractors: ['eleven', 'twelve', 'nine'] }),
+      ...vocabBlock({ uz: "o'n ikki", en: 'twelve', distractors: ['ten', 'eleven', 'nine'] }),
+      ...phraseBlock('U mening otam', 'He is my dad'),
+      ...phraseBlock('Dadam band', 'Dad is busy'),
+      ...phraseBlock('Dadam uyda', 'Dad is at home'),
+      matchPairs([
+        { left: 'one', right: 'bir' },
+        { left: 'six', right: 'olti' },
+        { left: 'ten', right: "o'n" },
+        { left: 'twelve', right: "o'n ikki" },
+        { left: 'You are a student', right: 'Sen talabasan' },
+      ]),
+    ],
+  },
+
+  // ── STEP 24 — They (ular) ─────────────────────────────────────────────────
+  {
+    orderNumber: 26,
+    title: 'STEP 24 — They (ular)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "'Ular' subjekti uchun 'to be'ning qaysi shakli ishlatiladi?",
+          options: ['am', 'is', 'are', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'Ular uchuvchilar', en: 'They are pilots', words: ['They', 'are', 'pilots'] }),
+      ...topicSentenceBlock({ uz: 'Ular mening sinfdoshlarim', en: 'They are my classmates', words: ['They', 'are', 'my', 'classmates'] }),
+      ...topicSentenceBlock({ uz: "Ular o'yinchoqlar", en: 'They are toys', words: ['They', 'are', 'toys'] }),
+      ...topicSentenceBlock({ uz: 'Ular Ispaniyadan', en: 'They are from Spain', words: ['They', 'are', 'from', 'Spain'] }),
+      ...phraseBlock('Mening akam bor', 'I have a brother'),
+      ...phraseBlock('U mening singlim', 'She is my sister'),
+      ...phraseBlock('Biz oilamiz', 'We are a family'),
+      matchPairs([
+        { left: 'one', right: 'bir' },
+        { left: 'six', right: 'olti' },
+        { left: 'ten', right: "o'n" },
+        { left: 'He is my dad', right: 'U mening otam' },
+        { left: 'Dad is busy', right: 'Dadam band' },
+      ]),
+    ],
+  },
+
+  // ── STEP 25 — Vaqtni qadrlash (Personal Dev) ─────────────────────────────
+  {
+    orderNumber: 27,
+    title: 'STEP 25 — Vaqtni qadrlash',
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Vaqtni qadrlash\"",
+      "",
+      "Asosiy g'oya: Vaqt — eng qimmat narsa. Uni to'g'ri sarflagan kishi kelajagini quради.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Kundalik vaqtingni qanday sarflayapsan?\"",
+      "3) \"Bugun qilish mumkin bo'lgan bir foydali ish nima?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Vaqtni qadrlash",
+            "",
+            "Bilasanmi do'stim, dunyodagi eng qimmat narsa nima? Pul emas. Oltin emas. Bu — VAQT!",
+            "",
+            "Chunki pulni yana topish mumkin. Lekin vaqt ketdimi — qaytmaydi! Har kuni bizga 24 soat beriladi. Lekin kimdir bu vaqtni orzulariga yaqinlashishga sarflaydi, kimdir esa telefon, o'yin, bekorchilikka.",
+            "",
+            "Haqiqat shuki: hozir nima qilsang — kelajakdagi o'zingni shunga tayyorlayapsan. Bugun o'qisang, ertaga dono bo'lasan. Bugun harakat qilsang, ertaga g'alaba qilasan.",
+            "",
+            "O'zingga bir savol ber: \"Men vaqtdan foydalanayapmanmi yoki uni yo'qotyapmanmi?\"",
+            "",
+            "Har kuni bir kichik foydali narsa qil: kitob o'qi, til o'rgan, qariyalarga yaxshilik qil, ota-onanga yordam ber...",
+            "",
+            "Chunki o'tayotgan vaqt — bu sening kelajaging!",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Bo'sh vaqtingda nima qilish eng yaxshisi?",
+          ].join('\n'),
+          options: [
+            "Telefonda 4 soat o'tirish",
+            "Bir kichik foydali narsa qilish — kitob, til, ko'maklash",
+            "Eshikda hech nima qilmasdan turish",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
+  // ── STEP 26 — Sonlar 13-90 (o'nliklar) ───────────────────────────────────
+  {
+    orderNumber: 28,
+    title: "STEP 26 — Sonlar 13-90 (o'nliklar)",
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: "o'n uch", en: 'thirteen', distractors: ['fourteen', 'fifteen', 'sixteen'] }),
+      ...vocabBlock({ uz: 'yigirma', en: 'twenty', distractors: ['thirty', 'forty', 'fifty'] }),
+      ...vocabBlock({ uz: "ellik", en: 'fifty', distractors: ['forty', 'sixty', 'seventy'] }),
+      ...vocabBlock({ uz: 'to\'qson', en: 'ninety', distractors: ['eighty', 'seventy', 'sixty'] }),
+      ...phraseBlock('Men ochman', 'I am hungry'),
+      ...phraseBlock('Ovqat xohlayman', 'I want food'),
+      ...phraseBlock('Biroz non yeng', 'Eat some bread'),
+      matchPairs([
+        { left: 'thirteen', right: "o'n uch" },
+        { left: 'twenty', right: 'yigirma' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'ninety', right: "to'qson" },
+        { left: 'They are pilots', right: 'Ular uchuvchilar' },
+      ]),
+    ],
+  },
+
+  // ── STEP 27 — to be: am ───────────────────────────────────────────────────
+  {
+    orderNumber: 29,
+    title: 'STEP 27 — to be: am',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "Faqat 'I' subjekti bilan ishlatiladigan 'to be' shakli qaysi?",
+          options: ['is', 'are', 'am', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: "Men uzun bo'yliman", en: 'I am tall', words: ['I', 'am', 'tall'] }),
+      ...topicSentenceBlock({ uz: 'Men 11 yoshdaman', en: 'I am 11 years old', words: ['I', 'am', '11', 'years', 'old'] }),
+      ...topicSentenceBlock({ uz: 'Men Buxorodanman', en: 'I am from Bukhara', words: ['I', 'am', 'from', 'Bukhara'] }),
+      ...topicSentenceBlock({ uz: 'Men yoshman', en: 'I am young', words: ['I', 'am', 'young'] }),
+      ...phraseBlock('Men chanqadim', 'I am thirsty'),
+      ...phraseBlock('Suv, iltimos', 'Water, please'),
+      ...phraseBlock('Biroz suv iching', 'Drink some water'),
+      matchPairs([
+        { left: 'thirteen', right: "o'n uch" },
+        { left: 'twenty', right: 'yigirma' },
+        { left: 'I am hungry', right: 'Men ochman' },
+        { left: 'I want food', right: 'Ovqat xohlayman' },
+        { left: 'Eat some bread', right: 'Biroz non yeng' },
+      ]),
+    ],
+  },
+
+  // ── STEP 28 — Sonlar 21-50 ────────────────────────────────────────────────
+  {
+    orderNumber: 30,
+    title: 'STEP 28 — Sonlar 21-50',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'yigirma bir', en: 'twenty-one', distractors: ['twenty-five', 'thirty', 'forty'] }),
+      ...vocabBlock({ uz: 'o\'ttiz', en: 'thirty', distractors: ['twenty', 'forty', 'fifty'] }),
+      ...vocabBlock({ uz: 'qirq', en: 'forty', distractors: ['thirty', 'fifty', 'twenty'] }),
+      ...vocabBlock({ uz: 'ellik', en: 'fifty', distractors: ['forty', 'thirty', 'sixty'] }),
+      ...phraseBlock('Menga bu yoqadi', 'I like it'),
+      ...phraseBlock('Men choyni yoqtiraman', 'I like tea'),
+      ...phraseBlock('Sizga bu yoqadimi?', 'Do you like it?'),
+      matchPairs([
+        { left: 'twenty-one', right: 'yigirma bir' },
+        { left: 'thirty', right: "o'ttiz" },
+        { left: 'forty', right: 'qirq' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'I am tall', right: "Men uzun bo'yliman" },
+      ]),
+    ],
+  },
+
+  // ── STEP 29 — to be: is ───────────────────────────────────────────────────
+  {
+    orderNumber: 31,
+    title: 'STEP 29 — to be: is',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "He, she, it subjektlari uchun 'to be'ning qaysi shakli ishlatiladi?",
+          options: ['am', 'are', 'be', 'is'],
+          correct: 3,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'U odobli', en: 'He is polite', words: ['He', 'is', 'polite'] }),
+      ...topicSentenceBlock({ uz: 'U 22 yoshda', en: 'She is 22 years old', words: ['She', 'is', '22', 'years', 'old'] }),
+      ...topicSentenceBlock({ uz: 'U it', en: 'It is a dog', words: ['It', 'is', 'a', 'dog'] }),
+      ...topicSentenceBlock({ uz: 'U doktor', en: 'She is a doctor', words: ['She', 'is', 'a', 'doctor'] }),
+      ...phraseBlock('Menga bu yoqmaydi', 'I do not like it'),
+      ...phraseBlock("Men buni yomon ko'raman", 'I hate this'),
+      ...phraseBlock("Yo'q, rahmat", 'No, thank you'),
+      matchPairs([
+        { left: 'twenty-one', right: 'yigirma bir' },
+        { left: 'forty', right: 'qirq' },
+        { left: 'I like it', right: 'Menga bu yoqadi' },
+        { left: 'I like tea', right: 'Men choyni yoqtiraman' },
+        { left: 'Do you like it?', right: 'Sizga bu yoqadimi?' },
+      ]),
+    ],
+  },
+
+  // ── STEP 30 — Katta orzu (Personal Dev) ──────────────────────────────────
+  {
+    orderNumber: 32,
+    title: 'STEP 30 — Katta orzu',
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Katta orzu qilishdan uyalmang\"",
+      "",
+      "Asosiy g'oya: Katta orzular — buyuk odamlar uchun. Hech qachon o'zingni kamsitma, orzungga ishon va harakat qil.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Sening katta orzung nima?\"",
+      "3) \"O'sha orzuga erishish uchun bugun nima qilish mumkin?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Katta orzu qilishdan uyalmang",
+            "",
+            "Do'stlar, ba'zida orzu qilganimizda boshqalar kuladi: \"Voy, sen shunaqa qila olasanmi?\", \"Bu juda katta orzu!\", \"Yerga tushing\" — deyishadi.",
+            "",
+            "Lekin bilasizmi? Hamma katta ishlar — katta orzudan boshlanadi! Astronavtlar, olimlar, sportchilar — hammasi avval orzu qilgan. Ular uyalmagan. Ishongan. Harakat qilgan.",
+            "",
+            "Agar sening ichingda katta orzu bo'lsa — bu seni ichkaridan chaqirayotgan ovoz! Unga quloq sol!",
+            "",
+            "Hech qachon \"Men kimman o'zi?\" deb o'zingni kamsitma. Aksincha: \"Nega men qila olmas ekanman?\" deb o'zingni ilhomlantir!",
+            "",
+            "Katta orzular — Buyuk odamlar uchun. Sen ham shulardan bo'lishing mumkin. Faqat ishon, orzu qil va harakat qil!",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Sening katta orzung bor — masalan, mashhur olim bo'lish. Boshqalar kuladi. Sen nima qilasan?",
+          ].join('\n'),
+          options: [
+            "Orzudan voz kechaman",
+            "Boshqalarga quloq solmasdan o'z orzumga ishonib harakat qilaman",
+            "Boshqalarga quloq solib, kichikroq orzu qilaman",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
+  // ── STEP 31 — My best friend (Composition — Archetype D) ─────────────────
+  {
+    orderNumber: 33,
+    title: 'STEP 31 — My best friend',
+    type: LessonType.english,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "You are a friendly English coach for a young Uzbek learner.",
+      "The student just composed a 'My best friend' paragraph.",
+      "Ask 3 short follow-up questions in English to extend the topic.",
+      "Be encouraging. Keep responses to 1-2 sentences.",
+      "English only — they are practising English.",
+    ].join('\n'),
+    components: [
+      fillBlank("My best friend's name is ___.", 'Bobur', ['Bobur', 'Sardor', 'Aziza', 'Madina']),
+      fillBlank('He is from ___.', 'Gijduvan', ['Gijduvan', 'Bukhara', 'Tashkent', 'Samarqand']),
+      fillBlank('He is a ___ boy.', 'good', ['good', 'kind', 'smart', 'funny']),
+      fillBlank('We take care of each ___.', 'other', ['other', 'one', 'time']),
+      fillBlank('I ___ my friend.', 'trust', ['trust', 'love', 'help', 'know']),
+      fillBlank('I am ___ to have him.', 'happy', ['happy', 'glad', 'lucky', 'proud']),
+      speakWords(
+        "I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        70,
+      ),
+    ],
+  },
+
   // ── TAKRORLASH 1-11 — Checkpoint (Archetype F) ────────────────────────────
   {
     orderNumber: 12,
