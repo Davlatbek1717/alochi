@@ -202,7 +202,70 @@ export function shuffleStable<T>(arr: T[]): T[] {
 // ─── lesson definitions ─────────────────────────────────────────────────────
 
 const LESSONS: LessonSpec[] = [
-  // (filled in by Tasks 4-15)
+  // ── STEP 1 — Xayrli tong ───────────────────────────────────────────────────
+  {
+    orderNumber: 1,
+    title: 'STEP 1 — Xayrli tong',
+    type: LessonType.english,
+    components: [
+      ...phraseBlock('Xayrli tong!', 'Good morning!'),
+      ...phraseBlock("Uyg'on, Ali.", 'Wake up, Ali.'),
+      ...phraseBlock('Xayrli tong, hammaga', 'Morning, everyone'),
+    ],
+  },
+
+  // ── STEP 2 — Xayrli kun ────────────────────────────────────────────────────
+  {
+    orderNumber: 2,
+    title: 'STEP 2 — Xayrli kun',
+    type: LessonType.english,
+    components: [
+      ...phraseBlock('Xayrli kun', 'Good afternoon'),
+      ...phraseBlock('Xayrli kech', 'Good evening'),
+      ...phraseBlock('Salom, Namoz', 'Hello, Namoz'),
+      matchPairs([
+        { left: 'Good morning', right: 'Xayrli tong' },
+        { left: 'Wake up', right: "Uyg'on" },
+        { left: 'Morning, everyone', right: 'Xayrli tong, hammaga' },
+      ]),
+    ],
+  },
+
+  // ── STEP 3 — Xayrli tun, xayr ─────────────────────────────────────────────
+  {
+    orderNumber: 3,
+    title: 'STEP 3 — Xayrli tun, xayr',
+    type: LessonType.english,
+    components: [
+      ...phraseBlock('Xayrli tun', 'Good night'),
+      ...phraseBlock('Yaxshi dam oling', 'Sleep well.'),
+      ...phraseBlock('Xayr', 'Goodbye'),
+      matchPairs([
+        { left: 'Good afternoon', right: 'Xayrli kun' },
+        { left: 'Good evening', right: 'Xayrli kech' },
+        { left: 'Hello', right: 'Salom' },
+        { left: 'Wake up', right: "Uyg'on" },
+      ]),
+    ],
+  },
+
+  // ── STEP 4 — Qalaysiz? ─────────────────────────────────────────────────────
+  {
+    orderNumber: 4,
+    title: 'STEP 4 — Qalaysiz?',
+    type: LessonType.english,
+    components: [
+      ...phraseBlock('Qalaysiz?', 'How are you?'),
+      ...phraseBlock('Men yaxshiman', 'I am fine'),
+      ...phraseBlock('Uyqum kelyapti', 'I am sleepy'),
+      matchPairs([
+        { left: 'Good afternoon', right: 'Xayrli kun' },
+        { left: 'Good night', right: 'Xayrli tun' },
+        { left: 'Sleep well', right: 'Yaxshi dam oling' },
+        { left: 'Goodbye', right: 'Xayr' },
+      ]),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
