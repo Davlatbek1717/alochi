@@ -211,6 +211,43 @@ const LESSONS: LessonSpec[] = [
       ...phraseBlock('Xayrli tong!', 'Good morning!'),
       ...phraseBlock("Uyg'on, Ali.", 'Wake up, Ali.'),
       ...phraseBlock('Xayrli tong, hammaga', 'Morning, everyone'),
+      // ── added: informal greetings ──────────────────────────────────────────
+      ...phraseBlock('Salom', 'Hi'),
+      ...phraseBlock('Salom', 'Hello'),
+      ...phraseBlock('Hayo', 'Hey'),
+      // ── added: critical-thinking MCQ ──────────────────────────────────────
+      mcq([
+        {
+          text: "Ertalab birovni ko'rganda nima deyish kerak?",
+          options: ['Hello', 'Good morning', 'Good night', 'Goodbye'],
+          correct: 1,
+        },
+        {
+          text: "'Wake up' tarjimasi qaysi?",
+          options: ["Uxlash", "Uyg'on", 'Tushlik', 'Yotish'],
+          correct: 1,
+        },
+        {
+          text: "'Morning, everyone' kimga aytiladi?",
+          options: ['Bittagina odamga', 'Hammaga', 'Hech kimga', 'Faqat ustozga'],
+          correct: 1,
+        },
+      ]),
+      // ── added: word-order practice ────────────────────────────────────────
+      wordOrder([
+        { words: ['morning', 'Good'], correct: 'Good morning' },
+        { words: ['Ali', 'up', 'Wake'], correct: 'Wake up Ali' },
+        { words: ['everyone', 'Morning'], correct: 'Morning everyone' },
+      ]),
+      // ── added: chained speaking ───────────────────────────────────────────
+      speakWords('Good morning everyone! Wake up Ali!', 70),
+      // ── added: reverse match-pairs ────────────────────────────────────────
+      matchPairs([
+        { left: 'Xayrli tong', right: 'Good morning' },
+        { left: "Uyg'on, Ali", right: 'Wake up, Ali' },
+        { left: 'Xayrli tong, hammaga', right: 'Morning, everyone' },
+        { left: 'Salom', right: 'Hi' },
+      ]),
     ],
   },
 
@@ -227,6 +264,49 @@ const LESSONS: LessonSpec[] = [
         { left: 'Good morning', right: 'Xayrli tong' },
         { left: 'Wake up', right: "Uyg'on" },
         { left: 'Morning, everyone', right: 'Xayrli tong, hammaga' },
+      ]),
+      // ── added: more phrases ───────────────────────────────────────────────
+      ...phraseBlock("Salom, do'stim", 'Hello, my friend'),
+      ...phraseBlock('Xush kelibsiz', 'Welcome'),
+      ...phraseBlock('Yaxshi kechki ovqat tilayman', 'Have a good evening'),
+      // ── added: critical-thinking MCQ ──────────────────────────────────────
+      mcq([
+        {
+          text: "Tushdan keyin (12:00 dan keyin) qanday salomlashasiz?",
+          options: ['Good morning', 'Good afternoon', 'Good night', 'Goodbye'],
+          correct: 1,
+        },
+        {
+          text: "Kechqurun (18:00 dan keyin) qanday salomlashasiz?",
+          options: ['Good morning', 'Good afternoon', 'Good evening', 'Good night'],
+          correct: 2,
+        },
+        {
+          text: "'Hello' qanday vaqtda ishlatiladi?",
+          options: ['Faqat ertalab', 'Faqat kechqurun', 'Istalgan vaqtda', 'Faqat tunda'],
+          correct: 2,
+        },
+        {
+          text: "'Hello, Namoz' iborasida 'Namoz' nima?",
+          options: ['Salomlashish vaqti', 'Odam ismi', 'Joy nomi', 'Mavzu'],
+          correct: 1,
+        },
+      ]),
+      // ── added: word-order practice ────────────────────────────────────────
+      wordOrder([
+        { words: ['afternoon', 'Good'], correct: 'Good afternoon' },
+        { words: ['evening', 'Good'], correct: 'Good evening' },
+        { words: ['Namoz', 'Hello'], correct: 'Hello Namoz' },
+      ]),
+      // ── added: chained speaking ───────────────────────────────────────────
+      speakWords('Good afternoon. Good evening. Hello.', 70),
+      // ── added: cumulative match-pairs (STEPs 1-2) ─────────────────────────
+      matchPairs([
+        { left: 'Good morning', right: 'Xayrli tong' },
+        { left: 'Good afternoon', right: 'Xayrli kun' },
+        { left: 'Good evening', right: 'Xayrli kech' },
+        { left: 'Hello', right: 'Salom' },
+        { left: 'Welcome', right: 'Xush kelibsiz' },
       ]),
     ],
   },
@@ -246,6 +326,49 @@ const LESSONS: LessonSpec[] = [
         { left: 'Hello', right: 'Salom' },
         { left: 'Wake up', right: "Uyg'on" },
       ]),
+      // ── added: farewell/extension phrases ────────────────────────────────
+      ...phraseBlock("Xayr, omon bo'l", 'Goodbye, take care'),
+      ...phraseBlock('Tushlaringiz shirin bo\'lsin', 'Sweet dreams'),
+      ...phraseBlock("Sog' bo'l", 'Bye-bye'),
+      // ── added: critical-thinking MCQ ──────────────────────────────────────
+      mcq([
+        {
+          text: 'Yotishdan oldin oilangizga nima deysiz?',
+          options: ['Good morning', 'Good night', 'Hello', 'Welcome'],
+          correct: 1,
+        },
+        {
+          text: "'Sleep well' qanday tarjima qilinadi?",
+          options: ['Salomlashish', 'Yaxshi dam oling', 'Ertaga ko\'rishaman', 'Xayr'],
+          correct: 1,
+        },
+        {
+          text: "'Goodbye' qachon ishlatiladi?",
+          options: ['Yotishdan oldin', 'Ketishdan oldin', 'Salomlashganda', 'Tushlik vaqti'],
+          correct: 1,
+        },
+        {
+          text: "'Have a good night' tarjimasi qaysi?",
+          options: ['Xayrli kech', 'Xayrli tun bo\'lsin', 'Yaxshi tushliklar', 'Yotishdan oldin'],
+          correct: 1,
+        },
+      ]),
+      // ── added: word-order practice ────────────────────────────────────────
+      wordOrder([
+        { words: ['night', 'Good'], correct: 'Good night' },
+        { words: ['well', 'Sleep'], correct: 'Sleep well' },
+        { words: ['Goodbye'], correct: 'Goodbye' },
+      ]),
+      // ── added: chained speaking ───────────────────────────────────────────
+      speakWords('Good night. Sleep well. Goodbye.', 70),
+      // ── added: cumulative match-pairs (STEPs 1-3) ─────────────────────────
+      matchPairs([
+        { left: 'Good morning', right: 'Xayrli tong' },
+        { left: 'Good night', right: 'Xayrli tun' },
+        { left: 'Sleep well', right: 'Yaxshi dam oling' },
+        { left: 'Goodbye', right: 'Xayr' },
+        { left: 'Good evening', right: 'Xayrli kech' },
+      ]),
     ],
   },
 
@@ -263,6 +386,49 @@ const LESSONS: LessonSpec[] = [
         { left: 'Good night', right: 'Xayrli tun' },
         { left: 'Sleep well', right: 'Yaxshi dam oling' },
         { left: 'Goodbye', right: 'Xayr' },
+      ]),
+      // ── added: state/feeling phrases ─────────────────────────────────────
+      ...phraseBlock('Charchadim', 'I am tired'),
+      ...phraseBlock('Och qoldim', 'I am hungry'),
+      ...phraseBlock('Yaxshiyam', 'Thanks!'),
+      // ── added: critical-thinking MCQ ──────────────────────────────────────
+      mcq([
+        {
+          text: "Kimnidir 'Qalaysiz?' deb so'rashganda nima javob beriladi?",
+          options: ['I am morning', 'I am fine', 'Goodbye', 'Hello'],
+          correct: 1,
+        },
+        {
+          text: "'I am sleepy' qachon ishlatiladi?",
+          options: ['Quvonganda', 'Charchaganda yoki uyqu kelganda', 'Salomlashganda', 'Xayr aytishda'],
+          correct: 1,
+        },
+        {
+          text: "'How are you?' kim bilan ishlatiladi?",
+          options: ["Faqat o'qituvchi bilan", 'Faqat onam bilan', "Hammasi bilan, salomlashishdan keyin", 'Hech kim bilan'],
+          correct: 2,
+        },
+        {
+          text: "'I am fine, thank you' qaysi savolga javob?",
+          options: ['Where are you?', 'Who are you?', 'How are you?', 'What is this?'],
+          correct: 2,
+        },
+      ]),
+      // ── added: word-order practice ────────────────────────────────────────
+      wordOrder([
+        { words: ['you', 'are', 'How'], correct: 'How are you' },
+        { words: ['fine', 'am', 'I'], correct: 'I am fine' },
+        { words: ['sleepy', 'am', 'I'], correct: 'I am sleepy' },
+      ]),
+      // ── added: chained speaking ───────────────────────────────────────────
+      speakWords('How are you? I am fine, thank you.', 70),
+      // ── added: cumulative match-pairs (STEPs 1-4) ─────────────────────────
+      matchPairs([
+        { left: 'How are you?', right: 'Qalaysiz?' },
+        { left: 'I am fine', right: 'Men yaxshiman' },
+        { left: 'I am sleepy', right: 'Uyqum kelyapti' },
+        { left: 'I am tired', right: 'Charchadim' },
+        { left: 'Good night', right: 'Xayrli tun' },
       ]),
     ],
   },
