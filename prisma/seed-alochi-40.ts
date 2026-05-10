@@ -1305,6 +1305,118 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+
+  // ── TAKRORLASH 22-31 — Checkpoint (Archetype F) ───────────────────────────
+  {
+    orderNumber: 34,
+    title: 'TAKRORLASH 22-31',
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Number match-pairs (sample 30 numbers in 5 rounds of 6) ────
+      matchPairs([
+        { left: 'one', right: 'bir' },
+        { left: 'two', right: 'ikki' },
+        { left: 'three', right: 'uch' },
+        { left: 'four', right: "to'rt" },
+        { left: 'five', right: 'besh' },
+        { left: 'six', right: 'olti' },
+      ]),
+      matchPairs([
+        { left: 'seven', right: 'yetti' },
+        { left: 'eight', right: 'sakkiz' },
+        { left: 'nine', right: "to'qqiz" },
+        { left: 'ten', right: "o'n" },
+        { left: 'eleven', right: "o'n bir" },
+        { left: 'twelve', right: "o'n ikki" },
+      ]),
+      matchPairs([
+        { left: 'thirteen', right: "o'n uch" },
+        { left: 'fifteen', right: "o'n besh" },
+        { left: 'seventeen', right: "o'n yetti" },
+        { left: 'nineteen', right: "o'n to'qqiz" },
+        { left: 'twenty', right: 'yigirma' },
+        { left: 'thirty', right: "o'ttiz" },
+      ]),
+      matchPairs([
+        { left: 'fourty', right: 'qirq' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'sixty', right: 'oltmish' },
+        { left: 'seventy', right: 'yetmish' },
+        { left: 'eighty', right: 'sakson' },
+        { left: 'ninety', right: "to'qson" },
+      ]),
+      matchPairs([
+        { left: 'twenty one', right: 'yigirma bir' },
+        { left: 'twenty five', right: 'yigirma besh' },
+        { left: 'thirty two', right: "o'ttiz ikki" },
+        { left: 'fourty three', right: 'qirq uch' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'forty', right: 'qirq' },
+      ]),
+      // ── Phrase translates ─────────────────────────────────────────
+      translate('U mening onam', 'She is my mom'),
+      translate('Onam mehribon', 'Mom is kind'),
+      translate("Onamni yaxshi ko'raman", 'I love mom'),
+      translate('U mening otam', 'He is my dad'),
+      translate('Dadam band', 'Dad is busy'),
+      translate('Dadam uyda', 'Dad is at home'),
+      translate('Mening akam bor', 'I have a brother'),
+      translate('U mening singlim', 'She is my sister'),
+      translate('Biz oilamiz', 'We are a family'),
+      translate('Men ochman', 'I am hungry'),
+      translate('Ovqat xohlayman', 'I want food'),
+      translate('Biroz non yeng', 'Eat some bread'),
+      translate('Men chanqadim', 'I am thirsty'),
+      translate('Suv, iltimos', 'Water, please'),
+      translate('Biroz suv iching', 'Drink some water'),
+      translate('Menga bu yoqadi', 'I like it'),
+      translate('Men choyni yoqtiraman', 'I like tea'),
+      translate('Sizga bu yoqadimi?', 'Do you like it?'),
+      translate('Menga bu yoqmaydi', 'I do not like it'),
+      translate("Men buni yomon ko'raman", 'I hate this'),
+      translate("Yo'q, rahmat", 'No, thank you'),
+      // ── Topic sentence drills (you, they, am, is) ─────────────────
+      wordOrder([
+        { words: ['student', 'a', 'are', 'You'], correct: 'You are a student' },
+        { words: ['friend', 'my', 'are', 'You'], correct: 'You are my friend' },
+        { words: ['beautiful', 'are', 'You'], correct: 'You are beautiful' },
+        { words: ['Russia', 'from', 'are', 'You'], correct: 'You are from Russia' },
+      ]),
+      wordOrder([
+        { words: ['pilots', 'are', 'They'], correct: 'They are pilots' },
+        { words: ['classmates', 'my', 'are', 'They'], correct: 'They are my classmates' },
+        { words: ['toys', 'are', 'They'], correct: 'They are toys' },
+        { words: ['Spain', 'from', 'are', 'They'], correct: 'They are from Spain' },
+      ]),
+      wordOrder([
+        { words: ['tall', 'am', 'I'], correct: 'I am tall' },
+        { words: ['old', 'years', '11', 'am', 'I'], correct: 'I am 11 years old' },
+        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+        { words: ['young', 'am', 'I'], correct: 'I am young' },
+      ]),
+      wordOrder([
+        { words: ['polite', 'is', 'He'], correct: 'He is polite' },
+        { words: ['old', 'years', '22', 'is', 'She'], correct: 'She is 22 years old' },
+        { words: ['dog', 'a', 'is', 'It'], correct: 'It is a dog' },
+        { words: ['doctor', 'a', 'is', 'She'], correct: 'She is a doctor' },
+      ]),
+      // ── Speak-aloud key sentences ────────────────────────────────
+      speakSentence('I am hungry', 70),
+      speakSentence('I am thirsty', 70),
+      speakSentence('I like it', 70),
+      speakSentence('I do not like it', 70),
+      speakSentence('She is my mom', 70),
+      speakSentence('I have a brother', 70),
+      speakSentence('We are a family', 70),
+      // ── 'My best friend' composition recall ──────────────────────
+      speakWords(
+        "Hello! I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
