@@ -38,19 +38,19 @@ interface LessonSpec {
 
 // ─── helper builders ────────────────────────────────────────────────────────
 
-function mcq(
+export function mcq(
   questions: Array<{ text: string; options: string[]; correct: number }>,
 ): ComponentSpec {
   return { type: 'mcq', config: { questions } };
 }
 
-function wordOrder(
+export function wordOrder(
   sentences: Array<{ words: string[]; correct: string }>,
 ): ComponentSpec {
   return { type: 'word_order', config: { sentences } };
 }
 
-function translate(
+export function translate(
   sourceText: string,
   correctAnswer: string,
   acceptedAnswers: string[] = [],
@@ -72,7 +72,7 @@ function translate(
   };
 }
 
-function listenPick(
+export function listenPick(
   text: string,
   options: Array<{ id: string; label: string }>,
   correctOptionId: string,
@@ -80,7 +80,7 @@ function listenPick(
   return { type: 'listen_pick', config: { text, options, correctOptionId } };
 }
 
-function listenType(
+export function listenType(
   text: string,
   acceptedAnswers: string[] = [],
 ): ComponentSpec {
@@ -97,13 +97,13 @@ function listenType(
   };
 }
 
-function matchPairs(
+export function matchPairs(
   pairs: Array<{ left: string; right: string }>,
 ): ComponentSpec {
   return { type: 'match_pairs', config: { pairs } };
 }
 
-function fillBlank(
+export function fillBlank(
   sentence: string,
   blank: string,
   alternatives: string[],
@@ -119,15 +119,15 @@ function fillBlank(
   };
 }
 
-function spelling(word: string): ComponentSpec {
+export function spelling(word: string): ComponentSpec {
   return { type: 'spelling', config: { word, audioPlay: true } };
 }
 
-function speakSentence(sentence: string, minScore = 70): ComponentSpec {
+export function speakSentence(sentence: string, minScore = 70): ComponentSpec {
   return { type: 'speak_sentence', config: { sentence, minScore } };
 }
 
-function speakWords(text: string, minScore = 70): ComponentSpec {
+export function speakWords(text: string, minScore = 70): ComponentSpec {
   return { type: 'speak_words', config: { text, minScore } };
 }
 
@@ -136,7 +136,7 @@ function speakWords(text: string, minScore = 70): ComponentSpec {
  * speak it. The 4 distractors for listen_pick must be supplied by the caller so
  * they're plausible (related vocabulary from the same lesson or the prior step).
  */
-function vocabBlock(opts: {
+export function vocabBlock(opts: {
   uz: string;
   en: string;
   distractors: string[]; // 3 EN words
@@ -162,7 +162,7 @@ function vocabBlock(opts: {
  * Three exercises for one EN phrase paired with its UZ meaning: listen+type,
  * UZ→EN translate, speak-aloud.
  */
-function phraseBlock(uz: string, en: string): ComponentSpec[] {
+export function phraseBlock(uz: string, en: string): ComponentSpec[] {
   return [listenType(en), translate(uz, en), speakSentence(en, 70)];
 }
 
@@ -171,7 +171,7 @@ function phraseBlock(uz: string, en: string): ComponentSpec[] {
  * `words` should be the EN sentence already split into the tokens shown to
  * the student (case + punctuation included).
  */
-function topicSentenceBlock(opts: {
+export function topicSentenceBlock(opts: {
   uz: string;
   en: string;
   words: string[];
@@ -188,7 +188,7 @@ function topicSentenceBlock(opts: {
  * fixed seed derived from the sentence so each call is stable but
  * different sentences shuffle differently.
  */
-function shuffleStable<T>(arr: T[]): T[] {
+export function shuffleStable<T>(arr: T[]): T[] {
   const out = [...arr];
   let seed = arr.join('|').length * 31 + 7;
   for (let i = out.length - 1; i > 0; i--) {
@@ -274,9 +274,11 @@ async function main() {
   console.log(`\nDone. ${LESSONS.length} lessons (${created} created, ${updated} updated), ${totalComponents} components.`);
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}
