@@ -159,6 +159,11 @@ export function StudentsShowcase() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeRegion, setActiveRegion] = useState<string | null>(null);
+  // Pagination cap so the landing page doesn't render a 20,000-pixel-tall
+  // single-column list on mobile when the tenant has dozens of students.
+  // Visitor reveals more in 12-card increments via the "Ko'proq ko'rsatish"
+  // button below the grid.
+  const [visibleCount, setVisibleCount] = useState(12);
 
   const load = useCallback(() => {
     // API responses are wrapped in { success, data } — pull `.data` out.
@@ -190,6 +195,16 @@ export function StudentsShowcase() {
     const matchRegion = !activeRegion || s.region === activeRegion;
     return matchText && matchRegion;
   });
+
+  // Reset the reveal counter whenever the active filter / search changes so
+  // narrowing a query doesn't leave the visitor with stale "show more"
+  // pagination state.
+  useEffect(() => {
+    setVisibleCount(12);
+  }, [query, activeRegion]);
+
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = filtered.length > visibleCount;
 
   const avgProgress =
     filtered.length > 0
@@ -301,9 +316,22 @@ export function StudentsShowcase() {
               </p>
             </div>
           ) : (
-            filtered.map((s) => <StudentCard key={s.id} student={s} />)
+            visible.map((s) => <StudentCard key={s.id} student={s} />)
           )}
         </div>
+
+        {/* Reveal more — only when the filter has spilled past the cap */}
+        {!loading && hasMore && (
+          <div className="mt-8 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((n) => n + 12)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6d28d9] text-white font-extrabold text-sm border-b-[3px] border-[#5b21b6] hover:bg-[#5b21b6] active:translate-y-[2px] active:border-b-[1px] transition-all"
+            >
+              Ko&apos;proq ko&apos;rsatish ({filtered.length - visibleCount})
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

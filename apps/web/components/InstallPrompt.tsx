@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Download, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 
@@ -9,6 +10,19 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const STORAGE_KEY = 'pwa-install-dismissed';
+// Delay before the prompt appears so it doesn't crowd the first paint of
+// every page load. Tuned to 30s — long enough that a student finishing
+// a quick task on the home screen won't see it, but short enough that a
+// regular session catches it once.
+const PROMPT_DELAY_MS = 30_000;
+// Routes where the prompt would obscure essential content (lesson runner
+// uses the bottom of the viewport for CTAs and progress bars). The prompt
+// stays hidden on these paths regardless of timer state.
+const HIDE_ON_PREFIXES = [
+  '/student/lessons/', // active lesson runner
+  '/student/duel/', // duel runner
+  '/login',
+];
 
 function isIOSSafari(): boolean {
   if (typeof window === 'undefined') return false;
@@ -20,13 +34,21 @@ function isIOSSafari(): boolean {
 }
 
 export function InstallPrompt() {
+  const pathname = usePathname() ?? '';
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIOSHint, setShowIOSHint] = useState(false);
   const [hidden, setHidden] = useState(true);
+  const [delayElapsed, setDelayElapsed] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (localStorage.getItem(STORAGE_KEY) === '1') return;
+
+    // 30s grace period before the prompt is allowed to show. Combined with
+    // setHidden(false) below this means the prompt always sits muted for
+    // half a minute even when the browser fires beforeinstallprompt
+    // immediately on load.
+    const t = setTimeout(() => setDelayElapsed(true), PROMPT_DELAY_MS);
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -40,7 +62,10 @@ export function InstallPrompt() {
       setHidden(false);
     }
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      clearTimeout(t);
+    };
   }, []);
 
   function dismiss() {
@@ -57,9 +82,11 @@ export function InstallPrompt() {
   }
 
   if (hidden) return null;
+  if (!delayElapsed) return null;
+  if (HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p))) return null;
 
   return (
-    <div className="fixed bottom-20 right-4 md:bottom-4 max-w-xs z-50 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-2 duration-200">
+    <div className="fixed bottom-20 right-3 left-3 md:left-auto md:right-4 md:bottom-4 max-w-xs md:max-w-xs mx-auto md:mx-0 z-40 bg-slate-800 border border-slate-700 rounded-2xl p-3 md:p-4 shadow-2xl animate-in slide-in-from-bottom-2 duration-200">
       <button
         onClick={dismiss}
         aria-label="Yopish"
