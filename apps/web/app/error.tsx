@@ -2,6 +2,23 @@
 import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
+/**
+ * Detect Next.js ChunkLoadError. Triggered when a redeploy invalidates
+ * the chunk filenames a stale browser session is still trying to fetch
+ * (the new build assigns fresh hashes; old chunks 404). The user has
+ * no way to recover except a hard refresh, so we do it for them.
+ */
+function isChunkLoadError(err: Error & { name?: string }): boolean {
+  if (!err) return false;
+  if (err.name === 'ChunkLoadError') return true;
+  const msg = err.message ?? '';
+  return /Loading chunk|Loading CSS chunk|Failed to fetch dynamically imported/i.test(
+    msg,
+  );
+}
+
+const RELOAD_GUARD_KEY = 'chunk-error-reloaded-at';
+
 export default function ErrorPage({
   error,
   reset,
@@ -11,6 +28,25 @@ export default function ErrorPage({
 }) {
   useEffect(() => {
     console.error('[GlobalError]', error);
+    // Auto-recover from chunk-load failures by hard-reloading the page so
+    // the browser fetches the new HTML + chunk manifest. Guard against a
+    // reload loop: if we already reloaded for this exact reason in the
+    // last 30s, fall through to the manual error UI instead of looping.
+    if (isChunkLoadError(error) && typeof window !== 'undefined') {
+      try {
+        const last = Number(sessionStorage.getItem(RELOAD_GUARD_KEY) ?? 0);
+        const now = Date.now();
+        if (now - last > 30_000) {
+          sessionStorage.setItem(RELOAD_GUARD_KEY, String(now));
+          window.location.reload();
+          return;
+        }
+      } catch {
+        // sessionStorage unavailable (private mode) — best-effort reload.
+        window.location.reload();
+        return;
+      }
+    }
   }, [error]);
 
   return (
