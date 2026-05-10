@@ -89,12 +89,6 @@ export function Header({ onDemoClick }: Props) {
 
         {/* Right CTAs — desktop */}
         <div className="hidden lg:flex items-center gap-2 ml-auto">
-          <Link
-            href="/login"
-            className="text-sm font-semibold text-[var(--ink-2)] hover:text-[var(--brand)] px-3.5 py-2 rounded-lg transition-colors"
-          >
-            Kirish
-          </Link>
           <button
             type="button"
             onClick={onDemoClick}
@@ -144,13 +138,6 @@ export function Header({ onDemoClick }: Props) {
                 {item.label}
               </a>
             ))}
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="px-3 py-3 text-base font-semibold text-[var(--ink)] rounded-lg hover:bg-[var(--brand-soft)] hover:text-[var(--brand)] transition-colors"
-            >
-              Kirish
-            </Link>
             <button
               type="button"
               onClick={() => {
