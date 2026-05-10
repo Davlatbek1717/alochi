@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none">
+  <!-- Compact A'lochi mark for nav bar / favicon — same shape as logo.svg, simplified to one swoosh -->
+  <path d="
+    M 540 90
+    L 80 990
+    L 320 990
+    L 440 750
+    L 660 750
+    L 660 660
+    L 480 660
+    L 540 380
+    L 600 540
+    L 690 540
+    L 540 90 Z
+  " fill="#6d28d9"/>
+  <path d="
+    M 990 200
+    Q 720 530 320 990
+    L 540 990
+    Q 870 600 1060 290
+    Z
+  " fill="#f97316"/>
+  <path d="
+    M 800 760
+    L 920 990
+    L 760 990
+    Z
+  " fill="#6d28d9"/>
+</svg>
