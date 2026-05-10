@@ -1593,6 +1593,96 @@ const LESSONS: LessonSpec[] = [
       ),
     ],
   },
+
+  // ── orderNumber 78 — TAKRORLASH 62-71 (Checkpoint — Archetype F) ─────────────
+  {
+    orderNumber: 78,
+    title: 'TAKRORLASH 62-71',
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab match-pairs (3 rounds: drinks + professions, 13 words total) ──
+      matchPairs([
+        { left: 'tea', right: 'choy' },
+        { left: 'coffee', right: 'kofe' },
+        { left: 'milk', right: 'sut' },
+        { left: 'orange juice', right: 'apelsin sharbati' },
+        { left: 'water', right: 'suv' },
+        { left: 'lemon juice', right: 'limon sharbati' },
+      ]),
+      matchPairs([
+        { left: 'coke', right: 'kola' },
+        { left: 'painter', right: 'rassom' },
+        { left: 'chef', right: 'oshpaz' },
+        { left: 'policeman', right: 'politsiyachi' },
+      ]),
+      matchPairs([
+        { left: 'astronaut', right: 'astronavt' },
+        { left: 'waiter', right: 'ofitsiant' },
+        { left: 'vet', right: 'veterinar' },
+      ]),
+      // ── Phrase translates (UZ → EN) ──
+      translate('Devorga qarang', 'Look at the wall'),
+      translate('Soat orqada qolyapti', 'The clock is slow'),
+      translate('Xaritani yoping', 'Close the map'),
+      translate('Quloqchinlaringizdan foydalaning', 'Use your headphones'),
+      translate('Musiqani tinglang', 'Listen to the music'),
+      translate('Ovozni balandlating, iltimos', 'Volume up, please'),
+      translate('Endi sekin yur', 'Walk slowly now'),
+      translate('Hovuzda suz', 'Swim in the pool'),
+      translate("To'pni tutib ol", 'Catch the ball'),
+      translate('Yuzingni yuv', 'Wash your face'),
+      translate('Tishlaringni tozala', 'Brush your teeth'),
+      translate('Sochingni tara', 'Comb your hair'),
+      translate("Ko'ylagingni kiy", 'Put on your shirt'),
+      translate("Oyoq kiyimingni bog'la", 'Tie your shoes'),
+      translate('Paltoni yech', 'Take off the coat'),
+      translate("O'rningni yig'ishtir", 'Make your bed'),
+      translate('Maktabga bor', 'Go to the school'),
+      translate("Do'stlarimni yaxshi ko'raman", 'I love my friends'),
+      translate('Doskani tozala', 'Clean the board'),
+      translate("Bo'r bo'lagini ol", 'Take a piece of chalk'),
+      translate("Partangizga o'tiring", 'Sit at your desk'),
+      translate('Oyga qara', 'Look at the moon'),
+      translate('Yulduzlar yorqin', 'The stars are bright'),
+      translate("Bugun yomg'irli kun", 'It is a rainy day'),
+      // ── Topic-sentence drills (is not 2 / are not 2 / am not 3 / is not 3) ──
+      wordOrder([
+        { words: ['Sherzod', 'not', 'is', 'He'], correct: 'He is not Sherzod' },
+        { words: ['watch', 'a', 'not', 'is', 'It'], correct: 'It is not a watch' },
+        { words: ['twenty', 'not', 'is', 'Dilnoza'], correct: 'Dilnoza is not twenty' },
+      ]),
+      wordOrder([
+        { words: ['hungry', 'not', 'are', 'We'], correct: 'We are not hungry' },
+        { words: ['policeman', 'a', 'not', 'are', 'You'], correct: 'You are not a policeman' },
+        { words: ['friends', 'not', 'are', 'Miron', 'and', 'Aziz'], correct: 'Aziz and Miron are not friends' },
+      ]),
+      wordOrder([
+        { words: ['Warsaw', 'from', 'not', 'am', 'I'], correct: 'I am not from Warsaw' },
+        { words: ['engineer', 'an', 'not', 'am', 'I'], correct: 'I am not an engineer' },
+        { words: ['Simon', 'not', 'am', 'I'], correct: 'I am not Simon' },
+      ]),
+      wordOrder([
+        { words: ['boxer', 'a', 'not', 'is', 'Sardor'], correct: 'Sardor is not a boxer' },
+        { words: ['clever', 'not', 'is', 'Cat'], correct: 'Cat is not clever' },
+        { words: ['doctor', 'a', 'not', 'is', 'Dilshoda'], correct: 'Dilshoda is not a doctor' },
+      ]),
+      // ── Speak-aloud key sentences ──
+      speakSentence('He is not Sherzod', 70),
+      speakSentence('We are not hungry', 70),
+      speakSentence('I am not an engineer', 70),
+      speakSentence('Sardor is not a boxer', 70),
+      speakSentence('Wash your face', 70),
+      speakSentence('Look at the moon', 70),
+      speakSentence('I love my friends', 70),
+      // ── Composition recall (My course) ──
+      speakWords(
+        "I love my A'lochi course. Javohir Hakimov is my teacher. I am from Bukhara. The course has 500 steps. I can go to Samarkand. I can go to Khiva.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
