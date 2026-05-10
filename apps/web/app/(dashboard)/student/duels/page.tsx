@@ -299,10 +299,10 @@ function StatPill({
 }) {
   return (
     <div
-      className={`rounded-2xl border px-3 py-2.5 text-center ${color}`}
+      className={`rounded-2xl border px-3 py-2.5 text-center min-w-0 ${color}`}
     >
       <p className="text-2xl font-extrabold leading-none">{value}</p>
-      <p className="text-[10px] font-bold uppercase tracking-wider mt-1 opacity-90">
+      <p className="text-[10px] font-bold uppercase tracking-wider mt-1 opacity-90 truncate">
         {label}
       </p>
     </div>

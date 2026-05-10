@@ -66,7 +66,7 @@ function BranchDetailContent() {
           >
             <ArrowLeft size={16} /> To&apos;lov Hisoboti
           </button>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#0d9488]/20 flex items-center justify-center">
                 <CreditCard size={18} className="text-[#0d9488]" />

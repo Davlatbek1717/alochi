@@ -511,7 +511,7 @@ interface SnapshotTileProps {
 
 function SnapshotTile({ icon, value, label, tint, bg }: SnapshotTileProps) {
   return (
-    <div className={`rounded-2xl border-[1.5px] ${bg} p-3 flex flex-col gap-1.5`}>
+    <div className={`rounded-2xl border-[1.5px] ${bg} p-3 flex flex-col gap-1.5 min-w-0`}>
       <div className={`w-7 h-7 rounded-lg bg-white/70 flex items-center justify-center ${tint}`}>
         {icon}
       </div>

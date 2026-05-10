@@ -336,7 +336,7 @@ export default function FiladminStaffPage() {
             {filtered.map((u) => (
               <div
                 key={u.id}
-                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3"
+                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3 flex-wrap"
               >
                 <div className="w-9 h-9 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {u.name
@@ -353,31 +353,32 @@ export default function FiladminStaffPage() {
                   <p className="text-xs text-[#94a3b8]">{u.login}</p>
                 </div>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                  className={`text-xs px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap shrink-0 ${
                     ROLE_BADGE[u.role as StaffRole] ??
                     'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'
                   }`}
                 >
                   {ROLE_LABEL[u.role as StaffRole] ?? u.role}
                 </span>
+                <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => startEdit(u)}
                   aria-label="Tahrirlash"
-                  className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
+                  className="min-w-[40px] min-h-[40px] bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
                 >
                   <Pencil size={14} />
                 </button>
                 <button
                   onClick={() => setResetting(u)}
                   aria-label="Parolni tiklash"
-                  className="w-8 h-8 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl flex items-center justify-center transition-colors"
+                  className="min-w-[40px] min-h-[40px] bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl flex items-center justify-center transition-colors"
                 >
                   <KeyRound size={14} />
                 </button>
                 <button
                   onClick={() => setToggleTarget(u)}
                   aria-label={u.status === 'active' ? 'O‘chirish' : 'Faollashtirish'}
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                  className={`min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center transition-colors ${
                     u.status === 'active'
                       ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -385,6 +386,7 @@ export default function FiladminStaffPage() {
                 >
                   <Power size={14} />
                 </button>
+                </div>
               </div>
             ))}
           </div>

@@ -442,13 +442,13 @@ function SnapshotTile({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-3 ${tint}`}
+      className={`rounded-2xl border p-3 min-w-0 ${tint}`}
     >
       <div className="opacity-80 mb-1">{icon}</div>
       <p className="text-2xl font-extrabold leading-none font-mono tabular-nums">
         {value}
       </p>
-      <p className="text-[10px] font-bold uppercase tracking-wider mt-1 opacity-90">
+      <p className="text-[10px] font-bold uppercase tracking-wider mt-1 opacity-90 truncate">
         {label}
       </p>
     </div>

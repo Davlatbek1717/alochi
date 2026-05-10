@@ -331,7 +331,7 @@ export default function WarningsPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#0f172a] text-sm">
+                    <p className="font-semibold text-[#0f172a] text-sm truncate">
                       {w.student?.name ?? w.studentId}
                     </p>
                     <p className="text-xs text-[#e11d48] font-semibold">

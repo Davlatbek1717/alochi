@@ -15,7 +15,7 @@ export default function MonthPicker({ value, onChange }: MonthPickerProps) {
         value={value}
         max={max}
         onChange={(e) => onChange(e.target.value)}
-        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+        className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-full"
       />
     </div>
   );

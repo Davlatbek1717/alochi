@@ -504,7 +504,7 @@ export default function SuperadminUsersPage() {
             {users.map((u) => (
               <div
                 key={u.id}
-                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3"
+                className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3 flex-wrap"
               >
                 <div className="w-9 h-9 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {getInitials(u.name)}
@@ -516,31 +516,32 @@ export default function SuperadminUsersPage() {
                   <p className="text-xs text-[#94a3b8]">{u.login}</p>
                 </div>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
+                  className={`text-xs px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap shrink-0 ${
                     ROLE_COLORS[u.role] ??
                     'bg-[#f7f4ef] text-[#64748b] border-[#ede9e1]'
                   }`}
                 >
                   {ROLE_LABELS[u.role] ?? u.role}
                 </span>
+                <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => startEdit(u)}
                   aria-label="Tahrirlash"
-                  className="w-8 h-8 bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
+                  className="min-w-[40px] min-h-[40px] bg-[#f7f4ef] text-[#64748b] hover:text-[#0f172a] hover:bg-[#ede9e1] rounded-xl flex items-center justify-center transition-colors"
                 >
                   <Pencil size={14} />
                 </button>
                 <button
                   onClick={() => setResetting(u)}
                   aria-label="Parolni tiklash"
-                  className="w-8 h-8 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl flex items-center justify-center transition-colors"
+                  className="min-w-[40px] min-h-[40px] bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl flex items-center justify-center transition-colors"
                 >
                   <KeyRound size={14} />
                 </button>
                 {(u.status === 'active' || u.status === 'inactive') && (
                   <button
                     onClick={() => toggleStatus(u)}
-                    className={`shrink-0 p-2 rounded-xl transition-colors ${
+                    className={`min-w-[40px] min-h-[40px] rounded-xl flex items-center justify-center transition-colors ${
                       u.status === 'active'
                         ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                         : 'text-[#94a3b8] bg-[#f7f4ef] hover:bg-[#ede9e1]'
@@ -560,10 +561,11 @@ export default function SuperadminUsersPage() {
                   onClick={() => setDeleting(u)}
                   aria-label="O'chirish"
                   title="O'chirish"
-                  className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
+                  className="min-w-[40px] min-h-[40px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
                 >
                   <Trash2 size={14} />
                 </button>
+                </div>
               </div>
             ))}
           </div>

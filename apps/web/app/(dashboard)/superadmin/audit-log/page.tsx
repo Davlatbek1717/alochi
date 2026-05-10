@@ -149,9 +149,9 @@ export default function AuditLogPage() {
                           )}
                         </div>
                         <div className="mt-0.5 flex flex-wrap gap-3 text-[11px] text-[#94a3b8] font-semibold">
-                          {e.actorId && <span>Actor: {e.actorId.slice(0,8)}…</span>}
-                          {e.targetId && <span>Target: {e.targetId.slice(0,16)}…</span>}
-                          {e.ipAddress && <span>IP: {e.ipAddress}</span>}
+                          {e.actorId && <span className="break-all">Actor: {e.actorId.slice(0,8)}…</span>}
+                          {e.targetId && <span className="break-all">Target: {e.targetId.slice(0,16)}…</span>}
+                          {e.ipAddress && <span className="break-all">IP: {e.ipAddress}</span>}
                           <span>{formatDate(e.createdAt)}</span>
                         </div>
                       </div>

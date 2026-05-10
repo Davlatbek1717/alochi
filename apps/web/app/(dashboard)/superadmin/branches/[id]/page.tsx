@@ -277,7 +277,7 @@ export default function BranchStatsPage() {
                     <span className="font-medium text-[#0f172a] flex-1 truncate">
                       {u.name}
                     </span>
-                    <span className="text-xs text-[#94a3b8]">{u.login}</span>
+                    <span className="text-xs text-[#94a3b8] truncate max-w-[100px]">{u.login}</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f7f4ef] text-[#64748b] border border-[#ede9e1] font-semibold">
                       {u.role}
                     </span>

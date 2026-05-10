@@ -78,13 +78,13 @@ export default function SuperadminDashboard() {
             { label: 'Darslar',   value: stats.lessons,  color: 'text-violet-400' },
             { label: 'Foydalanuvchilar', value: stats.users, color: 'text-[#f59e0b]' },
           ].map((s) => (
-            <div key={s.label} className="bg-[#162032] rounded-[14px] p-3">
+            <div key={s.label} className="bg-[#162032] rounded-[14px] p-3 min-w-0">
               {loaded ? (
                 <p className={`text-xl font-black font-mono ${s.color}`}>{s.value}</p>
               ) : (
                 <Skeleton className="h-7 w-12 mb-1" />
               )}
-              <p className="text-[#94a3b8] text-[10px] mt-0.5 leading-tight">{s.label}</p>
+              <p className="text-[#94a3b8] text-[10px] mt-0.5 leading-tight truncate">{s.label}</p>
             </div>
           ))}
         </div>

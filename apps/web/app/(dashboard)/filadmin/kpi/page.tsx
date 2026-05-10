@@ -245,7 +245,7 @@ export default function FiladminKpiPage() {
         {recentAwards.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold text-[#0f172a] mb-2">Oxirgi mukofotlar</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
               {recentAwards.map((a) => (
                 <div
                   key={a.id}

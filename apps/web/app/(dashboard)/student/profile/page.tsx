@@ -680,12 +680,12 @@ function StatCard({
   label: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 text-center motion-safe:[animation:count-up-fade_400ms_ease-out]">
+    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 text-center motion-safe:[animation:count-up-fade_400ms_ease-out] min-w-0">
       <div className="flex justify-center mb-1">{icon}</div>
       <p className="text-lg font-extrabold text-[#0f172a] leading-tight">
         <AnimatedCounter value={value} />
       </p>
-      <p className="text-[10px] text-[#64748b] uppercase tracking-wider font-bold">
+      <p className="text-[10px] text-[#64748b] uppercase tracking-wider font-bold truncate">
         {label}
       </p>
     </div>

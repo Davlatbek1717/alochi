@@ -549,11 +549,11 @@ function StatusBlock({ data }: { data: StatusData | null }) {
           return (
             <div
               key={it.field}
-              className={`rounded-2xl p-3 md:p-4 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 md:gap-1.5 text-center md:hover:-translate-y-0.5 md:hover:shadow-md transition-all`}
+              className={`rounded-2xl p-3 md:p-4 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 md:gap-1.5 text-center md:hover:-translate-y-0.5 md:hover:shadow-md transition-all min-w-0`}
             >
               <div className={`relative ${v.text}`}>{it.icon}</div>
               <p className={`text-sm md:text-base font-extrabold ${v.text}`}>{v.label}</p>
-              <p className="text-[10px] md:text-[11px] text-[#777] font-bold uppercase tracking-wider">
+              <p className="text-[10px] md:text-[11px] text-[#777] font-bold uppercase tracking-wider truncate w-full">
                 {it.label}
               </p>
               <span

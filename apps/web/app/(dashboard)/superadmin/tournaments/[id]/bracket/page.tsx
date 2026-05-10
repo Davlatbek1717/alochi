@@ -58,7 +58,7 @@ export default function TournamentBracketPage() {
       <div className="p-5">
         {loading ? (
           <div className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex gap-4 overflow-x-auto">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="space-y-3 min-w-[200px]">
                   <Skeleton theme="light" className="h-4 w-16" />
