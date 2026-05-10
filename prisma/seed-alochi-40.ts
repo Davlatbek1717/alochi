@@ -711,6 +711,34 @@ const LESSONS: LessonSpec[] = [
       fillBlank('My favourite subject is ___.', 'English', ['English', 'Math', 'Music', 'PE']),
       fillBlank('My favourite color is ___.', 'red', ['red', 'blue', 'green', 'yellow']),
       fillBlank('My favourite car is ___.', 'BMW', ['BMW', 'Cobalt', 'Tesla', 'Toyota']),
+      // ── Translate UZ → EN for each template sentence ────────────────────────
+      translate('Mening ismim Anvar.', 'My name is Anvar'),
+      translate('Oilam kichik.', 'My family is small'),
+      translate('Men 10 yoshdaman.', 'I am 10 years old'),
+      translate('Men Buxorodanman.', 'I am from Bukhara'),
+      translate("Men G'ijduvonda yashayman.", 'I live in Gijduvan'),
+      translate("Men maktab o'quvchisiman.", 'I am a pupil at school'),
+      translate('Sevimli fanim ingliz tili.', 'My favourite subject is English'),
+      translate('Sevimli rangim qizil.', 'My favourite color is red'),
+      // ── Word-order assembly for 4 key lines ─────────────────────────────────
+      wordOrder([
+        { words: ['Anvar', 'is', 'name', 'My'], correct: 'My name is Anvar' },
+        { words: ['old', 'years', '10', 'am', 'I'], correct: 'I am 10 years old' },
+        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+        { words: ['English', 'is', 'subject', 'favourite', 'My'], correct: 'My favourite subject is English' },
+      ]),
+      // ── Speak individual key sentences ──────────────────────────────────────
+      speakSentence('My name is Anvar', 70),
+      speakSentence('I am 10 years old', 70),
+      speakSentence('I am from Bukhara', 70),
+      speakSentence('My favourite subject is English', 70),
+      // ── Comprehension MCQ about composition structure ────────────────────────
+      mcq([
+        { text: "Inglizcha kompozitsiya odatda qaysi so'z bilan boshlanadi?", options: ['Goodbye', 'Hello!', 'Welcome', 'Thank you'], correct: 1 },
+        { text: '"My name is ..." iborasidan keyin nima yoziladi?', options: ['Sevimli rang', 'Yosh', 'Ism', 'Maktab'], correct: 2 },
+        { text: "Yoshni ifodalashda qaysi tuzilma to'g'ri?", options: ['I have 10 years', 'I am 10 years old', 'I 10 years', 'My age is 10'], correct: 1 },
+        { text: '"I am from ..." nimani anglatadi?', options: ["Yoshim", "Tug'ilgan joyim/qaerdanligim", 'Ismim', 'Sevimli ranglim'], correct: 1 },
+      ]),
       speakWords(
         "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I live in Gijduvan. I am a pupil at school. My favourite subject is English. My favourite color is red. My favourite car is BMW.",
         70,
@@ -1065,6 +1093,33 @@ const LESSONS: LessonSpec[] = [
       fillBlank("My mother's name is ___.", 'Nilufar', ['Nilufar', 'Malika', 'Zulfiya', 'Sarvinoz']),
       fillBlank("My sister's name is ___.", 'Aziza', ['Aziza', 'Kamola', 'Shahlo', 'Dilnoza']),
       fillBlank('I ___ my family.', 'love', ['love', 'like', 'miss', 'help']),
+      // ── Translate UZ → EN for each template sentence ────────────────────────
+      translate('Mening kichik oilam bor.', 'I have a small family'),
+      translate('Oilamda 4 kishi bor.', 'There are 4 people in my family'),
+      translate('Otamning ismi Anvar.', "My father's name is Anvar"),
+      translate('Onamning ismi Nilufar.', "My mother's name is Nilufar"),
+      translate('Opamning ismi Aziza.', "My sister's name is Aziza"),
+      translate("Men oilamni yaxshi ko'raman.", 'I love my family'),
+      translate('Akamning ismi Akbar.', "My brother's name is Akbar"),
+      translate('Mening 2 ta akam bor.', 'I have 2 brothers'),
+      // ── Word-order assembly for 4 key lines ─────────────────────────────────
+      wordOrder([
+        { words: ['family', 'small', 'a', 'have', 'I'], correct: 'I have a small family' },
+        { words: ['family', 'my', 'in', 'people', '4', 'are', 'There'], correct: 'There are 4 people in my family' },
+        { words: ['Anvar', 'is', 'name', "father's", 'My'], correct: "My father's name is Anvar" },
+        { words: ['family', 'my', 'love', 'I'], correct: 'I love my family' },
+      ]),
+      // ── Speak individual key sentences ──────────────────────────────────────
+      speakSentence('I have a small family', 70),
+      speakSentence("My father's name is Anvar", 70),
+      speakSentence('There are 4 people in my family', 70),
+      speakSentence('I love my family', 70),
+      // ── Comprehension MCQ about composition structure ────────────────────────
+      mcq([
+        { text: "Otamning ismini ifodalashda qaysi tuzilma to'g'ri?", options: ['My father name is Anvar', "My father's name is Anvar", 'Anvar is my father name', 'Anvar my father is'], correct: 1 },
+        { text: '"There are 4 people in my family" — qancha kishilik oila?', options: ['3 kishilik', '4 kishilik', '5 kishilik', '6 kishilik'], correct: 1 },
+        { text: '"I love my family" qachon aytiladi?', options: ['Salomlashganda', 'Oilangizga muhabbatingizni bildirganda', 'Ovqat oldida', 'Maktabda'], correct: 1 },
+      ]),
       speakWords(
         "Hello! I have a small family. There are 4 people in my family. My father's name is Anvar. My mother's name is Nilufar. My sister's name is Aziza. I love my family.",
         70,
@@ -1425,6 +1480,34 @@ const LESSONS: LessonSpec[] = [
       fillBlank('We take care of each ___.', 'other', ['other', 'one', 'time']),
       fillBlank('I ___ my friend.', 'trust', ['trust', 'love', 'help', 'know']),
       fillBlank('I am ___ to have him.', 'happy', ['happy', 'glad', 'lucky', 'proud']),
+      // ── Translate UZ → EN for each template sentence ────────────────────────
+      translate("Eng yaqin do'stim Bobur.", "My best friend's name is Bobur"),
+      translate("U G'ijduvondan.", 'He is from Gijduvan'),
+      translate("U yaxshi bola.", 'He is a good boy'),
+      translate("Biz bir-birimizga g'amxo'rlik qilamiz.", 'We take care of each other'),
+      translate("Men do'stimga ishonaman.", 'I trust my friend'),
+      translate("U borligidan xursandman.", 'I am happy to have him'),
+      translate("U mening eng yaxshi do'stim.", 'He is my best friend'),
+      translate("Bobur juda aqlli bola.", 'Bobur is a very smart boy'),
+      // ── Word-order assembly for 4 key lines ─────────────────────────────────
+      wordOrder([
+        { words: ['Bobur', 'is', 'name', "friend's", 'best', 'My'], correct: "My best friend's name is Bobur" },
+        { words: ['Gijduvan', 'from', 'is', 'He'], correct: 'He is from Gijduvan' },
+        { words: ['boy', 'good', 'a', 'is', 'He'], correct: 'He is a good boy' },
+        { words: ['friend', 'my', 'trust', 'I'], correct: 'I trust my friend' },
+      ]),
+      // ── Speak individual key sentences ──────────────────────────────────────
+      speakSentence("My best friend's name is Bobur", 70),
+      speakSentence('He is a good boy', 70),
+      speakSentence('He is from Gijduvan', 70),
+      speakSentence('I trust my friend', 70),
+      // ── Comprehension MCQ about composition structure ────────────────────────
+      mcq([
+        { text: '"My best friend\'s name is ..." — bu kim haqida?', options: ["O'zim", "Eng yaqin do'stim", 'Otam', 'Ustozim'], correct: 1 },
+        { text: "Yaxshi do'stga \"good boy\" deyish nimani anglatadi?", options: ['Yomon bola', 'Yaxshi bola', 'Katta bola', 'Kichik bola'], correct: 1 },
+        { text: '"We take care of each other" — kimga g\'amxo\'rlik?', options: ["Faqat o'zimga", 'Bir-birimizga', 'Hech kimga', 'Ota-onaga'], correct: 1 },
+        { text: "Inglizchada do'st haqida gapirish qachon yaxshi?", options: ['Hech qachon', 'Tanish-bilishlar bilan suhbatlashganda', 'Faqat darsda', 'Faqat darsdan keyin'], correct: 1 },
+      ]),
       speakWords(
         "I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
         70,
