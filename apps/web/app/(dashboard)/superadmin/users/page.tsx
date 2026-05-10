@@ -10,6 +10,7 @@ import {
   Filter,
   Pencil,
   KeyRound,
+  Trash2,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
@@ -91,6 +92,10 @@ export default function SuperadminUsersPage() {
   const [resetting, setResetting] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetSaving, setResetSaving] = useState(false);
+
+  // Delete confirmation
+  const [deleting, setDeleting] = useState<User | null>(null);
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   const toast = useToast();
 
@@ -244,6 +249,25 @@ export default function SuperadminUsersPage() {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setEditSaving(false);
+    }
+  }
+
+  async function doDelete() {
+    if (!deleting) return;
+    setDeleteSaving(true);
+    try {
+      await apiRequest(
+        `/users/${deleting.id}`,
+        { method: 'DELETE' },
+        token(),
+      );
+      setUsers((prev) => prev.filter((x) => x.id !== deleting.id));
+      toast.success("Foydalanuvchi o'chirildi");
+      setDeleting(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setDeleteSaving(false);
     }
   }
 
@@ -522,7 +546,7 @@ export default function SuperadminUsersPage() {
                         : 'text-[#94a3b8] bg-[#f7f4ef] hover:bg-[#ede9e1]'
                     }`}
                     title={
-                      u.status === 'active' ? "O'chirish" : 'Faollashtirish'
+                      u.status === 'active' ? 'Faolsizlantirish' : 'Faollashtirish'
                     }
                   >
                     {u.status === 'active' ? (
@@ -532,6 +556,14 @@ export default function SuperadminUsersPage() {
                     )}
                   </button>
                 )}
+                <button
+                  onClick={() => setDeleting(u)}
+                  aria-label="O'chirish"
+                  title="O'chirish"
+                  className="w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl flex items-center justify-center transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -698,6 +730,40 @@ export default function SuperadminUsersPage() {
             className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold disabled:opacity-50"
           >
             {resetSaving ? 'Saqlanmoqda...' : 'Tiklash'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={deleting !== null}
+        onClose={() => !deleteSaving && setDeleting(null)}
+        title="Foydalanuvchini o'chirish"
+        theme="light"
+      >
+        <p className="text-sm text-[#0f172a] mb-2">
+          <span className="font-semibold">{deleting?.name}</span>
+          {' '}({deleting?.login}) ni o'chirmoqchimisiz?
+        </p>
+        <p className="text-xs text-rose-600 mb-3">
+          Bu amal qaytarilmaydi. Foydalanuvchining barcha bog'liq ma'lumotlari
+          (darslar progressi, davomat, to'lovlar, ogohlantirishlar va h.k.)
+          ham birga o'chiriladi.
+        </p>
+        <div className="flex gap-2 mt-4 justify-end">
+          <button
+            onClick={() => setDeleting(null)}
+            disabled={deleteSaving}
+            className="text-sm px-4 py-2 rounded-xl border border-[#ede9e1] text-[#64748b] font-semibold hover:bg-[#f7f4ef] disabled:opacity-50"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={doDelete}
+            disabled={deleteSaving}
+            className="text-sm px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold disabled:opacity-50"
+          >
+            {deleteSaving ? "O'chirilmoqda..." : "Ha, o'chirish"}
           </button>
         </div>
       </Modal>

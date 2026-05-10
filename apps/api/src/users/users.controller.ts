@@ -1,14 +1,16 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  Request,
   BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  ForbiddenException,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Request,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -198,6 +200,22 @@ export class UsersController {
     @Request() req: any,
   ) {
     return this.users.resetPassword(id, req.user.tenantId, newPassword);
+  }
+
+  /**
+   * DELETE /users/:id — hard-delete a user and cascade-clean child rows.
+   * Restricted to superadmin. Self-deletion is rejected so an admin
+   * cannot accidentally lock themselves out.
+   */
+  @Delete(':id')
+  @Roles(UserRole.superadmin)
+  remove(@Param('id') id: string, @Request() req: any) {
+    if (id === req.user.userId) {
+      throw new ForbiddenException(
+        "O'z hisobingizni o'chira olmaysiz. Boshqa superadmindan so'rang.",
+      );
+    }
+    return this.users.remove(id, req.user.tenantId);
   }
 
   /**

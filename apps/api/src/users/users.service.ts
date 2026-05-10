@@ -499,6 +499,82 @@ export class UsersService {
   }
 
   /**
+   * Hard-delete a user. Cleans up child rows whose foreign keys do NOT
+   * already specify `ON DELETE CASCADE` in the schema, then deletes the
+   * `users` row. Wrapped in a single transaction so a partial failure
+   * leaves the database untouched.
+   *
+   * Cascading-by-schema (no manual cleanup needed): refresh_tokens,
+   * exam_permissions, social_feed_events, feed_event_reactions, tasks,
+   * spaced_repetition, error_logs, tournament_registrations,
+   * lesson_feedbacks, student_variant_assignments,
+   * culture_lesson_attendance, student_letters, promotion_reports,
+   * manager_sessions, kpi_override_log (student side; actor side is
+   * SetNull), video_checkins, staff_video_guides (creator SetNull),
+   * notifications, message_reactions, duel_answers, chat_bans.
+   */
+  async remove(id: string, tenantId: string) {
+    // Validate the user exists and belongs to the caller's tenant.
+    const user = await this.prisma.user.findFirst({
+      where: { id, tenantId },
+      select: { id: true, role: true, login: true },
+    });
+    if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
+
+    await this.prisma.$transaction(async (tx) => {
+      // Student-only profile rows (no cascade in schema).
+      await tx.studentProgress.deleteMany({ where: { studentId: id } });
+      await tx.studentLessonConfig.deleteMany({
+        where: { OR: [{ studentId: id }, { changedBy: id }] },
+      });
+      await tx.studentStatus.deleteMany({ where: { studentId: id } });
+      await tx.attendanceStudent.deleteMany({ where: { studentId: id } });
+      await tx.warning.deleteMany({ where: { studentId: id } });
+      await tx.payment.deleteMany({ where: { studentId: id } });
+      await tx.studentStreak.deleteMany({ where: { studentId: id } });
+      await tx.dailyQuest.deleteMany({ where: { studentId: id } });
+      await tx.certificate.deleteMany({ where: { studentId: id } });
+
+      // Staff/general rows (no cascade in schema).
+      await tx.attendanceStaff.deleteMany({ where: { userId: id } });
+      await tx.kpiScore.deleteMany({ where: { userId: id } });
+      await tx.faceEmbedding.deleteMany({ where: { userId: id } });
+      // Face recognition log keeps the row but null out the matched user.
+      await tx.faceRecognitionLog.updateMany({
+        where: { matchedUserId: id },
+        data: { matchedUserId: null },
+      });
+
+      // Social graph (both directions).
+      await tx.friendship.deleteMany({
+        where: { OR: [{ userId: id }, { friendId: id }] },
+      });
+      await tx.duel.deleteMany({
+        where: { OR: [{ challengerId: id }, { challengedId: id }] },
+      });
+      await tx.groupMessage.deleteMany({ where: { senderId: id } });
+
+      // Delegations (both directions).
+      await tx.delegation.deleteMany({
+        where: { OR: [{ fromUserId: id }, { toUserId: id }] },
+      });
+
+      // Finally drop the user. Remaining cascading FKs unwind on their own.
+      await tx.user.delete({ where: { id } });
+    });
+
+    this.events.emit('user.deleted', {
+      userId: id,
+      role: user.role,
+      login: user.login,
+      tenantId,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { ok: true, id };
+  }
+
+  /**
    * Manually unblock a student (superadmin/filadmin).
    * Sets status back to 'active' and emits `student.unblocked`.
    */
