@@ -42,7 +42,7 @@ async function main() {
   const otherLogins = new Set(others.map((u) => u.login));
 
   // Build target → {students who collide on it}
-  const targetMap = new Map<string, { id: string; name: string }[]>();
+  const targetMap = new Map<string, { id: string; name: string; login: string }[]>();
   for (const s of students) {
     const target = mkLogin(s.name);
     const arr = targetMap.get(target) ?? [];
