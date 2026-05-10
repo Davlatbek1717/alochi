@@ -131,7 +131,9 @@ export default function NewLessonPage() {
       toast.error('Tartib raqami noto‘g‘ri');
       return;
     }
-    if (!ytId) {
+    // YouTube URL is optional — but if the admin typed something, it must
+    // resolve to a real video id.
+    if (form.youtubeUrl.trim() !== '' && !ytId) {
       toast.error('YouTube havolasi noto‘g‘ri');
       return;
     }
@@ -144,11 +146,14 @@ export default function NewLessonPage() {
       title: form.title.trim(),
       type: form.type,
       orderNumber: parseInt(form.orderNumber, 10),
-      youtubeUrl: form.youtubeUrl.trim(),
       nRepetitions: parseInt(form.nRepetitions, 10),
       aiTutorEnabled: form.aiTutorEnabled,
       hasExam: form.hasExam,
     };
+
+    if (form.youtubeUrl.trim() !== '') {
+      body.youtubeUrl = form.youtubeUrl.trim();
+    }
 
     if (form.maxNOverride) {
       body.maxNOverride = parseInt(form.maxNOverride, 10);
@@ -282,7 +287,7 @@ export default function NewLessonPage() {
           {/* YouTube + live preview */}
           <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5 space-y-3">
             <label className={fieldLabel}>
-              YouTube URL <span className="text-[#e11d48]">*</span>
+              YouTube URL <span className="text-[#94a3b8] font-normal normal-case tracking-normal">(ixtiyoriy)</span>
             </label>
             <div className="relative">
               <LinkIcon
@@ -295,9 +300,11 @@ export default function NewLessonPage() {
                 onChange={(e) => set('youtubeUrl', e.target.value)}
                 className={`${fieldInput} pl-9`}
                 placeholder="https://youtu.be/..."
-                required
               />
             </div>
+            <p className="text-xs text-[#94a3b8] font-semibold">
+              Videosiz darsda o&apos;quvchi to&apos;g&apos;ridan-to&apos;g&apos;ri topshiriqlardan boshlaydi.
+            </p>
             {ytInvalid && (
               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                 <AlertTriangle

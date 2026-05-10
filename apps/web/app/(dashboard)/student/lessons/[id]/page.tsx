@@ -29,7 +29,6 @@ import type {
   SpeakWordsConfig,
 } from './_components/exercise-types';
 import { FeedbackWidget } from './_components/FeedbackWidget';
-import { Hearts } from './_components/Hearts';
 import { ProgressBar } from './_components/ProgressBar';
 import { LessonIntro } from './_components/LessonIntro';
 import { CompletionScreen } from './_components/CompletionScreen';
@@ -139,8 +138,6 @@ const EXERCISE_STEPS: Step[] = [
   'ai_tutor',
 ];
 
-const HEARTS_MAX = 3;
-
 /**
  * Detect "any present" for the new Pass 2 exercise types from
  * `lesson.components_data`. Returns true when at least one component of the
@@ -157,7 +154,10 @@ function hasComponentOfType(
 
 function buildSteps(lesson: Lesson): Step[] {
   const { components, components_data } = lesson;
-  const steps: Step[] = ['intro', 'video'];
+  // Video step is conditional — admins can author videoless lessons
+  // (just exercises). With no URL, the runner skips straight to tasks.
+  const steps: Step[] = ['intro'];
+  if (lesson.youtubeUrl?.trim()) steps.push('video');
   if (components.mcq) steps.push('mcq');
   if (components.word_order) steps.push('word_order');
   if (hasComponentOfType(components_data, 'translate')) steps.push('translate');
@@ -200,12 +200,6 @@ export default function LessonPage() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [exitModalOpen]);
-
-  // Hearts ("lives") — decremented on wrong answers from any exercise.
-  // When this hits 0, we show the "out of hearts" modal which routes the
-  // user back to the start of the cycle (same effect as restartCycle).
-  const [hearts, setHearts] = useState(HEARTS_MAX);
-  const [heartsModalOpen, setHeartsModalOpen] = useState(false);
 
   // Streak — captured post-completion to show in the stat tiles.
   // Best-effort: a fetch failure just hides the streak tile.
@@ -287,10 +281,11 @@ export default function LessonPage() {
     setCompleting(true);
     setSessionError(false);
     try {
-      // Variant B auto-status: report the session's accuracy (computed
-      // from hearts remaining) so the backend can map it to today's
-      // englishStatus colour. Range is 0-100; 100 means no hearts lost.
-      const sessionAccuracy = Math.round((hearts / HEARTS_MAX) * 100);
+      // Variant B auto-status: report the session's accuracy so the backend
+      // can map it to today's englishStatus colour. With hearts removed and
+      // wrong answers forcing a full restart, finishing a session implies a
+      // clean run — always 100.
+      const sessionAccuracy = 100;
       await apiRequest(
         `/progress/${lesson.id}/complete-session`,
         {
@@ -543,8 +538,8 @@ export default function LessonPage() {
   }
 
   function startLesson() {
-    // First *real* step after the intro. Buildable from the components flags;
-    // video is always present, so we know steps[1] === 'video' here.
+    // First *real* step after the intro. With videoless lessons supported,
+    // steps[1] is the first task instead of 'video'.
     if (!lesson) return;
     const steps = buildSteps(lesson);
     const next = steps[1];
@@ -552,33 +547,23 @@ export default function LessonPage() {
   }
 
   function restartCycle() {
-    setStep('video');
+    if (!lesson) return;
+    // Send the student back to the first non-intro step. With a video that's
+    // 'video'; without one we restart at the first task. Either way the
+    // cycle starts over from scratch, matching the original "wrong answer →
+    // start over" behaviour now that hearts are gone.
+    const steps = buildSteps(lesson);
+    const firstStep = steps[1] ?? 'done';
+    setStep(firstStep);
     setVideoCompleted(false);
-    setHearts(HEARTS_MAX);
-    setHeartsModalOpen(false);
   }
 
   /**
-   * Wire an exercise's `onFailed` event into the hearts system.
-   *
-   * Each call costs the user one heart. If that drains the last heart we
-   * surface the "Yuraklar tugadi" modal (which itself offers Restart or
-   * Home); otherwise we silently restart the cycle so the user can try
-   * again with one fewer heart.
+   * On a wrong answer the user has to redo the whole cycle. Hearts were
+   * removed (no per-mistake counter), but the restart-on-error flow stays.
    */
   function handleExerciseFailed() {
-    setHearts((prev) => {
-      const next = Math.max(0, prev - 1);
-      if (next === 0) {
-        // Defer modal so the heart's pop animation renders before the dialog.
-        setTimeout(() => setHeartsModalOpen(true), 220);
-      } else {
-        // Cycle restart with reduced hearts — drop them back to video step.
-        setStep('video');
-        setVideoCompleted(false);
-      }
-      return next;
-    });
+    restartCycle();
   }
 
   function handleBackClick() {
@@ -598,9 +583,9 @@ export default function LessonPage() {
    * `intro` / `done` so this list is suitable for the progress bar.
    */
   const enabledExerciseSteps = useMemo<Step[]>(() => {
-    if (!lesson) return ['video'];
+    if (!lesson) return [];
     return EXERCISE_STEPS.filter((s) => {
-      if (s === 'video') return true;
+      if (s === 'video') return Boolean(lesson.youtubeUrl?.trim());
       if (s === 'translate') return hasComponentOfType(lesson.components_data, 'translate');
       if (s === 'listen_pick') return hasComponentOfType(lesson.components_data, 'listen_pick');
       if (s === 'listen_type') return hasComponentOfType(lesson.components_data, 'listen_type');
@@ -700,8 +685,9 @@ export default function LessonPage() {
   const speakSentenceConfigs = getSpeakSentenceConfigs();
   const speakWordsConfigs = getSpeakWordsConfigs();
 
-  // Compute accuracy for the completion screen.
-  const accuracy = Math.round((hearts / HEARTS_MAX) * 100);
+  // Reaching the completion screen implies a full clean run (wrong answers
+  // restart the cycle), so accuracy is always 100% now that hearts are gone.
+  const accuracy = 100;
 
   // ─── Intro screen ─────────────────────────────────────────────────────────
   if (step === 'intro') {
@@ -809,43 +795,7 @@ export default function LessonPage() {
         </div>
       </Modal>
 
-      {/* Out-of-hearts modal */}
-      <Modal
-        open={heartsModalOpen}
-        onClose={() => setHeartsModalOpen(false)}
-        title="Yuraklar tugadi"
-        size="sm"
-        theme="light"
-        footer={
-          <>
-            <Button
-              variant="ghost"
-              size="md"
-              className="!text-[#7a5e2c] hover:!bg-[#f3eedf]"
-              onClick={() => router.push('/student/lessons')}
-            >
-              Bosh sahifaga
-            </Button>
-            <Button variant="duo" size="md" onClick={restartCycle}>
-              Qaytadan urinish
-            </Button>
-          </>
-        }
-      >
-        <div className="flex items-center gap-4">
-          <div className="shrink-0">
-            <Mascot expression="sad" size={88} animated />
-          </div>
-          <p
-            className="text-sm font-semibold text-[#3c3c3c] leading-snug"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
-            Hechqisi yo&apos;q — yana bir bor urinib ko&apos;ramiz!
-          </p>
-        </div>
-      </Modal>
-
-      {/* Sticky cream header: ✕ + progress bar + hearts */}
+      {/* Sticky cream header: ✕ + progress bar */}
       <header className="sticky top-0 z-30 bg-[#fffaf0] border-b border-[#f3eedf]">
         <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 py-3 flex items-center gap-3">
           <button
@@ -861,7 +811,6 @@ export default function LessonPage() {
             completed={completedExercises}
             className="flex-1"
           />
-          <Hearts remaining={hearts} max={HEARTS_MAX} />
         </div>
         {progress ? (
           <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 pb-2 flex items-center justify-between">

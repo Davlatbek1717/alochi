@@ -651,7 +651,7 @@ function SettingsForm({
       {/* YouTube + live preview */}
       <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5 space-y-3">
         <label className={fieldLabel}>
-          YouTube URL <span className="text-[#e11d48]">*</span>
+          YouTube URL <span className="text-[#94a3b8] font-normal normal-case tracking-normal">(ixtiyoriy)</span>
         </label>
         <div className="relative">
           <LinkIcon
