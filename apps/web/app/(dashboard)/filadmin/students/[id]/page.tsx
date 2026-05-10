@@ -251,7 +251,7 @@ export default function FiladminStudentDetailPage() {
       {/* Body */}
       <div className="max-w-3xl mx-auto px-4 pt-5 pb-6 space-y-4">
         {/* Quick actions */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => {

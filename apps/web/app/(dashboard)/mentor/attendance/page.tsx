@@ -207,7 +207,7 @@ export default function MentorAttendancePage() {
 
           {/* 3-tile counters */}
           {!loading && students.length > 0 && (
-            <div className="bg-[#162032] border border-white/5 rounded-2xl p-3 grid grid-cols-3">
+            <div className="bg-[#162032] border border-white/5 rounded-2xl p-3 grid grid-cols-3 gap-1">
               <div className="text-center">
                 <p className="text-emerald-400 text-2xl font-extrabold font-mono leading-none">
                   {counts.present}

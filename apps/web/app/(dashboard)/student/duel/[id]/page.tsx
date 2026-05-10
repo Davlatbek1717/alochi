@@ -226,17 +226,17 @@ export default function DuelPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
+            <div className="text-center flex-1 min-w-0">
               <p className="text-[#94a3b8] text-xs uppercase tracking-wide mb-1">Musobaqa</p>
-              <p className="text-white font-bold text-sm">{duel.challengerName}</p>
+              <p className="text-white font-bold text-sm truncate">{duel.challengerName}</p>
               <p className="text-5xl font-black text-[#e11d48] font-mono mt-1">{duel.challengerScore}</p>
             </div>
             <div className="text-center px-4">
               <p className="text-white/30 text-2xl font-black">VS</p>
             </div>
-            <div className="text-center flex-1">
+            <div className="text-center flex-1 min-w-0">
               <p className="text-[#94a3b8] text-xs uppercase tracking-wide mb-1">Raqib</p>
-              <p className="text-white font-bold text-sm">{duel.challengedName}</p>
+              <p className="text-white font-bold text-sm truncate">{duel.challengedName}</p>
               <p className="text-5xl font-black text-[#f59e0b] font-mono mt-1">{duel.challengedScore}</p>
             </div>
           </div>

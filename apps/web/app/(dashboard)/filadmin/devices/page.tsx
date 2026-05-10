@@ -204,8 +204,8 @@ export default function FiladminDevicesPage() {
                     <div className="w-9 h-9 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center shrink-0 mt-0.5">
                       <Wifi size={16} className="text-violet-600" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="font-semibold text-[#0f172a] text-sm">{d.deviceName}</p>
+                    <div className="space-y-1 min-w-0">
+                      <p className="font-semibold text-[#0f172a] text-sm truncate">{d.deviceName}</p>
                       <p className="text-xs text-[#64748b]">Oxirgi kesh: {formatDate(d.lastCacheSync)}</p>
                       <p className="text-xs text-[#94a3b8]">Qo&apos;shilgan: {formatDate(d.createdAt)}</p>
                     </div>
@@ -214,7 +214,7 @@ export default function FiladminDevicesPage() {
                     onClick={() => deactivate(d.id)}
                     disabled={deactivating === d.id}
                     aria-label={`${d.deviceName} qurilmasini o'chirish`}
-                    className="text-[#e11d48] hover:bg-[#e11d48]/10 p-2 rounded-xl disabled:opacity-50 transition-colors"
+                    className="text-[#e11d48] hover:bg-[#e11d48]/10 p-2 rounded-xl disabled:opacity-50 transition-colors shrink-0"
                   >
                     <Trash2 size={16} />
                   </button>

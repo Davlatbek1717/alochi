@@ -119,9 +119,9 @@ export default function StudentStatusHistoryPage() {
                 key={e.id}
                 className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4"
               >
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#0f172a] capitalize">{e.category}</p>
-                  <p className="text-xs text-[#64748b]">
+                <div className="flex items-center justify-between min-w-0">
+                  <p className="font-semibold text-[#0f172a] capitalize truncate">{e.category}</p>
+                  <p className="text-xs text-[#64748b] shrink-0 ml-2">
                     {formatDateNumeric(e.computedAt)}
                   </p>
                 </div>

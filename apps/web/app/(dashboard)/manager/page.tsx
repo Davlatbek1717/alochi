@@ -127,7 +127,7 @@ export default function ManagerDashboard() {
 
       <div className="px-4 pt-8 pb-6 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {loading ? (
             <>
               <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 space-y-3">

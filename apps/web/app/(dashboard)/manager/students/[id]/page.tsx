@@ -506,7 +506,7 @@ export default function StudentProfilePage() {
         }
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {([
               { v: 'yashil' as const, label: 'Yashil', dot: 'bg-emerald-500' },
               { v: 'sariq' as const, label: 'Sariq', dot: 'bg-amber-500' },

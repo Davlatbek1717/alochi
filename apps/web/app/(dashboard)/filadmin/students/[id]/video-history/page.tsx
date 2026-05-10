@@ -144,6 +144,7 @@ export default function StudentVideoHistoryPage() {
           </div>
         ) : (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <div className="overflow-x-auto">
             <div className="grid grid-cols-[1fr_auto_auto] bg-[#f7f4ef] px-4 py-2 gap-4">
               <span className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-wider">Sana</span>
               <span className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-wider w-20 text-center">Ertalab</span>
@@ -177,6 +178,7 @@ export default function StudentVideoHistoryPage() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         )}
 

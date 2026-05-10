@@ -350,7 +350,7 @@ export default function FiladminStaffPage() {
                   <p className="font-semibold text-[#0f172a] text-sm truncate">
                     {u.name}
                   </p>
-                  <p className="text-xs text-[#94a3b8]">{u.login}</p>
+                  <p className="text-xs text-[#94a3b8] truncate">{u.login}</p>
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap shrink-0 ${

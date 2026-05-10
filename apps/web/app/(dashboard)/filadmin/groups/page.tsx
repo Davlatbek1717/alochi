@@ -254,12 +254,12 @@ export default function FiladminGroupsPage() {
             transform: 'translate(30%, -30%)',
           }}
         />
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+        <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
               <Users size={20} className="text-violet-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Filadmin</p>
               <p className="text-white text-lg font-bold">Guruhlar</p>
               <p className="text-[#64748b] text-xs">Filialingizdagi guruhlar va mentor tayinlash</p>

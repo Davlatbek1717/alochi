@@ -325,13 +325,13 @@ export default function MentorDashboard() {
 
           {/* 3-tile compact stat grid */}
           {loading ? (
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} theme="light" className="h-20 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-1 sm:gap-2 mt-2">
               <SnapshotTile
                 icon={<Users size={16} />}
                 value={studentCount}

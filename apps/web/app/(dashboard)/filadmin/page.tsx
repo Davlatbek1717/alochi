@@ -227,7 +227,7 @@ export default function FiladminDashboard() {
         {/* Realtime stat cards */}
         <div>
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Bugungi holat</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1]">
               <Users size={18} className="text-[#0d9488] mb-2" />
               <p className="text-2xl font-black text-[#0f172a] font-mono">{stats.attendanceCount}</p>

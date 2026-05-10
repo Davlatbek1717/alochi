@@ -169,11 +169,11 @@ export default function StaffAttendanceHistoryPage() {
                 key={r.id}
                 className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-3 flex items-center justify-between"
               >
-                <div>
-                  <p className="font-semibold text-[#0f172a] text-sm">{r.user.name}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-[#0f172a] text-sm truncate">{r.user.name}</p>
                   <p className="text-xs text-[#64748b]">{formatDateNumeric(r.date)}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <p className="text-xs text-[#0f172a] flex items-center gap-1 justify-end">
                     <Clock size={12} /> {formatTime(r.loginTime)}
                   </p>
