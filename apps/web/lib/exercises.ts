@@ -6,6 +6,28 @@ import { apiRequest } from './api';
  * they don't have to repeat `apiRequest<...>('/ai/...')` boilerplate.
  */
 
+// AI endpoints can be slow when the upstream LLM is degraded. The exercise
+// runners ALL have local strict-match / canned-feedback fallbacks, so a
+// hung AI call is strictly worse than a fast failure. Race the request
+// against this timeout so wrong-answer flows never freeze the lesson.
+const AI_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 export interface GradeTranslationDto {
   sourceText: string;
   targetLanguage: 'en' | 'uz';
@@ -34,10 +56,14 @@ export async function gradeTranslation(
   payload: GradeTranslationDto,
   token: string,
 ): Promise<GradeTranslationResponse> {
-  const res = await apiRequest<GradeTranslationResponse>(
-    '/ai/grade-translation',
-    { method: 'POST', body: JSON.stringify(payload) },
-    token,
+  const res = await withTimeout(
+    apiRequest<GradeTranslationResponse>(
+      '/ai/grade-translation',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+    AI_TIMEOUT_MS,
+    'gradeTranslation',
   );
   return res.data;
 }
@@ -64,10 +90,14 @@ export async function explainAnswer(
   payload: ExplainAnswerDto,
   token: string,
 ): Promise<ExplainAnswerResponse> {
-  const res = await apiRequest<ExplainAnswerResponse>(
-    '/ai/explain-answer',
-    { method: 'POST', body: JSON.stringify(payload) },
-    token,
+  const res = await withTimeout(
+    apiRequest<ExplainAnswerResponse>(
+      '/ai/explain-answer',
+      { method: 'POST', body: JSON.stringify(payload) },
+      token,
+    ),
+    AI_TIMEOUT_MS,
+    'explainAnswer',
   );
   return res.data;
 }

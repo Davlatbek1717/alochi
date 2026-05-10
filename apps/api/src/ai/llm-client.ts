@@ -40,7 +40,25 @@ export interface LlmCallOptions {
 
 function buildClient(apiKey?: string): OpenAI {
   const key = apiKey || process.env.NVIDIA_API_KEY || '';
-  return new OpenAI({ baseURL: NVIDIA_BASE_URL, apiKey: key });
+  if (!key) {
+    // Throw immediately so callers' catch blocks fall through to their
+    // strict-match / canned-response fallbacks instead of burning a
+    // network round trip we know will 401. Keeps the student-facing
+    // UX from hanging for the full SDK timeout when ops hasn't set
+    // NVIDIA_API_KEY yet.
+    throw new Error('NVIDIA_API_KEY is not configured');
+  }
+  return new OpenAI({
+    baseURL: NVIDIA_BASE_URL,
+    apiKey: key,
+    // 10s per call is a comfortable upper bound for chat completion;
+    // anything longer means UX is already broken from the student's
+    // point of view, and the exercise's strict-match fallback is a
+    // better outcome than waiting indefinitely.
+    timeout: 10_000,
+    // Retry loop lives in AiService (see withRetry); avoid double retries.
+    maxRetries: 0,
+  });
 }
 
 /**
