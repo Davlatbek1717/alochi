@@ -85,10 +85,10 @@ const VARIANT_STYLES: Record<Variant, string> = {
 };
 
 const SIZE_STYLES: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-lg',
-  md: 'px-4 py-2.5 text-sm gap-2 rounded-xl',
-  lg: 'px-6 py-3 text-sm gap-2 rounded-xl',
-  xl: 'px-8 py-4 text-base gap-2.5 rounded-2xl',
+  sm: 'px-3 py-1.5 min-h-[36px] text-xs gap-1.5 rounded-lg',
+  md: 'px-4 py-2.5 min-h-[40px] text-sm gap-2 rounded-xl',
+  lg: 'px-6 py-3 min-h-[44px] text-sm gap-2 rounded-xl',
+  xl: 'px-8 py-4 min-h-[52px] text-base gap-2.5 rounded-2xl',
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(

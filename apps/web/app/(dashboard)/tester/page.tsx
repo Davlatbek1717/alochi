@@ -375,7 +375,7 @@ export default function TesterDashboard() {
               </p>
               <Link
                 href="/tester/exam-queue"
-                className="text-[11px] font-bold text-[#f59e0b] hover:underline"
+                className="text-[11px] font-bold text-[#f59e0b] hover:underline min-h-[36px] inline-flex items-center px-2 -mr-2"
               >
                 Barchasi →
               </Link>
@@ -454,7 +454,7 @@ export default function TesterDashboard() {
               </p>
               <Link
                 href="/tester/tasks"
-                className="text-[11px] font-bold text-[#f59e0b] hover:underline"
+                className="text-[11px] font-bold text-[#f59e0b] hover:underline min-h-[36px] inline-flex items-center px-2 -mr-2"
               >
                 Barchasi →
               </Link>

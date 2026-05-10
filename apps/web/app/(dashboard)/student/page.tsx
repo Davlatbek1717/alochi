@@ -666,7 +666,7 @@ function CertificatesCard({ certificates }: { certificates: Certificate[] }) {
       {certificates.length > 2 && (
         <Link
           href="/student/certificates"
-          className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#46a302] hover:underline"
+          className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#46a302] hover:underline min-h-[36px] py-2"
         >
           Barchasini ko‘rish ({certificates.length})
           <ChevronRight size={12} />

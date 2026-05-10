@@ -92,7 +92,7 @@ export function NotificationBell() {
     <div className="relative" ref={dropRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative w-8 h-8 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
+        className="relative w-10 h-10 flex items-center justify-center text-[#94a3b8] hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/20 rounded-lg"
         aria-label="Bildirishnomalar"
         aria-expanded={open}
       >

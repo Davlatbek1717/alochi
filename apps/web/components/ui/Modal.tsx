@@ -113,7 +113,7 @@ export function Modal({
               onClick={onClose}
               aria-label="Yopish"
               className={[
-                'grid place-items-center w-9 h-9 rounded-xl shrink-0 ml-3',
+                'grid place-items-center w-10 h-10 rounded-xl shrink-0 ml-3',
                 'transition-colors',
                 t.closeBtn,
               ].join(' ')}

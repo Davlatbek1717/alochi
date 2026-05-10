@@ -106,7 +106,7 @@ export const LessonPathPreview: FC = () => {
         </div>
         <Link
           href="/student/lessons"
-          className="inline-flex items-center gap-1 text-sm font-bold text-[#46a302] hover:text-[#3a8a02] shrink-0"
+          className="inline-flex items-center gap-1 text-sm font-bold text-[#46a302] hover:text-[#3a8a02] shrink-0 min-h-[36px] px-2 -mr-2"
         >
           Hammasini ko&apos;rish
           <ArrowRight size={14} />
