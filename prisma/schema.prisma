@@ -131,6 +131,23 @@ model User {
   region           String?
   school           String?
   avatarUrl        String?    @map("avatar_url")
+  // Imported-from-CRM student profile fields. Populated for students
+  // migrated from the legacy alochibolajon CRM (MongoDB) — kept
+  // optional so platform-native users do not need them.
+  firstName        String?    @map("first_name")
+  lastName         String?    @map("last_name")
+  district         String?
+  grade            Int?
+  steps            Json?
+  percentage       Int?
+  isPaid           Boolean?   @map("is_paid")
+  blockedReason    String?    @map("blocked_reason")
+  joinedAt         DateTime?  @map("joined_at")
+  totalPoints      Int?       @map("total_points")
+  timeSlot         String?    @map("time_slot")
+  warnings         Json?
+  warningsCount    Int?       @map("warnings_count")
+  crmStudentId     String?    @unique @map("crm_student_id")
   createdAt        DateTime   @default(now()) @map("created_at")
 
   tenant                   Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)

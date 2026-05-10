@@ -1,10 +1,14 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
+  Min,
   ValidateIf,
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
@@ -74,4 +78,68 @@ export class UpdateUserDto {
   @IsDateString()
   @IsOptional()
   birthDate?: string | null;
+
+  // CRM-imported student profile fields. All optional — platform-native
+  // students don't have these. Sent as part of admin edit-student form.
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  firstName?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  lastName?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  district?: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(15)
+  grade?: number;
+
+  @IsOptional()
+  steps?: unknown;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(100)
+  percentage?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isPaid?: boolean;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  blockedReason?: string;
+
+  @ValidateIf((_, v) => v !== null && v !== '')
+  @IsDateString()
+  @IsOptional()
+  joinedAt?: string | null;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  totalPoints?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(40)
+  timeSlot?: string;
+
+  @IsOptional()
+  warnings?: unknown;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  warningsCount?: number;
 }

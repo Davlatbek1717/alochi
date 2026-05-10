@@ -14,3 +14,6 @@ apps/coverage/
 apps/web/test-results/
 .superpowers/
 .deploy/
+
+# CRM/student data backups — contain PII, must never enter git history.
+backups/

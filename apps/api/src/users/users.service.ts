@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -42,11 +42,22 @@ export class UsersService {
     });
     if (exists) throw new ConflictException(this.i18n.t('duplicate_login'));
 
-    const { password, ...data } = dto;
+    const { password, joinedAt, steps, warnings, ...rest } = dto;
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await this.prisma.user.create({
-      data: { ...data, tenantId, passwordHash },
+      data: {
+        ...rest,
+        tenantId,
+        passwordHash,
+        ...(joinedAt !== undefined ? { joinedAt: new Date(joinedAt) } : {}),
+        ...(steps !== undefined
+          ? { steps: steps as Prisma.InputJsonValue }
+          : {}),
+        ...(warnings !== undefined
+          ? { warnings: warnings as Prisma.InputJsonValue }
+          : {}),
+      },
     });
 
     // Auto-friendship: when a student joins a group, accept-link them with
@@ -84,6 +95,16 @@ export class UsersService {
         status: true,
         phone: true,
         login: true,
+        firstName: true,
+        lastName: true,
+        region: true,
+        school: true,
+        district: true,
+        grade: true,
+        percentage: true,
+        isPaid: true,
+        totalPoints: true,
+        joinedAt: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -121,8 +142,29 @@ export class UsersService {
         status: true,
         tenantId: true,
         branchId: true,
+        groupId: true,
         phone: true,
         login: true,
+        firstName: true,
+        lastName: true,
+        region: true,
+        school: true,
+        district: true,
+        grade: true,
+        steps: true,
+        percentage: true,
+        isPaid: true,
+        blockedReason: true,
+        totalPoints: true,
+        joinedAt: true,
+        crmStudentId: true,
+        avatarUrl: true,
+        birthDate: true,
+        parentTelegramId: true,
+        timeSlot: true,
+        warnings: true,
+        warningsCount: true,
+        createdAt: true,
       },
     });
     if (!user) throw new NotFoundException(this.i18n.t('user_not_found'));
@@ -219,6 +261,16 @@ export class UsersService {
         phone: true,
         login: true,
         branchId: true,
+        firstName: true,
+        lastName: true,
+        region: true,
+        school: true,
+        district: true,
+        grade: true,
+        percentage: true,
+        isPaid: true,
+        totalPoints: true,
+        joinedAt: true,
       },
       orderBy: { name: 'asc' },
     });
@@ -238,6 +290,19 @@ export class UsersService {
       avatarUrl?: string | null;
       parentTelegramId?: string | null;
       birthDate?: string | null;
+      firstName?: string;
+      lastName?: string;
+      district?: string;
+      grade?: number;
+      steps?: unknown;
+      percentage?: number;
+      isPaid?: boolean;
+      blockedReason?: string;
+      joinedAt?: string | null;
+      totalPoints?: number;
+      timeSlot?: string;
+      warnings?: unknown;
+      warningsCount?: number;
     },
   ) {
     const before = await this.prisma.user.findFirst({
@@ -246,13 +311,22 @@ export class UsersService {
     });
     if (!before) throw new NotFoundException(this.i18n.t('user_not_found'));
 
-    // birthDate arrives as an ISO date string; Prisma needs a Date for
-    // a @db.Date column. Pass undefined when the field wasn't sent so
-    // we don't accidentally clear it.
-    const { birthDate, ...rest } = data;
+    // birthDate / joinedAt arrive as ISO date strings; Prisma needs Date
+    // objects for the underlying timestamp columns. Pass undefined when
+    // the field wasn't sent so we don't accidentally clear it.
+    const { birthDate, joinedAt, steps, warnings, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
     if (birthDate !== undefined) {
       updateData.birthDate = birthDate ? new Date(birthDate) : null;
+    }
+    if (joinedAt !== undefined) {
+      updateData.joinedAt = joinedAt ? new Date(joinedAt) : null;
+    }
+    if (steps !== undefined) {
+      updateData.steps = steps as Prisma.InputJsonValue;
+    }
+    if (warnings !== undefined) {
+      updateData.warnings = warnings as Prisma.InputJsonValue;
     }
 
     const updated = await this.prisma.user.update({

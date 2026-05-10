@@ -5,6 +5,12 @@ import {
   MinLength,
   IsOptional,
   IsNotEmpty,
+  IsInt,
+  IsBoolean,
+  IsDateString,
+  Min,
+  Max,
+  MaxLength,
 } from 'class-validator';
 import { UserRole } from '@prisma/client';
 
@@ -43,4 +49,83 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  // Optional CRM-imported student profile fields. Populated by the
+  // legacy alochibolajon CRM importer and the admin "edit student"
+  // form. All optional — platform-native users do not need them.
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  firstName?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  lastName?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  region?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(120)
+  school?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(80)
+  district?: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(15)
+  grade?: number;
+
+  @IsOptional()
+  steps?: unknown;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  @Max(100)
+  percentage?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  isPaid?: boolean;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(500)
+  blockedReason?: string;
+
+  @IsDateString()
+  @IsOptional()
+  joinedAt?: string;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  totalPoints?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(40)
+  timeSlot?: string;
+
+  @IsOptional()
+  warnings?: unknown;
+
+  @IsInt()
+  @IsOptional()
+  @Min(0)
+  warningsCount?: number;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(64)
+  crmStudentId?: string;
 }
