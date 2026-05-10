@@ -1306,6 +1306,305 @@ const LESSONS: LessonSpec[] = [
     ],
   },
 
+  // ── STEP 32 — Sonlar 51-69 ────────────────────────────────────────────────
+  {
+    orderNumber: 35,
+    title: 'STEP 32 — Sonlar 51-69',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'ellik bir', en: 'fifty-one', distractors: ['fifty-five', 'sixty', 'sixty-nine'] }),
+      ...vocabBlock({ uz: 'ellik besh', en: 'fifty-five', distractors: ['fifty-one', 'sixty', 'sixty-nine'] }),
+      ...vocabBlock({ uz: 'oltmish', en: 'sixty', distractors: ['fifty-one', 'fifty-five', 'sixty-nine'] }),
+      ...vocabBlock({ uz: 'oltmish to\'qqiz', en: 'sixty-nine', distractors: ['fifty-one', 'sixty', 'fifty-five'] }),
+      ...phraseBlock('Boshim og\'riyapti', 'My head hurts.'),
+      ...phraseBlock("O'zimni yomon his qilyapman", 'I feel bad.'),
+      ...phraseBlock('Men kasalman', 'I am sick.'),
+      matchPairs([
+        { left: 'fifty-one', right: 'ellik bir' },
+        { left: 'fifty-three', right: 'ellik uch' },
+        { left: 'fifty-seven', right: 'ellik yetti' },
+        { left: 'sixty-one', right: 'oltmish bir' },
+        { left: 'sixty-five', right: 'oltmish besh' },
+        { left: 'sixty-nine', right: 'oltmish to\'qqiz' },
+      ]),
+    ],
+  },
+
+  // ── STEP 33 — to be: are ─────────────────────────────────────────────────
+  {
+    orderNumber: 36,
+    title: 'STEP 33 — to be: are',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "Ko'plik subjektlar ('we', 'you', 'they') uchun 'to be'ning qaysi shakli ishlatiladi?",
+          options: ['am', 'is', 'are', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'Biz doktorlarmiz', en: 'We are doctors', words: ['We', 'are', 'doctors'] }),
+      ...topicSentenceBlock({ uz: 'Sizlar mashhursizlar', en: 'You are famous', words: ['You', 'are', 'famous'] }),
+      ...topicSentenceBlock({ uz: "Ular mening eng yaxshi do'stlarim", en: 'They are my best friends', words: ['They', 'are', 'my', 'best', 'friends'] }),
+      ...topicSentenceBlock({ uz: "Siz O'zbeksiz", en: 'You are Uzbek', words: ['You', 'are', 'Uzbek'] }),
+      ...phraseBlock("Qornim to'ydi", 'I am full'),
+      ...phraseBlock("Doktorga qo'ng'iroq qiling", 'Call a doctor.'),
+      ...phraseBlock('Tezroq sog\'ayib keting', 'Get well soon.'),
+      matchPairs([
+        { left: 'We are doctors', right: 'Biz doktorlarmiz' },
+        { left: 'You are famous', right: 'Sizlar mashhursizlar' },
+        { left: 'You are Uzbek', right: "Siz O'zbeksiz" },
+        { left: 'My head hurts.', right: "Boshim og'riyapti" },
+        { left: 'I am sick.', right: 'Men kasalman' },
+      ]),
+    ],
+  },
+
+  // ── STEP 34 — Sonlar 71-100 ───────────────────────────────────────────────
+  {
+    orderNumber: 37,
+    title: 'STEP 34 — Sonlar 71-100',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'yetmish bir', en: 'seventy-one', distractors: ['eighty', 'ninety-nine', 'hundred'] }),
+      ...vocabBlock({ uz: 'sakson', en: 'eighty', distractors: ['seventy-one', 'ninety-nine', 'hundred'] }),
+      ...vocabBlock({ uz: 'to\'qson to\'qqiz', en: 'ninety-nine', distractors: ['seventy-one', 'eighty', 'hundred'] }),
+      ...vocabBlock({ uz: 'yuz', en: 'hundred', distractors: ['seventy-one', 'eighty', 'ninety-nine'] }),
+      ...phraseBlock('Buni hozir qil', 'Do it now.'),
+      ...phraseBlock('Hozir bandman', 'I am busy now.'),
+      ...phraseBlock('Darsni boshlang', 'Start the lesson.'),
+      matchPairs([
+        { left: 'seventy-one', right: 'yetmish bir' },
+        { left: 'seventy-five', right: 'yetmish besh' },
+        { left: 'eighty', right: 'sakson' },
+        { left: 'eighty-two', right: 'sakson ikki' },
+        { left: 'ninety-nine', right: "to'qson to'qqiz" },
+        { left: 'hundred', right: 'yuz' },
+      ]),
+    ],
+  },
+
+  // ── STEP 35 — Do'st tanlash (Personal Dev) ───────────────────────────────
+  {
+    orderNumber: 38,
+    title: "STEP 35 — Do'st tanlash",
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Do'st tanlash qoidalari\"",
+      "",
+      "Asosiy g'oya: Kim bilan vaqt o'tkazsang, shu odamga o'xshab qolasan. Yaxshi do'st seni yuqoriga ko'taradi, yomon do'st — pastga tortadi.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Sening eng yaqin do'sting seni ilhomlantiradimi?\"",
+      "3) \"Do'st tanlashda uchta qoidadan qaysi biri senga eng muhim?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Do'st tanlash qoidalari",
+            "",
+            "Do'stlar, bilasizmi, kim bilan ko'p vaqt o'tkazsangiz — siz ham asta-sekin o'shanga o'xshab qolasiz. Shuning uchun do'st tanlash — bu hayotingizni tanlash degani.",
+            "",
+            "Yaxshi do'st nima qiladi? U sizni ortga tortmaydi, aksincha — ko'taradi. Siz xato qilsangiz — kulmaydi, yaxshi yo'l ko'rsatadi. Orzuingizga ishonadi, siz bilan birga harakat qiladi.",
+            "",
+            "Agar do'stingiz faqat g'iybat qilsa, urishsa, yomon so'zlar aytsa — u seni o'zgartiryapti. Yomon tomonga!",
+            "",
+            "Shuning uchun do'st tanlashda 3 ta qoidani esda saqla:",
+            "- U seni ilhomlantiradimi?",
+            "- U seni dangasalikka emas, harakatga undaydimi?",
+            "- U borligida o'zingni yaxshi his qilasanmi?",
+            "",
+            "Agar javob \"ha\" bo'lsa — u chin do'st!",
+            "Esda tut: do'stlik son bilan emas — sifat bilan o'lchanadi!",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Yaxshi do'stning belgisi qaysi?",
+          ].join('\n'),
+          options: [
+            "Doim sening barcha gaplaringga rozi bo'ladi",
+            "Sening yutuqlaringga ishonadi va harakatga undaydi",
+            "Hech qachon senga muammo aytmaydi",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
+  // ── STEP 36 — to be: am/is (2-dars) ─────────────────────────────────────
+  {
+    orderNumber: 39,
+    title: 'STEP 36 — to be: am/is (2-dars)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "Sing. subj. ('I' uchun 'am', 'he/she/it' uchun 'is') — to'g'ri shakl qaysi? 'Hafiza ___ a tailor'",
+          options: ['am', 'are', 'is', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'Men rassomman', en: 'I am an artist', words: ['I', 'am', 'an', 'artist'] }),
+      ...topicSentenceBlock({ uz: 'Men 12 yoshdaman', en: 'I am twelve', words: ['I', 'am', 'twelve'] }),
+      ...topicSentenceBlock({ uz: 'U sotuvchi', en: 'She is a seller', words: ['She', 'is', 'a', 'seller'] }),
+      ...topicSentenceBlock({ uz: 'Masha mening sigirim', en: 'Masha is my cow', words: ['Masha', 'is', 'my', 'cow'] }),
+      ...phraseBlock('Hozir emas', 'Not now.'),
+      ...phraseBlock('Keyinroq qil', 'Do it later.'),
+      ...phraseBlock("Keyinroq qo'ng'iroq qil", 'Call me later.'),
+      matchPairs([
+        { left: 'I am an artist', right: 'Men rassomman' },
+        { left: 'I am middle-aged', right: "Men o'rta yoshliman" },
+        { left: 'I am French', right: 'Men fransuzman' },
+        { left: 'She is my aunt', right: 'U mening xolam' },
+        { left: 'Hafiza is a tailor', right: 'Hafiza tikuvchi' },
+        { left: 'Not now.', right: 'Hozir emas' },
+      ]),
+    ],
+  },
+
+  // ── STEP 37 — Kiyimlar (1) ────────────────────────────────────────────────
+  {
+    orderNumber: 40,
+    title: 'STEP 37 — Kiyimlar (1)',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: 'futbolka', en: 'T-shirt', distractors: ['jeans', 'blouse', 'skirt'] }),
+      ...vocabBlock({ uz: 'jinsi shim', en: 'jeans', distractors: ['T-shirt', 'blouse', 'sweater'] }),
+      ...vocabBlock({ uz: 'kofta', en: 'blouse', distractors: ['T-shirt', 'jeans', 'skirt'] }),
+      ...vocabBlock({ uz: 'yubka', en: 'skirt', distractors: ['jeans', 'blouse', 'sweater'] }),
+      ...vocabBlock({ uz: "svit'r", en: 'sweater', distractors: ['T-shirt', 'jeans', 'skirt'] }),
+      ...phraseBlock('Bu yerga kel', 'Come here.'),
+      ...phraseBlock('Shu yerda qol', 'Stay here.'),
+      ...phraseBlock('Men shu yerdaman', 'I am here.'),
+      matchPairs([
+        { left: 'T-shirt', right: 'futbolka' },
+        { left: 'jeans', right: 'jinsi shim' },
+        { left: 'blouse', right: 'kofta' },
+        { left: 'skirt', right: 'yubka' },
+        { left: 'sweater', right: "svit'r" },
+        { left: 'Clothes', right: 'kiyimlar' },
+      ]),
+    ],
+  },
+
+  // ── STEP 38 — to be: are (2-dars) ────────────────────────────────────────
+  {
+    orderNumber: 41,
+    title: 'STEP 38 — to be: are (2-dars)',
+    type: LessonType.english,
+    components: [
+      mcq([
+        {
+          text: "Ikki yoki undan ortiq odam haqida gapirilganda 'to be'ning qaysi shakli ishlatiladi?",
+          options: ['am', 'is', 'are', 'be'],
+          correct: 2,
+        },
+      ]),
+      ...topicSentenceBlock({ uz: 'Biz Polshadanmiz', en: 'We are from Poland', words: ['We', 'are', 'from', 'Poland'] }),
+      ...topicSentenceBlock({ uz: 'Siz hamshirasiz', en: 'You are a nurse', words: ['You', 'are', 'a', 'nurse'] }),
+      ...topicSentenceBlock({ uz: 'Baxodir va Jonibek kuchli yigitlar', en: 'Bakhodir and Jonibek are strong boys', words: ['Bakhodir', 'and', 'Jonibek', 'are', 'strong', 'boys'] }),
+      ...topicSentenceBlock({ uz: 'Ular juda eski', en: 'They are very old', words: ['They', 'are', 'very', 'old'] }),
+      ...phraseBlock('Bu nima?', 'What is this?'),
+      ...phraseBlock('U qayerda?', 'Where is it?'),
+      ...phraseBlock('Anavi kim?', 'Who is that?'),
+      matchPairs([
+        { left: 'We are from Poland', right: 'Biz Polshadanmiz' },
+        { left: 'You are a nurse', right: 'Siz hamshirasiz' },
+        { left: 'They are very old', right: 'Ular juda eski' },
+        { left: 'Come here.', right: 'Bu yerga kel' },
+        { left: 'Stay here.', right: 'Shu yerda qol' },
+      ]),
+    ],
+  },
+
+  // ── STEP 39 — Kiyimlar (2) ────────────────────────────────────────────────
+  {
+    orderNumber: 42,
+    title: 'STEP 39 — Kiyimlar (2)',
+    type: LessonType.english,
+    components: [
+      ...vocabBlock({ uz: "ko'ylak", en: 'dress', distractors: ['cardigan', 'jacket', 'coat'] }),
+      ...vocabBlock({ uz: 'kamzul', en: 'cardigan', distractors: ['dress', 'jacket', 'cap'] }),
+      ...vocabBlock({ uz: 'jaket', en: 'jacket', distractors: ['dress', 'cardigan', 'coat'] }),
+      ...vocabBlock({ uz: 'palto', en: 'coat', distractors: ['jacket', 'cardigan', 'cap'] }),
+      ...vocabBlock({ uz: 'bosh kiyim', en: 'cap', distractors: ['dress', 'jacket', 'coat'] }),
+      ...phraseBlock('U yerga bor', 'Go there.'),
+      ...phraseBlock("U o'sha yerda", 'It is there.'),
+      ...phraseBlock('Anavi yerga qara', 'Look over there.'),
+      matchPairs([
+        { left: 'dress', right: "ko'ylak" },
+        { left: 'cardigan', right: 'kamzul' },
+        { left: 'jacket', right: 'jaket' },
+        { left: 'coat', right: 'palto' },
+        { left: 'cap', right: 'bosh kiyim' },
+        { left: 'vest', right: 'ichki kiyim' },
+      ]),
+    ],
+  },
+
+  // ── STEP 40 — Ota-ona urishganida (Personal Dev) ─────────────────────────
+  {
+    orderNumber: 43,
+    title: 'STEP 40 — Ota-ona urishganida',
+    type: LessonType.personal_development,
+    nRepetitions: 1,
+    aiTutorEnabled: true,
+    aiTutorContext: [
+      "Sen Aloqushsan, do'stona o'zbek bola. O'zbek tilida suhbatlash.",
+      "",
+      "Bola hozir ushbu mavzuni o'qidi: \"Ota-onamiz urishsalar, nima qilishimiz kerak?\"",
+      "",
+      "Asosiy g'oya: Ota-onang urishganda — javob qaytarma, o'zingni tekshir, kerak bo'lsa sokin uzr so'ra. Tinchlik va bosiqlik — eng kuchli javob.",
+      "",
+      "Boladan 3 ta savol so'ra (ketma-ket, javobiga qarab):",
+      "1) \"Bu darsdan nima o'rganding?\"",
+      "2) \"Ota-onang urishganda odatda sen nima qilasan?\"",
+      "3) \"Bundan keyin nima qilishga harakat qilasan?\"",
+      "",
+      "Har javobini hurmat qil, kichik maslahat ber. Maksimal 2-3 jumla.",
+    ].join('\n'),
+    components: [
+      mcq([
+        {
+          text: [
+            "📖 SHAXSIY RIVOJLANISH — Ota-onamiz urishsalar, nima qilishimiz kerak?",
+            "",
+            "Ba'zida biz xatoga yo'l qo'yamiz, yoki ota-onamiz bizni tushunmaydilar. Shunda ular jahli chiqib, urishishlari mumkin. Bunday paytda nima qilish kerak?",
+            "",
+            "Avvalo, urishgan paytda javob qaytarmaslik kerak. Chunki ularning jahl ustida aytgan gaplari doim ham adolatli bo'lmasligi mumkin. Javob bersak, urush yana kuchayadi.",
+            "",
+            "Keyin, o'zingdan so'ra: \"Men haqiqatan xato qildimmi?\" Agar ha bo'lsa, sokin gap bilan uzr so'rash — bu kuchsizlik emas, bu donolik!",
+            "",
+            "Agar sen xato qilmagan bo'lsang, lekin baribir urishishsalar, ularni tushunishga harakat qil. Balki ular charchaganlar yoki ishda asabiylashganlar.",
+            "",
+            "Esda tut: ota-onang seni yaxshi ko'radilar. Ba'zida ularning sevgisi ham shunaqa — urushib namoyon bo'ladi. Lekin sen tarbiyali bola bo'lib, jimgina tinglasang, hammasi OK bo'ladi.",
+            "",
+            "Tinchlik, bosiqlik — eng kuchli javob.",
+            "",
+            "👨‍👩‍👧 Oila a'zolaringizga shu mavzuda treyning o'tib bering va ko'proq oynaga qarab mashq qiling!",
+            "",
+            "❓ Ota-onang seni urishyapti. Eng to'g'ri javob qaysi?",
+          ].join('\n'),
+          options: [
+            "Ovozini ko'tarib, javob qaytarish",
+            "Jimgina tinglab, keyin xato qilgan bo'lsam, sokin uzr so'rash",
+            "Eshikni yopib, ketib qolish",
+          ],
+          correct: 1,
+        },
+      ]),
+    ],
+  },
+
   // ── TAKRORLASH 22-31 — Checkpoint (Archetype F) ───────────────────────────
   {
     orderNumber: 34,
