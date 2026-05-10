@@ -2102,6 +2102,192 @@ const LESSONS: LessonSpec[] = [
       mcq([{ text: "Qaysi gap to'g'ri?", options: ["Erinish muvaffaqiyatga olib boradi", "Boshlash — eng qiyin qadam, lekin boshlagach yengillashtiradi", "Vazifani kechiktirish yaxshi odat", "Erinish normal va muammosiz"], correct: 1 }]),
     ],
   },
+
+  // ── Lesson 88: TAKRORLASH 1-80 — Yakuniy kurs imtihoni ──────────────────
+  {
+    orderNumber: 88,
+    title: "TAKRORLASH 1-80 — Yakuniy kurs imtihoni",
+    type: LessonType.english,
+    hasExam: true,
+    nRepetitions: 5,
+    components: [
+      // ── Vocab match-pairs: 7 rounds covering family / house / numbers / clothes / kitchen / food / professions+colors+room ──
+      matchPairs([
+        { left: 'mother', right: 'ona' },
+        { left: 'father', right: 'ota' },
+        { left: 'brother', right: 'aka' },
+        { left: 'sister', right: 'opa' },
+        { left: 'grandfather', right: 'buvajon' },
+        { left: 'grandmother', right: 'buvijon' },
+      ]),
+      matchPairs([
+        { left: 'house', right: 'uy' },
+        { left: 'door', right: 'eshik' },
+        { left: 'window', right: 'deraza' },
+        { left: 'wall', right: 'devor' },
+        { left: 'roof', right: 'tom' },
+        { left: 'kitchen', right: 'oshxona' },
+      ]),
+      matchPairs([
+        { left: 'one', right: 'bir' },
+        { left: 'five', right: 'besh' },
+        { left: 'ten', right: "o'n" },
+        { left: 'twenty', right: 'yigirma' },
+        { left: 'fifty', right: 'ellik' },
+        { left: 'hundred', right: 'yuz' },
+      ]),
+      matchPairs([
+        { left: 'T-shirt', right: 'futbolka' },
+        { left: 'jeans', right: 'jinsi shim' },
+        { left: 'dress', right: "ko'ylak" },
+        { left: 'shoes', right: 'oyoq kiyim' },
+        { left: 'hat', right: 'shlyapa' },
+        { left: 'gloves', right: "qo'lqoplar" },
+      ]),
+      matchPairs([
+        { left: 'fork', right: 'sanchqi' },
+        { left: 'spoon', right: 'qoshiq' },
+        { left: 'knife', right: 'pichoq' },
+        { left: 'plate', right: 'likopcha' },
+        { left: 'fridge', right: 'muzlatgich' },
+        { left: 'cooker', right: 'gaz plita' },
+      ]),
+      matchPairs([
+        { left: 'bread', right: 'non' },
+        { left: 'meat', right: "go'sht" },
+        { left: 'soup', right: "sho'rva" },
+        { left: 'cake', right: 'tort' },
+        { left: 'tea', right: 'choy' },
+        { left: 'milk', right: 'sut' },
+      ]),
+      matchPairs([
+        { left: 'painter', right: 'rassom' },
+        { left: 'chef', right: 'oshpaz' },
+        { left: 'astronaut', right: 'astronavt' },
+        { left: 'red', right: 'qizil' },
+        { left: 'blue', right: "ko'k" },
+        { left: 'bed', right: 'yotoq' },
+      ]),
+      // ── Phrase translates: 25 representative across the whole curriculum ──
+      translate('Xayrli tong!', 'Good morning!'),
+      translate('Qalaysiz?', 'How are you?'),
+      translate('Men yaxshiman', 'I am fine'),
+      translate('Tanishganimdan xursandman', 'Nice to meet you'),
+      translate('Raxmat', 'Thank you'),
+      translate('Arzimaydi', 'You are welcome'),
+      translate('Kechirasiz', 'I am sorry'),
+      translate("Keyinroq ko'rishguncha", 'See you later'),
+      translate('Men ochman', 'I am hungry'),
+      translate('Suv, iltimos', 'Water, please'),
+      translate('Menga bu yoqadi', 'I like it'),
+      translate('Buni hozir qil', 'Do it now'),
+      translate("Ehtiyot bo'l", 'Be careful'),
+      translate('Bu qancha turadi?', 'How much is it?'),
+      translate('Eshikni oching', 'Open the door'),
+      translate('Eshikni yoping', 'Close the door'),
+      translate('Chiroqni yoqing', 'Turn on the light'),
+      translate("O'rningdan tur", 'Stand up'),
+      translate("O'tir", 'Sit down'),
+      translate('Sekin yuring', 'Walk slowly'),
+      translate('Yuzingni yuv', 'Wash your face'),
+      translate('Tishlaringni tozala', 'Brush your teeth'),
+      translate('Maktabga bor', 'Go to the school'),
+      translate("Do'stlarimni yaxshi ko'raman", 'I love my friends'),
+      translate('Bugun dushanba', 'Today is Monday'),
+      // ── Topic sentence drills: affirmative, negative, question patterns ──
+      wordOrder([
+        { words: ['pupil', 'a', 'I', 'am'], correct: 'I am a pupil' },
+        { words: ['Uzbekistan', 'from', 'I', 'am'], correct: 'I am from Uzbekistan' },
+        { words: ['strong', 'am', 'I'], correct: 'I am strong' },
+      ]),
+      wordOrder([
+        { words: ['firefighter', 'a', 'is', 'He'], correct: 'He is a firefighter' },
+        { words: ['friend', 'my', 'is', 'He'], correct: 'He is my friend' },
+      ]),
+      wordOrder([
+        { words: ['doctor', 'a', 'is', 'She'], correct: 'She is a doctor' },
+        { words: ['mother', 'my', 'is', 'She'], correct: 'She is my mother' },
+      ]),
+      wordOrder([
+        { words: ['desk', 'my', 'is', 'It'], correct: 'It is my desk' },
+        { words: ['big', 'very', 'is', 'It'], correct: 'It is very big' },
+      ]),
+      wordOrder([
+        { words: ['Japan', 'from', 'are', 'We'], correct: 'We are from Japan' },
+        { words: ['clever', 'are', 'We'], correct: 'We are clever' },
+      ]),
+      wordOrder([
+        { words: ['student', 'a', 'are', 'You'], correct: 'You are a student' },
+        { words: ['friend', 'my', 'are', 'You'], correct: 'You are my friend' },
+      ]),
+      wordOrder([
+        { words: ['pilots', 'are', 'They'], correct: 'They are pilots' },
+        { words: ['toys', 'are', 'They'], correct: 'They are toys' },
+      ]),
+      // negative forms
+      wordOrder([
+        { words: ['English', 'not', 'am', 'I'], correct: 'I am not English' },
+        { words: ['old', 'not', 'am', 'I'], correct: 'I am not old' },
+      ]),
+      wordOrder([
+        { words: ['17', 'not', 'is', 'He'], correct: 'He is not 17' },
+        { words: ['actress', 'an', 'not', 'is', 'She'], correct: 'She is not an actress' },
+      ]),
+      wordOrder([
+        { words: ['Polish', 'not', 'are', 'We'], correct: 'We are not Polish' },
+        { words: ['friends', 'not', 'are', 'They'], correct: 'They are not friends' },
+      ]),
+      // question forms
+      wordOrder([
+        { words: ['brother?', 'your', 'Dilmurod', 'Is'], correct: 'Is Dilmurod your brother?' },
+        { words: ['friendly?', 'Rex', 'Is'], correct: 'Is Rex friendly?' },
+      ]),
+      wordOrder([
+        { words: ['schoolmates?', 'we', 'Are'], correct: 'Are we schoolmates?' },
+        { words: ['teacher?', 'a', 'you', 'are'], correct: 'are you a teacher?' },
+      ]),
+      // ── Speak-aloud: 10 representative sentences ──
+      speakSentence('I am a pupil', 70),
+      speakSentence('He is my friend', 70),
+      speakSentence('She is my mother', 70),
+      speakSentence('We are clever', 70),
+      speakSentence('They are my classmates', 70),
+      speakSentence('I am happy', 70),
+      speakSentence('I love my family', 70),
+      speakSentence('Thank you', 70),
+      speakSentence('Today is Monday', 70),
+      speakSentence("I love my A'lochi course", 70),
+      // ── Composition recall: 7 short paragraphs (one per composition lesson across the whole curriculum) ──
+      speakWords(
+        "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I am a pupil at school. My favourite subject is English.",
+        70,
+      ),
+      speakWords(
+        "Hello! I have a small family. There are 4 people in my family. My father's name is Ali. My mother's name is Dilnoza. I love my family.",
+        70,
+      ),
+      speakWords(
+        "Hello! I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. I trust my friend.",
+        70,
+      ),
+      speakWords(
+        "I want to talk about my house. My house is big and clean. There are five rooms in my house. My room is small but nice. I love my house.",
+        70,
+      ),
+      speakWords(
+        "I want to talk about my daily routine. I wake up at six o'clock. I have breakfast at seven. After school, I do my homework. I go to bed at nine o'clock.",
+        70,
+      ),
+      speakWords(
+        "I have two hobbies. I like playing football. I play football with my friends after school. I also like learning English.",
+        70,
+      ),
+      speakWords(
+        "I love my A'lochi course. Javohir Hakimov is my teacher. I am from Bukhara. The course has 500 steps. I can go to Samarkand.",
+        70,
+      ),
+    ],
+  },
 ];
 
 // ─── main ───────────────────────────────────────────────────────────────────
