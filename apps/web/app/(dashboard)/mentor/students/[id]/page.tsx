@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Sparkles, AlertTriangle, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, AlertTriangle, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { apiRequest, ApiError } from '@/lib/api';
 import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { Skeleton, useToast } from '@/components/ui';
+import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
 
 type AnalysisResult = {
   weakAreas: string[];
@@ -65,6 +66,23 @@ export default function StudentDetailPage() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // Progress marker modal
+  const [markerOpen, setMarkerOpen] = useState(false);
+
+  async function refreshProgressSummary() {
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const res = await apiRequest<ProgressSummary>(
+        `/progress/${studentId}/summary`,
+        {},
+        token,
+      );
+      setProgressSummary(res.data);
+    } catch {
+      /* best-effort */
+    }
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -209,9 +227,24 @@ export default function StudentDetailPage() {
                 {lessonCount} ta dars
               </span>
             </div>
+            <button
+              onClick={() => setMarkerOpen(true)}
+              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 min-h-[36px] rounded-xl bg-violet-500/15 border border-violet-500/30 text-violet-200 text-xs font-bold hover:bg-violet-500/25 transition-colors"
+            >
+              <CheckCircle2 size={13} />
+              Qadam belgilash
+            </button>
           </div>
         </div>
       </div>
+
+      <ProgressMarkerModal
+        open={markerOpen}
+        onClose={() => setMarkerOpen(false)}
+        studentId={studentId}
+        studentName={studentName}
+        onMarked={refreshProgressSummary}
+      />
 
       <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
         {/* AI Analysis Card */}

@@ -319,6 +319,121 @@ export class ProgressService {
   }
 
   /**
+   * Mentor / filadmin bulk-fill: mark every lesson in this tenant up to and
+   * including `uptoLessonId` as fully completed for `studentId`. Used when a
+   * student joined mid-course and the staff member confirms the work was
+   * done offline. Existing completed rows are left alone so completedAt
+   * timestamps stay truthful; missing/incomplete rows are upserted to
+   * academyCompleted=true with sessionCount bumped to the lesson's nRepetitions
+   * so the home-progress UI doesn't show the row as half-done. A single
+   * SystemAuditLog entry records the actor + target + affected lesson IDs.
+   */
+  async bulkCompleteUpTo(
+    actorId: string,
+    actorRole: string,
+    studentId: string,
+    uptoLessonId: string,
+    reason: string,
+    ctx?: { ipAddress?: string; userAgent?: string },
+  ) {
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, role: true, tenantId: true, branchId: true, groupId: true },
+    });
+    if (!student) throw new NotFoundException("O'quvchi topilmadi");
+    if (student.role !== 'student') {
+      throw new BadRequestException("Faqat o'quvchi uchun belgilash mumkin");
+    }
+
+    const target = await this.prisma.lesson.findFirst({
+      where: { id: uptoLessonId, tenantId: student.tenantId },
+      select: { id: true, orderNumber: true },
+    });
+    if (!target) throw new NotFoundException('Dars topilmadi');
+
+    const lessons = await this.prisma.lesson.findMany({
+      where: {
+        tenantId: student.tenantId,
+        orderNumber: { lte: target.orderNumber },
+      },
+      select: { id: true, orderNumber: true, nRepetitions: true },
+      orderBy: { orderNumber: 'asc' },
+    });
+
+    const existing = await this.prisma.studentProgress.findMany({
+      where: { studentId, lessonId: { in: lessons.map((l) => l.id) } },
+    });
+    const existingByLesson = new Map(existing.map((e) => [e.lessonId, e]));
+
+    const now = new Date();
+    const affected: string[] = [];
+    let alreadyDone = 0;
+
+    for (const l of lessons) {
+      const cur = existingByLesson.get(l.id);
+      if (cur?.academyCompleted) {
+        alreadyDone++;
+        continue;
+      }
+      if (cur) {
+        await this.prisma.studentProgress.update({
+          where: { studentId_lessonId: { studentId, lessonId: l.id } },
+          data: {
+            academyCompleted: true,
+            homeCompleted: true,
+            completedAt: cur.completedAt ?? now,
+            sessionCount: Math.max(cur.sessionCount, l.nRepetitions),
+          },
+        });
+      } else {
+        await this.prisma.studentProgress.create({
+          data: {
+            studentId,
+            lessonId: l.id,
+            academyCompleted: true,
+            homeCompleted: true,
+            completedAt: now,
+            sessionCount: l.nRepetitions,
+          },
+        });
+      }
+      affected.push(l.id);
+    }
+
+    await this.prisma.systemAuditLog
+      .create({
+        data: {
+          actorId,
+          actorRole,
+          tenantId: student.tenantId,
+          action: 'progress.bulk_complete',
+          targetId: studentId,
+          meta: {
+            uptoLessonId: target.id,
+            uptoOrderNumber: target.orderNumber,
+            affectedLessonIds: affected,
+            alreadyCompletedCount: alreadyDone,
+            reason: reason.trim(),
+          },
+          ipAddress: ctx?.ipAddress,
+          userAgent: ctx?.userAgent,
+        },
+      })
+      .catch(() => undefined);
+
+    for (const key of ['mc:stats', 'mc:students:50:0', 'mc:students:100:0']) {
+      this.cache.del(key).catch(() => undefined);
+    }
+
+    return {
+      totalLessons: lessons.length,
+      marked: affected.length,
+      alreadyDone,
+      uptoOrderNumber: target.orderNumber,
+    };
+  }
+
+  /**
    * Compact progress roll-up for staff UIs (mentor student-detail). Returns
    * counts only — no per-lesson rows — so it stays cheap even when a
    * student has dozens of progress entries.

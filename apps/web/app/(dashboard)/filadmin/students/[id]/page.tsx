@@ -18,6 +18,7 @@ import {
 import { apiRequest } from '@/lib/api';
 import { Modal, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
+import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
 
 interface UserInfo {
   id: string;
@@ -100,6 +101,9 @@ export default function FiladminStudentDetailPage() {
   const [warningReason, setWarningReason] = useState(REASON_OPTIONS[0]);
   const [warningNote, setWarningNote] = useState('');
   const [savingWarning, setSavingWarning] = useState(false);
+
+  // Progress marker modal
+  const [markerOpen, setMarkerOpen] = useState(false);
 
   useEffect(() => {
     if (!studentId) return;
@@ -251,7 +255,7 @@ export default function FiladminStudentDetailPage() {
       {/* Body */}
       <div className="max-w-3xl mx-auto px-4 pt-5 pb-6 space-y-4">
         {/* Quick actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             type="button"
             onClick={() => {
@@ -264,6 +268,15 @@ export default function FiladminStudentDetailPage() {
           >
             <AlertTriangle size={18} className="text-amber-600" />
             <span className="text-xs font-bold text-[#0f172a]">Ogohlantirish</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMarkerOpen(true)}
+            disabled={!student}
+            className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 flex flex-col items-center justify-center gap-1.5 hover:bg-[#f7f4ef] disabled:opacity-50 transition-colors"
+          >
+            <CheckCircle2 size={18} className="text-violet-600" />
+            <span className="text-xs font-bold text-[#0f172a]">Qadam belgilash</span>
           </button>
           <Link
             href={`/filadmin/students/${studentId}/history`}
@@ -280,6 +293,13 @@ export default function FiladminStudentDetailPage() {
             <span className="text-xs font-bold text-[#0f172a]">Toʻlovlar</span>
           </Link>
         </div>
+
+        <ProgressMarkerModal
+          open={markerOpen}
+          onClose={() => setMarkerOpen(false)}
+          studentId={studentId}
+          studentName={student?.name}
+        />
 
         {/* Status pills */}
         <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5">

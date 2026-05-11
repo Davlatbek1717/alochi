@@ -6,6 +6,7 @@ import {
   Param,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -87,5 +88,42 @@ export class ProgressController {
   @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin)
   getSummary(@Param('studentId') studentId: string) {
     return this.progress.getSummary(studentId);
+  }
+
+  /**
+   * POST /progress/:studentId/bulk-complete — mentor / filadmin shortcut for
+   * students who joined mid-course: marks every lesson up to and including
+   * `uptoLessonId` as completed. Writes a SystemAuditLog row with the
+   * reason and affected lesson IDs.
+   */
+  @Post(':studentId/bulk-complete')
+  @Roles(UserRole.mentor, UserRole.filadmin)
+  bulkComplete(
+    @Param('studentId') studentId: string,
+    @Body() body: { uptoLessonId: string; reason: string },
+    @Request() req: any,
+  ) {
+    const reason = (body?.reason ?? '').trim();
+    if (!body?.uptoLessonId) {
+      throw new BadRequestException('Darsni tanlang');
+    }
+    if (reason.length < 3) {
+      throw new BadRequestException(
+        'Sabab maydoni kamida 3 ta belgidan iborat boʻlsin',
+      );
+    }
+    const ip =
+      (req.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket?.remoteAddress;
+    const ua = req.headers?.['user-agent'];
+    return this.progress.bulkCompleteUpTo(
+      req.user.userId,
+      req.user.role,
+      studentId,
+      body.uptoLessonId,
+      reason,
+      { ipAddress: ip, userAgent: ua },
+    );
   }
 }
