@@ -185,6 +185,11 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [step, setStep] = useState<Step>('intro');
+  // Bumped on every wrong-answer restart so each exercise's internal state
+  // (current question index, wrong counter, etc.) is wiped — without this,
+  // restarting into the same step value is a React no-op and the component
+  // stays mid-failure, freezing the lesson.
+  const [cycleKey, setCycleKey] = useState(0);
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [sessionError, setSessionError] = useState(false);
@@ -556,6 +561,7 @@ export default function LessonPage() {
     const firstStep = steps[1] ?? 'done';
     setStep(firstStep);
     setVideoCompleted(false);
+    setCycleKey((k) => k + 1);
   }
 
   /**
@@ -856,6 +862,7 @@ export default function LessonPage() {
 
         {step === 'mcq' && mcqQuestions.length > 0 && (
           <McqTest
+            key={cycleKey}
             questions={mcqQuestions}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -868,6 +875,7 @@ export default function LessonPage() {
 
         {step === 'word_order' && wordOrderSentences.length > 0 && (
           <WordOrderTest
+            key={cycleKey}
             sentences={wordOrderSentences}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -880,6 +888,7 @@ export default function LessonPage() {
 
         {step === 'translate' && translateConfigs[0] && (
           <TranslateInput
+            key={cycleKey}
             config={translateConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -892,6 +901,7 @@ export default function LessonPage() {
 
         {step === 'listen_pick' && listenPickConfigs[0] && (
           <ListenPick
+            key={cycleKey}
             config={listenPickConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -904,6 +914,7 @@ export default function LessonPage() {
 
         {step === 'listen_type' && listenTypeConfigs[0] && (
           <ListenType
+            key={cycleKey}
             config={listenTypeConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -916,6 +927,7 @@ export default function LessonPage() {
 
         {step === 'spelling' && spellingConfigs[0] && (
           <SpellingDrill
+            key={cycleKey}
             config={spellingConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -928,6 +940,7 @@ export default function LessonPage() {
 
         {step === 'fill_blank' && fillBlankConfigs[0] && (
           <FillBlank
+            key={cycleKey}
             config={fillBlankConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -940,6 +953,7 @@ export default function LessonPage() {
 
         {step === 'order_sentences' && orderSentenceConfigs[0] && (
           <OrderSentences
+            key={cycleKey}
             config={orderSentenceConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -952,6 +966,7 @@ export default function LessonPage() {
 
         {step === 'match_pairs' && matchPairsConfigs[0] && (
           <MatchPairs
+            key={cycleKey}
             config={matchPairsConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -964,6 +979,7 @@ export default function LessonPage() {
 
         {step === 'pick_picture' && pickPictureConfigs[0] && (
           <PickPicture
+            key={cycleKey}
             config={pickPictureConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -976,6 +992,7 @@ export default function LessonPage() {
 
         {step === 'speak_sentence' && speakSentenceConfigs[0] && (
           <SpeakSentence
+            key={cycleKey}
             config={speakSentenceConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -988,6 +1005,7 @@ export default function LessonPage() {
 
         {step === 'speak_words' && speakWordsConfigs[0] && (
           <SpeakWords
+            key={cycleKey}
             config={speakWordsConfigs[0]}
             onPassed={goToNextStep}
             onFailed={handleExerciseFailed}
@@ -999,7 +1017,7 @@ export default function LessonPage() {
         )}
 
         {step === 'ai_tutor' && (
-          <AiTutor lessonContext={lesson.title} onCompleted={goToNextStep} />
+          <AiTutor key={cycleKey} lessonContext={lesson.title} onCompleted={goToNextStep} />
         )}
       </main>
 
