@@ -843,6 +843,88 @@ export class AiService {
       return null;
     }
   }
+
+  /**
+   * Student-facing translator tool (/student/translate). Plain text
+   * translation between Uzbek and English via Gemini. Returns the
+   * translation plus an optional one-line note (used to surface
+   * idiomatic / kid-friendly hints when the literal translation would
+   * be misleading). The DTO caps text at 2000 chars so a single call
+   * stays inside the model's context budget.
+   */
+  async translateText(input: {
+    text: string;
+    fromLang: 'uz' | 'en';
+    toLang: 'uz' | 'en';
+  }): Promise<{ translation: string; note?: string }> {
+    const trimmed = input.text.trim();
+    if (!trimmed) return { translation: '' };
+    if (input.fromLang === input.toLang) {
+      return { translation: trimmed };
+    }
+
+    const fromName = input.fromLang === 'uz' ? 'Uzbek' : 'English';
+    const toName = input.toLang === 'uz' ? 'Uzbek' : 'English';
+
+    const prompt =
+      `You are an experienced ${fromName}↔${toName} translator for ` +
+      `Uzbek 3-7 grade students learning English.\n\n` +
+      `TASK: translate the following ${fromName} text into natural, ` +
+      `kid-appropriate ${toName}. Keep the same register (formal/informal). ` +
+      `Preserve names, numbers, punctuation. If a word is ambiguous, ` +
+      `pick the most common school-context meaning.\n\n` +
+      `SOURCE (${fromName}):\n${trimmed}\n\n` +
+      `Respond in JSON only:\n` +
+      `{\n` +
+      `  "translation": "<your ${toName} translation>",\n` +
+      `  "note": "<optional 1-sentence Uzbek note about an idiom or alternative — omit when literal translation is fine>"\n` +
+      `}`;
+
+    try {
+      const raw = await withRetry(() =>
+        chatJson(
+          [{ role: 'user', content: prompt }],
+          { model: LLM_MODEL, temperature: 0.3, maxTokens: 1024 },
+        ),
+      );
+      const parsed = AiService.parseTranslateJson(raw || '{}');
+      if (parsed) return parsed;
+    } catch (err) {
+      this.logger.warn(
+        `translateText failed, returning empty: ${(err as Error).message}`,
+      );
+    }
+    return { translation: '' };
+  }
+
+  /** Tolerant parser for {@link translateText}. */
+  static parseTranslateJson(raw: string): {
+    translation: string;
+    note?: string;
+  } | null {
+    if (!raw) return null;
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const slice = fenced ? fenced[1] : raw;
+    const first = slice.indexOf('{');
+    const last = slice.lastIndexOf('}');
+    if (first < 0 || last < 0 || last <= first) return null;
+    try {
+      const parsed = JSON.parse(slice.slice(first, last + 1)) as {
+        translation?: unknown;
+        note?: unknown;
+      };
+      if (typeof parsed.translation !== 'string') return null;
+      const out: { translation: string; note?: string } = {
+        translation: parsed.translation,
+      };
+      if (typeof parsed.note === 'string' && parsed.note.trim()) {
+        out.note = parsed.note.trim();
+      }
+      return out;
+    } catch {
+      return null;
+    }
+  }
 }
 
 function escapeXml(s: string) {

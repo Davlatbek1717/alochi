@@ -17,6 +17,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { GradeTranslationDto } from './dto/grade-translation.dto';
 import { ExplainAnswerDto } from './dto/explain-answer.dto';
 import { TtsDto } from './dto/tts.dto';
+import { TranslateTextDto } from './dto/translate-text.dto';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,6 +70,16 @@ export class AiController {
   @Roles(UserRole.student, UserRole.tester, UserRole.mentor)
   explainAnswer(@Body() body: ExplainAnswerDto) {
     return this.ai.explainAnswer(body);
+  }
+
+  /**
+   * POST /ai/translate-text — student-facing translator tool.
+   * Returns `{ translation, note? }` from Gemini.
+   */
+  @Post('translate-text')
+  @Roles(UserRole.student, UserRole.tester, UserRole.mentor, UserRole.filadmin)
+  translateText(@Body() body: TranslateTextDto) {
+    return this.ai.translateText(body);
   }
 
   /**
