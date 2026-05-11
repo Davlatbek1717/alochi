@@ -3,7 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Mic, Square, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { playSound } from '@/lib/sound';
-import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
+import {
+  getSpeechCapabilities,
+  listen,
+  similarityScore,
+  speak,
+  stopSpeaking,
+} from '@/lib/speech';
 import { Waveform } from './Waveform';
 
 type VocabularyAudioProps = {
@@ -45,15 +51,26 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const listenHandleRef = useRef<{ stop: () => void } | null>(null);
 
   // Browser TTS support — drives whether to render the "Eshitish" pronunciation
   // example button. Computed once on mount so SSR/hydration stay consistent.
   const [ttsAvailable, setTtsAvailable] = useState(false);
+  // Browser STT support — when present we skip the MediaRecorder upload path
+  // entirely and grade via Levenshtein similarity against the target word.
+  const [sttAvailable, setSttAvailable] = useState(false);
   useEffect(() => {
-    setTtsAvailable(getSpeechCapabilities().tts);
+    const caps = getSpeechCapabilities();
+    setTtsAvailable(caps.tts);
+    setSttAvailable(caps.stt);
     return () => {
       // Stop any in-flight pronunciation example when the exercise unmounts.
       stopSpeaking();
+      try {
+        listenHandleRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
     };
   }, []);
 
@@ -79,6 +96,13 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
   async function startRecording() {
     setPermError('');
     setScore(null);
+    // Browser STT is preferred — instant local scoring, no upload, no
+    // Azure key needed. Falls through to MediaRecorder + /ai/speech/assess
+    // on browsers that lack Web Speech API (mostly older Firefox).
+    if (sttAvailable) {
+      startBrowserStt();
+      return;
+    }
     try {
       const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
       setStream(ms);
@@ -108,7 +132,62 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
     }
   }
 
+  function startBrowserStt() {
+    let final = false;
+    try {
+      const handle = listen({
+        lang: 'en-US',
+        continuous: false,
+        onInterim: () => {
+          /* could surface live transcript later; not needed for single-word UX */
+        },
+        onResult: (txt) => {
+          final = true;
+          gradeBrowserStt(txt);
+        },
+        onError: (err) => {
+          if (err === 'not-allowed' || err === 'service-not-allowed') {
+            setPermError(
+              'Mikrofon ruxsati berilmadi. Brauzer sozlamalarida ruxsat bering.',
+            );
+          } else if (err === 'no-speech') {
+            setPermError("Ovoz eshitilmadi — qayta urinib ko'ring.");
+          }
+          setRecording(false);
+        },
+        onEnd: () => {
+          // If the recognizer wrapped up without a final result (silence,
+          // user cancel), reset the button to idle.
+          if (!final) setRecording(false);
+        },
+      });
+      listenHandleRef.current = handle;
+      setRecording(true);
+    } catch {
+      setPermError("Brauzer ovozini boshlab bo'lmadi.");
+    }
+  }
+
+  function gradeBrowserStt(transcript: string) {
+    const finalScore = similarityScore(transcript, word);
+    setScore(finalScore);
+    setRecording(false);
+    // Reset Azure-fail counter — student successfully completed a turn
+    // via the browser path, so we shouldn't drop them into text-mode.
+    setAzureFails(0);
+    if (finalScore < 75) onFailed?.();
+  }
+
   function stopRecording() {
+    if (sttAvailable && listenHandleRef.current) {
+      try {
+        listenHandleRef.current.stop();
+      } catch {
+        /* ignore */
+      }
+      setRecording(false);
+      return;
+    }
     if (mediaRecorderRef.current && recording) {
       mediaRecorderRef.current.stop();
       setRecording(false);
@@ -121,20 +200,39 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
     const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
     try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-      formData.append('word', word);
-      formData.append('lessonId', lessonId);
+      // The backend's @Post('speech/assess') expects JSON
+      // { wordEn, audioBase64 }, not multipart. Encode the blob to base64
+      // and send as JSON so the request actually scores instead of 400ing.
+      const audioBase64 = await blobToBase64(audioBlob);
 
       const res = await fetch(`${BASE_URL}/ai/speech/assess`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ wordEn: word, audioBase64 }),
       });
 
-      const json = (await res.json()) as ScoreResult & { error?: string };
-      if (!res.ok) throw new Error(json.error ?? 'Xato yuz berdi');
-      const finalScore = json.score ?? 0;
+      const json = (await res.json()) as ScoreResult & {
+        error?: string;
+        data?: ScoreResult & { error?: string };
+      };
+      // The API wraps successes in { success: true, data: {...} }.
+      const payload = json.data ?? json;
+      const errorCode = payload.error ?? json.error;
+      if (errorCode === 'NOT_CONFIGURED') {
+        // Azure isn't set up. We're already on the upload path because
+        // browser STT isn't available either — switch the student to
+        // text-mode now instead of waiting for 3 retries.
+        setAudioMode(false);
+        setPermError('');
+        return;
+      }
+      if (!res.ok || typeof payload.score !== 'number') {
+        throw new Error(errorCode ?? 'Xato yuz berdi');
+      }
+      const finalScore = payload.score;
       setScore(finalScore);
       setAzureFails(0); // success → reset counter
       if (finalScore < 75) onFailed?.();
@@ -149,6 +247,24 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
     } finally {
       setLoading(false);
     }
+  }
+
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('FileReader did not return a string'));
+          return;
+        }
+        // strip the "data:audio/webm;base64," prefix
+        const idx = result.indexOf(',');
+        resolve(idx >= 0 ? result.slice(idx + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('FileReader error'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   function submitTextAnswer() {
