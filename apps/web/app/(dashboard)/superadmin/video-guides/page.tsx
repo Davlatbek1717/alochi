@@ -123,7 +123,7 @@ export default function VideoGuidesPage() {
   return (
     <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+      <div className="bg-[#0f172a] px-5 pt-4 pb-5 relative overflow-hidden">
         <div
           aria-hidden
           className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
@@ -145,9 +145,9 @@ export default function VideoGuidesPage() {
         </div>
       </div>
 
-      <div className="p-5 space-y-5 max-w-3xl">
+      <div className="p-4 space-y-4 max-w-3xl">
         {/* Create form */}
-        <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5">
+        <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4">
           <p className="text-xs font-extrabold uppercase tracking-widest text-[#64748b] mb-4">
             Yangi qo&apos;llanma qo&apos;shish
           </p>
