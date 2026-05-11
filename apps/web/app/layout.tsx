@@ -3,6 +3,7 @@ import { Manrope, Fraunces, JetBrains_Mono, Nunito } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { DevServiceWorkerCleanup } from "@/components/DevServiceWorkerCleanup";
+import { StaleAssetReloader } from "@/components/StaleAssetReloader";
 
 // Body font — Manrope: humanist geometric sans with excellent Cyrillic
 // coverage. Reads beautifully at small sizes in both Uzbek and Russian.
@@ -75,6 +76,7 @@ export default function RootLayout({
         className={`${manrope.variable} ${fraunces.variable} ${mono.variable} ${nunito.variable} antialiased`}
       >
         <DevServiceWorkerCleanup />
+        <StaleAssetReloader />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
