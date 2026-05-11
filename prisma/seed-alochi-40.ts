@@ -209,7 +209,7 @@ const LESSONS: LessonSpec[] = [
     type: LessonType.english,
     components: [
       ...phraseBlock('Xayrli tong!', 'Good morning!'),
-      ...phraseBlock("Uyg'on, Ali.", 'Wake up, Ali.'),
+      ...phraseBlock("Uyg'on, do'stim.", 'Wake up, friend.'),
       ...phraseBlock('Xayrli tong, hammaga', 'Morning, everyone'),
       // ── added: informal greetings ──────────────────────────────────────────
       ...phraseBlock('Salom', 'Hi'),
@@ -236,15 +236,15 @@ const LESSONS: LessonSpec[] = [
       // ── added: word-order practice ────────────────────────────────────────
       wordOrder([
         { words: ['morning', 'Good'], correct: 'Good morning' },
-        { words: ['Ali', 'up', 'Wake'], correct: 'Wake up Ali' },
+        { words: ['friend', 'up', 'Wake'], correct: 'Wake up friend' },
         { words: ['everyone', 'Morning'], correct: 'Morning everyone' },
       ]),
       // ── added: chained speaking ───────────────────────────────────────────
-      speakWords('Good morning everyone! Wake up Ali!', 70),
+      speakWords('Good morning everyone! Wake up friend!', 70),
       // ── added: reverse match-pairs ────────────────────────────────────────
       matchPairs([
         { left: 'Xayrli tong', right: 'Good morning' },
-        { left: "Uyg'on, Ali", right: 'Wake up, Ali' },
+        { left: "Uyg'on, do'stim", right: 'Wake up, friend' },
         { left: 'Xayrli tong, hammaga', right: 'Morning, everyone' },
         { left: 'Salom', right: 'Hi' },
       ]),
@@ -259,7 +259,7 @@ const LESSONS: LessonSpec[] = [
     components: [
       ...phraseBlock('Xayrli kun', 'Good afternoon'),
       ...phraseBlock('Xayrli kech', 'Good evening'),
-      ...phraseBlock('Salom, Namoz', 'Hello, Namoz'),
+      ...phraseBlock("Salom, do'stim", 'Hello, friend'),
       matchPairs([
         { left: 'Good morning', right: 'Xayrli tong' },
         { left: 'Wake up', right: "Uyg'on" },
@@ -287,16 +287,16 @@ const LESSONS: LessonSpec[] = [
           correct: 2,
         },
         {
-          text: "'Hello, Namoz' iborasida 'Namoz' nima?",
-          options: ['Salomlashish vaqti', 'Odam ismi', 'Joy nomi', 'Mavzu'],
-          correct: 1,
+          text: "Sizning ismingiz qanday so'rashadi?",
+          options: ["What's your name?", "What's your age?", "Where are you from?", "How old are you?"],
+          correct: 0,
         },
       ]),
       // ── added: word-order practice ────────────────────────────────────────
       wordOrder([
         { words: ['afternoon', 'Good'], correct: 'Good afternoon' },
         { words: ['evening', 'Good'], correct: 'Good evening' },
-        { words: ['Namoz', 'Hello'], correct: 'Hello Namoz' },
+        { words: ['friend', 'Hello'], correct: 'Hello friend' },
       ]),
       // ── added: chained speaking ───────────────────────────────────────────
       speakWords('Good afternoon. Good evening. Hello.', 70),
@@ -522,7 +522,7 @@ const LESSONS: LessonSpec[] = [
       ...vocabBlock({ uz: 'aka', en: 'brother', distractors: ['mother', 'father', 'sister'] }),
       ...vocabBlock({ uz: 'opa', en: 'sister', distractors: ['mother', 'father', 'brother'] }),
       ...phraseBlock('Mening ismim ...', 'My name is ...'),
-      ...phraseBlock('Men Anvarman', 'I am Anvar'),
+      ...phraseBlock("Sizning ismingiz nima?", "What is your name?"),
       ...phraseBlock('Tanishganimdan xursandman', 'Nice to meet you'),
       matchPairs([
         { left: 'How are you?', right: 'Qalaysiz?' },
@@ -548,7 +548,7 @@ const LESSONS: LessonSpec[] = [
         },
       ]),
       ...topicSentenceBlock({ uz: "Men o'quvchiman", en: 'I am a pupil', words: ['I', 'am', 'a', 'pupil'] }),
-      ...topicSentenceBlock({ uz: "Men O'zbekistondanman", en: 'I am from Uzbekistan', words: ['I', 'am', 'from', 'Uzbekistan'] }),
+      ...topicSentenceBlock({ uz: "Men bu yerdanman", en: 'I am from here', words: ['I', 'am', 'from', 'here'] }),
       ...topicSentenceBlock({ uz: 'Men 10 yoshdaman', en: 'I am 10 years old', words: ['I', 'am', '10', 'years', 'old'] }),
       ...topicSentenceBlock({ uz: 'Men kuchliman', en: 'I am strong', words: ['I', 'am', 'strong'] }),
       ...phraseBlock('Qaerdasan?', 'Where are you?'),
@@ -702,35 +702,35 @@ const LESSONS: LessonSpec[] = [
       "English only — they are practising English.",
     ].join('\n'),
     components: [
-      fillBlank('Hello! My name is ___.', 'Anvar', ['Anvar', 'Aziza', 'Bekzod', 'Nodira']),
+      fillBlank('Hello! I am a ___.', 'student', ['student', 'teacher', 'driver', 'doctor']),
       fillBlank('My family is ___.', 'small', ['small', 'big', 'happy', 'kind']),
       fillBlank('I am ___ years old.', '10', ['8', '9', '10', '11', '12']),
-      fillBlank('I am from ___.', 'Bukhara', ['Bukhara', 'Tashkent', 'Samarqand', 'Khiva']),
-      fillBlank('I live in ___.', 'Gijduvan', ['Gijduvan', 'Bukhara', 'Tashkent', 'Andijan']),
+      fillBlank('I am from ___.', 'my city', ['my city', 'here', 'my country', 'another city']),
+      fillBlank('I live in ___.', 'my town', ['my town', 'my city', 'my village', 'another city']),
       fillBlank('I am a ___ at school.', 'pupil', ['pupil', 'teacher', 'student']),
       fillBlank('My favourite subject is ___.', 'English', ['English', 'Math', 'Music', 'PE']),
       fillBlank('My favourite color is ___.', 'red', ['red', 'blue', 'green', 'yellow']),
-      fillBlank('My favourite car is ___.', 'BMW', ['BMW', 'Cobalt', 'Tesla', 'Toyota']),
+      fillBlank('My favourite vehicle is ___.', 'a car', ['a car', 'a bike', 'a bus', 'a truck']),
       // ── Translate UZ → EN for each template sentence ────────────────────────
-      translate('Mening ismim Anvar.', 'My name is Anvar'),
+      translate('Salom, men talaba.', 'Hello, I am a student'),
       translate('Oilam kichik.', 'My family is small'),
       translate('Men 10 yoshdaman.', 'I am 10 years old'),
-      translate('Men Buxorodanman.', 'I am from Bukhara'),
-      translate("Men G'ijduvonda yashayman.", 'I live in Gijduvan'),
+      translate('Men shahardan.', 'I am from my city'),
+      translate('Men sharimda yashayman.', 'I live in my town'),
       translate("Men maktab o'quvchisiman.", 'I am a pupil at school'),
       translate('Sevimli fanim ingliz tili.', 'My favourite subject is English'),
       translate('Sevimli rangim qizil.', 'My favourite color is red'),
       // ── Word-order assembly for 4 key lines ─────────────────────────────────
       wordOrder([
-        { words: ['Anvar', 'is', 'name', 'My'], correct: 'My name is Anvar' },
+        { words: ['student', 'a', 'am', 'I'], correct: 'I am a student' },
         { words: ['old', 'years', '10', 'am', 'I'], correct: 'I am 10 years old' },
-        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+        { words: ['here', 'from', 'am', 'I'], correct: 'I am from here' },
         { words: ['English', 'is', 'subject', 'favourite', 'My'], correct: 'My favourite subject is English' },
       ]),
       // ── Speak individual key sentences ──────────────────────────────────────
-      speakSentence('My name is Anvar', 70),
+      speakSentence('I am a student', 70),
       speakSentence('I am 10 years old', 70),
-      speakSentence('I am from Bukhara', 70),
+      speakSentence('I am from here', 70),
       speakSentence('My favourite subject is English', 70),
       // ── Comprehension MCQ about composition structure ────────────────────────
       mcq([
@@ -740,7 +740,7 @@ const LESSONS: LessonSpec[] = [
         { text: '"I am from ..." nimani anglatadi?', options: ["Yoshim", "Tug'ilgan joyim/qaerdanligim", 'Ismim', 'Sevimli ranglim'], correct: 1 },
       ]),
       speakWords(
-        "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I live in Gijduvan. I am a pupil at school. My favourite subject is English. My favourite color is red. My favourite car is BMW.",
+        "Hello! I am a student. My family is small. I am 10 years old. I am from here. I live in my town. I am a pupil at school. My favourite subject is English. My favourite color is red. My favourite vehicle is a car.",
         70,
       ),
     ],
@@ -784,7 +784,7 @@ const LESSONS: LessonSpec[] = [
         },
       ]),
       ...topicSentenceBlock({ uz: "U o't o'chiruvchi", en: 'He is a firefighter', words: ['He', 'is', 'a', 'firefighter'] }),
-      ...topicSentenceBlock({ uz: 'U Avstraliyadan', en: 'He is from Australia', words: ['He', 'is', 'from', 'Australia'] }),
+      ...topicSentenceBlock({ uz: 'U boshqa davlatdan', en: 'He is from another country', words: ['He', 'is', 'from', 'another', 'country'] }),
       ...topicSentenceBlock({ uz: 'U kelishgan', en: 'He is well-built', words: ['He', 'is', 'well-built'] }),
       ...topicSentenceBlock({ uz: "U mening do'stim", en: 'He is my friend', words: ['He', 'is', 'my', 'friend'] }),
       ...phraseBlock('Raxmat', 'Thank you'),
@@ -792,7 +792,7 @@ const LESSONS: LessonSpec[] = [
       ...phraseBlock('Arzimaydi', 'You are welcome'),
       matchPairs([
         { left: 'He is a firefighter', right: "U o't o'chiruvchi" },
-        { left: 'He is from Australia', right: 'U Avstraliyadan' },
+        { left: 'He is from another country', right: 'U boshqa davlatdan' },
         { left: 'He is well-built', right: 'U kelishgan' },
         { left: "He is my friend", right: "U mening do'stim" },
         { left: 'Thank you', right: 'Raxmat' },
@@ -961,7 +961,7 @@ const LESSONS: LessonSpec[] = [
           correct: 1,
         },
       ]),
-      ...topicSentenceBlock({ uz: 'Biz Yaponiyadanmiz', en: 'We are from Japan', words: ['We', 'are', 'from', 'Japan'] }),
+      ...topicSentenceBlock({ uz: 'Biz boshqa davlatdanmiz', en: 'We are from abroad', words: ['We', 'are', 'from', 'abroad'] }),
       ...topicSentenceBlock({ uz: "Biz futbol o'yinchilarimiz", en: 'We are football players', words: ['We', 'are', 'football', 'players'] }),
       ...topicSentenceBlock({ uz: 'Biz 25 yoshdamiz', en: 'We are 25 years old', words: ['We', 'are', '25', 'years', 'old'] }),
       ...topicSentenceBlock({ uz: 'Biz aqllimiz', en: 'We are clever', words: ['We', 'are', 'clever'] }),
@@ -969,7 +969,7 @@ const LESSONS: LessonSpec[] = [
       ...phraseBlock('Tashqariga chiqing, iltimos', 'Go out, please.'),
       ...phraseBlock('Meni kutib turing', 'Wait for me.'),
       matchPairs([
-        { left: 'We are from Japan', right: 'Biz Yaponiyadanmiz' },
+        { left: 'We are from abroad', right: 'Biz boshqa davlatdanmiz' },
         { left: 'We are football players', right: "Biz futbol o'yinchilarimiz" },
         { left: 'We are 25 years old', right: 'Biz 25 yoshdamiz' },
         { left: 'We are clever', right: 'Biz aqllimiz' },
@@ -1089,39 +1089,39 @@ const LESSONS: LessonSpec[] = [
     components: [
       fillBlank('Hello! I have a ___ family.', 'small', ['small', 'big', 'happy', 'large']),
       fillBlank('There are ___ people in my family.', '4', ['2', '3', '4', '5', '6']),
-      fillBlank("My father's name is ___.", 'Anvar', ['Anvar', 'Aziz', 'Bobur', 'Jasur']),
-      fillBlank("My mother's name is ___.", 'Nilufar', ['Nilufar', 'Malika', 'Zulfiya', 'Sarvinoz']),
-      fillBlank("My sister's name is ___.", 'Aziza', ['Aziza', 'Kamola', 'Shahlo', 'Dilnoza']),
+      fillBlank("My father's job is ___.", 'teacher', ['teacher', 'doctor', 'driver', 'farmer']),
+      fillBlank("My mother's job is ___.", 'nurse', ['nurse', 'teacher', 'doctor', 'cook']),
+      fillBlank("My sister is ___.", 'kind', ['kind', 'smart', 'funny', 'happy']),
       fillBlank('I ___ my family.', 'love', ['love', 'like', 'miss', 'help']),
       // ── Translate UZ → EN for each template sentence ────────────────────────
       translate('Mening kichik oilam bor.', 'I have a small family'),
       translate('Oilamda 4 kishi bor.', 'There are 4 people in my family'),
-      translate('Otamning ismi Anvar.', "My father's name is Anvar"),
-      translate('Onamning ismi Nilufar.', "My mother's name is Nilufar"),
-      translate('Opamning ismi Aziza.', "My sister's name is Aziza"),
+      translate("Otamning kasbi o'qituvchi.", "My father's job is teacher"),
+      translate("Onamning kasbi hamshira.", "My mother's job is nurse"),
+      translate("Opam mehribon.", 'My sister is kind'),
       translate("Men oilamni yaxshi ko'raman.", 'I love my family'),
-      translate('Akamning ismi Akbar.', "My brother's name is Akbar"),
+      translate('Akamning kasbi haydovchi.', "My brother's job is driver"),
       translate('Mening 2 ta akam bor.', 'I have 2 brothers'),
       // ── Word-order assembly for 4 key lines ─────────────────────────────────
       wordOrder([
         { words: ['family', 'small', 'a', 'have', 'I'], correct: 'I have a small family' },
         { words: ['family', 'my', 'in', 'people', '4', 'are', 'There'], correct: 'There are 4 people in my family' },
-        { words: ['Anvar', 'is', 'name', "father's", 'My'], correct: "My father's name is Anvar" },
+        { words: ['teacher', 'is', 'job', "father's", 'My'], correct: "My father's job is teacher" },
         { words: ['family', 'my', 'love', 'I'], correct: 'I love my family' },
       ]),
       // ── Speak individual key sentences ──────────────────────────────────────
       speakSentence('I have a small family', 70),
-      speakSentence("My father's name is Anvar", 70),
+      speakSentence("My father's job is teacher", 70),
       speakSentence('There are 4 people in my family', 70),
       speakSentence('I love my family', 70),
       // ── Comprehension MCQ about composition structure ────────────────────────
       mcq([
-        { text: "Otamning ismini ifodalashda qaysi tuzilma to'g'ri?", options: ['My father name is Anvar', "My father's name is Anvar", 'Anvar is my father name', 'Anvar my father is'], correct: 1 },
+        { text: "Otamning kasbini ifodalashda qaysi tuzilma to'g'ri?", options: ["My father job is teacher", "My father's job is teacher", "teacher is my father job", "My father is teacher job"], correct: 1 },
         { text: '"There are 4 people in my family" — qancha kishilik oila?', options: ['3 kishilik', '4 kishilik', '5 kishilik', '6 kishilik'], correct: 1 },
         { text: '"I love my family" qachon aytiladi?', options: ['Salomlashganda', 'Oilangizga muhabbatingizni bildirganda', 'Ovqat oldida', 'Maktabda'], correct: 1 },
       ]),
       speakWords(
-        "Hello! I have a small family. There are 4 people in my family. My father's name is Anvar. My mother's name is Nilufar. My sister's name is Aziza. I love my family.",
+        "Hello! I have a small family. There are 4 people in my family. My father's job is teacher. My mother's job is nurse. My sister is kind. I love my family.",
         70,
       ),
     ],
@@ -1143,7 +1143,7 @@ const LESSONS: LessonSpec[] = [
       ...topicSentenceBlock({ uz: "Sen talabasan", en: 'You are a student', words: ['You', 'are', 'a', 'student'] }),
       ...topicSentenceBlock({ uz: "Sen mening do'stimsan", en: 'You are my friend', words: ['You', 'are', 'my', 'friend'] }),
       ...topicSentenceBlock({ uz: 'Sen chiroylisan', en: 'You are beautiful', words: ['You', 'are', 'beautiful'] }),
-      ...topicSentenceBlock({ uz: 'Siz Rossiyadansiz', en: 'You are from Russia', words: ['You', 'are', 'from', 'Russia'] }),
+      ...topicSentenceBlock({ uz: 'Siz boshqa davlatdansiz', en: 'You are from abroad', words: ['You', 'are', 'from', 'abroad'] }),
       ...phraseBlock('U mening onam', 'She is my mom'),
       ...phraseBlock('Onam mehribon', 'Mom is kind'),
       ...phraseBlock("Onamni yaxshi ko'raman", 'I love mom'),
@@ -1196,7 +1196,7 @@ const LESSONS: LessonSpec[] = [
       ...topicSentenceBlock({ uz: 'Ular uchuvchilar', en: 'They are pilots', words: ['They', 'are', 'pilots'] }),
       ...topicSentenceBlock({ uz: 'Ular mening sinfdoshlarim', en: 'They are my classmates', words: ['They', 'are', 'my', 'classmates'] }),
       ...topicSentenceBlock({ uz: "Ular o'yinchoqlar", en: 'They are toys', words: ['They', 'are', 'toys'] }),
-      ...topicSentenceBlock({ uz: 'Ular Ispaniyadan', en: 'They are from Spain', words: ['They', 'are', 'from', 'Spain'] }),
+      ...topicSentenceBlock({ uz: 'Ular boshqa davlatdan', en: 'They are from abroad', words: ['They', 'are', 'from', 'abroad'] }),
       ...phraseBlock('Mening akam bor', 'I have a brother'),
       ...phraseBlock('U mening singlim', 'She is my sister'),
       ...phraseBlock('Biz oilamiz', 'We are a family'),
@@ -1274,7 +1274,7 @@ const LESSONS: LessonSpec[] = [
       mcq([{ text: "O'tib ketgan vaqtdan nima qoladi?", options: ["Xotira va natija", "Hech narsa, u qaytmaydi", "Faqat afsus", "Yana bir imkoniyat"], correct: 1 }]),
       mcq([{ text: "Kelajakdagi o'zingni hozir qanday yaratasiz?", options: ["Hech narsa qilmasdan", "Tasodif bilan", "Bugungi tanlov va harakatlar bilan", "Boshqalarni kuzatib"], correct: 2 }]),
       mcq([{ text: "Vaqtni qadrlaydigan odam har kechasi nima qiladi?", options: ["Hech nima rejalashtirmaydi", "Ertangi kun uchun reja tuzib yotadi", "Faqat o'yin o'ynaydi", "Ijtimoiy tarmoqda vaqt o'tkazadi"], correct: 1 }]),
-      mcq([{ text: "Karimasining bo'sh soati bor. U til o'rganishni tanladi. Bu nima?", options: ["Vaqtni behuda sarflash", "Vaqtdan to'g'ri foydalanish", "Majburiy ish", "Zerikish"], correct: 1 }]),
+      mcq([{ text: "Bir bolaning bo'sh soati bor. U til o'rganishni tanladi. Bu nima?", options: ["Vaqtni behuda sarflash", "Vaqtdan to'g'ri foydalanish", "Majburiy ish", "Zerikish"], correct: 1 }]),
       mcq([{ text: "Qariyalarga yaxshilik qilish vaqtni qanday sarflash?", options: ["Behuda sarflash", "Eng yaxshi sarflash", "Keraksiz sarflash", "Zarar sarflash"], correct: 1 }]),
       mcq([{ text: "Vaqt qadrini bilmaslik nimani anglatadi?", options: ["O'zingning kelajagingga befarq qarash", "Ko'p dam olishni sevish", "Quvnoq bo'lishni xohlash", "Boshqalardan yordam kutish"], correct: 0 }]),
       mcq([{ text: "'Vaqt — eng qimmat sarmoya' degani nima?", options: ["Vaqtni sotsa bo'ladi", "Vaqtga qanday sarf qilsang, kelajagingni shunday qurasiz", "Vaqt pul bilan o'lchanadi", "Vaqtni bank karta bilan saqlash mumkin"], correct: 1 }]),
@@ -1321,7 +1321,7 @@ const LESSONS: LessonSpec[] = [
       ]),
       ...topicSentenceBlock({ uz: "Men uzun bo'yliman", en: 'I am tall', words: ['I', 'am', 'tall'] }),
       ...topicSentenceBlock({ uz: 'Men 11 yoshdaman', en: 'I am 11 years old', words: ['I', 'am', '11', 'years', 'old'] }),
-      ...topicSentenceBlock({ uz: 'Men Buxorodanman', en: 'I am from Bukhara', words: ['I', 'am', 'from', 'Bukhara'] }),
+      ...topicSentenceBlock({ uz: 'Men shahardanman', en: 'I am from a city', words: ['I', 'am', 'from', 'a', 'city'] }),
       ...topicSentenceBlock({ uz: 'Men yoshman', en: 'I am young', words: ['I', 'am', 'young'] }),
       ...phraseBlock('Men chanqadim', 'I am thirsty'),
       ...phraseBlock('Suv, iltimos', 'Water, please'),
@@ -1474,42 +1474,42 @@ const LESSONS: LessonSpec[] = [
       "English only — they are practising English.",
     ].join('\n'),
     components: [
-      fillBlank("My best friend's name is ___.", 'Bobur', ['Bobur', 'Sardor', 'Aziza', 'Madina']),
-      fillBlank('He is from ___.', 'Gijduvan', ['Gijduvan', 'Bukhara', 'Tashkent', 'Samarqand']),
+      fillBlank("My best friend's character is ___.", 'kind', ['kind', 'smart', 'funny', 'brave']),
+      fillBlank('He is from ___.', 'my city', ['my city', 'my town', 'another city', 'abroad']),
       fillBlank('He is a ___ boy.', 'good', ['good', 'kind', 'smart', 'funny']),
       fillBlank('We take care of each ___.', 'other', ['other', 'one', 'time']),
       fillBlank('I ___ my friend.', 'trust', ['trust', 'love', 'help', 'know']),
       fillBlank('I am ___ to have him.', 'happy', ['happy', 'glad', 'lucky', 'proud']),
       // ── Translate UZ → EN for each template sentence ────────────────────────
-      translate("Eng yaqin do'stim Bobur.", "My best friend's name is Bobur"),
-      translate("U G'ijduvondan.", 'He is from Gijduvan'),
+      translate("Eng yaqin do'stim yaxshi bola.", "My best friend is a good boy"),
+      translate("U shahardан.", 'He is from my city'),
       translate("U yaxshi bola.", 'He is a good boy'),
       translate("Biz bir-birimizga g'amxo'rlik qilamiz.", 'We take care of each other'),
       translate("Men do'stimga ishonaman.", 'I trust my friend'),
       translate("U borligidan xursandman.", 'I am happy to have him'),
       translate("U mening eng yaxshi do'stim.", 'He is my best friend'),
-      translate("Bobur juda aqlli bola.", 'Bobur is a very smart boy'),
+      translate("U juda aqlli bola.", 'He is a very smart boy'),
       // ── Word-order assembly for 4 key lines ─────────────────────────────────
       wordOrder([
-        { words: ['Bobur', 'is', 'name', "friend's", 'best', 'My'], correct: "My best friend's name is Bobur" },
-        { words: ['Gijduvan', 'from', 'is', 'He'], correct: 'He is from Gijduvan' },
+        { words: ['good', 'is', 'friend', 'best', 'My'], correct: 'My best friend is good' },
+        { words: ['city', 'my', 'from', 'is', 'He'], correct: 'He is from my city' },
         { words: ['boy', 'good', 'a', 'is', 'He'], correct: 'He is a good boy' },
         { words: ['friend', 'my', 'trust', 'I'], correct: 'I trust my friend' },
       ]),
       // ── Speak individual key sentences ──────────────────────────────────────
-      speakSentence("My best friend's name is Bobur", 70),
+      speakSentence("My best friend is a good boy", 70),
       speakSentence('He is a good boy', 70),
-      speakSentence('He is from Gijduvan', 70),
+      speakSentence('He is from my city', 70),
       speakSentence('I trust my friend', 70),
       // ── Comprehension MCQ about composition structure ────────────────────────
       mcq([
-        { text: '"My best friend\'s name is ..." — bu kim haqida?', options: ["O'zim", "Eng yaqin do'stim", 'Otam', 'Ustozim'], correct: 1 },
+        { text: '"My best friend is ..." — bu kim haqida?', options: ["O'zim", "Eng yaqin do'stim", 'Otam', 'Ustozim'], correct: 1 },
         { text: "Yaxshi do'stga \"good boy\" deyish nimani anglatadi?", options: ['Yomon bola', 'Yaxshi bola', 'Katta bola', 'Kichik bola'], correct: 1 },
         { text: '"We take care of each other" — kimga g\'amxo\'rlik?', options: ["Faqat o'zimga", 'Bir-birimizga', 'Hech kimga', 'Ota-onaga'], correct: 1 },
         { text: "Inglizchada do'st haqida gapirish qachon yaxshi?", options: ['Hech qachon', 'Tanish-bilishlar bilan suhbatlashganda', 'Faqat darsda', 'Faqat darsdan keyin'], correct: 1 },
       ]),
       speakWords(
-        "I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        "I want to talk about my best friend. My best friend is a good boy. He is from my city. He is kind and smart. We take care of each other. I trust my friend. I am happy to have him.",
         70,
       ),
     ],
@@ -1558,7 +1558,7 @@ const LESSONS: LessonSpec[] = [
       // ── Topic sentence drills (word_order for I- and she- patterns) ─────
       wordOrder([
         { words: ['pupil', 'a', 'I', 'am'], correct: 'I am a pupil' },
-        { words: ['Uzbekistan', 'from', 'I', 'am'], correct: 'I am from Uzbekistan' },
+        { words: ['here', 'from', 'I', 'am'], correct: 'I am from here' },
         { words: ['old', 'I', 'years', '10', 'am'], correct: 'I am 10 years old' },
         { words: ['strong', 'am', 'I'], correct: 'I am strong' },
       ]),
@@ -1577,7 +1577,7 @@ const LESSONS: LessonSpec[] = [
       speakSentence('See you later', 70),
       // ── 'About myself' composition recall ────────────────────────────────
       speakWords(
-        "Hello! My name is Anvar. I am 10 years old. I am from Bukhara. I am a pupil at school.",
+        "Hello! I am a student. I am 10 years old. I am from here. I am a pupil at school.",
         70,
       ),
     ],
@@ -1637,7 +1637,7 @@ const LESSONS: LessonSpec[] = [
       // ── Topic sentence drills (he, it, we) ────────────────────────
       wordOrder([
         { words: ['firefighter', 'a', 'is', 'He'], correct: 'He is a firefighter' },
-        { words: ['Australia', 'from', 'is', 'He'], correct: 'He is from Australia' },
+        { words: ['abroad', 'from', 'is', 'He'], correct: 'He is from abroad' },
         { words: ['well-built', 'is', 'He'], correct: 'He is well-built' },
         { words: ['friend', 'my', 'is', 'He'], correct: 'He is my friend' },
       ]),
@@ -1648,7 +1648,7 @@ const LESSONS: LessonSpec[] = [
         { words: ['big', 'very', 'is', 'It'], correct: 'It is very big' },
       ]),
       wordOrder([
-        { words: ['Japan', 'from', 'are', 'We'], correct: 'We are from Japan' },
+        { words: ['abroad', 'from', 'are', 'We'], correct: 'We are from abroad' },
         { words: ['players', 'football', 'are', 'We'], correct: 'We are football players' },
         { words: ['old', 'years', '25', 'are', 'We'], correct: 'We are 25 years old' },
         { words: ['clever', 'are', 'We'], correct: 'We are clever' },
@@ -1663,7 +1663,7 @@ const LESSONS: LessonSpec[] = [
       speakSentence('Wait for me', 70),
       // ── 'About my family' composition recall ────────────────────
       speakWords(
-        "Hello! I have a small family. There are 4 people in my family. My father's name is Ali. My mother's name is Dilnoza. I love my family.",
+        "Hello! I have a small family. There are 4 people in my family. My father's job is teacher. My mother's job is nurse. I love my family.",
         70,
       ),
     ],
@@ -1830,7 +1830,7 @@ const LESSONS: LessonSpec[] = [
     components: [
       mcq([
         {
-          text: "Sing. subj. ('I' uchun 'am', 'he/she/it' uchun 'is') — to'g'ri shakl qaysi? 'Hafiza ___ a tailor'",
+          text: "Sing. subj. ('I' uchun 'am', 'he/she/it' uchun 'is') — to'g'ri shakl qaysi? 'She ___ a tailor'",
           options: ['am', 'are', 'is', 'be'],
           correct: 2,
         },
@@ -1838,16 +1838,16 @@ const LESSONS: LessonSpec[] = [
       ...topicSentenceBlock({ uz: 'Men rassomman', en: 'I am an artist', words: ['I', 'am', 'an', 'artist'] }),
       ...topicSentenceBlock({ uz: 'Men 12 yoshdaman', en: 'I am twelve', words: ['I', 'am', 'twelve'] }),
       ...topicSentenceBlock({ uz: 'U sotuvchi', en: 'She is a seller', words: ['She', 'is', 'a', 'seller'] }),
-      ...topicSentenceBlock({ uz: 'Masha mening sigirim', en: 'Masha is my cow', words: ['Masha', 'is', 'my', 'cow'] }),
+      ...topicSentenceBlock({ uz: 'U mening sigirim', en: 'It is my cow', words: ['It', 'is', 'my', 'cow'] }),
       ...phraseBlock('Hozir emas', 'Not now.'),
       ...phraseBlock('Keyinroq qil', 'Do it later.'),
       ...phraseBlock("Keyinroq qo'ng'iroq qil", 'Call me later.'),
       matchPairs([
         { left: 'I am an artist', right: 'Men rassomman' },
         { left: 'I am middle-aged', right: "Men o'rta yoshliman" },
-        { left: 'I am French', right: 'Men fransuzman' },
+        { left: 'I am a teacher', right: "Men o'qituvchiman" },
         { left: 'She is my aunt', right: 'U mening xolam' },
-        { left: 'Hafiza is a tailor', right: 'Hafiza tikuvchi' },
+        { left: 'She is a tailor', right: 'U tikuvchi' },
         { left: 'Not now.', right: 'Hozir emas' },
       ]),
     ],
@@ -1891,15 +1891,15 @@ const LESSONS: LessonSpec[] = [
           correct: 2,
         },
       ]),
-      ...topicSentenceBlock({ uz: 'Biz Polshadanmiz', en: 'We are from Poland', words: ['We', 'are', 'from', 'Poland'] }),
+      ...topicSentenceBlock({ uz: 'Biz chet eldanmiz', en: 'We are from abroad', words: ['We', 'are', 'from', 'abroad'] }),
       ...topicSentenceBlock({ uz: 'Siz hamshirasiz', en: 'You are a nurse', words: ['You', 'are', 'a', 'nurse'] }),
-      ...topicSentenceBlock({ uz: 'Baxodir va Jonibek kuchli yigitlar', en: 'Bakhodir and Jonibek are strong boys', words: ['Bakhodir', 'and', 'Jonibek', 'are', 'strong', 'boys'] }),
+      ...topicSentenceBlock({ uz: 'Ular kuchli yigitlar', en: 'They are strong boys', words: ['They', 'are', 'strong', 'boys'] }),
       ...topicSentenceBlock({ uz: 'Ular juda eski', en: 'They are very old', words: ['They', 'are', 'very', 'old'] }),
       ...phraseBlock('Bu nima?', 'What is this?'),
       ...phraseBlock('U qayerda?', 'Where is it?'),
       ...phraseBlock('Anavi kim?', 'Who is that?'),
       matchPairs([
-        { left: 'We are from Poland', right: 'Biz Polshadanmiz' },
+        { left: 'We are from abroad', right: 'Biz chet eldanmiz' },
         { left: 'You are a nurse', right: 'Siz hamshirasiz' },
         { left: 'They are very old', right: 'Ular juda eski' },
         { left: 'Come here.', right: 'Bu yerga kel' },
@@ -2082,18 +2082,18 @@ const LESSONS: LessonSpec[] = [
         { words: ['student', 'a', 'are', 'You'], correct: 'You are a student' },
         { words: ['friend', 'my', 'are', 'You'], correct: 'You are my friend' },
         { words: ['beautiful', 'are', 'You'], correct: 'You are beautiful' },
-        { words: ['Russia', 'from', 'are', 'You'], correct: 'You are from Russia' },
+        { words: ['abroad', 'from', 'are', 'You'], correct: 'You are from abroad' },
       ]),
       wordOrder([
         { words: ['pilots', 'are', 'They'], correct: 'They are pilots' },
         { words: ['classmates', 'my', 'are', 'They'], correct: 'They are my classmates' },
         { words: ['toys', 'are', 'They'], correct: 'They are toys' },
-        { words: ['Spain', 'from', 'are', 'They'], correct: 'They are from Spain' },
+        { words: ['abroad', 'from', 'are', 'They'], correct: 'They are from abroad' },
       ]),
       wordOrder([
         { words: ['tall', 'am', 'I'], correct: 'I am tall' },
         { words: ['old', 'years', '11', 'am', 'I'], correct: 'I am 11 years old' },
-        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+        { words: ['here', 'from', 'am', 'I'], correct: 'I am from here' },
         { words: ['young', 'am', 'I'], correct: 'I am young' },
       ]),
       wordOrder([
@@ -2112,7 +2112,7 @@ const LESSONS: LessonSpec[] = [
       speakSentence('We are a family', 70),
       // ── 'My best friend' composition recall ──────────────────────
       speakWords(
-        "Hello! I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        "Hello! I want to talk about my best friend. My best friend is a good boy. He is from my city. He is kind and smart. We take care of each other. I trust my friend. I am happy to have him.",
         70,
       ),
     ],
@@ -2213,12 +2213,12 @@ const LESSONS: LessonSpec[] = [
       // ── Topic sentence drills: 12 patterns, 3 sentences each ────────────
       wordOrder([
         { words: ['pupil', 'a', 'I', 'am'], correct: 'I am a pupil' },
-        { words: ['Uzbekistan', 'from', 'I', 'am'], correct: 'I am from Uzbekistan' },
+        { words: ['here', 'from', 'I', 'am'], correct: 'I am from here' },
         { words: ['strong', 'am', 'I'], correct: 'I am strong' },
       ]),
       wordOrder([
         { words: ['firefighter', 'a', 'is', 'He'], correct: 'He is a firefighter' },
-        { words: ['Australia', 'from', 'is', 'He'], correct: 'He is from Australia' },
+        { words: ['abroad', 'from', 'is', 'He'], correct: 'He is from abroad' },
         { words: ['friend', 'my', 'is', 'He'], correct: 'He is my friend' },
       ]),
       wordOrder([
@@ -2232,7 +2232,7 @@ const LESSONS: LessonSpec[] = [
         { words: ['big', 'very', 'is', 'It'], correct: 'It is very big' },
       ]),
       wordOrder([
-        { words: ['Japan', 'from', 'are', 'We'], correct: 'We are from Japan' },
+        { words: ['abroad', 'from', 'are', 'We'], correct: 'We are from abroad' },
         { words: ['players', 'football', 'are', 'We'], correct: 'We are football players' },
         { words: ['clever', 'are', 'We'], correct: 'We are clever' },
       ]),
@@ -2249,7 +2249,7 @@ const LESSONS: LessonSpec[] = [
       wordOrder([
         { words: ['tall', 'am', 'I'], correct: 'I am tall' },
         { words: ['young', 'am', 'I'], correct: 'I am young' },
-        { words: ['Bukhara', 'from', 'am', 'I'], correct: 'I am from Bukhara' },
+        { words: ['here', 'from', 'am', 'I'], correct: 'I am from here' },
       ]),
       wordOrder([
         { words: ['polite', 'is', 'He'], correct: 'He is polite' },
@@ -2267,7 +2267,7 @@ const LESSONS: LessonSpec[] = [
         { words: ['seller', 'a', 'is', 'She'], correct: 'She is a seller' },
       ]),
       wordOrder([
-        { words: ['Poland', 'from', 'are', 'We'], correct: 'We are from Poland' },
+        { words: ['abroad', 'from', 'are', 'We'], correct: 'We are from abroad' },
         { words: ['nurse', 'a', 'are', 'You'], correct: 'You are a nurse' },
         { words: ['old', 'very', 'are', 'They'], correct: 'They are very old' },
       ]),
@@ -2284,15 +2284,15 @@ const LESSONS: LessonSpec[] = [
       speakSentence('See you later', 70),
       // ── Composition recall: 3 paragraphs ────────────────────────────────
       speakWords(
-        "Hello! My name is Anvar. My family is small. I am 10 years old. I am from Bukhara. I live in Gijduvan. I am a pupil at school. My favourite subject is English.",
+        "Hello! I am a student. My family is small. I am 10 years old. I am from here. I live in my town. I am a pupil at school. My favourite subject is English.",
         70,
       ),
       speakWords(
-        "Hello! I have a small family. There are 4 people in my family. My father's name is Ali. My mother's name is Dilnoza. I love my family.",
+        "Hello! I have a small family. There are 4 people in my family. My father's job is teacher. My mother's job is nurse. I love my family.",
         70,
       ),
       speakWords(
-        "Hello! I want to talk about my best friend. My best friend's name is Bobur. He is from Gijduvan. He is a good boy. We take care of each other. I trust my friend. I am happy to have him.",
+        "Hello! I want to talk about my best friend. My best friend is a good boy. He is from my city. He is kind and smart. We take care of each other. I trust my friend. I am happy to have him.",
         70,
       ),
     ],
