@@ -1,5 +1,4 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
@@ -9,8 +8,6 @@ import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
 
 @ApiTags('auth')
 @Controller('auth')
-// Tight rate limit on all auth endpoints — brute-force protection.
-@Throttle({ default: { ttl: 60_000, limit: 10 } })
 export class AuthController {
   constructor(private authService: AuthService) {}
 

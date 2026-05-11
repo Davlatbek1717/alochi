@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
 import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -73,22 +71,10 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
         return { store };
       },
     }),
-    // Rate limiting: 60 req/min on most endpoints, 10 req/min on auth
-    // endpoints (configured per-route with @Throttle decorator).
-    // The store defaults to in-memory which is fine for single-node;
-    // swap to ThrottlerStorageRedisService when scaling horizontally.
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60_000, // 1 minute window
-        limit: 120, // 120 req/min per IP (generous for SaaS dashboard)
-      },
-      {
-        name: 'auth',
-        ttl: 60_000,
-        limit: 10, // 10 attempts/min for login/register
-      },
-    ]),
+    // Rate limiting removed per product decision — every endpoint is
+    // unlimited. Brute-force protection on /auth/login is now gone, so
+    // monitor login_failure rates if abuse becomes a concern and
+    // re-introduce a tighter throttle just for the auth routes.
     LoggerModule.forRoot(loggerConfig),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
@@ -137,9 +123,6 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     GroupsModule,
   ],
   providers: [
-    // Throttler applied globally — individual controllers can override
-    // with @Throttle({ auth: { ttl: 60_000, limit: 5 } }) etc.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_INTERCEPTOR, useClass: DelegationContextInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
