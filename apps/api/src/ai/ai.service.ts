@@ -207,22 +207,123 @@ export class AiService {
     return 'qizil';
   }
 
+  /**
+   * Pronunciation Assessment via Azure Speech REST API.
+   *
+   * Sends the student's audio + the canonical reference text and lets
+   * Azure return a per-word accuracy / fluency / completeness score.
+   * Docs: https://learn.microsoft.com/azure/ai-services/speech-service/pronunciation-assessment
+   *
+   * Returns `{ is_correct, accuracy_score (0-100), feedback }` so the
+   * existing frontend contract is preserved.
+   *
+   * When AZURE_SPEECH_KEY is not configured the response carries
+   * `error: 'NOT_CONFIGURED'` and the frontend falls back to its
+   * browser-STT scoring path. Critically, the old "always 100%"
+   * fallback is gone — a missing key no longer awards a free pass.
+   */
   async checkPronunciation(wordEn: string, audioBase64: string) {
-    try {
-      const res = await withRetry(() =>
-        firstValueFrom(
-          this.http.post(`${this.aiServiceUrl}/ai/speech/check`, {
-            word_en: wordEn,
-            audio_base64: audioBase64,
-          }),
-        ),
-      );
-      return res.data;
-    } catch {
+    const azureKey = process.env.AZURE_SPEECH_KEY;
+    const azureRegion = process.env.AZURE_SPEECH_REGION;
+    if (!azureKey || !azureRegion) {
       return {
-        is_correct: true,
-        accuracy_score: 100,
-        feedback: 'Fallback mode',
+        is_correct: null,
+        accuracy_score: null,
+        feedback: 'NOT_CONFIGURED',
+        error: 'NOT_CONFIGURED' as const,
+      };
+    }
+
+    try {
+      // Pronunciation Assessment expects the score parameters as a
+      // base64-encoded JSON string in the `Pronunciation-Assessment` header.
+      const paParams = Buffer.from(
+        JSON.stringify({
+          ReferenceText: wordEn,
+          GradingSystem: 'HundredMark',
+          Granularity: 'Word',
+          EnableMiscue: true,
+        }),
+      ).toString('base64');
+
+      // Decode the data URL prefix if present, then re-encode body as bytes.
+      const cleanBase64 = audioBase64.replace(/^data:[^;]+;base64,/, '');
+      const audioBytes = Buffer.from(cleanBase64, 'base64');
+
+      const url =
+        `https://${azureRegion}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1` +
+        `?language=en-US&format=detailed`;
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Ocp-Apim-Subscription-Key': azureKey,
+          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+          'Pronunciation-Assessment': paParams,
+          Accept: 'application/json',
+        },
+        body: audioBytes,
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.warn(
+          `Azure Pronunciation Assessment failed (${res.status}): ${body.slice(0, 200)}`,
+        );
+        return {
+          is_correct: null,
+          accuracy_score: null,
+          feedback: 'ASSESSMENT_FAILED',
+          error: 'ASSESSMENT_FAILED' as const,
+        };
+      }
+
+      const data = (await res.json()) as {
+        NBest?: Array<{
+          PronunciationAssessment?: {
+            AccuracyScore?: number;
+            FluencyScore?: number;
+            CompletenessScore?: number;
+            PronScore?: number;
+          };
+        }>;
+      };
+      const pa = data.NBest?.[0]?.PronunciationAssessment;
+      const accuracy =
+        typeof pa?.PronScore === 'number'
+          ? pa.PronScore
+          : typeof pa?.AccuracyScore === 'number'
+            ? pa.AccuracyScore
+            : null;
+
+      if (accuracy === null) {
+        return {
+          is_correct: false,
+          accuracy_score: 0,
+          feedback: 'NO_SPEECH_DETECTED',
+        };
+      }
+
+      // 70% — same threshold as the lesson-runner Pronunciation Assessment
+      // exercises currently use client-side. `score` is the field name
+      // SpeakSentence + VocabularyAudio read; `accuracy_score` stays for
+      // any other caller still on the legacy Python service shape.
+      const rounded = Math.round(accuracy);
+      return {
+        score: rounded,
+        is_correct: accuracy >= 70,
+        accuracy_score: rounded,
+        feedback: accuracy >= 70 ? 'OK' : 'TRY_AGAIN',
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Azure Pronunciation Assessment threw: ${(err as Error).message}`,
+      );
+      return {
+        is_correct: null,
+        accuracy_score: null,
+        feedback: 'ASSESSMENT_FAILED',
+        error: 'ASSESSMENT_FAILED' as const,
       };
     }
   }

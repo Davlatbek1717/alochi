@@ -413,13 +413,27 @@ export function SpeakSentence({ config, onPassed, onFailed }: SpeakSentenceProps
         body: JSON.stringify({ wordEn: sentence, audioBase64 }),
       });
       const json = (await res.json().catch(() => ({}))) as ScoreResult;
-      if (!res.ok || typeof json.score !== 'number') {
-        // Soft-pass: backend unreachable / Azure not configured. Don't block
-        // the lesson — log a warning and let the student continue.
+      // Unwrap the API's success envelope: { success: true, data: {...} }
+      // when the server returned 200. Errors come through with `error`.
+      const payload =
+        (json as unknown as { data?: ScoreResult }).data ?? json;
+      if (!res.ok || typeof payload.score !== 'number') {
+        // Distinguish "service not configured" (auto-pass would let the
+        // student skip every speaking exercise) from a transient error
+        // (network blip — soft-pass is acceptable).
+        const code = payload.error ?? (json as { error?: string }).error;
+        if (code === 'NOT_CONFIGURED') {
+          if (!mountedRef.current) return;
+          setPermError(
+            'Talaffuz baholash xizmati sozlanmagan. Chrome yoki Edge brauzeridan foydalaning — talaffuz mikrofon orqali baholanadi.',
+          );
+          setPhase('idle');
+          return;
+        }
         if (typeof console !== 'undefined') {
           console.warn(
             '[SpeakSentence] /ai/speech/assess unavailable, soft-passing',
-            { status: res.status, error: json.error },
+            { status: res.status, error: code },
           );
         }
         if (!mountedRef.current) return;
@@ -429,6 +443,7 @@ export function SpeakSentence({ config, onPassed, onFailed }: SpeakSentenceProps
         setTimeout(onPassed, 1100);
         return;
       }
+      json.score = payload.score;
       const finalScore = Math.max(0, Math.min(100, Math.round(json.score)));
       if (!mountedRef.current) return;
       setScore(finalScore);
