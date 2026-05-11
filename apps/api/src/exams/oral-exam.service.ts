@@ -9,9 +9,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ExamStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { chatJson, NVIDIA_NIM_MODEL } from '../ai/llm-client';
+import { chatJson, GEMINI_MODEL } from '../ai/llm-client';
 
-const LLM_MODEL = NVIDIA_NIM_MODEL;
+const LLM_MODEL = GEMINI_MODEL;
 
 export interface ConversationTurn {
   role: 'ai' | 'student';
@@ -45,10 +45,10 @@ export interface AiTurnResponse {
 export class OralExamService {
   private readonly logger = new Logger(OralExamService.name);
   /**
-   * Pool of NVIDIA NIM API keys. `NVIDIA_API_KEY` accepts a comma-separated
+   * Pool of Gemini API keys. `GEMINI_API_KEY` accepts a comma-separated
    * list — every key gets its own quota bucket and we rotate through them
-   * as each hits its limit. Set up additional keys at
-   * https://build.nvidia.com on separate accounts to raise the cap.
+   * as each hits its limit. Add more keys (separate Google AI Studio
+   * projects) to raise the daily request cap.
    */
   private apiKeys: string[];
   /** Last key that succeeded — start the next call there to keep
@@ -59,21 +59,21 @@ export class OralExamService {
     private prisma: PrismaService,
     private config: ConfigService,
   ) {
-    const raw = this.config.get<string>('NVIDIA_API_KEY', '') ?? '';
+    const raw = this.config.get<string>('GEMINI_API_KEY', '') ?? '';
     this.apiKeys = raw
       .split(',')
       .map((k) => k.trim())
       .filter(Boolean);
     if (this.apiKeys.length === 0) {
       this.logger.warn(
-        'NVIDIA_API_KEY is empty — oral exam start will return 503 until set.',
+        'GEMINI_API_KEY is empty — oral exam start will return 503 until set.',
       );
       // Keep one empty entry so the rest of the code path is uniform;
       // it'll fail with a clear "no key" error when a request comes in.
       this.apiKeys = [''];
     } else {
       this.logger.log(
-        `Oral exam NVIDIA NIM pool configured with ${this.apiKeys.length} key(s).`,
+        `Oral exam Gemini pool configured with ${this.apiKeys.length} key(s).`,
       );
     }
   }
@@ -574,7 +574,7 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     const allQuota = errors.every((e) => e.includes('quota'));
     throw new ServiceUnavailableException(
       allQuota
-        ? "AI imtihon barcha API kalitlar chegaraga yetgan. Administratorga NVIDIA_API_KEY ga yana bir kalit qo'shish haqida xabar bering."
+        ? "AI imtihon barcha API kalitlar chegaraga yetgan. Administratorga GEMINI_API_KEY ga yana bir kalit qo'shish haqida xabar bering."
         : 'AI imtihon servisining kalitlari yaroqsiz. Administratorga xabar bering.',
     );
   }

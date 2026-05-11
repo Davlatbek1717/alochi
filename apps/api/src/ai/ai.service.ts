@@ -11,15 +11,15 @@ import {
   chatJson,
   chatText,
   geminiHistoryToOpenAi,
-  NVIDIA_NIM_MODEL,
+  GEMINI_MODEL,
 } from './llm-client';
 import { StatusService } from '../student-status/status.service';
 import { StatusColor } from '../student-status/status.types';
 
-// Active LLM model — set in apps/api/.env via NVIDIA_NIM_MODEL or defaults
-// to MiniMax-M2.7. Used for tutor chat, translation grading, wrong-answer
-// explanations, and error pattern analysis. (Replaced Gemini 2.5 Flash.)
-const LLM_MODEL = NVIDIA_NIM_MODEL;
+// Active LLM model — set in apps/api/.env via GEMINI_MODEL or defaults to
+// gemini-2.5-flash. Used for tutor chat, translation grading, wrong-answer
+// explanations, and error pattern analysis.
+const LLM_MODEL = GEMINI_MODEL;
 
 /**
  * Phase 21.1: retry transient failures (5xx, network errors, timeouts) for
