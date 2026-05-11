@@ -117,6 +117,12 @@ export async function chatText(
         ...(systemInstruction ? { systemInstruction } : {}),
         temperature: options.temperature ?? 0.7,
         topP: options.topP ?? 0.95,
+        // Gemini 2.5 Flash burns budget on hidden "thinking" tokens before
+        // emitting visible output. For chat where prompts are simple, the
+        // think pass adds latency + cost without a meaningful quality lift,
+        // so disable it by default. Callers that want it can pass a higher
+        // maxTokens and override via options (none currently do).
+        thinkingConfig: { thinkingBudget: 0 },
         maxOutputTokens: options.maxTokens ?? 8192,
       },
     }),
@@ -145,6 +151,12 @@ export async function chatJson(
         ...(systemInstruction ? { systemInstruction } : {}),
         temperature: options.temperature ?? 0.3,
         topP: options.topP ?? 0.95,
+        // Disable thinking-token budget — graders just need a structured
+        // JSON object, not an open-ended reasoning pass. Without this the
+        // model exhausts maxOutputTokens on hidden thoughts and returns
+        // empty visible text (finishReason MAX_TOKENS), forcing callers
+        // into their string-match fallback every time.
+        thinkingConfig: { thinkingBudget: 0 },
         maxOutputTokens: options.maxTokens ?? 1024,
         responseMimeType: 'application/json',
       },
