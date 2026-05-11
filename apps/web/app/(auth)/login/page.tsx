@@ -18,9 +18,9 @@ const FEATURES = [
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#0f0c2d]">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row bg-[#0f0c2d]">
       {/* ── Left panel — editorial branding ─────────────────────────── */}
-      <div className="hidden lg:flex flex-1 flex-col justify-between px-16 py-14 relative overflow-hidden">
+      <div className="hidden lg:flex flex-1 flex-col justify-between px-12 xl:px-16 py-10 xl:py-14 relative overflow-hidden min-w-0">
         {/* Layered atmosphere */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[var(--brand)]/22 blur-3xl" />
@@ -48,7 +48,7 @@ export default function LoginPage() {
             Editorial · Modern · Ta&apos;lim
           </p>
 
-          <h1 className="font-display text-[56px] xl:text-[68px] font-bold text-white leading-[0.95] tracking-[-0.025em]">
+          <h1 className="font-display text-[44px] xl:text-[60px] font-bold text-white leading-[0.95] tracking-[-0.025em]">
             O&apos;rganish —
             <br />
             <span className="italic font-light text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent)] to-[#fcd34d]">
@@ -80,7 +80,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel — login form ─────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center px-6 py-14 lg:bg-[var(--background)] relative overflow-hidden">
+      <div className="flex-1 flex items-center justify-center px-6 py-10 lg:py-14 lg:bg-[var(--background)] relative overflow-hidden min-h-0">
         {/* Subtle warmth on the form side */}
         <div
           aria-hidden
