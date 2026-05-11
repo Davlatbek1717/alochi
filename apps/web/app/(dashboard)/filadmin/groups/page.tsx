@@ -9,6 +9,7 @@ import {
   ChevronUp,
   X,
   UserPlus,
+  Search,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getBranchIdFromToken } from '@/lib/jwt';
@@ -54,6 +55,7 @@ export default function FiladminGroupsPage() {
   // add-students picker (groupId → bool)
   const [pickerGroup, setPickerGroup] = useState<string | null>(null);
   const [pickerSelected, setPickerSelected] = useState<string[]>([]);
+  const [pickerSearch, setPickerSearch] = useState('');
   const [addingStudents, setAddingStudents] = useState(false);
 
   const token = () =>
@@ -342,7 +344,7 @@ export default function FiladminGroupsPage() {
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Oʻquvchilar</p>
                       <button
-                        onClick={() => { setPickerGroup(g.id); setPickerSelected([]); }}
+                        onClick={() => { setPickerGroup(g.id); setPickerSelected([]); setPickerSearch(''); }}
                         className="flex items-center gap-1.5 text-xs font-bold text-[#7c3aed] hover:underline"
                       >
                         <UserPlus size={12} />
@@ -445,49 +447,139 @@ export default function FiladminGroupsPage() {
         onClose={() => setPickerGroup(null)}
         title="Oʻquvchi qoʻshish"
         size="lg"
-      >
-        <div className="space-y-3">
-          {studentsWithoutGroup().length === 0 ? (
-            <p className="text-sm text-[#64748b] italic">Guruhsiz oʻquvchi yoʻq</p>
-          ) : (
-            studentsWithoutGroup().map((s) => {
-              const checked = pickerSelected.includes(s.id);
-              return (
-                <label
-                  key={s.id}
-                  className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5 cursor-pointer hover:bg-violet-50 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() =>
-                      setPickerSelected((p) =>
-                        checked ? p.filter((x) => x !== s.id) : [...p, s.id],
-                      )
-                    }
-                    className="accent-[#7c3aed] w-4 h-4"
-                  />
-                  <span className="text-sm text-[#0f172a] font-semibold">{s.name}</span>
-                </label>
-              );
-            })
-          )}
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={handleAddStudents}
-              disabled={addingStudents || pickerSelected.length === 0}
-              className="bg-[#0f172a] text-white text-sm px-4 py-2 rounded-xl font-bold disabled:opacity-40"
-            >
-              {addingStudents ? 'Qoʻshilmoqda...' : `${pickerSelected.length} ta qoʻshish`}
-            </button>
+        footer={
+          <>
             <button
               onClick={() => setPickerGroup(null)}
-              className="text-sm text-[#64748b] px-3 py-2 rounded-xl border border-[#ede9e1] font-semibold"
+              className="text-sm text-[#64748b] px-4 py-2.5 min-h-[40px] rounded-xl border border-[#ede9e1] font-semibold"
             >
               Bekor
             </button>
-          </div>
-        </div>
+            <button
+              onClick={handleAddStudents}
+              disabled={addingStudents || pickerSelected.length === 0}
+              className="bg-[#0f172a] text-white text-sm px-4 py-2.5 min-h-[40px] rounded-xl font-bold disabled:opacity-40 hover:bg-[#1e293b] transition-colors"
+            >
+              {addingStudents
+                ? 'Qoʻshilmoqda...'
+                : pickerSelected.length === 0
+                  ? 'Qoʻshish'
+                  : `${pickerSelected.length} ta qoʻshish`}
+            </button>
+          </>
+        }
+      >
+        {(() => {
+          const all = studentsWithoutGroup();
+          const filtered = pickerSearch.trim()
+            ? all.filter((s) =>
+                s.name.toLowerCase().includes(pickerSearch.trim().toLowerCase()),
+              )
+            : all;
+          const allFilteredSelected =
+            filtered.length > 0 &&
+            filtered.every((s) => pickerSelected.includes(s.id));
+          return (
+            <div className="flex flex-col" style={{ maxHeight: 'min(60vh, 520px)' }}>
+              {/* Search + toolbar (sticky-ish at top of body) */}
+              <div className="space-y-2 mb-3">
+                <div className="relative">
+                  <Search
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={pickerSearch}
+                    onChange={(e) => setPickerSearch(e.target.value)}
+                    placeholder="O'quvchi ismidan qidiring..."
+                    className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0f172a]"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#64748b]">
+                    {filtered.length === all.length
+                      ? `${all.length} ta o'quvchi`
+                      : `${filtered.length} / ${all.length} ta`}
+                    {pickerSelected.length > 0 && (
+                      <span className="text-[#7c3aed] font-bold ml-2">
+                        · {pickerSelected.length} ta tanlangan
+                      </span>
+                    )}
+                  </span>
+                  {filtered.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (allFilteredSelected) {
+                          // Uncheck only the currently-filtered ones.
+                          setPickerSelected((p) =>
+                            p.filter((id) => !filtered.some((s) => s.id === id)),
+                          );
+                        } else {
+                          // Add any filtered IDs not already in the selection.
+                          setPickerSelected((p) => {
+                            const set = new Set(p);
+                            filtered.forEach((s) => set.add(s.id));
+                            return [...set];
+                          });
+                        }
+                      }}
+                      className="text-[#7c3aed] font-bold hover:underline"
+                    >
+                      {allFilteredSelected ? "Bekor qilish" : "Hammasini tanlash"}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Scrollable list */}
+              <div className="flex-1 overflow-y-auto -mx-1 px-1">
+                {all.length === 0 ? (
+                  <p className="text-sm text-[#64748b] italic py-4 text-center">
+                    Guruhsiz oʻquvchi yoʻq
+                  </p>
+                ) : filtered.length === 0 ? (
+                  <p className="text-sm text-[#64748b] italic py-4 text-center">
+                    «{pickerSearch}» boʻyicha oʻquvchi topilmadi
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {filtered.map((s) => {
+                      const checked = pickerSelected.includes(s.id);
+                      return (
+                        <label
+                          key={s.id}
+                          className={[
+                            'flex items-center gap-3 rounded-xl px-3 py-2.5 cursor-pointer transition-colors min-h-[44px]',
+                            checked
+                              ? 'bg-violet-50 border border-violet-200'
+                              : 'bg-[#f7f4ef] border border-transparent hover:bg-violet-50',
+                          ].join(' ')}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setPickerSelected((p) =>
+                                checked
+                                  ? p.filter((x) => x !== s.id)
+                                  : [...p, s.id],
+                              )
+                            }
+                            className="accent-[#7c3aed] w-4 h-4 shrink-0"
+                          />
+                          <span className="text-sm text-[#0f172a] font-semibold truncate">
+                            {s.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );
