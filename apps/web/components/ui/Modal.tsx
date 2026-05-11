@@ -84,7 +84,7 @@ export function Modal({
       <div
         className={[
           t.surface,
-          'rounded-3xl w-full',
+          'rounded-3xl w-full flex flex-col max-h-[calc(100dvh-2rem)]',
           SIZES[size],
           'motion-safe:[animation:scaleIn_var(--dur-slow)_var(--ease-spring)]',
         ].join(' ')}
@@ -92,7 +92,7 @@ export function Modal({
       >
         {(title || description) && (
           <div
-            className={`flex items-start justify-between p-6 border-b ${t.border}`}
+            className={`shrink-0 flex items-start justify-between p-6 border-b ${t.border}`}
           >
             <div className="min-w-0">
               {title && (
@@ -122,11 +122,11 @@ export function Modal({
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6">{children}</div>
         {footer && (
           <div
             className={[
-              'flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-6 py-4 border-t rounded-b-3xl',
+              'shrink-0 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 px-6 py-4 border-t rounded-b-3xl',
               t.border,
               t.footer,
             ].join(' ')}

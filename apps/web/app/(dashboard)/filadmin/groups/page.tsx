@@ -480,9 +480,9 @@ export default function FiladminGroupsPage() {
             filtered.length > 0 &&
             filtered.every((s) => pickerSelected.includes(s.id));
           return (
-            <div className="flex flex-col" style={{ maxHeight: 'min(60vh, 520px)' }}>
-              {/* Search + toolbar (sticky-ish at top of body) */}
-              <div className="space-y-2 mb-3">
+            <div className="flex flex-col">
+              {/* Search + toolbar (sticky at top — Modal body scrolls beneath) */}
+              <div className="space-y-2 mb-3 sticky -top-6 -mx-6 px-6 -mt-6 pt-6 pb-3 bg-[var(--surface)] z-10 border-b border-[var(--line)]">
                 <div className="relative">
                   <Search
                     size={15}
@@ -532,8 +532,8 @@ export default function FiladminGroupsPage() {
                 </div>
               </div>
 
-              {/* Scrollable list */}
-              <div className="flex-1 overflow-y-auto -mx-1 px-1">
+              {/* List (Modal body provides scroll) */}
+              <div className="-mx-1 px-1">
                 {all.length === 0 ? (
                   <p className="text-sm text-[#64748b] italic py-4 text-center">
                     Guruhsiz oʻquvchi yoʻq
