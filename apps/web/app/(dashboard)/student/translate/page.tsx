@@ -76,7 +76,9 @@ export default function StudentTranslatePage() {
       setTranslation(res.data.translation || '');
       setNote(res.data.note);
       if (!res.data.translation) {
-        toast.error('Tarjima qilinmadi, qaytadan urinib koʻring');
+        toast.error(
+          'Tarjima qilinmadi. AI band — bir necha soniyadan soʻng qayta urinib koʻring.',
+        );
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;

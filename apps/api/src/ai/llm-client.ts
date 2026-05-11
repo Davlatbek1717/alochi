@@ -99,6 +99,47 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
 const CALL_TIMEOUT_MS = 10_000;
 
 /**
+ * Google returns RESOURCE_EXHAUSTED (HTTP 429) with a `retryDelay` field
+ * (e.g. "12s") when the per-minute quota is hit. We honour that delay
+ * once before giving up, so a single rate-limit blip doesn't blow up
+ * the caller's request. Capped at 8s so a misbehaving model can't
+ * stretch the request past our outer timeout budget.
+ */
+const MAX_RETRY_WAIT_MS = 8_000;
+
+function parseRetryDelayMs(err: unknown): number | null {
+  if (!err) return null;
+  const message = err instanceof Error ? err.message : String(err);
+  // The Gemini SDK serialises the error response into the Error message.
+  // We look for either the explicit retryDelay field or a 429 status code.
+  const retryMatch = message.match(/"retryDelay":\s*"(\d+(?:\.\d+)?)s"/);
+  if (retryMatch) {
+    const seconds = parseFloat(retryMatch[1]);
+    return Math.min(MAX_RETRY_WAIT_MS, Math.ceil(seconds * 1000) + 250);
+  }
+  if (/RESOURCE_EXHAUSTED|"code":\s*429|status\s*[:=]\s*429/i.test(message)) {
+    return MAX_RETRY_WAIT_MS;
+  }
+  return null;
+}
+
+async function generateWithRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+): Promise<T> {
+  try {
+    return await withTimeout(fn(), CALL_TIMEOUT_MS, label);
+  } catch (err) {
+    const wait = parseRetryDelayMs(err);
+    if (wait === null) throw err;
+    await new Promise((r) => setTimeout(r, wait));
+    // One retry. If the second attempt still fails, bubble the original
+    // shape so the caller's fallback path fires the same way it always has.
+    return await withTimeout(fn(), CALL_TIMEOUT_MS, label);
+  }
+}
+
+/**
  * Plain-text chat completion. Pass full message array (system + history +
  * latest user turn). Returns the assistant's reply, or empty string when
  * the model produced no content.
@@ -109,24 +150,23 @@ export async function chatText(
 ): Promise<string> {
   const client = buildClient(options.apiKey);
   const { systemInstruction, contents } = toGeminiHistory(messages);
-  const response = await withTimeout(
-    client.models.generateContent({
-      model: options.model ?? DEFAULT_MODEL,
-      contents,
-      config: {
-        ...(systemInstruction ? { systemInstruction } : {}),
-        temperature: options.temperature ?? 0.7,
-        topP: options.topP ?? 0.95,
-        // Gemini 2.5 Flash burns budget on hidden "thinking" tokens before
-        // emitting visible output. For chat where prompts are simple, the
-        // think pass adds latency + cost without a meaningful quality lift,
-        // so disable it by default. Callers that want it can pass a higher
-        // maxTokens and override via options (none currently do).
-        thinkingConfig: { thinkingBudget: 0 },
-        maxOutputTokens: options.maxTokens ?? 8192,
-      },
-    }),
-    CALL_TIMEOUT_MS,
+  const response = await generateWithRetry(
+    () =>
+      client.models.generateContent({
+        model: options.model ?? DEFAULT_MODEL,
+        contents,
+        config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
+          temperature: options.temperature ?? 0.7,
+          topP: options.topP ?? 0.95,
+          // Gemini 2.5 Flash burns budget on hidden "thinking" tokens before
+          // emitting visible output. For chat where prompts are simple, the
+          // think pass adds latency + cost without a meaningful quality lift,
+          // so disable it by default.
+          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: options.maxTokens ?? 8192,
+        },
+      }),
     'chatText',
   );
   return response.text ?? '';
@@ -143,25 +183,25 @@ export async function chatJson(
 ): Promise<string> {
   const client = buildClient(options.apiKey);
   const { systemInstruction, contents } = toGeminiHistory(messages);
-  const response = await withTimeout(
-    client.models.generateContent({
-      model: options.model ?? DEFAULT_MODEL,
-      contents,
-      config: {
-        ...(systemInstruction ? { systemInstruction } : {}),
-        temperature: options.temperature ?? 0.3,
-        topP: options.topP ?? 0.95,
-        // Disable thinking-token budget — graders just need a structured
-        // JSON object, not an open-ended reasoning pass. Without this the
-        // model exhausts maxOutputTokens on hidden thoughts and returns
-        // empty visible text (finishReason MAX_TOKENS), forcing callers
-        // into their string-match fallback every time.
-        thinkingConfig: { thinkingBudget: 0 },
-        maxOutputTokens: options.maxTokens ?? 1024,
-        responseMimeType: 'application/json',
-      },
-    }),
-    CALL_TIMEOUT_MS,
+  const response = await generateWithRetry(
+    () =>
+      client.models.generateContent({
+        model: options.model ?? DEFAULT_MODEL,
+        contents,
+        config: {
+          ...(systemInstruction ? { systemInstruction } : {}),
+          temperature: options.temperature ?? 0.3,
+          topP: options.topP ?? 0.95,
+          // Disable thinking-token budget — graders just need a structured
+          // JSON object, not an open-ended reasoning pass. Without this the
+          // model exhausts maxOutputTokens on hidden thoughts and returns
+          // empty visible text (finishReason MAX_TOKENS), forcing callers
+          // into their string-match fallback every time.
+          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: options.maxTokens ?? 1024,
+          responseMimeType: 'application/json',
+        },
+      }),
     'chatJson',
   );
   return response.text ?? '';
