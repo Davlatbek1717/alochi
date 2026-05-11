@@ -288,6 +288,7 @@ export class ExamsService {
         kind: true,
         language: true,
         maxMinutes: true,
+        questionCount: true,
         passThreshold: true,
         timeLimitMinutes: true,
         _count: { select: { questions: true } },

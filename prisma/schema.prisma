@@ -1148,6 +1148,13 @@ model Exam {
   // Soft session length cap for ai_oral exams. The AI is told to wrap
   // up around this mark.
   maxMinutes       Int?     @default(10) @map("max_minutes")
+  // Number of questions the AI must ask in an ai_oral exam before
+  // wrapping up with the final evaluation. The system prompt embeds
+  // this so the model knows how to pace itself; the service also
+  // forces isFinal once the student has supplied this many answers as
+  // a hard backstop in case the model ignores the instruction.
+  // Default 5; range typically 3-15.
+  questionCount    Int      @default(5) @map("question_count")
   // Pass threshold as a percentage (0-100).
   passThreshold    Int      @default(70) @map("pass_threshold")
   // Optional time budget for test exams; null means no enforcement.

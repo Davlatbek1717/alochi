@@ -49,6 +49,7 @@ export class ExamService {
         language: kind === 'ai_oral' ? (dto.language ?? 'en') : null,
         aiPrompt: kind === 'ai_oral' ? dto.aiPrompt?.trim() || null : null,
         maxMinutes: kind === 'ai_oral' ? (dto.maxMinutes ?? 10) : null,
+        questionCount: kind === 'ai_oral' ? (dto.questionCount ?? 5) : 5,
         passThreshold: dto.passThreshold ?? 70,
         timeLimitMinutes: dto.timeLimitMinutes ?? null,
         isPublished: dto.isPublished ?? false,
@@ -87,6 +88,8 @@ export class ExamService {
         updateData.aiPrompt = dto.aiPrompt?.trim() || null;
       if (dto.maxMinutes !== undefined)
         updateData.maxMinutes = dto.maxMinutes ?? null;
+      if (dto.questionCount !== undefined)
+        updateData.questionCount = dto.questionCount;
       if (dto.passThreshold !== undefined)
         updateData.passThreshold = dto.passThreshold;
       if (dto.timeLimitMinutes !== undefined)

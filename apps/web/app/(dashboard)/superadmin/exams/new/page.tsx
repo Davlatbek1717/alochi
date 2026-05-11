@@ -7,6 +7,7 @@ const EMPTY: ExamPayload = {
   language: 'en',
   aiPrompt: '',
   maxMinutes: 10,
+  questionCount: 5,
   passThreshold: 70,
   timeLimitMinutes: null,
   isPublished: false,

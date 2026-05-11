@@ -9,7 +9,7 @@ import {
   XCircle,
   AlertTriangle,
   Volume2,
-  StopCircle,
+  RotateCcw,
   Send,
   Sparkles,
 } from 'lucide-react';
@@ -32,6 +32,8 @@ interface StartResponse {
   isFinal: boolean;
   language: 'uz' | 'en';
   maxMinutes: number;
+  questionCount: number;
+  answeredCount: number;
 }
 
 interface RespondResponse {
@@ -46,6 +48,8 @@ interface RespondResponse {
     weaknesses?: string[];
     recommendations?: string[];
   } | null;
+  questionCount?: number;
+  answeredCount?: number;
 }
 
 interface FinalizeResponse {
@@ -84,18 +88,27 @@ interface Props {
   initialResult?: InitialResult | null;
 }
 
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+/**
+ * Auto-stop the mic this many milliseconds after the last new transcript
+ * chunk arrives. Voice activity detection via "no new STT result for X
+ * seconds" — cheap and works on every browser the Web Speech API does.
+ */
+const SILENCE_TIMEOUT_MS = 3000;
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 /**
- * AI-driven oral exam runner. Browser-only flow (Path 1):
- *   - Web Speech `listen()` for STT (mic → text)
- *   - SpeechSynthesis for TTS (AI text → spoken voice)
- *   - Server proxies LLM calls and persists transcript
+ * AI-driven oral exam runner — mic-only flow.
  *
- * The AI speaks first (loaded from /start). Student records their reply,
- * we POST the transcribed text to /respond, get the next AI turn, speak
- * it. Loop until the AI returns isFinal=true OR the student hits
- * "Tugatdim" → /finalize.
+ *   - AI speaks each question via SpeechSynthesis
+ *   - Student records via Web Speech `listen()`, mic auto-stops after
+ *     SILENCE_TIMEOUT_MS without new transcript OR a tap on the stop button
+ *   - Student sees the transcribed answer with "Qayta yozish" + "Yuborish"
+ *     so STT mishears are recoverable in one tap
+ *   - When the server returns isFinal=true the exam finalizes automatically;
+ *     no manual "Tugatdim" button (it would defeat the question budget)
  */
 export function OralExamRunner({
   permissionId,
@@ -107,24 +120,19 @@ export function OralExamRunner({
 }: Props) {
   const router = useRouter();
   // Two-phase init:
-  //   `started=false` — pre-flight screen. Browsers block speech
-  //                    synthesis until a user gesture, so we render a
-  //                    "Imtihonni boshlash" CTA. The student tap also
-  //                    primes the audio context.
-  //   `started=true`  — fetched /start, AI is talking, conversation
-  //                    is live.
-  // If the parent supplied an `initialResult`, we skip both phases
-  // and jump to the result screen — that's the saved-state path used
-  // when the student lands here after an exam they already finished.
+  //   started=false — pre-flight screen. Browsers block SpeechSynthesis
+  //                   until a user gesture; the "Boshlash" tap unlocks
+  //                   the audio context.
+  //   started=true  — fetched /start, AI is talking, exam is live.
   const [started, setStarted] = useState(false);
-  const [transcript, setTranscript] = useState<ConversationTurn[]>([]);
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [questionCount, setQuestionCount] = useState(5);
+  const [answeredCount, setAnsweredCount] = useState(0);
+  const [phase, setPhase] = useState<'listening-to-ai' | 'ready' | 'recording' | 'review' | 'submitting' | 'finalizing'>('listening-to-ai');
+  const [studentAnswer, setStudentAnswer] = useState('');
+  const [interim, setInterim] = useState('');
   const [loading, setLoading] = useState(false);
   const [aiSpeaking, setAiSpeaking] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [interim, setInterim] = useState('');
-  const [studentDraft, setStudentDraft] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [finalResult, setFinalResult] = useState<FinalizeResponse | null>(
     initialResult
@@ -143,18 +151,13 @@ export function OralExamRunner({
 
   const listenHandleRef = useRef<{ stop: () => void } | null>(null);
   const ttsUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedAtRef = useRef<number>(Date.now());
 
-  // ── Helpers ──────────────────────────────────────────────────────────────
   const langTag = language === 'uz' ? 'uz-UZ' : 'en-US';
 
-  /**
-   * Speak the given text via SpeechSynthesis. Cancels any ongoing
-   * utterance first. Tracks `aiSpeaking` so the mic button can be
-   * disabled while the AI is talking (prevents the AI's voice from
-   * being captured as the student's response on speakers).
-   */
+  // ── TTS ──────────────────────────────────────────────────────────────────
+
   const speakAi = useCallback(
     (text: string) => {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
@@ -163,29 +166,27 @@ export function OralExamRunner({
       utter.lang = langTag;
       utter.rate = 0.95;
       utter.pitch = 1;
-      utter.onstart = () => setAiSpeaking(true);
-      utter.onend = () => setAiSpeaking(false);
-      utter.onerror = () => setAiSpeaking(false);
+      utter.onstart = () => {
+        setAiSpeaking(true);
+        setPhase('listening-to-ai');
+      };
+      utter.onend = () => {
+        setAiSpeaking(false);
+        // After AI finishes speaking, student is ready to answer.
+        setPhase((p) => (p === 'listening-to-ai' ? 'ready' : p));
+      };
+      utter.onerror = () => {
+        setAiSpeaking(false);
+        setPhase((p) => (p === 'listening-to-ai' ? 'ready' : p));
+      };
       ttsUtteranceRef.current = utter;
       window.speechSynthesis.speak(utter);
     },
     [langTag],
   );
 
-  function stopAiSpeech() {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    setAiSpeaking(false);
-  }
+  // ── Detect capabilities + cleanup ────────────────────────────────────────
 
-  function appendTurn(turn: ConversationTurn) {
-    setTranscript((prev) => [...prev, turn]);
-  }
-
-  // Detect STT capability + cleanup on unmount. Session start is
-  // gated behind the user's "Boshlash" tap (see beginExam below) so
-  // SpeechSynthesis has the gesture it needs to play the AI's voice.
   useEffect(() => {
     setSttSupported(getSpeechCapabilities().stt);
     return () => {
@@ -194,23 +195,27 @@ export function OralExamRunner({
       } catch {
         /* ignore */
       }
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     };
   }, []);
 
-  /**
-   * Student tapped "Imtihonni boshlash". This counts as the audio
-   * gesture, so we can also kick off /start and immediately speak the
-   * AI's opening line. Calling speechSynthesis here (synchronously
-   * inside the click handler) primes the engine even though we'll
-   * actually call it later when the response lands.
-   */
+  // ── Elapsed timer ────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setElapsedSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Begin exam ───────────────────────────────────────────────────────────
+
   async function beginExam() {
     if (started || loading) return;
-    // Pre-flight: a no-op utterance to unlock SpeechSynthesis on
-    // browsers that throttle it without a recent user gesture.
+    // Pre-flight warm-up so SpeechSynthesis is allowed to speak later.
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         const warm = new SpeechSynthesisUtterance(' ');
@@ -230,13 +235,17 @@ export function OralExamRunner({
         token,
       );
       const data = res.data;
-      setTranscript(data.transcript ?? []);
       startedAtRef.current = Date.now();
       setStarted(true);
+      setQuestionCount(data.questionCount ?? 5);
+      setAnsweredCount(data.answeredCount ?? 0);
+      // Use the latest AI turn (covers resume of an in-progress session).
       const lastAi = [...(data.transcript ?? [])]
         .reverse()
         .find((t) => t.role === 'ai');
-      if (lastAi?.text) speakAi(lastAi.text);
+      const q = lastAi?.text ?? data.message;
+      setAiQuestion(q);
+      speakAi(q);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sessiya boshlanmadi');
     } finally {
@@ -244,70 +253,32 @@ export function OralExamRunner({
     }
   }
 
-  // ── Elapsed timer ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    const id = setInterval(() => {
-      setElapsedSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
+  // ── Mic — start / stop / silence detection ───────────────────────────────
 
-  // ── Auto-scroll on new messages ───────────────────────────────────────────
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [transcript, finalResult]);
+  function resetSilenceTimer() {
+    if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+    silenceTimerRef.current = setTimeout(() => {
+      stopMic();
+    }, SILENCE_TIMEOUT_MS);
+  }
 
-  // Auto-mute the mic while the AI is speaking — otherwise the speech
-  // engine picks up the AI's voice through the device speakers and
-  // transcribes it as the student's response. This was the cause of
-  // the "huge auto-typed paragraph" bug on first oral-exam test.
-  useEffect(() => {
-    if (aiSpeaking && listening) {
-      try {
-        listenHandleRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      setListening(false);
-      // Drop any in-flight interim that was definitely the AI talking.
-      setInterim('');
-    }
-  }, [aiSpeaking, listening]);
-
-  // ── Mic toggle ────────────────────────────────────────────────────────────
-  function toggleMic() {
-    if (listening) {
-      try {
-        listenHandleRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      setListening(false);
-      return;
-    }
-    // Don't even open the mic while AI is speaking — would just
-    // capture echo. The button is disabled in this state, but guard
-    // here too in case state changes between render and click.
-    if (aiSpeaking) {
-      stopAiSpeech();
-    }
+  function startMic() {
+    if (phase === 'recording' || aiSpeaking) return;
+    setStudentAnswer('');
+    setInterim('');
+    setError(null);
     try {
-      // Cache draft prefix at start: the lib's `listen()` emits the
-      // CUMULATIVE finalised transcript for the current session each
-      // time, so we treat each onResult as a REPLACEMENT of the
-      // session's contribution — not an append. The user's prior draft
-      // (typed or from a previous mic session that was stopped) lives
-      // in `prefix`; the live transcript is appended to it.
-      const prefix = studentDraft.trim();
       const handle = listen({
         lang: langTag,
         continuous: true,
         onInterim: (txt) => {
-          setInterim(prefix ? `${prefix} ${txt}`.trim() : txt);
+          setInterim(txt);
+          resetSilenceTimer();
         },
         onResult: (txt) => {
-          setStudentDraft(prefix ? `${prefix} ${txt}`.trim() : txt);
+          setStudentAnswer(txt);
           setInterim('');
+          resetSilenceTimer();
         },
         onError: (err) => {
           if (err === 'not-allowed' || err === 'service-not-allowed') {
@@ -315,42 +286,60 @@ export function OralExamRunner({
               'Mikrofonga ruxsat berilmadi. Brauzer sozlamalaridan ruxsat bering.',
             );
           } else if (err === 'no-speech') {
-            setError("Ovoz eshitilmadi. Mikrofonni tekshiring.");
+            // No-speech during recording — silence timer will auto-stop.
+            return;
           }
-          setListening(false);
+          setPhase('ready');
         },
-        onEnd: () => setListening(false),
+        onEnd: () => {
+          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        },
       });
       listenHandleRef.current = handle;
-      setListening(true);
-      setError(null);
+      setPhase('recording');
+      // Arm silence timer immediately — if student says nothing, we still
+      // exit recording after SILENCE_TIMEOUT_MS instead of hanging.
+      resetSilenceTimer();
     } catch {
       setError("Brauzer ovozini boshlab bo'lmadi.");
     }
   }
 
-  // ── Send student draft to server, get next AI turn ────────────────────────
-  async function sendResponse() {
-    const text = studentDraft.trim();
-    if (!text || submitting || finalizing) return;
-    setSubmitting(true);
-    setError(null);
-
-    // Stop mic if still listening when send is pressed.
-    if (listening) {
-      try {
-        listenHandleRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      setListening(false);
+  function stopMic() {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
     }
-
-    // Optimistic append so the chat doesn't feel janky.
-    appendTurn({ role: 'student', text, ts: new Date().toISOString() });
-    setStudentDraft('');
+    try {
+      listenHandleRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+    // Move to review if we captured anything; otherwise back to ready.
+    setPhase((p) => {
+      if (p !== 'recording') return p;
+      const got = (studentAnswer || interim).trim();
+      if (!got) return 'ready';
+      // Promote interim to final if onResult hasn't fired yet.
+      if (!studentAnswer && interim) setStudentAnswer(interim);
+      return 'review';
+    });
     setInterim('');
+  }
 
+  function retryRecording() {
+    setStudentAnswer('');
+    setInterim('');
+    setPhase('ready');
+  }
+
+  // ── Submit answer ────────────────────────────────────────────────────────
+
+  async function submitAnswer() {
+    const text = studentAnswer.trim();
+    if (!text || phase === 'submitting' || phase === 'finalizing') return;
+    setPhase('submitting');
+    setError(null);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<RespondResponse>(
@@ -359,8 +348,11 @@ export function OralExamRunner({
         token,
       );
       const data = res.data;
-      setTranscript(data.transcript ?? []);
+      setStudentAnswer('');
+      setAnsweredCount(data.answeredCount ?? answeredCount + 1);
+
       if (data.isFinal && typeof data.score === 'number') {
+        // Backend has already finalized — show result screen.
         setFinalResult({
           sessionId: data.sessionId,
           score: data.score,
@@ -369,31 +361,44 @@ export function OralExamRunner({
           message: data.message,
           isFinal: true,
         });
+        // Speak the closing line so the student knows the exam ended.
         speakAi(data.message);
-      } else {
-        speakAi(data.message);
+        return;
       }
+
+      // Not yet final — next AI question.
+      setAiQuestion(data.message);
+      speakAi(data.message);
+      // phase will move to 'listening-to-ai' via speakAi.onstart, then
+      // 'ready' on onend.
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Yuborib bo\'lmadi');
-    } finally {
-      setSubmitting(false);
+      setError(e instanceof Error ? e.message : 'Yuborib boʻlmadi');
+      setPhase('review');
     }
   }
 
-  // ── Force-finalize ────────────────────────────────────────────────────────
-  async function tugatdim() {
-    if (finalizing || finalResult) return;
-    if (!window.confirm('Imtihonni tugatishga ishonchingiz komilmi?')) return;
-    setFinalizing(true);
-    setError(null);
-    if (listening) {
-      try {
-        listenHandleRef.current?.stop();
-      } catch {
-        /* ignore */
-      }
-      setListening(false);
+  // ── Auto-finalize fallback (shouldn't fire under normal flow) ────────────
+  // If the server ever leaves us with answeredCount === questionCount but
+  // somehow didn't return isFinal (e.g., AI grader produced a malformed
+  // JSON), kick the explicit /finalize endpoint to force a verdict.
+  useEffect(() => {
+    if (
+      started &&
+      !finalResult &&
+      questionCount > 0 &&
+      answeredCount >= questionCount &&
+      phase === 'ready' &&
+      !aiSpeaking
+    ) {
+      void forceFinalize();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answeredCount, questionCount, phase, aiSpeaking, started, finalResult]);
+
+  async function forceFinalize() {
+    if (phase === 'finalizing' || finalResult) return;
+    setPhase('finalizing');
+    setError(null);
     const token = localStorage.getItem('accessToken') ?? '';
     try {
       const res = await apiRequest<FinalizeResponse>(
@@ -405,16 +410,12 @@ export function OralExamRunner({
       if (res.data.message) speakAi(res.data.message);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Yakunlab boʻlmadi');
-    } finally {
-      setFinalizing(false);
+      setPhase('ready');
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // ── Pre-flight screen ────────────────────────────────────────────────────
 
-  // Pre-flight intro. Browsers (Chrome/Safari) block SpeechSynthesis
-  // until the page sees a user gesture, so we MUST not auto-fire the
-  // AI's voice on mount. The "Imtihonni boshlash" CTA is that gesture.
   if (!started && !finalResult) {
     return (
       <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center px-4 py-8">
@@ -435,13 +436,15 @@ export function OralExamRunner({
               <Volume2 size={14} className="text-violet-600 shrink-0 mt-0.5" />
               <span>
                 AI siz bilan{' '}
-                {language === 'uz' ? "o'zbek tilida" : 'inglizcha'}{' '}
-                gapiradi va savollar beradi
+                {language === 'uz' ? "o'zbek tilida" : 'inglizcha'} savol beradi
               </span>
             </li>
             <li className="flex items-start gap-2">
               <Mic size={14} className="text-rose-600 shrink-0 mt-0.5" />
-              <span>Mikrofon orqali ovoz bilan javob bering</span>
+              <span>
+                Mikrofon orqali ovoz bilan javob bering. 3 soniya jim tursangiz
+                avtomatik to&apos;xtaydi.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <Sparkles size={14} className="text-amber-600 shrink-0 mt-0.5" />
@@ -467,11 +470,11 @@ export function OralExamRunner({
             className="!bg-violet-600 hover:!bg-violet-700 !border-violet-700 !rounded-xl !py-4"
             onClick={beginExam}
           >
-            {loading ? '...' : "Imtihonni boshlash"}
+            {loading ? '...' : 'Imtihonni boshlash'}
           </Button>
           <p className="text-[11px] text-[#94a3b8] font-semibold">
-            Boshlaganingizdan so&apos;ng AI darhol gapira boshlaydi.
-            Mikrofon ruxsatini bering.
+            Boshlaganingizdan so&apos;ng AI savol berishni boshlaydi. Mikrofon
+            ruxsatini bering.
           </p>
         </div>
       </div>
@@ -483,12 +486,12 @@ export function OralExamRunner({
       <div className="px-4 py-6 max-w-3xl mx-auto space-y-3">
         <Skeleton theme="light" className="h-16 w-full rounded-2xl" />
         <Skeleton theme="light" className="h-32 w-full rounded-2xl" />
-        <Skeleton theme="light" className="h-32 w-full rounded-2xl" />
       </div>
     );
   }
 
   // ── Result screen ────────────────────────────────────────────────────────
+
   if (finalResult) {
     const passed = finalResult.passed;
     const a = finalResult.analysis ?? {};
@@ -589,22 +592,26 @@ export function OralExamRunner({
     );
   }
 
-  // ── Active conversation ──────────────────────────────────────────────────
+  // ── Active exam — mic-only flow ──────────────────────────────────────────
+
   const elapsedMin = Math.floor(elapsedSec / 60);
   const elapsedDispSec = elapsedSec % 60;
   const overTime = elapsedMin >= maxMinutes;
+  // Question number to display: 1-indexed answered+1 while still asking,
+  // or N while showing the final acknowledgment.
+  const currentQuestionNumber = Math.min(answeredCount + 1, questionCount);
 
   return (
     <div className="min-h-full bg-[#f7f4ef] flex flex-col">
-      {/* Header — exam title + timer + finish button */}
+      {/* Header — title + progress + timer */}
       <div className="bg-[#0f172a] px-4 md:px-6 pt-4 pb-4 sticky top-0 z-30 border-b border-white/5">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
             <Volume2 size={18} className="text-violet-400" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-violet-300">
-              AI og&apos;zaki imtihon · {language === 'uz' ? "O'zbek" : 'English'}
+              Savol {currentQuestionNumber} / {questionCount}
             </p>
             <p className="text-white font-bold text-sm truncate">{examTitle}</p>
           </div>
@@ -616,174 +623,152 @@ export function OralExamRunner({
             >
               {elapsedMin}:{String(elapsedDispSec).padStart(2, '0')}
             </p>
-            <p className="text-[10px] font-bold text-[#94a3b8]">/ {maxMinutes} min</p>
+            <p className="text-[10px] font-bold text-[#94a3b8]">
+              / {maxMinutes} min
+            </p>
           </div>
+        </div>
+        {/* Progress bar */}
+        <div className="max-w-2xl mx-auto mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-violet-500 transition-all duration-500"
+            style={{
+              width: `${Math.min(100, Math.round((answeredCount / Math.max(1, questionCount)) * 100))}%`,
+            }}
+          />
         </div>
       </div>
 
-      {/* Conversation transcript */}
-      <div className="flex-1 px-4 md:px-6 py-5 max-w-3xl mx-auto w-full space-y-3">
-        {transcript.map((turn, i) => (
-          <div
-            key={i}
-            className={`flex ${turn.role === 'student' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[85%] md:max-w-[75%] px-4 py-3 rounded-2xl text-sm font-semibold leading-relaxed ${
-                turn.role === 'student'
-                  ? 'bg-[#0d9488] text-white rounded-tr-md'
-                  : 'bg-white border-l-4 border-violet-500 text-[#0f172a] rounded-tl-md'
-              }`}
+      {/* Body — current question + mic */}
+      <div className="flex-1 px-4 md:px-6 py-8 max-w-2xl mx-auto w-full flex flex-col items-center justify-center gap-6">
+        {/* AI question card */}
+        <div className="w-full bg-white rounded-3xl border-[1.5px] border-violet-200 shadow-sm p-5 md:p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-7 h-7 rounded-xl bg-violet-100 border border-violet-200 flex items-center justify-center">
+              <Volume2 size={14} className="text-violet-600" />
+            </div>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-700">
+              {aiSpeaking ? 'AI gapiryapti...' : 'AI savoli'}
+            </p>
+          </div>
+          <p className="text-base md:text-lg font-bold text-[#0f172a] leading-relaxed">
+            {aiQuestion || '...'}
+          </p>
+        </div>
+
+        {/* Phase-specific UI */}
+        {phase === 'submitting' || phase === 'finalizing' ? (
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-5 py-4 inline-flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse" />
+            <span
+              className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse"
+              style={{ animationDelay: '120ms' }}
+            />
+            <span
+              className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse"
+              style={{ animationDelay: '240ms' }}
+            />
+            <span className="text-xs font-bold text-[#64748b] ml-1">
+              {phase === 'finalizing' ? 'Imtihon yakunlanmoqda...' : "AI o'ylayapti..."}
+            </span>
+          </div>
+        ) : phase === 'review' ? (
+          <div className="w-full space-y-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-4">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700 mb-1">
+                Sizning javobingiz
+              </p>
+              <p className="text-base font-bold text-[#0f172a] leading-relaxed">
+                {studentAnswer}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={retryRecording}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-white border-2 border-[#ede9e1] hover:border-[#0f172a] text-[#0f172a] font-bold text-sm rounded-2xl py-3 min-h-[48px] transition-colors"
+              >
+                <RotateCcw size={16} />
+                Qayta yozish
+              </button>
+              <button
+                type="button"
+                onClick={submitAnswer}
+                className="flex-1 inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold text-sm rounded-2xl py-3 min-h-[48px] transition-colors"
+              >
+                <Send size={16} />
+                Yuborish
+              </button>
+            </div>
+          </div>
+        ) : phase === 'recording' ? (
+          <div className="w-full flex flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={stopMic}
+              aria-label="Yozishni to'xtatish"
+              className="w-24 h-24 rounded-full bg-rose-600 hover:bg-rose-700 text-white motion-safe:animate-pulse flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(225,29,72,0.5)] transition-colors"
             >
-              {turn.text}
+              <Square size={32} fill="currentColor" />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-extrabold text-rose-700">
+                Eshityapman...
+              </p>
+              <p className="text-[11px] text-[#64748b] font-semibold mt-1">
+                Gapirib bo&apos;lganingizda tugmani bosing yoki 3 soniya jim turing
+              </p>
             </div>
+            {(studentAnswer || interim) && (
+              <div className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a] max-h-32 overflow-y-auto">
+                <span className="font-semibold">{studentAnswer}</span>
+                {interim && (
+                  <span className="text-[#94a3b8] italic"> {interim}</span>
+                )}
+              </div>
+            )}
           </div>
-        ))}
-
-        {aiSpeaking && (
-          <div className="flex justify-start">
-            <div className="bg-white border-l-4 border-violet-500 px-4 py-2 rounded-2xl rounded-tl-md inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse" />
-              <span
-                className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse"
-                style={{ animationDelay: '120ms' }}
-              />
-              <span
-                className="w-2 h-2 rounded-full bg-violet-500 motion-safe:animate-pulse"
-                style={{ animationDelay: '240ms' }}
-              />
-              <span className="text-xs font-bold text-violet-700 ml-1">
-                AI gapiryapti
-              </span>
-            </div>
+        ) : phase === 'ready' ? (
+          <div className="w-full flex flex-col items-center gap-4">
+            <button
+              type="button"
+              onClick={startMic}
+              disabled={!sttSupported}
+              aria-label="Javob berishni boshlash"
+              className="w-24 h-24 rounded-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed text-white flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(124,58,237,0.6)] transition-colors"
+            >
+              <Mic size={36} />
+            </button>
+            <p className="text-sm font-bold text-[#64748b]">
+              Javob berish uchun mikrofon tugmasini bosing
+            </p>
+            {!sttSupported && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-amber-800 text-center">
+                Brauzeringiz mikrofonni qo&apos;llab-quvvatlamaydi. Chrome yoki
+                Edge ishlatib ko&apos;ring.
+              </div>
+            )}
           </div>
-        )}
-
-        {(submitting || finalizing) && !aiSpeaking && (
-          <div className="flex justify-start">
-            <div className="bg-white border-l-4 border-violet-500 px-4 py-2 rounded-2xl rounded-tl-md text-xs font-bold text-[#64748b]">
-              {finalizing ? 'Imtihon yakunlanmoqda...' : "AI o'ylayapti..."}
-            </div>
+        ) : (
+          // listening-to-ai — wait for TTS to finish
+          <div className="text-center">
+            <p className="text-sm font-bold text-violet-700">
+              AI savolni gapirayapti...
+            </p>
+            <p className="text-[11px] text-[#64748b] font-semibold mt-1">
+              Tugaganidan keyin mikrofon tugmasi paydo bo&apos;ladi
+            </p>
           </div>
         )}
 
         {error && (
-          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2">
+          <div className="w-full bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2">
             <AlertTriangle size={14} className="text-rose-600 shrink-0 mt-0.5" />
-            <p className="text-xs font-bold text-rose-800 leading-snug">{error}</p>
+            <p className="text-xs font-bold text-rose-800 leading-snug">
+              {error}
+            </p>
           </div>
         )}
-
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input bar — sticky bottom */}
-      <div className="sticky bottom-0 bg-white border-t border-[#ede9e1] px-4 md:px-6 py-3">
-        <div className="max-w-3xl mx-auto space-y-2">
-          {/* Live transcription preview (only when listening) */}
-          {(listening || studentDraft) && (
-            <div className="bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2 text-sm text-[#0f172a]">
-              {studentDraft && (
-                <span className="font-semibold">{studentDraft}</span>
-              )}
-              {interim && (
-                <span className="text-[#94a3b8] italic"> {interim}</span>
-              )}
-              {!studentDraft && !interim && (
-                <span className="text-[#94a3b8] italic">Tinglanmoqda...</span>
-              )}
-            </div>
-          )}
-
-          {!sttSupported && !studentDraft && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs font-bold text-amber-800">
-              Brauzeringiz mikrofonni qo&apos;llab-quvvatlamaydi. Chrome yoki
-              Edge ishlatib ko&apos;ring.
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            {sttSupported && (
-              <button
-                type="button"
-                onClick={toggleMic}
-                disabled={submitting || finalizing || aiSpeaking}
-                aria-label={listening ? "To'xtatish" : 'Mikrofonni yoqish'}
-                title={
-                  aiSpeaking
-                    ? 'AI gapirib bo\'lguniga qadar kuting'
-                    : listening
-                      ? "To'xtatish"
-                      : 'Mikrofonni yoqish'
-                }
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 transition-all ${
-                  listening
-                    ? 'bg-rose-600 motion-safe:animate-pulse'
-                    : 'bg-violet-600 hover:bg-violet-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {listening ? <Square size={18} fill="currentColor" /> : <Mic size={20} />}
-              </button>
-            )}
-
-            {/* Manual text input as a fallback (also handy for testing) */}
-            <input
-              type="text"
-              value={studentDraft}
-              onChange={(e) => setStudentDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendResponse();
-                }
-              }}
-              placeholder={
-                listening
-                  ? 'Tinglanmoqda...'
-                  : language === 'uz'
-                    ? 'Yoki yozing...'
-                    : 'Or type your answer...'
-              }
-              disabled={submitting || finalizing}
-              className="flex-1 bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-3 text-sm text-[#0f172a] focus:outline-none focus:border-violet-500 disabled:opacity-50"
-            />
-
-            <button
-              type="button"
-              onClick={sendResponse}
-              disabled={!studentDraft.trim() || submitting || finalizing}
-              aria-label="Javobni yuborish"
-              className="w-12 h-12 rounded-full flex items-center justify-center bg-[#0d9488] hover:bg-teal-700 text-white shrink-0 disabled:opacity-50 transition-colors"
-            >
-              <Send size={18} />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            {aiSpeaking ? (
-              <button
-                type="button"
-                onClick={stopAiSpeech}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#64748b] hover:text-[#0f172a]"
-              >
-                <StopCircle size={14} /> AI ovozini to&apos;xtatish
-              </button>
-            ) : (
-              <span className="text-[11px] text-[#94a3b8] font-semibold">
-                Mikrofon orqali javob bering yoki yozing
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={tugatdim}
-              disabled={finalizing}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 hover:text-rose-900 disabled:opacity-50"
-            >
-              <CheckCircle2 size={14} />
-              Tugatdim
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

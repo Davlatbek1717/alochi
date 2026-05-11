@@ -89,6 +89,7 @@ export class OralExamService {
     aiPrompt: string;
     maxMinutes: number;
     passThreshold: number;
+    questionCount: number;
   }): string {
     const langName = input.language === 'uz' ? 'Uzbek' : 'English';
     return `You are an experienced ${langName} language teacher conducting an ORAL exam with a student.
@@ -99,10 +100,11 @@ ${input.aiPrompt}
 CONVERSATION RULES:
 1. Speak ONLY in ${langName}. Do not switch languages mid-exam.
 2. Keep your turns SHORT — 1-2 sentences. This is a spoken exam.
-3. Ask 3-5 substantive questions matching the instructions above.
-4. After each student response, briefly acknowledge then continue.
-5. Wrap up around the ${input.maxMinutes}-minute mark or when you have enough evidence to grade.
-6. The student may say "Tugatdim" / "I'm done" — accept and finalize.
+3. Ask EXACTLY ${input.questionCount} substantive questions matching the instructions above. No fewer, no more.
+4. The first AI turn must contain a brief greeting AND question 1.
+5. Each subsequent AI turn (except the final) must contain the next question. Do NOT add follow-up sub-questions or comments — just the next question.
+6. After the student answers question ${input.questionCount}, the NEXT AI turn must be the final verdict (isFinal=true).
+7. Wrap up early if the student says "Tugatdim" / "I'm done".
 
 OUTPUT FORMAT — return STRICT JSON only, no markdown fences, no commentary:
 {
@@ -179,12 +181,13 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         aiPrompt: exam.aiPrompt,
         maxMinutes: exam.maxMinutes ?? 10,
         passThreshold: exam.passThreshold,
+        questionCount: exam.questionCount,
       }),
       [],
       // Bootstrap: tell the model to greet the student and ask the
       // first question. We send this as a synthetic user turn so the
       // generation API has something to respond to.
-      '[BEGIN] Greet the student and ask your first question now.',
+      '[BEGIN] Greet the student and ask question 1 now.',
     );
 
     const transcript: ConversationTurn[] = [
@@ -213,6 +216,8 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         isFinal: false,
         language: exam.language,
         maxMinutes: exam.maxMinutes,
+        questionCount: exam.questionCount,
+        answeredCount: 0,
       };
     } catch (err) {
       const code = (err as { code?: string }).code;
@@ -233,10 +238,15 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
    */
   private resumePayload(
     existing: { id: string; transcript: unknown },
-    exam: { language: string | null; maxMinutes: number | null },
+    exam: {
+      language: string | null;
+      maxMinutes: number | null;
+      questionCount: number;
+    },
   ) {
     const transcript = (existing.transcript as ConversationTurn[]) ?? [];
     const lastAi = [...transcript].reverse().find((t) => t.role === 'ai');
+    const answeredCount = transcript.filter((t) => t.role === 'student').length;
     return {
       sessionId: existing.id,
       transcript,
@@ -244,6 +254,8 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
       isFinal: false,
       language: exam.language,
       maxMinutes: exam.maxMinutes,
+      questionCount: exam.questionCount,
+      answeredCount,
     };
   }
 
@@ -281,15 +293,29 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
     });
 
     const exam = session.exam;
+    // Server-side question budget: count student turns up to and
+    // including this one. Once the student has answered exam.questionCount
+    // questions, the next AI turn MUST be the final verdict — we don't
+    // trust the model to count its own questions, so we instruct
+    // "STOP and grade now" explicitly.
+    const studentAnswers = transcript.filter((t) => t.role === 'student').length;
+    const forceFinalize = studentAnswers >= exam.questionCount;
+    const directive = forceFinalize
+      ? 'STOP. The student has answered all ' +
+        exam.questionCount +
+        ' questions. Do NOT ask another question. Return ONLY the final-grade JSON with isFinal=true, an integer "score" 0-100 per the rubric, and the analysis object. Use the student\'s latest answer above when grading.'
+      : trimmed;
+
     const ai = await this.askGemini(
       this.buildSystemPrompt({
         language: (exam.language as 'uz' | 'en') ?? 'en',
         aiPrompt: exam.aiPrompt ?? '',
         maxMinutes: exam.maxMinutes ?? 10,
         passThreshold: exam.passThreshold,
+        questionCount: exam.questionCount,
       }),
       transcript.slice(0, -1), // history before this student turn
-      trimmed,
+      directive,
     );
 
     transcript.push({
@@ -326,6 +352,8 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
       transcript,
       message: ai.message,
       isFinal: false,
+      questionCount: exam.questionCount,
+      answeredCount: studentAnswers,
     };
   }
 
@@ -361,6 +389,7 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
         aiPrompt: exam.aiPrompt ?? '',
         maxMinutes: exam.maxMinutes ?? 10,
         passThreshold: exam.passThreshold,
+        questionCount: exam.questionCount,
       }),
       transcript,
       // Force-finalize directive — stronger wording so the model
@@ -384,6 +413,7 @@ Be fair but realistic. A beginner answering haltingly can still pass with ~70 if
             aiPrompt: exam.aiPrompt ?? '',
             maxMinutes: exam.maxMinutes ?? 10,
             passThreshold: exam.passThreshold,
+            questionCount: exam.questionCount,
           }),
           transcript,
           'EVALUATE NOW. Output ONLY this JSON shape and nothing else: ' +

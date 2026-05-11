@@ -87,6 +87,12 @@ export class CreateExamDto {
 
   @IsInt()
   @IsOptional()
+  @Min(3)
+  @Max(15)
+  questionCount?: number;
+
+  @IsInt()
+  @IsOptional()
   @Min(0)
   @Max(100)
   passThreshold?: number;
@@ -137,6 +143,12 @@ export class UpdateExamDto {
   @Min(2)
   @Max(60)
   maxMinutes?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Min(3)
+  @Max(15)
+  questionCount?: number;
 
   @IsInt()
   @IsOptional()

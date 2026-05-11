@@ -15,6 +15,7 @@ interface ExamFromApi {
   language: 'uz' | 'en' | null;
   aiPrompt: string | null;
   maxMinutes: number | null;
+  questionCount: number;
   passThreshold: number;
   timeLimitMinutes: number | null;
   isPublished: boolean;
@@ -46,6 +47,7 @@ export default function EditExamPage() {
           language: (exam.language ?? 'en') as 'uz' | 'en',
           aiPrompt: exam.aiPrompt ?? '',
           maxMinutes: exam.maxMinutes ?? 10,
+          questionCount: exam.questionCount ?? 5,
           passThreshold: exam.passThreshold,
           timeLimitMinutes: exam.timeLimitMinutes,
           isPublished: exam.isPublished,

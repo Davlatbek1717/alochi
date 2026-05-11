@@ -43,6 +43,8 @@ export interface ExamPayload {
   aiPrompt: string;
   /** Soft cap on conversation length, ai_oral only. */
   maxMinutes: number;
+  /** Number of questions the AI must ask in an ai_oral exam (3-15). */
+  questionCount: number;
   passThreshold: number;
   timeLimitMinutes: number | null;
   isPublished: boolean;
@@ -207,6 +209,7 @@ export function ExamEditor({ examId, initial }: Props) {
             language: form.language,
             aiPrompt: form.aiPrompt.trim(),
             maxMinutes: form.maxMinutes,
+            questionCount: form.questionCount,
           }
         : {}),
       passThreshold: form.passThreshold,
@@ -449,6 +452,27 @@ export function ExamEditor({ examId, initial }: Props) {
                   />
                   <p className="text-[11px] text-[#94a3b8] font-semibold mt-1">
                     AI shu vaqt atrofida tugatadi
+                  </p>
+                </div>
+                <div>
+                  <label className={fieldLabel}>
+                    Savollar soni
+                  </label>
+                  <input
+                    type="number"
+                    min={3}
+                    max={15}
+                    value={form.questionCount}
+                    onChange={(e) =>
+                      patch(
+                        'questionCount',
+                        Math.max(3, Math.min(15, Number(e.target.value) || 5)),
+                      )
+                    }
+                    className={fieldInput}
+                  />
+                  <p className="text-[11px] text-[#94a3b8] font-semibold mt-1">
+                    AI aniq shuncha savol beradi va so&apos;ng yakunlaydi
                   </p>
                 </div>
               </div>
