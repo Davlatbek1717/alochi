@@ -35,7 +35,7 @@ function tashkentHourMinute(date: Date): { hour: number; minute: number } {
  * Returns 'morning' | 'evening' | null depending on whether now falls
  * inside a check-in window in Tashkent local time.
  *
- * Morning:  06:00 – 06:30 (inclusive of 06:00, exclusive of 06:31)
+ * Morning:  05:00 – 06:30 (inclusive of 05:00, exclusive of 06:31)
  * Evening:  18:00 – 22:00 (inclusive of 18:00, exclusive of 22:01)
  */
 export function currentWindow(): 'morning' | 'evening' | null {
@@ -43,8 +43,8 @@ export function currentWindow(): 'morning' | 'evening' | null {
   const { hour, minute } = tashkentHourMinute(now);
   const totalMinutes = hour * 60 + minute;
 
-  // Morning: 06:00–06:30  →  360–390
-  if (totalMinutes >= 360 && totalMinutes <= 390) return 'morning';
+  // Morning: 05:00–06:30  →  300–390
+  if (totalMinutes >= 300 && totalMinutes <= 390) return 'morning';
   // Evening: 18:00–22:00  →  1080–1320
   if (totalMinutes >= 1080 && totalMinutes <= 1320) return 'evening';
 
@@ -83,12 +83,12 @@ export function dateStringToDate(dateStr: string): Date {
  */
 export function nextWindowLabel(current: 'morning' | 'evening' | null): string {
   if (current === 'morning') return 'kechki (18:00–22:00)';
-  if (current === 'evening') return 'ertangi ertalabki (06:00–06:30)';
+  if (current === 'evening') return 'ertangi ertalabki (05:00–06:30)';
   // If outside windows, figure out which is next
   const now = new Date();
   const { hour, minute } = tashkentHourMinute(now);
   const totalMinutes = hour * 60 + minute;
-  if (totalMinutes < 360) return 'ertalabki (06:00–06:30)';
+  if (totalMinutes < 300) return 'ertalabki (05:00–06:30)';
   if (totalMinutes < 1080) return 'kechki (18:00–22:00)';
-  return 'ertangi ertalabki (06:00–06:30)';
+  return 'ertangi ertalabki (05:00–06:30)';
 }

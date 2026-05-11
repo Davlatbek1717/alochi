@@ -279,7 +279,7 @@ export default function VideoCheckinsPanel({
         <div>
           <p className="text-sm font-extrabold text-[#0f172a]">Kunlik video tekshir</p>
           <p className="text-[10px] text-[#64748b] font-semibold uppercase tracking-wider">
-            Ertalab 06:00–06:30 | Kechki 18:00–22:00
+            Ertalab 05:00–06:30 | Kechki 18:00–22:00
           </p>
         </div>
       </div>

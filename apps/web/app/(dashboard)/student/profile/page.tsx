@@ -500,14 +500,14 @@ export default function StudentProfilePage() {
                 Bot ulangan. Har kuni video tashlang.
               </p>
               <p className="text-xs text-[#64748b]">
-                06:00–06:30 ertalabki video • 18:00–22:00 kechki video
+                05:00–06:30 ertalabki video • 18:00–22:00 kechki video
               </p>
             </div>
           ) : BOT_USERNAME ? (
             <div className="flex flex-col gap-3">
               <p className="text-xs text-[#64748b] leading-relaxed">
                 Har kuni ikki marta video tashlashingiz kerak:<br />
-                <strong>Ertalab 06:00–06:30</strong> va <strong>Kechki 18:00–22:00</strong>.<br />
+                <strong>Ertalab 05:00–06:30</strong> va <strong>Kechki 18:00–22:00</strong>.<br />
                 Faqat bot ichida yozilgan video qabul qilinadi (forward qilinmagan).
               </p>
               <a

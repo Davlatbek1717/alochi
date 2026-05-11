@@ -1153,10 +1153,12 @@ export class CronService {
   // ── Video check-in crons (Asia/Tashkent timezone) ──────────────────────────
 
   /**
-   * 05:55 Tashkent — "Ertalabki video vaqti yetdi" reminder.
-   * Only sent to students who haven't submitted morning video yet.
+   * 04:55 Tashkent — "Ertalabki video vaqti yetdi" reminder.
+   * Fires 5 minutes before the morning window opens at 05:00.
+   * Only sent to students who haven't submitted morning video yet
+   * (always empty pre-window, but kept for consistency with evening).
    */
-  @Cron('55 5 * * *', {
+  @Cron('55 4 * * *', {
     name: 'video_morning_start_reminder',
     timeZone: 'Asia/Tashkent',
   })
@@ -1168,7 +1170,7 @@ export class CronService {
       const recipients =
         await this.videoCheckin.getReminderRecipients('morning');
       const msg =
-        'Ertalabki video tashlash vaqti yetdi (06:00–06:30). Iltimos, video yuboring!';
+        'Ertalabki video tashlash vaqti yetdi (05:00–06:30). Iltimos, video yuboring!';
       await Promise.allSettled(
         recipients.map((r) =>
           this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),

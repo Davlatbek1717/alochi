@@ -52,7 +52,7 @@ export class VideoCheckinHandler {
       await ctx.reply(
         `Salom, ${student.name}! Profilingiz muvaffaqiyatli bog'landi.\n\n` +
           `Endi har kuni:\n` +
-          `• 06:00–06:30 — ertalabki video\n` +
+          `• 05:00–06:30 — ertalabki video\n` +
           `• 18:00–22:00 — kechki video\n\n` +
           `Video yuboring: bot ichida dumaloq yoki to'g'riburchak video yozing. ` +
           `Forward qilingan video qabul qilinmaydi.`,
@@ -109,7 +109,7 @@ export class VideoCheckinHandler {
     const window = currentWindow();
     if (!window) {
       await ctx.reply(
-        'Hozir video tashlash vaqti emas.\n\nVaqtlar:\n• Ertalab: 06:00–06:30\n• Kechki: 18:00–22:00',
+        'Hozir video tashlash vaqti emas.\n\nVaqtlar:\n• Ertalab: 05:00–06:30\n• Kechki: 18:00–22:00',
       );
       return;
     }
