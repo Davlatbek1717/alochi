@@ -19,6 +19,7 @@ import { apiRequest } from '@/lib/api';
 import { Modal, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
 import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
+import { StudentExamResults } from '@/app/(dashboard)/_components/StudentExamResults';
 
 interface UserInfo {
   id: string;
@@ -330,6 +331,9 @@ export default function FiladminStudentDetailPage() {
             <p className="text-sm text-[#94a3b8]">Status hali belgilanmagan</p>
           )}
         </section>
+
+        {/* Imtihon natijalari */}
+        <StudentExamResults studentId={studentId} />
 
         {/* Warnings */}
         <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">

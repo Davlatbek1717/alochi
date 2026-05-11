@@ -231,7 +231,28 @@ export class ExamsService {
       where: { studentId },
       include: {
         lesson: { select: { id: true, title: true, orderNumber: true } },
-        exam: { select: { id: true, title: true } },
+        exam: {
+          select: {
+            id: true,
+            title: true,
+            kind: true,
+            passThreshold: true,
+          },
+        },
+        // Pull the oral session so the staff-facing UI can render the
+        // AI analysis (strengths / weaknesses / recommendations) and the
+        // full transcript on the same screen — no extra round-trip.
+        oralSession: {
+          select: {
+            id: true,
+            status: true,
+            score: true,
+            passed: true,
+            completedAt: true,
+            aiAnalysis: true,
+            transcript: true,
+          },
+        },
       },
       orderBy: { grantedAt: 'desc' },
     });

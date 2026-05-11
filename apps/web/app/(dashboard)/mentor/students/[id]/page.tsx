@@ -6,6 +6,7 @@ import { apiRequest, ApiError } from '@/lib/api';
 import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { Skeleton, useToast } from '@/components/ui';
 import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
+import { StudentExamResults } from '@/app/(dashboard)/_components/StudentExamResults';
 
 type AnalysisResult = {
   weakAreas: string[];
@@ -315,6 +316,9 @@ export default function StudentDetailPage() {
             </p>
           </div>
         )}
+
+        {/* Imtihon natijalari */}
+        <StudentExamResults studentId={studentId} />
 
         {/* Parent Telegram message */}
         <div className="mt-2 p-5 rounded-[18px] bg-white border-[1.5px] border-[#ede9e1] shadow-sm">

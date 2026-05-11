@@ -73,7 +73,13 @@ export class ExamsController {
   }
 
   @Get('student/:studentId')
-  @Roles(UserRole.tester, UserRole.filadmin, UserRole.manager)
+  @Roles(
+    UserRole.tester,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+    UserRole.superadmin,
+  )
   getStudentExams(@Param('studentId') studentId: string) {
     return this.exams.getStudentExams(studentId);
   }
