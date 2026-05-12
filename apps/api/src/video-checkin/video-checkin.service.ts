@@ -12,8 +12,8 @@ import { tashkentDateString, dateStringToDate } from './lib/tashkent-time';
 export interface TodayCheckinRow {
   studentId: string;
   name: string;
-  morning: 'submitted' | 'missed' | 'pending';
-  evening: 'submitted' | 'missed' | 'pending';
+  morning: 'submitted' | 'late' | 'missed' | 'pending';
+  evening: 'submitted' | 'late' | 'missed' | 'pending';
   morningAt: string | null;
   eveningAt: string | null;
   morningCheckinId: string | null;
@@ -128,7 +128,12 @@ export class VideoCheckinService {
 
   /**
    * Records a video submission. Upserts so re-sends within the same window
-   * update the file reference rather than failing.
+   * update the file reference rather than failing. When `late` is true
+   * the row is stored as `status='late'` instead of `'submitted'` so
+   * attendance reports can flag the delay.
+   *
+   * A row that's already `submitted` (on-time) cannot be downgraded to
+   * `late` by a subsequent submission — the first on-time submit wins.
    */
   async recordSubmission(
     studentId: string,
@@ -136,9 +141,21 @@ export class VideoCheckinService {
     fileId: string,
     kind: 'video_note' | 'video',
     durationSec: number | null,
+    late = false,
   ) {
     const dateStr = tashkentDateString();
     const date = dateStringToDate(dateStr);
+
+    const status = late ? 'late' : 'submitted';
+
+    // Look up the existing row first so we never downgrade an on-time
+    // 'submitted' into 'late' on a late re-submission.
+    const existing = await this.prisma.videoCheckin.findUnique({
+      where: { studentId_date_type: { studentId, date, type } },
+      select: { status: true },
+    });
+    const finalStatus =
+      existing?.status === 'submitted' ? 'submitted' : status;
 
     const row = await this.prisma.videoCheckin.upsert({
       where: { studentId_date_type: { studentId, date, type } },
@@ -146,14 +163,14 @@ export class VideoCheckinService {
         studentId,
         date,
         type,
-        status: 'submitted',
+        status: finalStatus,
         telegramFileId: fileId,
         videoKind: kind,
         durationSec,
         submittedAt: new Date(),
       },
       update: {
-        status: 'submitted',
+        status: finalStatus,
         telegramFileId: fileId,
         videoKind: kind,
         durationSec,
@@ -167,7 +184,7 @@ export class VideoCheckinService {
       tenantId,
       studentId,
       type,
-      status: 'submitted',
+      status: finalStatus,
     });
 
     return row;
@@ -178,11 +195,11 @@ export class VideoCheckinService {
    * Fires notifications to filadmin(s) + mentor.
    */
   async markMissed(studentId: string, date: Date, type: 'morning' | 'evening') {
-    // Skip if already submitted
+    // Skip if already submitted (on-time) or accepted as 'late'.
     const existing = await this.prisma.videoCheckin.findUnique({
       where: { studentId_date_type: { studentId, date, type } },
     });
-    if (existing?.status === 'submitted') return;
+    if (existing?.status === 'submitted' || existing?.status === 'late') return;
 
     const row = await this.prisma.videoCheckin.upsert({
       where: { studentId_date_type: { studentId, date, type } },
@@ -280,15 +297,16 @@ export class VideoCheckinService {
     });
 
     // Find students who already submitted for this window today
-    const submitted = await this.prisma.videoCheckin.findMany({
-      where: { date, type, status: 'submitted' },
+    // Anyone with status='submitted' OR 'late' counts as having done it.
+    const done = await this.prisma.videoCheckin.findMany({
+      where: { date, type, status: { in: ['submitted', 'late'] } },
       select: { studentId: true },
     });
-    const submittedIds = new Set(submitted.map((s) => s.studentId));
+    const doneIds = new Set(done.map((s) => s.studentId));
 
     let missed = 0;
     for (const student of students) {
-      if (submittedIds.has(student.id)) continue;
+      if (doneIds.has(student.id)) continue;
       await this.markMissed(student.id, date, type).catch((err) =>
         this.logger.warn(
           `markMissed failed for ${student.id}: ${(err as Error).message}`,
@@ -309,10 +327,12 @@ export class VideoCheckinService {
     const date = dateStringToDate(dateStr);
     const now = new Date();
 
-    // Determine which windows are still "pending" (open) vs closed
+    // Determine which windows are fully closed (on-time AND late grace
+    // both expired). A student is only "missed" once both deadlines have
+    // passed without a submission.
     const nowTashkent = this.tashkentMinutes(now);
-    const morningClosed = nowTashkent > 391; // 06:31
-    const eveningClosed = nowTashkent > 1321; // 22:01
+    const morningClosed = nowTashkent >= 1080; // 18:00 — evening opens
+    const eveningClosed = nowTashkent === 0; // wraps at midnight; effectively only after the cron stamps a row
 
     const students = await this.prisma.user.findMany({
       where: { branchId, role: 'student', status: 'active' },
@@ -354,14 +374,16 @@ export class VideoCheckinService {
       const morningRow = checkinByStudentType.get(`${s.id}:morning`);
       const eveningRow = checkinByStudentType.get(`${s.id}:evening`);
 
-      const resolveMorning = (): 'submitted' | 'missed' | 'pending' => {
+      const resolveMorning = (): 'submitted' | 'late' | 'missed' | 'pending' => {
         if (morningRow?.status === 'submitted') return 'submitted';
+        if (morningRow?.status === 'late') return 'late';
         if (morningRow?.status === 'missed') return 'missed';
         return morningClosed ? 'missed' : 'pending';
       };
 
-      const resolveEvening = (): 'submitted' | 'missed' | 'pending' => {
+      const resolveEvening = (): 'submitted' | 'late' | 'missed' | 'pending' => {
         if (eveningRow?.status === 'submitted') return 'submitted';
+        if (eveningRow?.status === 'late') return 'late';
         if (eveningRow?.status === 'missed') return 'missed';
         return eveningClosed ? 'missed' : 'pending';
       };
@@ -478,41 +500,46 @@ export class VideoCheckinService {
     });
     if (!student) return null;
 
-    const { currentWindow, tashkentDateString: dateStr } =
+    const { currentWindowOrLate, tashkentDateString: dateStr } =
       await import('./lib/tashkent-time');
-    const window = currentWindow();
-    if (!window) return null;
+    const slot = currentWindowOrLate();
+    if (!slot) return null;
 
     const dateString = dateStr();
     const date = dateStringToDate(dateString);
 
-    // Check if already submitted for this window
+    // Check if already submitted for this window. 'submitted' (on-time)
+    // is final — student can't resubmit. 'late' rows are also treated
+    // as final so a student doesn't keep re-uploading and resetting
+    // the late-vs-on-time flag.
     const existing = await this.prisma.videoCheckin.findUnique({
       where: {
-        studentId_date_type: { studentId: student.id, date, type: window },
+        studentId_date_type: { studentId: student.id, date, type: slot.type },
       },
     });
-    if (existing?.status === 'submitted') return null;
+    if (existing?.status === 'submitted' || existing?.status === 'late') {
+      return null;
+    }
 
-    // Calculate window end time in UTC
+    // Calculate window end time in UTC. For an on-time slot we use the
+    // original boundary; for a late slot we use the late-grace cutoff
+    // (next-window-opens for morning, midnight for evening).
     const now = new Date();
     const windowEndsAt = new Date();
     const { hour: nowHour, minute: nowMinute } = this.tashkentHourMinuteOf(now);
     const nowTotalMin = nowHour * 60 + nowMinute;
 
-    if (window === 'morning') {
-      // Window ends at 06:30 Tashkent = 01:30 UTC
-      const tashkentEndMin = 390; // 06:30
+    if (slot.type === 'morning') {
+      const tashkentEndMin = slot.late ? 1080 : 390; // 18:00 vs 06:30
       const diffMin = tashkentEndMin - nowTotalMin;
       windowEndsAt.setMinutes(windowEndsAt.getMinutes() + diffMin);
     } else {
-      // Window ends at 22:00 Tashkent = 17:00 UTC
-      const tashkentEndMin = 1320; // 22:00
+      const tashkentEndMin = slot.late ? 1440 : 1320; // 24:00 vs 22:00
       const diffMin = tashkentEndMin - nowTotalMin;
       windowEndsAt.setMinutes(windowEndsAt.getMinutes() + diffMin);
     }
 
-    return { studentId: student.id, type: window, windowEndsAt };
+    return { studentId: student.id, type: slot.type, windowEndsAt };
   }
 
   private tashkentMinutes(date: Date): number {

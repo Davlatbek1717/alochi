@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-export type CheckinStatus = 'submitted' | 'missed' | 'pending';
+export type CheckinStatus = 'submitted' | 'late' | 'missed' | 'pending';
 
 export interface VideoCheckinRow {
   studentId: string;
@@ -57,13 +57,19 @@ function StatusCell({
   windowLabel: string;
   onPlay: (checkinId: string, studentName: string, windowLabel: string) => void;
 }) {
-  if (status === 'submitted') {
+  if (status === 'submitted' || status === 'late') {
     const time = formatTime(submittedAt);
+    const isLate = status === 'late';
+    const labelText = isLate ? 'Kechikdi' : 'Tashladi';
+    const wrapperColor = isLate ? 'text-amber-700' : 'text-emerald-700';
+    const playColor = isLate
+      ? 'bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 focus:ring-amber-500/30'
+      : 'bg-[#0d9488]/10 text-[#0d9488] hover:bg-[#0d9488]/20 focus:ring-[#0d9488]/30';
     return (
       <div className="inline-flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-emerald-700 font-semibold text-xs">
+        <span className={`inline-flex items-center gap-1 font-semibold text-xs ${wrapperColor}`}>
           <CheckCircle size={13} className="shrink-0" />
-          Tashladi{time ? ` (${time})` : ''}
+          {labelText}{time ? ` (${time})` : ''}
         </span>
         {checkinId && (
           <button
@@ -73,7 +79,7 @@ function StatusCell({
               onPlay(checkinId, studentName, windowLabel);
             }}
             aria-label={`${studentName} — ${windowLabel} videoni ko'rish`}
-            className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0d9488]/10 text-[#0d9488] hover:bg-[#0d9488]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0d9488]/30"
+            className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 ${playColor}`}
           >
             <Play size={11} fill="currentColor" />
           </button>

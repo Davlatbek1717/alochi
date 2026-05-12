@@ -52,6 +52,47 @@ export function currentWindow(): 'morning' | 'evening' | null {
 }
 
 /**
+ * Window detection with a late-grace period after the on-time window
+ * closes. A student can keep submitting after the window if the slot
+ * hasn't fully expired yet — the row is stored with `status='late'`
+ * instead of `submitted`, so attendance reports can flag the delay.
+ *
+ * - Morning on-time:  05:00 – 06:30
+ * - Morning late:     06:31 – 17:59  (until evening window opens at 18:00)
+ * - Evening on-time:  18:00 – 22:00
+ * - Evening late:     22:01 – 23:59  (until midnight Tashkent)
+ *
+ * Returns `null` between 00:00 and 05:00 — no slot is open then. (The
+ * evening late window deliberately stops at midnight per product
+ * choice; students who miss that range are marked as 'missed' the next
+ * morning by the cron job.)
+ */
+export function currentWindowOrLate():
+  | { type: 'morning' | 'evening'; late: boolean }
+  | null {
+  const now = new Date();
+  const { hour, minute } = tashkentHourMinute(now);
+  const totalMinutes = hour * 60 + minute;
+
+  if (totalMinutes >= 300 && totalMinutes <= 390) {
+    return { type: 'morning', late: false };
+  }
+  // Morning late grace: 06:31 → 17:59 (one minute before evening on-time)
+  if (totalMinutes > 390 && totalMinutes < 1080) {
+    return { type: 'morning', late: true };
+  }
+  if (totalMinutes >= 1080 && totalMinutes <= 1320) {
+    return { type: 'evening', late: false };
+  }
+  // Evening late grace: 22:01 → 23:59 (until midnight)
+  if (totalMinutes > 1320 && totalMinutes <= 1439) {
+    return { type: 'evening', late: true };
+  }
+  // 00:00 – 04:59 — no slot open.
+  return null;
+}
+
+/**
  * Returns the calendar date string (YYYY-MM-DD) in Tashkent timezone for
  * the given date (defaults to now).
  */

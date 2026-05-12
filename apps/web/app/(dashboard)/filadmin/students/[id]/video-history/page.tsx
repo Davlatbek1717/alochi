@@ -17,6 +17,8 @@ function StatusDot({ status }: { status: string | null }) {
   if (!status) return <span className="text-[#cbd5e1] text-xs">—</span>;
   if (status === 'submitted')
     return <CheckCircle size={14} className="text-emerald-500 shrink-0" />;
+  if (status === 'late')
+    return <CheckCircle size={14} className="text-amber-500 shrink-0" />;
   if (status === 'missed')
     return <XCircle size={14} className="text-rose-500 shrink-0" />;
   return <Clock size={14} className="text-amber-500 shrink-0" />;
@@ -162,7 +164,7 @@ export default function StudentVideoHistoryPage() {
                 </span>
                 <div className="w-20 flex flex-col items-center gap-0.5">
                   <StatusDot status={row.morning} />
-                  {row.morning === 'submitted' && row.morningSubmittedAt && (
+                  {(row.morning === 'submitted' || row.morning === 'late') && row.morningSubmittedAt && (
                     <span className="text-[9px] text-[#94a3b8] font-semibold">
                       {formatTime(row.morningSubmittedAt)}
                     </span>
@@ -170,7 +172,7 @@ export default function StudentVideoHistoryPage() {
                 </div>
                 <div className="w-20 flex flex-col items-center gap-0.5">
                   <StatusDot status={row.evening} />
-                  {row.evening === 'submitted' && row.eveningSubmittedAt && (
+                  {(row.evening === 'submitted' || row.evening === 'late') && row.eveningSubmittedAt && (
                     <span className="text-[9px] text-[#94a3b8] font-semibold">
                       {formatTime(row.eveningSubmittedAt)}
                     </span>

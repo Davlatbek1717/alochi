@@ -1218,9 +1218,13 @@ export class CronService {
   }
 
   /**
-   * 06:31 Tashkent — mark all students who missed the morning window.
+   * 18:00 Tashkent — mark missed for any student who hasn't submitted
+   * a morning video AND hasn't sent a late one before the evening
+   * window opens. The on-time morning window closed at 06:30 but late
+   * submissions remain accepted until 18:00; running the mark-missed
+   * any earlier would label late students as missed by mistake.
    */
-  @Cron('31 6 * * *', {
+  @Cron('0 18 * * *', {
     name: 'video_morning_mark_missed',
     timeZone: 'Asia/Tashkent',
   })
@@ -1298,9 +1302,13 @@ export class CronService {
   }
 
   /**
-   * 22:01 Tashkent — mark all students who missed the evening window.
+   * 00:00 Tashkent — mark missed for any student who hasn't submitted
+   * an evening video AND didn't send a late one before midnight. The
+   * on-time evening window closed at 22:00 but late submissions remain
+   * accepted until 00:00; this cron fires right after the late grace
+   * cutoff so a missed mark survives.
    */
-  @Cron('1 22 * * *', {
+  @Cron('0 0 * * *', {
     name: 'video_evening_mark_missed',
     timeZone: 'Asia/Tashkent',
   })

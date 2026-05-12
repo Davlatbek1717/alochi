@@ -3,7 +3,7 @@ import { Context } from 'grammy';
 import { PrismaService } from '../../prisma/prisma.service';
 import { VideoCheckinService } from '../../video-checkin/video-checkin.service';
 import {
-  currentWindow,
+  currentWindowOrLate,
   nextWindowLabel,
 } from '../../video-checkin/lib/tashkent-time';
 
@@ -105,11 +105,13 @@ export class VideoCheckinHandler {
       return;
     }
 
-    // 3. Check current window
-    const window = currentWindow();
-    if (!window) {
+    // 3. Check current window — accepts late submissions too. A slot is
+    //    open for late grace until the next slot opens (morning) or until
+    //    midnight (evening).
+    const slot = currentWindowOrLate();
+    if (!slot) {
       await ctx.reply(
-        'Hozir video tashlash vaqti emas.\n\nVaqtlar:\n• Ertalab: 05:00–06:30\n• Kechki: 18:00–22:00',
+        'Hozir video tashlash vaqti emas.\n\nVaqtlar:\n• Ertalab: 05:00–06:30\n• Kechki: 18:00–22:00\n\nKechikkan videolar ham qabul qilinadi (kechki vaqti boshlangunga qadar yoki yarim tunga qadar).',
       );
       return;
     }
@@ -119,7 +121,7 @@ export class VideoCheckinHandler {
       BigInt(telegramId),
     );
     if (!pending) {
-      const nextLabel = nextWindowLabel(window);
+      const nextLabel = nextWindowLabel(slot.type);
       await ctx.reply(
         `Bu vaqt uchun videoni allaqachon yubordingiz. Keyingi vaqt: ${nextLabel}.`,
       );
@@ -156,14 +158,21 @@ export class VideoCheckinHandler {
     try {
       await this.videoCheckinService.recordSubmission(
         student.id,
-        window,
+        slot.type,
         fileId,
         kind,
         durationSec,
+        slot.late,
       );
 
-      const nextLabel = nextWindowLabel(window);
-      await ctx.reply(`Qabul qilindi! Yana ${nextLabel} da kutamiz.`);
+      const nextLabel = nextWindowLabel(slot.type);
+      if (slot.late) {
+        await ctx.reply(
+          `Video kechikib qabul qilindi (kechikdi deb belgilandi). Keyingi safar vaqtida yuboring. Yana ${nextLabel} da kutamiz.`,
+        );
+      } else {
+        await ctx.reply(`Qabul qilindi! Yana ${nextLabel} da kutamiz.`);
+      }
     } catch (err) {
       this.logger.error(`recordSubmission failed for ${student.id}: ${err}`);
       await ctx.reply("Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
