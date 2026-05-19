@@ -64,6 +64,36 @@ export class VideoCheckinController {
   }
 
   /**
+   * GET /video-checkins/monitoring?date=YYYY-MM-DD
+   *
+   * Dedicated daily monitoring — role-scoped inside the service
+   * (mentor → own group, filadmin/manager → own branch, superadmin →
+   * tenant). Defaults to today; past dates show finalised status.
+   */
+  @Get('monitoring')
+  @Roles(
+    UserRole.filadmin,
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
+  async getMonitoring(
+    @Query('date') date: string | undefined,
+    @Request() req: { user: JwtUser },
+  ) {
+    return this.service.getMonitoring(
+      {
+        userId: req.user.userId,
+        role: req.user.role,
+        tenantId: req.user.tenantId,
+        branchId: req.user.branchId ?? null,
+        groupId: req.user.groupId ?? null,
+      },
+      date,
+    );
+  }
+
+  /**
    * GET /video-checkins/student/:studentId/history?days=30
    *
    * History for a student. Student can only see their own; staff can see any.

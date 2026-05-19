@@ -106,9 +106,11 @@ const NAV: Record<string, NavEntry[]> = {
     { label: 'Bosh sahifa', href: '/mentor', icon: <Home size={15} /> },
     { label: 'Guruh', href: '/mentor/group', icon: <GraduationCap size={15} /> },
     { label: 'Davomat', href: '/mentor/attendance', icon: <BarChart2 size={15} /> },
+    { label: 'Video', href: '/mentor/video-monitoring', icon: <Video size={15} /> },
     { label: 'Vazifalar', href: '/mentor/tasks', icon: <ClipboardList size={15} /> },
     { label: "O'quvchilar", href: '/mentor/students', icon: <Users size={15} /> },
     { label: 'Reyting', href: '/mentor/leaderboard', icon: <Trophy size={15} /> },
+    { label: 'Profil', href: '/profile', icon: <Layers size={15} /> },
   ],
 
   manager: [
@@ -138,6 +140,8 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/manager/kpi', icon: <BarChart2 size={14} />, label: 'KPI' },
       ],
     },
+    { label: 'Video', href: '/manager/video-monitoring', icon: <Video size={15} /> },
+    { label: 'Profil', href: '/profile', icon: <Layers size={15} /> },
   ],
 
   filadmin: [
@@ -158,6 +162,7 @@ const NAV: Record<string, NavEntry[]> = {
       icon: <BarChart2 size={15} />,
       items: [
         { href: '/filadmin/attendance', icon: <BarChart2 size={14} />, label: 'Davomat' },
+        { href: '/filadmin/video-monitoring', icon: <Video size={14} />, label: 'Video monitoring' },
         { href: '/filadmin/face-attendance', icon: <ScanFace size={14} />, label: 'Face davomat' },
         { href: '/filadmin/devices', icon: <Wrench size={14} />, label: 'Qurilmalar' },
       ],
@@ -188,6 +193,7 @@ const NAV: Record<string, NavEntry[]> = {
         { href: '/filadmin/lessons', icon: <BookOpen size={14} />, label: 'Darslar' },
       ],
     },
+    { label: 'Profil', href: '/profile', icon: <Layers size={15} /> },
   ],
 
   tester: [
@@ -196,6 +202,7 @@ const NAV: Record<string, NavEntry[]> = {
     { label: 'Imtihon navbati', href: '/tester/exam-queue', icon: <CheckCircle size={15} /> },
     { label: 'Vazifalar', href: '/tester/tasks', icon: <ClipboardList size={15} /> },
     { label: 'Texnik muammo', href: '/tester/tech-issues', icon: <Wrench size={15} /> },
+    { label: 'Profil', href: '/profile', icon: <Layers size={15} /> },
   ],
 
   student: [

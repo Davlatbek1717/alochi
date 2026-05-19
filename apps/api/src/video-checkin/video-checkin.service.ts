@@ -21,6 +21,18 @@ export interface TodayCheckinRow {
   totalMissedDays: number;
 }
 
+export interface MonitoringResp {
+  date: string;
+  isPast: boolean;
+  scope: 'group' | 'branch' | 'tenant' | 'none';
+  summary: {
+    students: number;
+    morning: { submitted: number; late: number; missed: number; pending: number };
+    evening: { submitted: number; late: number; missed: number; pending: number };
+  };
+  rows: TodayCheckinRow[];
+}
+
 export interface StudentHistoryRow {
   date: string;
   morning: string | null;
@@ -405,6 +417,148 @@ export class VideoCheckinService {
         totalMissedDays: missedCountMap.get(s.id) ?? 0,
       };
     });
+  }
+
+  /**
+   * Role-aware daily video monitoring for a single Tashkent day.
+   * mentor → own group, filadmin/manager → own branch, superadmin →
+   * whole tenant. For past days both windows are closed so any
+   * non-submitted slot resolves to 'missed'; for today the live
+   * window-close times apply (same logic as getTodayList). Future
+   * dates are clamped to today.
+   */
+  async getMonitoring(
+    requester: {
+      userId: string;
+      role: string;
+      tenantId: string;
+      branchId?: string | null;
+      groupId?: string | null;
+    },
+    dateParam?: string,
+  ): Promise<MonitoringResp> {
+    const todayStr = tashkentDateString();
+    const re = /^\d{4}-\d{2}-\d{2}$/;
+    let dateStr =
+      dateParam && re.test(dateParam) ? dateParam : todayStr;
+    if (dateStr > todayStr) dateStr = todayStr; // clamp future → today
+    const isPast = dateStr < todayStr;
+    const date = dateStringToDate(dateStr);
+
+    // Resolve the scoped student set.
+    let studentWhere:
+      | { role: 'student'; status: 'active'; tenantId: string; groupId?: string; branchId?: string }
+      | null = null;
+    let scope: MonitoringResp['scope'] = 'none';
+    if (requester.role === 'mentor') {
+      const mentor = await this.prisma.user.findUnique({
+        where: { id: requester.userId },
+        select: { groupId: true },
+      });
+      const gid = mentor?.groupId ?? requester.groupId ?? null;
+      if (gid) {
+        studentWhere = {
+          role: 'student',
+          status: 'active',
+          tenantId: requester.tenantId,
+          groupId: gid,
+        };
+        scope = 'group';
+      }
+    } else if (
+      requester.role === 'filadmin' ||
+      requester.role === 'manager'
+    ) {
+      if (requester.branchId) {
+        studentWhere = {
+          role: 'student',
+          status: 'active',
+          tenantId: requester.tenantId,
+          branchId: requester.branchId,
+        };
+        scope = 'branch';
+      }
+    } else if (requester.role === 'superadmin') {
+      studentWhere = {
+        role: 'student',
+        status: 'active',
+        tenantId: requester.tenantId,
+      };
+      scope = 'tenant';
+    }
+
+    const empty: MonitoringResp = {
+      date: dateStr,
+      isPast,
+      scope,
+      summary: {
+        students: 0,
+        morning: { submitted: 0, late: 0, missed: 0, pending: 0 },
+        evening: { submitted: 0, late: 0, missed: 0, pending: 0 },
+      },
+      rows: [],
+    };
+    if (!studentWhere) return { ...empty, scope: 'none' };
+
+    const students = await this.prisma.user.findMany({
+      where: studentWhere,
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    if (students.length === 0) return empty;
+    const studentIds = students.map((s) => s.id);
+
+    const checkins = await this.prisma.videoCheckin.findMany({
+      where: { studentId: { in: studentIds }, date },
+    });
+    const byKey = new Map<string, (typeof checkins)[0]>();
+    for (const c of checkins) byKey.set(`${c.studentId}:${c.type}`, c);
+
+    // Window-close state: past days are fully closed; today uses the
+    // live clock (mirrors getTodayList).
+    const nowTashkent = this.tashkentMinutes(new Date());
+    const morningClosed = isPast || nowTashkent >= 1080;
+    const eveningClosed = isPast; // evening only finalises via cron / next day
+
+    const summary = {
+      students: students.length,
+      morning: { submitted: 0, late: 0, missed: 0, pending: 0 },
+      evening: { submitted: 0, late: 0, missed: 0, pending: 0 },
+    };
+
+    const resolve = (
+      row: (typeof checkins)[0] | undefined,
+      closed: boolean,
+    ): 'submitted' | 'late' | 'missed' | 'pending' => {
+      if (row?.status === 'submitted') return 'submitted';
+      if (row?.status === 'late') return 'late';
+      if (row?.status === 'missed') return 'missed';
+      return closed ? 'missed' : 'pending';
+    };
+
+    const rows: TodayCheckinRow[] = students.map((s) => {
+      const m = byKey.get(`${s.id}:morning`);
+      const e = byKey.get(`${s.id}:evening`);
+      const mStatus = resolve(m, morningClosed);
+      const eStatus = resolve(e, eveningClosed);
+      summary.morning[mStatus]++;
+      summary.evening[eStatus]++;
+      return {
+        studentId: s.id,
+        name: s.name,
+        morning: mStatus,
+        evening: eStatus,
+        morningAt: m?.submittedAt?.toISOString() ?? null,
+        eveningAt: e?.submittedAt?.toISOString() ?? null,
+        morningCheckinId:
+          m?.status === 'submitted' || m?.status === 'late' ? m.id : null,
+        eveningCheckinId:
+          e?.status === 'submitted' || e?.status === 'late' ? e.id : null,
+        totalMissedDays: 0,
+      };
+    });
+
+    return { date: dateStr, isPast, scope, summary, rows };
   }
 
   /** Number of missed checkins in the past N days for a student. */

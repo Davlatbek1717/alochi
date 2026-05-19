@@ -91,6 +91,7 @@ const NAV: Record<string, NavEntry[]> = {
       icon: <BarChart2 size={16} />,
       items: [
         { href: '/superadmin/analytics', icon: <BarChart2 size={14} />, label: 'Analytics' },
+        { href: '/superadmin/video-monitoring', icon: <Video size={14} />, label: 'Video monitoring' },
         { href: '/superadmin/face-sla', icon: <ScanFace size={14} />, label: 'Face ID monitoring' },
       ],
     },
@@ -334,7 +335,7 @@ export default function Sidebar({ role, userName, brandName, onLogout }: Sidebar
               {userName || '…'}
             </p>
             <p className="text-[10px] text-[var(--ink-4)] truncate leading-tight font-bold uppercase tracking-[0.18em] mt-0.5">
-              {brandName ?? "A'lochi"}
+              {brandName ?? "A'lojon"}
             </p>
           </div>
         </div>
