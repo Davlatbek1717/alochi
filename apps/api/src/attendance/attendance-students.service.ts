@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
@@ -21,7 +21,40 @@ export class AttendanceStudentsService {
     private events: EventEmitter2,
   ) {}
 
-  async markBulk(records: MarkRecord[]) {
+  /**
+   * Mentor records attendance for their own group only. `mentorId` is
+   * the marking mentor; we resolve their group and reject the whole
+   * batch if any studentId is outside it (no partial writes — a mixed
+   * batch means the client is out of sync, fail loudly).
+   */
+  async markBulk(records: MarkRecord[], mentorId?: string) {
+    if (records.length === 0) return [];
+
+    if (mentorId) {
+      const mentor = await this.prisma.user.findUnique({
+        where: { id: mentorId },
+        select: { groupId: true },
+      });
+      if (!mentor?.groupId) {
+        throw new ForbiddenException(
+          "Sizga guruh biriktirilmagan — davomat belgilab bo'lmaydi",
+        );
+      }
+      const ids = Array.from(new Set(records.map((r) => r.studentId)));
+      const inGroup = await this.prisma.user.count({
+        where: {
+          id: { in: ids },
+          role: 'student',
+          groupId: mentor.groupId,
+        },
+      });
+      if (inGroup !== ids.length) {
+        throw new ForbiddenException(
+          "Faqat o'z guruhingiz o'quvchilari uchun davomat belgilay olasiz",
+        );
+      }
+    }
+
     const results = await Promise.all(
       records.map((r) =>
         this.prisma.attendanceStudent.upsert({

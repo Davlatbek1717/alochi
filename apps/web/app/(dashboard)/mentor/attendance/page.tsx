@@ -13,7 +13,7 @@ import {
   X as XIcon,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { getBranchIdFromToken } from '@/lib/jwt';
+import { fetchMyGroupId } from '@/lib/jwt';
 import { tashkentToday } from '@/lib/tashkent-date';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
@@ -71,19 +71,24 @@ export default function MentorAttendancePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [search, setSearch] = useState('');
+  const [noGroup, setNoGroup] = useState(false);
   const initialLoadRef = useRef(true);
-
-  const branchId = getBranchIdFromToken();
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      if (!branchId)
-        throw new Error("Filial topilmadi. Administrator bilan bog'laning.");
+      const groupId = await fetchMyGroupId();
+      if (!groupId) {
+        setNoGroup(true);
+        throw new Error(
+          "Sizga guruh biriktirilmagan. Administrator bilan bog'laning.",
+        );
+      }
+      setNoGroup(false);
       const res = await apiRequest<ApiUser[]>(
-        `/users/by-branch/${branchId}`,
+        `/users/group/${groupId}`,
         {},
         token,
       );
@@ -102,7 +107,7 @@ export default function MentorAttendancePage() {
     } finally {
       setLoading(false);
     }
-  }, [branchId]);
+  }, []);
 
   useEffect(() => {
     loadStudents();
@@ -239,10 +244,11 @@ export default function MentorAttendancePage() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-36 md:pb-24 space-y-3 max-w-lg mx-auto">
-        {!branchId ? (
+        {noGroup ? (
           <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center">
             <p className="text-rose-600 text-sm font-bold">
-              Filial topilmadi. Administrator bilan bog&apos;laning.
+              Sizga guruh biriktirilmagan. Administrator bilan
+              bog&apos;laning.
             </p>
           </div>
         ) : loading ? (
@@ -273,7 +279,7 @@ export default function MentorAttendancePage() {
             <EmptyState
               theme="light"
               icon={<Users size={28} />}
-              title="Bu filialda o'quvchilar topilmadi"
+              title="Bu guruhda o'quvchilar topilmadi"
             />
           </div>
         ) : (

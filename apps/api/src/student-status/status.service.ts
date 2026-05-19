@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -48,6 +48,32 @@ export class StatusService {
    * trustworthy holistic read on the student.
    */
   async setPersonalStatus(actor: ActorContext, dto: SetPersonalStatusDto) {
+    // Daily personal-development status: one row per student per day
+    // (StudentStatus @@unique([studentId, date])). A mentor may only
+    // set it for students in their OWN group.
+    const mentor = await this.prisma.user.findUnique({
+      where: { id: actor.userId },
+      select: { groupId: true },
+    });
+    if (!mentor?.groupId) {
+      throw new ForbiddenException(
+        "Sizga guruh biriktirilmagan — holat belgilab bo'lmaydi",
+      );
+    }
+    const student = await this.prisma.user.findUnique({
+      where: { id: dto.studentId },
+      select: { groupId: true, role: true },
+    });
+    if (
+      !student ||
+      student.role !== UserRole.student ||
+      student.groupId !== mentor.groupId
+    ) {
+      throw new ForbiddenException(
+        "Faqat o'z guruhingiz o'quvchisi holatini belgilay olasiz",
+      );
+    }
+
     const dateObj = dto.date ? new Date(dto.date) : startOfToday();
 
     const existing = await this.prisma.studentStatus.findUnique({

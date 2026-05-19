@@ -167,48 +167,34 @@ export default function TesterExamQueuePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function markPresent(studentId: string) {
-    const token = localStorage.getItem('accessToken') ?? '';
-    try {
-      await apiRequest('/attendance/students', {
-        method: 'POST',
-        body: JSON.stringify({ date: today, records: [{ studentId, status: 'present' }] }),
-      }, token);
-      setRows((prev) => prev.map((r) => r.id === studentId ? { ...r, attendance: 'present', queue: 'waiting' } : r));
-      success('Davomat belgilandi');
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Xatolik');
-    }
+  // Attendance is mentor-owned (Phase 4). The tester only READS the
+  // mentor's marking; "qabul qilish" here just advances the LOCAL exam
+  // queue for a student who showed up to test — it never writes an
+  // attendance record.
+  function markPresent(studentId: string) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === studentId
+          ? { ...r, attendance: 'present', queue: 'waiting' }
+          : r,
+      ),
+    );
+    success('Imtihon navbatiga qoʻshildi');
   }
 
-  async function markAllPresent() {
+  function markAllPresent() {
     const notArrived = rows.filter((r) => r.attendance !== 'present');
     if (notArrived.length === 0) return;
     setBulkLoading(true);
-    const token = localStorage.getItem('accessToken') ?? '';
-    // A3: use Promise.allSettled so a single failure doesn't abort all UI updates
-    const results = await Promise.allSettled(
-      notArrived.map((s) =>
-        apiRequest('/attendance/students', {
-          method: 'POST',
-          body: JSON.stringify({ date: today, records: [{ studentId: s.id, status: 'present' }] }),
-        }, token),
+    const ids = new Set(notArrived.map((s) => s.id));
+    setRows((prev) =>
+      prev.map((r) =>
+        ids.has(r.id)
+          ? { ...r, attendance: 'present', queue: 'waiting' }
+          : r,
       ),
     );
-
-    const succeeded = notArrived.filter((_, i) => results[i].status === 'fulfilled');
-    const failedCount = notArrived.length - succeeded.length;
-
-    if (succeeded.length > 0) {
-      const succeededIds = new Set(succeeded.map((s) => s.id));
-      setRows((prev) => prev.map((r) =>
-        succeededIds.has(r.id) ? { ...r, attendance: 'present', queue: 'waiting' } : r,
-      ));
-      success(`${succeeded.length} ta o'quvchi keldi deb belgilandi`);
-    }
-    if (failedCount > 0) {
-      toastError(`${failedCount} ta o'quvchi saqlanmadi — qayta urinib ko'ring`);
-    }
+    success(`${notArrived.length} ta oʻquvchi navbatga qoʻshildi`);
     setBulkLoading(false);
   }
 
@@ -658,7 +644,7 @@ export default function TesterExamQueuePage() {
                     {bulkLoading ? (
                       <span className="inline-flex items-center gap-1.5"><Clock size={13} className="animate-spin" /> Belgilanmoqda...</span>
                     ) : (
-                      <><CheckCheck size={13} /> Hammani Keldi deb belgilash</>
+                      <><CheckCheck size={13} /> Hammani navbatga qoʻshish</>
                     )}
                   </button>
                 )}
@@ -674,7 +660,7 @@ export default function TesterExamQueuePage() {
                         size="sm"
                         onClick={() => markPresent(s.id)}
                       >
-                        Keldi
+                        Navbatga
                       </Button>
                     </div>
                   ))}

@@ -28,8 +28,12 @@ export class AttendanceController {
 
   // ── Student attendance ───────────────────────────────────────────────────────
 
+  // Academic attendance is mentor-owned: only a mentor may record who
+  // came to class, and only for students in their OWN group. Testers
+  // (exam queue) no longer write attendance — they read the mentor's
+  // marking. Group ownership is enforced in the service.
   @Post('students')
-  @Roles(UserRole.mentor, UserRole.tester)
+  @Roles(UserRole.mentor)
   markBulk(
     @Body() body: { records: Array<{ studentId: string; status: string }> },
     @Request() req: any,
@@ -50,7 +54,7 @@ export class AttendanceController {
       date,
     }));
 
-    return this.studentsService.markBulk(records);
+    return this.studentsService.markBulk(records, userId);
   }
 
   @Get('students/:branchId/:date')
