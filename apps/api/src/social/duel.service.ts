@@ -33,11 +33,17 @@ export class DuelService {
 
     const [aProgress, bProgress] = await Promise.all([
       this.prisma.studentProgress.findMany({
-        where: { studentId: challengerId, academyCompleted: true },
+        where: {
+          studentId: challengerId,
+          OR: [{ homeCompleted: true }, { academyCompleted: true }],
+        },
         select: { lessonId: true },
       }),
       this.prisma.studentProgress.findMany({
-        where: { studentId: challengedId, academyCompleted: true },
+        where: {
+          studentId: challengedId,
+          OR: [{ homeCompleted: true }, { academyCompleted: true }],
+        },
         select: { lessonId: true },
       }),
     ]);
@@ -339,6 +345,7 @@ export class DuelService {
       challengedName: duel.challenged.name,
       currentQuestionIdx: myAnswers,
       winner: winnerName,
+      // winnerId is already in the spread but we keep winner (name) for display
     };
   }
 
@@ -352,11 +359,20 @@ export class DuelService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return duels.map((d) => ({
-      ...d,
-      challengerName: d.challenger.name,
-      challengedName: d.challenged.name,
-    }));
+    return duels.map((d) => {
+      const winnerName =
+        d.winnerId === d.challengerId
+          ? d.challenger.name
+          : d.winnerId === d.challengedId
+            ? d.challenged.name
+            : null;
+      return {
+        ...d,
+        challengerName: d.challenger.name,
+        challengedName: d.challenged.name,
+        winner: winnerName,
+      };
+    });
   }
 
   /**

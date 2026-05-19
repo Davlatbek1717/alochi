@@ -1,17 +1,15 @@
 'use client';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Sword, Clock, Trophy, CheckCircle, XCircle, Timer, ArrowLeft, Zap } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Mascot, Skeleton, useToast } from '@/components/ui';
+import { useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import Link from 'next/link';
+import { Ustoz } from '@/components/Ustoz';
 
-type DuelQuestion = {
-  text: string;
-  options: string[];
-};
+type DuelQuestion = { text: string; options: string[] };
 
 type Duel = {
   id: string;
@@ -25,15 +23,14 @@ type Duel = {
   questions: DuelQuestion[];
   currentQuestionIdx: number;
   expiresAt: string;
-  winner?: string;
+  winnerId?: string | null;
+  winner?: string | null;
 };
 
 function useCountdown(expiresAt: string | undefined) {
   const [timeLeft, setTimeLeft] = useState('');
-
   useEffect(() => {
     if (!expiresAt) return;
-
     function update() {
       const diff = new Date(expiresAt!).getTime() - Date.now();
       if (diff <= 0) {
@@ -45,12 +42,10 @@ function useCountdown(expiresAt: string | undefined) {
       const s = Math.floor((diff % 60000) / 1000);
       setTimeLeft(`${h > 0 ? h + 'soat ' : ''}${m}daq ${s}son`);
     }
-
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [expiresAt]);
-
   return timeLeft;
 }
 
@@ -78,7 +73,6 @@ export default function DuelPage() {
   const [responding, setResponding] = useState(false);
 
   const currentUserId = useMemo(() => getCurrentUserId(), []);
-
   const timeLeft = useCountdown(duel?.expiresAt);
 
   const fetchDuel = useCallback(async () => {
@@ -99,7 +93,6 @@ export default function DuelPage() {
     fetchDuel();
   }, [fetchDuel]);
 
-  // Refresh when tab regains focus so score updates appear live
   useFocusRevalidate(fetchDuel);
   useRevalidateOnEvent(['status:updated'], fetchDuel);
 
@@ -141,236 +134,360 @@ export default function DuelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f7f4ef]">
-        <div className="bg-[#0f172a] px-5 pt-5 pb-8">
-          <Skeleton className="h-5 w-24 mb-5 rounded" />
-          <div className="flex items-center justify-between">
-            <div className="flex-1 space-y-2 text-center">
-              <Skeleton className="h-4 w-20 mx-auto rounded" />
-              <Skeleton className="h-12 w-12 mx-auto rounded" />
-            </div>
-            <Skeleton className="h-8 w-10 rounded mx-4" />
-            <div className="flex-1 space-y-2 text-center">
-              <Skeleton className="h-4 w-20 mx-auto rounded" />
-              <Skeleton className="h-12 w-12 mx-auto rounded" />
-            </div>
-          </div>
-        </div>
-        <div className="px-4 pt-5">
-          <Skeleton theme="light" className="h-40 rounded-[18px] w-full" />
-        </div>
+      <div className="sp-theme min-h-full p-4 space-y-4">
+        <div className="sp-skeleton h-6 w-40" />
+        <div className="sp-skeleton h-16 w-full" style={{ borderRadius: 'var(--r-3)' }} />
+        <div className="sp-skeleton h-64 w-full" style={{ borderRadius: 'var(--r-3)' }} />
       </div>
     );
   }
 
   if (error || !duel) {
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
-          <Mascot expression="sad" size={96} className="mx-auto" />
-          <p className="text-[#0f172a] font-extrabold text-base">
+      <div className="sp-theme sp-paper-dots min-h-full flex items-center justify-center p-4">
+        <div
+          className="text-center max-w-sm w-full space-y-4 p-8"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+          }}
+        >
+          <Ustoz size={96} mood="oops" className="mx-auto" />
+          <p className="sp-display text-base" style={{ color: 'var(--ink)' }}>
             {error || 'Duel topilmadi'}
           </p>
-          <p className="text-[#64748b] text-sm">
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
             Duel mavjud emas yoki sizga tegishli emas.
           </p>
           <Link
             href="/student/duels"
-            className="inline-flex items-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+            className="sp-display inline-flex items-center gap-2 px-5 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              border: '2px solid var(--leaf-deep)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: '0 4px 0 var(--leaf-deep)',
+              fontWeight: 700,
+            }}
           >
-            <ArrowLeft size={14} /> Duellar ro&apos;yxati
+            <ArrowLeft size={14} /> Duellar roʻyxati
           </Link>
         </div>
       </div>
     );
   }
 
-  const currentQuestion = duel.status === 'active' && duel.questions
-    ? duel.questions[duel.currentQuestionIdx]
-    : null;
-
-  const statusBadge = {
-    pending: { label: 'Kutilmoqda', cls: 'bg-[#f59e0b]/20 text-[#f59e0b] border-[#f59e0b]/30' },
-    active: { label: 'Faol', cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-    completed: { label: 'Tugagan', cls: 'bg-white/10 text-white/60 border-white/10' },
-  }[duel.status];
+  const currentQuestion =
+    duel.status === 'active' && duel.questions
+      ? duel.questions[duel.currentQuestionIdx]
+      : null;
+  const total = Math.max(1, duel.challengerScore + duel.challengedScore);
+  const isChallenged = currentUserId === duel.challengedId;
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      {/* Hero header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-8 md:px-8 md:py-8 relative overflow-hidden">
+    <div
+      className="sp-theme min-h-full pb-10"
+      style={{
+        background:
+          duel.status === 'completed'
+            ? 'var(--paper)'
+            : 'linear-gradient(180deg, var(--paper) 0%, var(--ember-tint) 100%)',
+      }}
+    >
+      {/* Header */}
+      <header className="px-4 pt-4 pb-3 flex items-center gap-3 max-w-lg mx-auto md:max-w-2xl">
+        <Link
+          href="/student/duels"
+          aria-label="Orqaga"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="sp-eyebrow">
+            duel · vs {currentUserId === duel.challengerId ? duel.challengedName : duel.challengerName}
+          </div>
+          <h1 className="sp-display text-lg leading-tight" style={{ color: 'var(--ink)' }}>
+            {duel.status === 'active'
+              ? `Savol ${(duel.currentQuestionIdx ?? 0) + 1} / ${duel.questions?.length ?? 10}`
+              : duel.status === 'pending'
+                ? 'Duel taklifi'
+                : 'Duel yakuni'}
+          </h1>
+        </div>
+        {duel.status !== 'completed' && timeLeft && (
+          <span
+            className="sp-mono text-xs px-3 py-1.5 shrink-0"
+            style={{ background: 'var(--ink)', color: 'var(--bone)', borderRadius: 999, fontWeight: 700 }}
+          >
+            ⏱ {timeLeft}
+          </span>
+        )}
+      </header>
+
+      <div className="px-4 max-w-lg mx-auto md:max-w-2xl space-y-4">
+        {/* Battle bar */}
         <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse at 30% 50%, rgba(225,29,72,0.15) 0%, transparent 60%)' }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(245,158,11,0.15) 0%, transparent 60%)' }}
-        />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <Link
-                href="/student/duels"
-                aria-label="Orqaga"
-                className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[#94a3b8] hover:bg-white/20 transition-colors mr-1"
-              >
-                <ArrowLeft size={16} />
-              </Link>
-              <Sword size={20} className="text-[#e11d48]" />
-              <p className="text-white font-bold text-lg">Duel</p>
-            </div>
-            <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${statusBadge.cls}`}>
-              {statusBadge.label}
+          className="flex items-center gap-2.5 p-3"
+          style={{
+            background: 'var(--bone-2)',
+            border: '2px solid var(--ink)',
+            borderRadius: 'var(--r-3)',
+          }}
+        >
+          <DuelAvatar name={duel.challengerName} color="var(--leaf)" />
+          <div
+            className="flex-1 relative h-[18px] overflow-hidden flex"
+            style={{ background: 'var(--paper-3)', borderRadius: 999 }}
+          >
+            <div
+              style={{
+                background: 'var(--leaf)',
+                height: '100%',
+                width: `${(duel.challengerScore / total) * 100}%`,
+              }}
+            />
+            <span
+              className="absolute left-2 top-1/2 -translate-y-1/2 sp-mono"
+              style={{ color: 'var(--bone)', fontWeight: 700, fontSize: 11 }}
+            >
+              {duel.challengerScore}
+            </span>
+            <span
+              className="absolute right-2 top-1/2 -translate-y-1/2 sp-mono"
+              style={{ color: 'var(--ember-deep)', fontWeight: 700, fontSize: 11 }}
+            >
+              {duel.challengedScore}
+            </span>
+            <span
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sp-display"
+              style={{ fontWeight: 800, color: 'var(--ink)', fontSize: 12 }}
+            >
+              VS
             </span>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="text-center flex-1 min-w-0">
-              <p className="text-[#94a3b8] text-xs uppercase tracking-wide mb-1">Musobaqa</p>
-              <p className="text-white font-bold text-sm truncate">{duel.challengerName}</p>
-              <p className="text-5xl font-black text-[#e11d48] font-mono mt-1">{duel.challengerScore}</p>
-            </div>
-            <div className="text-center px-4">
-              <p className="text-white/30 text-2xl font-black">VS</p>
-            </div>
-            <div className="text-center flex-1 min-w-0">
-              <p className="text-[#94a3b8] text-xs uppercase tracking-wide mb-1">Raqib</p>
-              <p className="text-white font-bold text-sm truncate">{duel.challengedName}</p>
-              <p className="text-5xl font-black text-[#f59e0b] font-mono mt-1">{duel.challengedScore}</p>
-            </div>
-          </div>
-
-          {duel.status !== 'completed' && timeLeft && (
-            <div className="flex items-center justify-center gap-2 mt-4 text-[#94a3b8] text-sm">
-              <Timer size={14} />
-              <span className="font-mono">{timeLeft}</span>
-            </div>
-          )}
+          <DuelAvatar name={duel.challengedName} color="var(--ember)" />
         </div>
-      </div>
 
-      {/* Body */}
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-4xl">
-        {/* Pending: invitation response */}
-        {duel.status === 'pending' && (() => {
-          const isChallenged = currentUserId === duel.challengedId;
-          return isChallenged ? (
-            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-[#f59e0b]/10 border-2 border-[#f59e0b]/30 flex items-center justify-center mx-auto">
-                <Zap size={28} className="text-[#f59e0b]" />
-              </div>
-              <p className="font-semibold text-[#0f172a]">{duel.challengerName} sizi duelga chaqirdi!</p>
+        {/* Pending — invitation */}
+        {duel.status === 'pending' &&
+          (isChallenged ? (
+            <div
+              className="p-6 text-center space-y-4"
+              style={{
+                background: 'var(--bone)',
+                border: '1.5px solid var(--line)',
+                borderRadius: 'var(--r-3)',
+              }}
+            >
+              <Ustoz size={96} mood="study" className="mx-auto" />
+              <p className="sp-display" style={{ color: 'var(--ink)' }}>
+                {duel.challengerName} sizni duelga chaqirdi!
+              </p>
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={() => handleRespond(true)}
                   disabled={responding}
-                  className="flex items-center gap-2 bg-[#58cc02] text-white px-6 py-3 rounded-xl font-extrabold text-sm border-b-[3px] border-[#46a302] disabled:opacity-50 hover:brightness-105 active:translate-y-[1px] active:border-b-[1px] transition-all min-h-[44px]"
+                  className="sp-display px-6 py-3 min-h-[44px] active:translate-y-[2px] transition-transform disabled:opacity-50"
+                  style={{
+                    background: 'var(--leaf)',
+                    color: 'var(--bone)',
+                    border: '2px solid var(--leaf-deep)',
+                    borderRadius: 'var(--r-3)',
+                    boxShadow: '0 4px 0 var(--leaf-deep)',
+                    fontWeight: 700,
+                  }}
                 >
-                  {responding ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={16} />}
                   Qabul qilish
                 </button>
                 <button
                   onClick={() => handleRespond(false)}
                   disabled={responding}
-                  className="flex items-center gap-2 bg-[#f7f4ef] text-[#e11d48] border-[1.5px] border-[#e11d48]/30 px-6 py-3 rounded-xl font-extrabold text-sm disabled:opacity-50 hover:bg-[#e11d48]/10 transition-colors min-h-[44px]"
+                  className="sp-display px-6 py-3 min-h-[44px] disabled:opacity-50"
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--ember-deep)',
+                    border: '1.5px solid var(--ember-soft)',
+                    borderRadius: 'var(--r-3)',
+                    fontWeight: 700,
+                  }}
                 >
-                  <XCircle size={16} /> Rad etish
+                  Rad etish
                 </button>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center">
-              <Clock size={32} className="text-[#94a3b8] mx-auto mb-3" />
-              <p className="font-semibold text-[#0f172a]">Raqib qabul qilishini kutmoqdamiz</p>
-              <p className="text-sm text-[#94a3b8] mt-1">So&apos;rov yuborildi</p>
-            </div>
-          );
-        })()}
-
-        {/* Active: question */}
-        {duel.status === 'active' && currentQuestion && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-                Savol {(duel.currentQuestionIdx ?? 0) + 1} / {duel.questions.length}
+            <div
+              className="p-6 text-center space-y-2"
+              style={{
+                background: 'var(--bone)',
+                border: '1.5px solid var(--line)',
+                borderRadius: 'var(--r-3)',
+              }}
+            >
+              <Ustoz size={88} mood="calm" className="mx-auto" />
+              <p className="sp-display" style={{ color: 'var(--ink)' }}>
+                Raqib qabul qilishini kutmoqdamiz
               </p>
-              <div className="flex gap-1">
-                {duel.questions.map((_, i) => (
-                  <div
+              <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+                Soʻrov yuborildi
+              </p>
+            </div>
+          ))}
+
+        {/* Active — question */}
+        {duel.status === 'active' && currentQuestion && (
+          <div
+            className="p-5 space-y-4"
+            style={{
+              background: 'var(--bone-2)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: 'var(--shadow-1)',
+            }}
+          >
+            <div className="sp-eyebrow">Savolga javob bering</div>
+            <h2 className="sp-display text-xl m-0" style={{ color: 'var(--ink)' }}>
+              {currentQuestion.text}
+            </h2>
+            <div className="flex flex-col gap-2.5">
+              {currentQuestion.options.map((opt, i) => {
+                const active = selectedAnswer === i;
+                return (
+                  <button
                     key={i}
-                    className={`h-1.5 w-6 rounded-full ${i < duel.currentQuestionIdx ? 'bg-[#58cc02]' : i === duel.currentQuestionIdx ? 'bg-[#e11d48]' : 'bg-[#ede9e1]'}`}
-                  />
-                ))}
-              </div>
+                    onClick={() => handleAnswer(i)}
+                    disabled={answering}
+                    className="flex items-center gap-3 p-3.5 text-left min-h-[44px] active:translate-y-[1px] transition-transform disabled:opacity-60"
+                    style={{
+                      background: active ? 'var(--ink)' : 'var(--bone)',
+                      color: active ? 'var(--bone)' : 'var(--ink)',
+                      border: `1.5px solid ${active ? 'var(--ink)' : 'var(--line-2)'}`,
+                      borderRadius: 'var(--r-2)',
+                    }}
+                  >
+                    <span
+                      className="w-7 h-7 rounded-lg flex items-center justify-center sp-mono shrink-0"
+                      style={{
+                        background: active ? 'rgba(255,255,255,0.16)' : 'var(--paper-2)',
+                        fontSize: 12,
+                      }}
+                    >
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="flex-1 text-sm">{opt}</span>
+                  </button>
+                );
+              })}
             </div>
-            <p className="text-lg font-bold text-[#0f172a]">{currentQuestion.text}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {currentQuestion.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleAnswer(i)}
-                  disabled={answering}
-                  className={`py-3 px-4 rounded-xl border-[1.5px] text-sm font-extrabold transition-all min-h-[44px] ${
-                    selectedAnswer === i
-                      ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                      : 'bg-[#f7f4ef] text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]'
-                  } disabled:opacity-60`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-            {answering && (
-              <div className="flex justify-center">
-                <span className="w-5 h-5 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
-              </div>
-            )}
           </div>
         )}
 
-        {/* Active but no question — waiting for opponent */}
+        {/* Active — waiting for opponent */}
         {duel.status === 'active' && !currentQuestion && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center space-y-3">
-            <Mascot expression="idle" size={88} className="mx-auto" />
-            <p className="font-semibold text-[#0f172a]">Raqibingizning javobini kutmoqdamiz</p>
-            <p className="text-sm text-[#94a3b8]">Savollar tez orada yangilanadi</p>
+          <div
+            className="p-6 text-center space-y-3"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-3)',
+            }}
+          >
+            <Ustoz size={88} mood="calm" className="mx-auto" />
+            <p className="sp-display" style={{ color: 'var(--ink)' }}>
+              Raqibingizning javobini kutmoqdamiz
+            </p>
+            <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+              Savollar tez orada yangilanadi
+            </p>
           </div>
         )}
 
         {/* Completed */}
         {duel.status === 'completed' && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-6 text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-[#f59e0b]/10 border-2 border-[#f59e0b]/30 flex items-center justify-center mx-auto">
-              <Trophy size={28} className="text-[#f59e0b]" />
-            </div>
-            <h2 className="text-xl font-extrabold text-[#0f172a]">Duel yakunlandi!</h2>
-            {duel.winner && (
-              <p className={`font-extrabold ${duel.winner === currentUserId ? 'text-[#58cc02]' : 'text-[#64748b]'}`}>
-                {duel.winner === currentUserId
-                  ? '🏆 Siz g\'oldingiz!'
-                  : `G'olib: ${duel.challengerId === duel.winner ? duel.challengerName : duel.challengedName}`}
+          <div
+            className="p-6 text-center space-y-4"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-3)',
+            }}
+          >
+            <Ustoz
+              size={120}
+              mood={duel.winnerId === currentUserId ? 'cheer' : 'calm'}
+              className="mx-auto sp-anim-pop"
+            />
+            <h2 className="sp-display text-xl" style={{ color: 'var(--ink)' }}>
+              Duel yakunlandi!
+            </h2>
+            {duel.winnerId && (
+              <p
+                className="sp-display"
+                style={{
+                  color: duel.winnerId === currentUserId ? 'var(--leaf)' : 'var(--ink-3)',
+                }}
+              >
+                {duel.winnerId === currentUserId
+                  ? "🏆 Siz g'olib bo'ldingiz!"
+                  : `G'olib: ${duel.winner ?? (duel.winnerId === duel.challengerId ? duel.challengerName : duel.challengedName)}`}
               </p>
             )}
             <div className="flex justify-center gap-8">
               <div className="text-center">
-                <p className="text-3xl font-black text-[#e11d48] font-mono">{duel.challengerScore}</p>
-                <p className="text-xs text-[#64748b] mt-1">{duel.challengerName}</p>
+                <p className="sp-display text-3xl" style={{ color: 'var(--leaf-deep)' }}>
+                  {duel.challengerScore}
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+                  {duel.challengerName}
+                </p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-black text-[#f59e0b] font-mono">{duel.challengedScore}</p>
-                <p className="text-xs text-[#64748b] mt-1">{duel.challengedName}</p>
+                <p className="sp-display text-3xl" style={{ color: 'var(--ember-deep)' }}>
+                  {duel.challengedScore}
+                </p>
+                <p className="text-xs mt-1" style={{ color: 'var(--ink-3)' }}>
+                  {duel.challengedName}
+                </p>
               </div>
             </div>
-            <Link
-              href="/student/duels"
-              className="inline-flex items-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+            <button
+              type="button"
+              onClick={() => router.push('/student/duels')}
+              className="sp-display inline-flex items-center justify-center px-5 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-3)',
+                boxShadow: '0 4px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
             >
-              Duellar ro&apos;yxati
-            </Link>
+              Duellar roʻyxati
+            </button>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function DuelAvatar({ name, color }: { name: string; color: string }) {
+  return (
+    <div
+      className="w-11 h-11 rounded-full flex items-center justify-center sp-display shrink-0"
+      style={{
+        background: color,
+        color: 'var(--bone)',
+        border: '2px solid var(--ink)',
+        fontWeight: 800,
+      }}
+    >
+      {(name || '?').charAt(0).toUpperCase()}
     </div>
   );
 }

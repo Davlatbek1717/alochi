@@ -19,6 +19,7 @@ type Duel = {
   challengerScore: number;
   challengedScore: number;
   expiresAt: string;
+  winnerId?: string | null;
   winner?: string | null;
   xpEarned?: number;
 };
@@ -63,8 +64,8 @@ type DuelOutcome = 'won' | 'lost' | 'draw' | null;
 function outcomeFor(d: Duel, myId: string): DuelOutcome {
   if (d.status !== 'completed') return null;
   if (d.challengerScore === d.challengedScore) return 'draw';
-  if (d.winner === myId) return 'won';
-  if (d.winner && d.winner !== myId) return 'lost';
+  if (d.winnerId === myId) return 'won';
+  if (d.winnerId && d.winnerId !== myId) return 'lost';
   return null;
 }
 
