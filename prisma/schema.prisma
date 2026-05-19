@@ -83,6 +83,9 @@ model Branch {
   workStartTime    String  @default("09:00") @map("work_start_time")
   lateGraceMinutes Int     @default(5) @map("late_grace_minutes")
   chatLocked       Boolean @default(false) @map("chat_locked")
+  // Daily minimum study time (minutes) a student must spend doing
+  // lessons/review/translate. 0 = no requirement. Filadmin-editable.
+  minDailyStudyMinutes Int @default(0) @map("min_daily_study_minutes")
 
   tenant  Tenant         @relation(fields: [tenantId], references: [id])
   users   User[]
@@ -194,6 +197,7 @@ model User {
   kpiOverrideLogsAsStudent KpiOverrideLog[]           @relation("KpiOverrideLogStudent")
   kpiOverrideLogsAsActor   KpiOverrideLog[]           @relation("KpiOverrideLogChangedBy")
   videoCheckins            VideoCheckin[]              @relation("VideoCheckinStudent")
+  studyTimeDaily           StudyTimeDaily[]            @relation("StudyTimeStudent")
 
   @@unique([tenantId, login])
   @@index([tenantId, role])
@@ -1160,6 +1164,11 @@ model Exam {
   // Optional time budget for test exams; null means no enforcement.
   timeLimitMinutes Int?     @map("time_limit_minutes")
   isPublished      Boolean  @default(false) @map("is_published")
+  // Per-tenant sequential position (like Lesson.orderNumber). A student
+  // progresses through catalogue exams in this order; "current exam #"
+  // is derived from it. Nullable only for the pre-migration window —
+  // the 0062 migration backfills every row and new exams get max+1.
+  orderNumber      Int?     @map("order_number")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -1168,6 +1177,7 @@ model Exam {
   permissions  ExamPermission[]
   oralSessions OralExamSession[]
 
+  @@unique([tenantId, orderNumber])
   @@index([tenantId, isPublished])
   @@map("exams")
 }
@@ -1371,4 +1381,35 @@ model VideoCheckin {
   @@unique([studentId, date, type])
   @@index([date, status])
   @@map("video_checkins")
+}
+
+// ---- DAILY STUDY-TIME TRACKING ----
+// One row per student per Tashkent calendar day. `seconds` is the
+// accumulated *active* study time (lesson runner + daily review +
+// translate tool only). Incremented by the /study-time/ping heartbeat
+// with server-side clamping. Filadmin compares against
+// Branch.minDailyStudyMinutes to find students who studied too little.
+model StudyTimeDaily {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  branchId   String?  @map("branch_id") @db.Uuid
+  date       DateTime @db.Date // calendar date in Asia/Tashkent
+  seconds    Int      @default(0)
+  lastPingAt DateTime @map("last_ping_at")
+  // Session engine (superadmin daily-cap + hourly forced breaks):
+  //  blockStartedAt — when the current continuous work block began
+  //  breakUntil     — student is locked out until this instant (forced break)
+  //  capReachedAt   — daily cap hit; locked for the rest of the day
+  blockStartedAt DateTime? @map("block_started_at")
+  breakUntil     DateTime? @map("break_until")
+  capReachedAt   DateTime? @map("cap_reached_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  student User @relation(fields: [studentId], references: [id], onDelete: Cascade, name: "StudyTimeStudent")
+
+  @@unique([studentId, date])
+  @@index([branchId, date])
+  @@index([date])
+  @@map("study_time_daily")
 }

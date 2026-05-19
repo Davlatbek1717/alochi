@@ -6,6 +6,7 @@ import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { useParams, useRouter } from 'next/navigation';
 import { StudyTimeMini } from '../../../_components/StudyTimeMini';
 import { StudentActivity } from '../../../_components/StudentActivity';
+import { StudentExamResults } from '../../../_components/StudentExamResults';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal, Skeleton, useToast } from '@/components/ui';
@@ -300,6 +301,7 @@ export default function StudentProfilePage() {
       <div className="px-4 pt-5 pb-6 space-y-4">
         <StudyTimeMini studentId={studentId} />
         <StudentActivity studentId={studentId} />
+        <StudentExamResults studentId={studentId} />
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-2">
           <button

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Calendar, BookOpen, CheckCircle2, Clock, ArrowLeft, ArrowRight, CalendarDays, Zap } from 'lucide-react';
+import { MapPin, Calendar, BookOpen, CheckCircle2, Clock, ArrowLeft, ArrowRight, CalendarDays, Zap, GraduationCap } from 'lucide-react';
 import { StudentProfileClient } from './_client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -23,6 +23,9 @@ interface StudentDetail {
   completedLessons: number;
   totalLessons: number;
   progress: number;
+  passedExams?: number;
+  totalExams?: number;
+  currentExam?: number;
   recent: RecentLesson[];
 }
 
@@ -55,9 +58,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const student = await fetchStudent(id);
-  if (!student) return { title: "O'quvchi topilmadi | A'lochi" };
+  if (!student) return { title: "O'quvchi topilmadi | A'lojon" };
   return {
-    title: `${student.name} | A'lochi`,
+    title: `${student.name} | A'lojon`,
     description: `${student.name} — ${student.school}, ${student.region}. ${student.progress}% progress.`,
   };
 }
@@ -282,6 +285,24 @@ export default async function StudentProfilePage({
                   qadam × 100 ÷ kun
                 </span>
               </div>
+              {typeof student.totalExams === 'number' &&
+                student.totalExams > 0 && (
+                  <div className="col-span-2 bg-white rounded-2xl border-2 border-[#e8e0d0] p-5 flex items-center gap-4">
+                    <span className="grid place-items-center w-11 h-11 rounded-full bg-[#6d28d9]/12 text-[#6d28d9] shrink-0">
+                      <GraduationCap size={20} strokeWidth={2.5} />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block text-2xl font-extrabold text-[#1e1b4b]">
+                        {(student.passedExams ?? 0) >= student.totalExams
+                          ? `Barcha imtihonlar oʻtildi (${student.totalExams}/${student.totalExams})`
+                          : `Joriy imtihon #${student.currentExam ?? 1} / ${student.totalExams}`}
+                      </span>
+                      <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#94a3b8]">
+                        Imtihonlar · {student.passedExams ?? 0} ta oʻtilgan
+                      </span>
+                    </div>
+                  </div>
+                )}
             </div>
           </section>
 

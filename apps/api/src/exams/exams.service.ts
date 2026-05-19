@@ -312,8 +312,150 @@ export class ExamsService {
         questionCount: true,
         passThreshold: true,
         timeLimitMinutes: true,
+        orderNumber: true,
         _count: { select: { questions: true } },
       },
     });
+  }
+
+  /**
+   * Tenant-ordered catalogue exams + the eligible (assignable) set.
+   * Eligible mirrors listAvailableForTester: published, with content.
+   */
+  private async orderedExams(tenantId: string) {
+    return this.prisma.exam.findMany({
+      where: {
+        tenantId,
+        isPublished: true,
+        OR: [
+          { kind: 'test', questions: { some: {} } },
+          { kind: 'ai_oral', NOT: { aiPrompt: null } },
+        ],
+      },
+      orderBy: [
+        { orderNumber: { sort: 'asc', nulls: 'last' } },
+        { createdAt: 'asc' },
+      ],
+      select: { id: true, title: true, orderNumber: true },
+    });
+  }
+
+  /**
+   * Where a student is in the tenant's exam sequence. `currentOrder`
+   * is the 1-based position of the first not-yet-passed exam (mirrors
+   * the lesson "current step" pattern); when every exam is passed it
+   * equals totalExams and `allDone` is true.
+   */
+  async getStudentExamProgress(studentId: string) {
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { tenantId: true },
+    });
+    if (!student) throw new NotFoundException(this.i18n.t('user_not_found'));
+
+    const exams = await this.orderedExams(student.tenantId);
+    const total = exams.length;
+
+    const perms = await this.prisma.examPermission.findMany({
+      where: { studentId, examId: { not: null } },
+      select: { examId: true, status: true, passed: true },
+    });
+    const passedSet = new Set(
+      perms
+        .filter((p) => p.passed === true || p.status === ExamStatus.done)
+        .map((p) => p.examId as string),
+    );
+    const activeSet = new Set(
+      perms
+        .filter((p) => p.status === ExamStatus.active)
+        .map((p) => p.examId as string),
+    );
+
+    const passedCount = exams.filter((e) => passedSet.has(e.id)).length;
+    const currentIdx = exams.findIndex((e) => !passedSet.has(e.id));
+    const current = currentIdx === -1 ? null : exams[currentIdx];
+    const allDone = total > 0 && currentIdx === -1;
+
+    return {
+      totalExams: total,
+      passedCount,
+      // Lesson-parity: the displayed "current #" is passed+1 (capped at
+      // total), so "#M / N · P passed" always reads M = P+1. The actual
+      // next exam to take is `current` (first not-yet-passed in order),
+      // which may differ if exams were passed out of sequence.
+      currentOrder:
+        total === 0 ? 0 : Math.min(passedCount + 1, total),
+      currentExamId: current?.id ?? null,
+      currentExamTitle: current?.title ?? null,
+      currentGranted: current ? activeSet.has(current.id) : false,
+      allDone,
+    };
+  }
+
+  /**
+   * Tester grants the student's next `count` (1–20) un-passed,
+   * un-granted catalogue exams in sequence order — so they don't have
+   * to hand-pick. Returns the freshly granted permissions + the
+   * recomputed progress so the UI can update in one round trip.
+   */
+  async grantNext(grantedBy: string, studentId: string, count = 1) {
+    const n = Math.max(1, Math.min(20, Math.round(count || 1)));
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { tenantId: true },
+    });
+    if (!student) throw new NotFoundException(this.i18n.t('user_not_found'));
+
+    const exams = await this.orderedExams(student.tenantId);
+    const perms = await this.prisma.examPermission.findMany({
+      where: { studentId, examId: { not: null } },
+      select: { examId: true, status: true, passed: true },
+    });
+    const passedSet = new Set(
+      perms
+        .filter((p) => p.passed === true || p.status === ExamStatus.done)
+        .map((p) => p.examId as string),
+    );
+    const activeSet = new Set(
+      perms
+        .filter((p) => p.status === ExamStatus.active)
+        .map((p) => p.examId as string),
+    );
+
+    const targets = exams
+      .filter((e) => !passedSet.has(e.id) && !activeSet.has(e.id))
+      .slice(0, n);
+    if (targets.length === 0) {
+      throw new BadRequestException(
+        'Berish uchun navbatdagi imtihon qolmadi',
+      );
+    }
+
+    const granted = [];
+    for (const e of targets) {
+      const p = await this.prisma.examPermission.upsert({
+        where: { studentId_examId: { studentId, examId: e.id } },
+        create: {
+          studentId,
+          examId: e.id,
+          grantedBy,
+          status: ExamStatus.active,
+        },
+        update: {
+          grantedBy,
+          status: ExamStatus.active,
+          passed: null,
+          score: null,
+          completedAt: null,
+        },
+        include: {
+          exam: { select: { id: true, title: true, orderNumber: true } },
+        },
+      });
+      granted.push(p);
+    }
+
+    const progress = await this.getStudentExamProgress(studentId);
+    return { granted, progress };
   }
 }

@@ -40,9 +40,17 @@ export class ExamService {
 
   async create(dto: CreateExamDto, tenantId: string) {
     const kind = dto.kind ?? 'test';
+    // Next per-tenant sequence position (mirrors Lesson.orderNumber).
+    // Admin authoring is effectively single-writer, so max+1 is safe.
+    const agg = await this.prisma.exam.aggregate({
+      where: { tenantId },
+      _max: { orderNumber: true },
+    });
+    const orderNumber = (agg._max.orderNumber ?? 0) + 1;
     return this.prisma.exam.create({
       data: {
         tenantId,
+        orderNumber,
         title: dto.title.trim(),
         description: dto.description?.trim() || null,
         kind,

@@ -1,34 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Bell } from 'lucide-react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
-import {
-  RefreshCw,
-  BarChart2,
-  Trophy,
-  GraduationCap,
-  Award,
-  PlayCircle,
-  Sparkles,
-  BookOpen,
-  Newspaper,
-  Mail,
-  Users,
-  Swords,
-  ChevronRight,
-  Bell,
-  Flag,
-  Brain,
-  Lightbulb,
-  HelpCircle,
-} from 'lucide-react';
 import { SocialFeed } from './_components/SocialFeed';
-import { StreakFlame } from './_components/StreakFlame';
-import { LessonPathPreview } from './_components/LessonPathPreview';
-import CertificateShare from '@/components/CertificateShare';
 import { apiRequest } from '@/lib/api';
-import { Mascot, Skeleton, SkeletonCard } from '@/components/ui';
+import { Ustoz, Suzani } from '@/components/Ustoz';
 
 type StreakData = {
   streak: number;
@@ -69,6 +47,14 @@ type LessonInfo = {
 
 type ProgressRow = { lessonId: string; sessionCount: number };
 
+type ExamProgress = {
+  totalExams: number;
+  passedCount: number;
+  currentOrder: number;
+  currentExamTitle: string | null;
+  allDone: boolean;
+};
+
 type StatusColor = 'yashil' | 'sariq' | 'qizil' | '';
 type StatusData = {
   englishStatus?: StatusColor;
@@ -76,39 +62,24 @@ type StatusData = {
   criticalStatus?: StatusColor;
 };
 
-const STATUS_VISUAL: Record<
+// Mentor-assigned discipline status → sp-theme semantic tone.
+const STATUS_TONE: Record<
   string,
-  { label: string; bg: string; text: string; ring: string; tone: string }
+  { dot: string; note: string; noteColor: string }
 > = {
-  yashil: {
-    label: 'Yaxshi',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-700',
-    ring: 'ring-emerald-200',
-    tone: 'bg-emerald-500',
-  },
-  sariq: {
-    label: 'Diqqat',
-    bg: 'bg-amber-50',
-    text: 'text-amber-700',
-    ring: 'ring-amber-200',
-    tone: 'bg-amber-500',
-  },
-  qizil: {
-    label: "E'tibor",
-    bg: 'bg-rose-50',
-    text: 'text-rose-700',
-    ring: 'ring-rose-200',
-    tone: 'bg-rose-500',
-  },
-  '': {
-    label: '—',
-    bg: 'bg-[#f3eedf]',
-    text: 'text-[#777]',
-    ring: 'ring-[#e8e0d0]',
-    tone: 'bg-[#cbbf9c]',
-  },
+  yashil: { dot: 'var(--ok)', note: 'yaxshi', noteColor: 'var(--leaf)' },
+  sariq: { dot: 'var(--warn)', note: 'diqqat', noteColor: 'var(--gold-deep)' },
+  qizil: { dot: 'var(--bad)', note: "e'tibor", noteColor: 'var(--ember)' },
+  '': { dot: 'var(--ink-4)', note: '—', noteColor: 'var(--ink-3)' },
 };
+
+const CERT_TIER_UZ: Record<string, string> = {
+  bronze: 'Bronza',
+  silver: 'Kumush',
+  gold: 'Oltin',
+  diamond: 'Olmos',
+};
+const CERT_RANK = ['bronze', 'silver', 'gold', 'diamond'];
 
 export default function StudentDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -122,6 +93,7 @@ export default function StudentDashboard() {
   const [nextLesson, setNextLesson] = useState<LessonInfo | null>(null);
   const [nextLessonSession, setNextLessonSession] = useState<{ count: number; total: number } | null>(null);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
+  const [examProgress, setExamProgress] = useState<ExamProgress | null>(null);
   // Initial-load failure surface. Background refreshes (focus, visibility)
   // intentionally don't update this so a brief flake on a tab switch
   // doesn't tear down a working dashboard. Retry bumps reloadKey which
@@ -146,6 +118,7 @@ export default function StudentDashboard() {
         certsRes,
         nextLessonRes,
         statusRes,
+        examProgressRes,
       ] = await Promise.all([
         apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
         apiRequest<StreakData>('/gamification/streak', {}, token),
@@ -155,6 +128,7 @@ export default function StudentDashboard() {
         apiRequest<Certificate[]>('/gamification/certificates', {}, token).catch(() => ({ data: [] as Certificate[] })),
         apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
         apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
+        apiRequest<ExamProgress>('/exams/my-progress', {}, token).catch(() => ({ data: null as ExamProgress | null })),
       ]);
       if (profileRes.data) setProfile(profileRes.data);
       setStreak(streakRes.data.streak);
@@ -164,6 +138,7 @@ export default function StudentDashboard() {
       setReviewItems(reviewRes.data ?? []);
       setCertificates(certsRes.data ?? []);
       setStatusData(statusRes.data);
+      setExamProgress(examProgressRes.data);
 
       const nextL = nextLessonRes.data ?? null;
       setNextLesson(nextL);
@@ -214,32 +189,69 @@ export default function StudentDashboard() {
     return n.split(/\s+/)[0];
   }, [profile?.name]);
 
+  const bestCert = useMemo(() => {
+    let best = -1;
+    for (const c of certificates) {
+      const r = CERT_RANK.indexOf(c.level);
+      if (r > best) best = r;
+    }
+    return best >= 0 ? CERT_TIER_UZ[CERT_RANK[best]] : null;
+  }, [certificates]);
+
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto md:max-w-3xl lg:max-w-7xl space-y-4 pb-4 pt-4 px-4 bg-[#fffaf0] min-h-full">
-        <Skeleton theme="light" className="h-32 w-full rounded-3xl" />
-        <Skeleton theme="light" className="h-44 w-full rounded-3xl" />
-        <Skeleton theme="light" className="h-28 w-full rounded-3xl" />
-        <SkeletonCard theme="light" />
+      <div className="sp-theme min-h-full px-4 pt-4 pb-24 max-w-lg mx-auto md:max-w-3xl space-y-4">
+        <div className="sp-skeleton h-12 w-2/3" />
+        <div className="sp-skeleton h-40 w-full" style={{ borderRadius: 'var(--r-4)' }} />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="sp-skeleton h-20" />
+          <div className="sp-skeleton h-20" />
+          <div className="sp-skeleton h-20" />
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="sp-skeleton h-24" />
+          <div className="sp-skeleton h-24" />
+          <div className="sp-skeleton h-24" />
+          <div className="sp-skeleton h-24" />
+        </div>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="bg-[#fffaf0] min-h-full flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-4">
-          <p className="text-5xl" aria-hidden>
-            😕
+      <div className="sp-theme sp-paper-dots min-h-full flex items-center justify-center p-6">
+        <div
+          className="text-center max-w-sm w-full space-y-4 p-8"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+            boxShadow: 'var(--shadow-1)',
+          }}
+        >
+          <Ustoz size={120} mood="oops" className="mx-auto" />
+          <p className="sp-display text-lg" style={{ color: 'var(--ink)' }}>
+            Internet bilan muammo
           </p>
-          <p className="text-[#0f172a] font-extrabold text-lg">
-            Maʼlumotlar yuklanmadi
+          <p
+            className="sp-mono text-xs"
+            style={{ color: 'var(--ink-3)' }}
+          >
+            {loadError}
           </p>
-          <p className="text-[#64748b] text-sm font-semibold">{loadError}</p>
           <button
             type="button"
             onClick={retryLoad}
-            className="inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-5 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
+            className="sp-display inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              border: '2px solid var(--leaf-deep)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: '0 4px 0 var(--leaf-deep)',
+              fontWeight: 700,
+            }}
           >
             Qayta urinish
           </button>
@@ -249,529 +261,406 @@ export default function StudentDashboard() {
   }
 
   const activeWarnings = warnings.filter((w) => !w.isCancelled);
+  const currentStep = lessonProgress + 1;
+  const tracks = [
+    { code: 'EN', label: 'Ingliz tili', value: statusData?.englishStatus ?? '' },
+    { code: 'PR', label: 'Rivojlanish', value: statusData?.personalStatus ?? '' },
+    { code: 'CR', label: 'Tanqidiy fikr', value: statusData?.criticalStatus ?? '' },
+  ];
 
   return (
-    <div className="bg-[#fffaf0] min-h-full">
-      {/* Phone: single-column. Tablet/Desktop: 12-col grid (left 5, right 7). */}
-      <div className="max-w-lg mx-auto lg:max-w-7xl pb-4 pt-4 px-4 md:px-6 lg:px-8">
-        {/* ── TABLET/DESKTOP 2-column grid ── */}
-        <div className="md:grid md:grid-cols-12 md:gap-5 lg:gap-8 md:items-start">
-
-          {/* ── LEFT column (sticky on md+) ── */}
-          <div className="md:col-span-5 md:sticky md:top-20 space-y-4 md:space-y-5 mb-4 md:mb-0">
-            {/* 1. Greeting hero */}
-            <GreetingHero
-              firstName={firstName}
-              streak={streak}
-              hasShield={hasShield}
-              currentStep={lessonProgress + 1}
-            />
-
-            {/* 2. Active warnings — only when present */}
-            {activeWarnings.length > 0 && (
-              <WarningBanner warnings={activeWarnings} />
-            )}
-
-            {/* 3. Primary CTA */}
-            <ContinueLessonCard
-              nextLesson={nextLesson}
-              session={nextLessonSession}
-              lessonNumber={lessonProgress + 1}
-            />
-
-            {/* 4. Status block */}
-            <StatusBlock data={statusData} />
+    <div className="sp-theme min-h-full pb-24">
+      <div className="max-w-lg mx-auto md:max-w-3xl">
+        {/* ── Greeting header ── */}
+        <header className="px-4 pt-4 pb-3 flex items-center gap-3">
+          <div
+            className="w-11 h-11 rounded-full flex items-center justify-center sp-display shrink-0"
+            style={{
+              background: 'var(--gold-tint)',
+              border: '2px solid var(--gold-deep)',
+              color: 'var(--gold-deep)',
+              fontWeight: 800,
+            }}
+          >
+            {(firstName || 'A').charAt(0).toUpperCase()}
           </div>
-
-          {/* ── RIGHT column ── */}
-          <div className="md:col-span-7 space-y-4 md:space-y-5">
-            {/* 5. Daily review */}
-            {reviewItems.length > 0 && <DailyReviewCard items={reviewItems} />}
-
-            {/* 6. Lesson path peek */}
-            <LessonPathPreview />
-
-            {/* 7. Certificates */}
-            {certificates.length > 0 && (
-              <CertificatesCard certificates={certificates} />
-            )}
-
-            {/* 8. Browse more */}
-            <BrowseMoreGrid />
-
-            {/* 9. Friends activity */}
-            <SocialFeed />
-          </div>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================================
-   Subcomponents
-   ============================================================================ */
-
-function GreetingHero({
-  firstName,
-  streak,
-  hasShield,
-  currentStep,
-}: {
-  firstName: string;
-  streak: number;
-  hasShield: boolean;
-  currentStep: number;
-}) {
-  const greeting = firstName ? `Salom, ${firstName}!` : 'Salom, do‘stim!';
-  const subtitle = pickGreetingSubtitle(streak, currentStep);
-  const mood = streak >= 3 ? 'happy' : 'idle';
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-3xl border border-[#f3e8c7] shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]"
-      style={{
-        background:
-          'linear-gradient(135deg, #fffaf0 0%, #fef3c7 60%, #fde68a 100%)',
-      }}
-    >
-      <div
-        aria-hidden
-        className="absolute -top-12 -right-12 w-44 h-44 md:w-72 md:h-72 rounded-full opacity-60 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle, rgba(251,191,36,0.55) 0%, transparent 70%)',
-        }}
-      />
-      <div className="relative z-10 p-5 md:p-7 space-y-4">
-        <div className="flex items-start gap-4">
-          <div className="shrink-0">
-            <Mascot expression={mood} size={88} className="md:!w-[120px] md:!h-[120px] lg:!w-[140px] lg:!h-[140px]" animated />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h1
-              className="text-2xl md:text-3xl lg:text-4xl font-extrabold leading-tight text-[#3c3c3c] truncate"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-            >
-              {greeting}
-            </h1>
-            <p className="mt-1 text-sm md:text-base font-bold text-[#7a5e2c] leading-snug">
-              {subtitle}
-            </p>
+          <div className="flex-1 min-w-0">
+            <div className="sp-eyebrow">Salom,</div>
+            <div className="sp-display text-xl truncate" style={{ color: 'var(--ink)' }}>
+              {firstName || 'do‘stim'}!
+            </div>
           </div>
           <Link
-            href="/student/profile"
+            href="/student/lenta"
             aria-label="Bildirishnomalar"
-            className="shrink-0 w-9 h-9 rounded-full bg-white/70 backdrop-blur border border-[#f3e8c7] flex items-center justify-center text-[#7a5e2c] hover:bg-white transition-colors"
+            className="relative w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
           >
-            <Bell size={16} />
-          </Link>
-        </div>
-
-        {/* Stat strip — Streak | Qadam */}
-        <div className="grid grid-cols-2 gap-2">
-          <HeroStat
-            icon={
-              <StreakFlame
-                streak={streak}
-                hasShield={hasShield}
-                size={18}
-                showLabel={false}
+            <Bell size={18} />
+            {(activeWarnings.length > 0 || reviewItems.length > 0) && (
+              <span
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                style={{ background: 'var(--ember)' }}
               />
-            }
-            value={streak.toString()}
-            label="Kun zanjir"
+            )}
+          </Link>
+        </header>
+
+        {/* ── Active warnings ── */}
+        {activeWarnings.length > 0 && (
+          <div className="px-4 mb-3">
+            <div
+              className="p-4 flex items-start gap-3"
+              style={{
+                background: activeWarnings.length >= 3 ? 'var(--ember-tint)' : 'var(--gold-tint)',
+                border: `1.5px solid ${activeWarnings.length >= 3 ? 'var(--ember-soft)' : 'var(--gold-soft)'}`,
+                borderRadius: 'var(--r-3)',
+              }}
+            >
+              <span className="text-xl shrink-0" aria-hidden>
+                {activeWarnings.length >= 3 ? '🚨' : '⚠️'}
+              </span>
+              <div className="min-w-0">
+                <p
+                  className="sp-display text-sm"
+                  style={{ color: activeWarnings.length >= 3 ? 'var(--ember-deep)' : 'var(--gold-deep)' }}
+                >
+                  {activeWarnings.length >= 3
+                    ? 'Hisobingiz bloklangan'
+                    : `${activeWarnings.length} ta ogohlantirish`}
+                </p>
+                <p className="text-xs mt-0.5 leading-snug" style={{ color: 'var(--ink-2)' }}>
+                  {activeWarnings[0].reasonText}
+                  {activeWarnings.length > 1 && ` va yana ${activeWarnings.length - 1} ta`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Hero CTA ── */}
+        <div className="px-4">
+          <div
+            className="relative overflow-hidden"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              borderRadius: 'var(--r-4)',
+              boxShadow: '0 6px 0 var(--leaf-deep)',
+            }}
+          >
+            <div className="absolute -top-3 -right-3 opacity-[0.18] pointer-events-none" aria-hidden>
+              <Suzani size={140} color="var(--bone)" />
+            </div>
+            <div className="relative p-5 flex gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="sp-eyebrow" style={{ color: 'var(--gold-soft)' }}>
+                  Joriy dars · qadam {currentStep}
+                </div>
+                {examProgress && examProgress.totalExams > 0 && (
+                  <div
+                    className="sp-eyebrow mt-0.5"
+                    style={{ color: 'var(--gold-soft)', opacity: 0.85 }}
+                  >
+                    {examProgress.allDone
+                      ? `Imtihonlar · barchasi oʻtildi (${examProgress.totalExams}/${examProgress.totalExams})`
+                      : `Joriy imtihon · #${examProgress.currentOrder} / ${examProgress.totalExams}`}
+                  </div>
+                )}
+                <h2 className="sp-display text-xl leading-tight mt-1.5 mb-1">
+                  {nextLesson?.title ?? 'Barcha darslar tugatildi 🎉'}
+                </h2>
+                <div className="text-[13px] opacity-85 mb-3.5">
+                  {nextLesson
+                    ? `~${nextLesson.estimatedMinutes ?? 5} daqiqa${
+                        nextLessonSession && nextLessonSession.total > 1
+                          ? ` · sessiya ${nextLessonSession.count}/${nextLessonSession.total}`
+                          : ''
+                      }`
+                    : 'Zo‘r ish — davom eting'}
+                </div>
+                <Link
+                  href={nextLesson ? '/student/lessons/current' : '/student/lessons'}
+                  className="sp-display inline-flex items-center gap-1.5 px-5 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+                  style={{
+                    background: 'var(--gold)',
+                    color: 'var(--ink)',
+                    border: '2px solid var(--gold-deep)',
+                    borderRadius: 14,
+                    boxShadow: '0 4px 0 var(--gold-deep)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {nextLesson ? 'Davom etish →' : 'Darslarni ko‘rish →'}
+                </Link>
+              </div>
+              <div className="flex flex-col items-center gap-1 pt-1 shrink-0">
+                <div
+                  className="flex items-center gap-1 px-2.5 py-1 sp-mono"
+                  style={{
+                    background: 'var(--ember)',
+                    color: 'var(--bone)',
+                    borderRadius: 999,
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  🔥 {streak}
+                </div>
+                <div
+                  className="sp-eyebrow"
+                  style={{ color: 'var(--gold-soft)', fontSize: 9 }}
+                >
+                  kun zanjiri
+                </div>
+                {hasShield && (
+                  <div
+                    className="mt-2 px-2 py-1 sp-mono flex items-center gap-1"
+                    style={{
+                      background: 'rgba(255,255,255,0.12)',
+                      borderRadius: 8,
+                      fontSize: 10,
+                    }}
+                  >
+                    🛡 qalqon
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Three tracks ── */}
+        <SectionTitle action={<span className="sp-eyebrow">mentor bahosi</span>}>
+          Yo‘nalishlar
+        </SectionTitle>
+        <div className="px-4 grid grid-cols-3 gap-2">
+          {tracks.map((t) => {
+            const tone = STATUS_TONE[t.value] ?? STATUS_TONE[''];
+            return (
+              <div
+                key={t.code}
+                className="p-3 flex flex-col gap-2"
+                style={{
+                  background: 'var(--bone)',
+                  border: '1.5px solid var(--line)',
+                  borderRadius: 'var(--r-3)',
+                  boxShadow: 'var(--shadow-1)',
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="sp-mono" style={{ fontSize: 10, fontWeight: 700, color: 'var(--ink-3)' }}>
+                    {t.code}
+                  </span>
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ background: tone.dot }}
+                  />
+                </div>
+                <div className="sp-display text-[13px] leading-tight" style={{ color: 'var(--ink)' }}>
+                  {t.label}
+                </div>
+                <div className="sp-eyebrow" style={{ fontSize: 9, color: tone.noteColor }}>
+                  {tone.note}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Quick actions ── */}
+        <SectionTitle>Tezkor amallar</SectionTitle>
+        <div className="px-4 grid grid-cols-2 gap-2.5">
+          <QAction
+            href="/student/review"
+            bg="var(--ember)"
+            deep="var(--ember-deep)"
+            emoji="📚"
+            title="Kunlik takror"
+            sub={reviewItems.length > 0 ? `${reviewItems.length} ta so‘z` : 'hozircha yo‘q'}
           />
-          <HeroStat
-            icon={<Flag size={16} className="text-[#46a302]" />}
-            value={`#${currentStep}`}
-            label="Qadam"
-            highlight
+          <QAction
+            href="/student/duels"
+            bg="var(--gold)"
+            deep="var(--gold-deep)"
+            ink="var(--ink)"
+            emoji="⚔"
+            title="Duel"
+            sub="do‘st bilan musobaqa"
+          />
+          <QAction
+            href="/student/letters"
+            bg="var(--sky)"
+            deep="#2D5872"
+            emoji="🔤"
+            title="Harflar"
+            sub="kolleksiya"
+          />
+          <QAction
+            href="/student/certificates"
+            bg="var(--leaf-2)"
+            deep="var(--leaf-deep)"
+            emoji="🏅"
+            title="Sertifikatlar"
+            sub={bestCert ? `${bestCert} daraja` : 'hali yo‘q'}
           />
         </div>
-      </div>
-    </div>
-  );
-}
 
-function HeroStat({
-  icon,
-  value,
-  label,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="bg-white/70 backdrop-blur rounded-2xl border border-[#f3e8c7] px-3 py-2.5 md:py-3 flex flex-col items-center gap-1 md:gap-1.5 md:hover:-translate-y-0.5 md:hover:shadow-md transition-all">
-      <div className="h-5 md:h-6 flex items-center justify-center">{icon}</div>
-      <p
-        className={`text-base md:text-lg font-extrabold leading-none truncate max-w-full ${
-          highlight ? 'text-[#46a302]' : 'text-[#3c3c3c]'
-        }`}
-      >
-        {value}
-      </p>
-      <p className="text-[10px] md:text-[11px] font-bold uppercase tracking-wider text-[#7a5e2c]">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function ContinueLessonCard({
-  nextLesson,
-  session,
-  lessonNumber,
-}: {
-  nextLesson: LessonInfo | null;
-  session: { count: number; total: number } | null;
-  lessonNumber: number;
-}) {
-    // "All caught up" state — no next lesson available
-  if (!nextLesson) {
-    return (
-      <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
-        <div className="bg-gradient-to-br from-[#1cb0f6] via-[#0ea5e9] to-[#0284c7] p-5 md:p-6 text-white relative">
-          <div
-            aria-hidden
-            className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
-            }}
-          />
-          <div className="relative z-10 text-center">
-            <p className="text-4xl mb-3" aria-hidden>🎉</p>
-            <p className="text-xl md:text-2xl font-extrabold leading-tight">
-              {'Barcha darslar tugatildi! 🎉'}
-            </p>
-            <p className="mt-1.5 text-sm font-bold text-white/80">
-              Zo&apos;r ish — siz hammani yengdingiz!
-            </p>
+        {/* ── Lesson roadmap preview ── */}
+        <SectionTitle
+          action={
             <Link
               href="/student/lessons"
-              className="mt-4 block bg-white text-[#0284c7] py-3 md:py-3.5 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#bae6fd] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105 min-h-[44px] flex items-center justify-center"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+              className="sp-display text-xs"
+              style={{ color: 'var(--leaf)', fontWeight: 600 }}
             >
-              Darslarni ko&apos;rish
+              Hammasi →
             </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const title = nextLesson.title ?? 'Keyingi dars sizni kutmoqda';
-  const minutes = nextLesson.estimatedMinutes ?? 5;
-  const showSession = session && session.total > 1;
-
-  return (
-    <div className="relative overflow-hidden rounded-3xl shadow-sm motion-safe:animate-[bounce-in_500ms_ease-out]">
-      <div className="bg-gradient-to-br from-[#58cc02] via-[#4cb702] to-[#3a8a02] p-5 md:p-6 text-white relative">
-        <div
-          aria-hidden
-          className="absolute -top-10 -right-8 w-44 h-44 rounded-full opacity-30 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 70%)',
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute -bottom-6 right-3 text-white/15 pointer-events-none"
+          }
         >
-          <ChevronRight size={120} strokeWidth={1.5} />
-        </div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <PlayCircle size={18} className="text-white/95" />
-            <p className="text-[11px] md:text-xs font-extrabold uppercase tracking-widest text-white/90">
-              Davom etamiz
-            </p>
-            {showSession && (
-              <span className="ml-auto bg-white/25 backdrop-blur text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full">
-                Sessiya {session.count}/{session.total}
-              </span>
-            )}
-          </div>
-          <p className="text-2xl md:text-3xl font-extrabold leading-tight">{title}</p>
-          <div className="mt-2.5 flex items-center gap-3 text-[11px] md:text-xs font-bold text-white/90 flex-wrap">
-            <span className="inline-flex items-center gap-1">
-              <BookOpen size={12} /> Dars {lessonNumber}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Sparkles size={12} /> ~{minutes} daqiqa
-            </span>
-          </div>
-          <Link
-            href="/student/lessons/current"
-            className="mt-4 block bg-white text-[#46a302] py-3 md:py-3.5 rounded-2xl font-extrabold text-base text-center border-b-[4px] border-[#cfe9b0] active:translate-y-[2px] active:border-b-[2px] transition-all hover:brightness-105 min-h-[44px] flex items-center justify-center"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
-            {'Davom etish'}
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatusBlock({ data }: { data: StatusData | null }) {
-    // Per-discipline mentor-managed status colour. The whole block is
-  // shown even before the first lesson finishes (with "—" placeholders)
-  // so the student knows where the slots will surface their grades.
-  const items: { field: keyof StatusData; label: string; icon: React.ReactNode }[] = [
-    { field: 'englishStatus', label: 'Ingliz tili', icon: <BookOpen size={16} /> },
-    { field: 'personalStatus', label: 'Shaxsiy rivojlanish', icon: <Brain size={16} /> },
-    { field: 'criticalStatus', label: 'Tanqidiy fikrlash', icon: <Lightbulb size={16} /> },
-  ];
-  return (
-    <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-[#ede9e1] space-y-3 md:space-y-4">
-      <div className="flex items-center gap-2">
-        <p className="text-xs md:text-sm font-bold uppercase tracking-widest text-[#7a5e2c]">
-          {'Sizning holatingiz'}
-        </p>
-        <span
-          className="text-[#94a3b8]"
-          title="Mentor har bir sohada belgilaydigan rang: yashil — yaxshi, sariq — diqqat, qizil — e'tibor"
-        >
-          <HelpCircle size={12} />
-        </span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {items.map((it) => {
-          const val: string = data?.[it.field] ?? '';
-          const v = STATUS_VISUAL[val] ?? STATUS_VISUAL[''];
-          return (
-            <div
-              key={it.field}
-              className={`rounded-2xl p-3 md:p-4 ring-1 ${v.bg} ${v.ring} flex flex-col items-center gap-1 md:gap-1.5 text-center md:hover:-translate-y-0.5 md:hover:shadow-md transition-all min-w-0`}
-            >
-              <div className={`relative ${v.text}`}>{it.icon}</div>
-              <p className={`text-sm md:text-base font-extrabold ${v.text}`}>{v.label}</p>
-              <p className="text-[10px] md:text-[11px] text-[#777] font-bold uppercase tracking-wider truncate w-full">
-                {it.label}
-              </p>
-              <span
-                aria-hidden
-                className={`mt-0.5 w-2 h-2 rounded-full ${v.tone}`}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WarningBanner({ warnings }: { warnings: Warning[] }) {
-  const isBlocked = warnings.length >= 3;
-  return (
-    <div
-      className={`rounded-2xl p-4 flex items-start gap-3 border ${
-        isBlocked
-          ? 'bg-[#ff4b4b]/10 border-[#ff4b4b]/30'
-          : 'bg-[#fbbf24]/10 border-[#fbbf24]/30'
-      }`}
-    >
-      <span className="text-2xl shrink-0" aria-hidden>
-        {isBlocked ? '\u{1F6A8}' : '\u{26A0}\u{FE0F}'}
-      </span>
-      <div className="flex-1">
-        <p
-          className={`font-extrabold text-sm ${
-            isBlocked ? 'text-[#b91c1c]' : 'text-[#92400e]'
-          }`}
-        >
-          {isBlocked
-            ? 'Hisobingiz bloklangan'
-            : `${warnings.length} ta ogohlantirish`}
-        </p>
-        <p className="text-xs text-[#5b5b5b] mt-0.5 leading-snug">
-          {warnings[0].reasonText}
-          {warnings.length > 1 && ` va yana ${warnings.length - 1} ta`}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function DailyReviewCard({ items }: { items: ReviewItem[] }) {
-  return (
-    <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-[#ede9e1] space-y-3 md:space-y-4">
-      <div className="flex items-center gap-2">
-        <RefreshCw size={18} className="text-[#46a302]" />
-        <h2 className="font-extrabold text-[#3c3c3c] md:text-lg">Kunlik takrorlash</h2>
-        <span className="ml-auto text-xs font-bold text-[#777]">
-          {items.length} ta so&apos;z
-        </span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {items.slice(0, 8).map((item) => (
-          <span
-            key={item.word}
-            className="bg-[#f3eedf] text-[#46a302] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-bold"
-          >
-            {item.word}
-          </span>
-        ))}
-        {items.length > 8 && (
-          <span className="bg-[#f3eedf] text-[#777] text-sm px-3 py-1 rounded-full border border-[#e8e0d0] font-semibold">
-            +{items.length - 8}
-          </span>
-        )}
-      </div>
-      <Link
-        href="/student/review"
-        className="block text-center text-sm bg-[#58cc02] hover:brightness-105 text-white py-3 rounded-2xl font-extrabold uppercase tracking-wide border-b-[3px] border-[#46a302] active:translate-y-[2px] active:border-b-[1px] transition-all"
-      >
-        Takrorlashni boshlash
-      </Link>
-    </div>
-  );
-}
-
-function CertificatesCard({ certificates }: { certificates: Certificate[] }) {
-  return (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-[#ede9e1]">
-      <div className="flex items-center gap-2 mb-3">
-        <Award size={18} className="text-[#fbbf24]" />
-        <h2 className="font-extrabold text-[#3c3c3c] text-base">Sertifikatlar</h2>
-        <span className="ml-auto text-xs text-[#777] font-bold">
-          {certificates.length} ta
-        </span>
-      </div>
-      <div className="space-y-2.5">
-        {certificates.slice(0, 2).map((cert) => (
+          Dars yo‘lim
+        </SectionTitle>
+        <div className="px-4">
           <div
-            key={cert.id}
-            className="border border-amber-200 bg-amber-50/60 rounded-2xl p-3"
+            className="p-4"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: 'var(--shadow-1)',
+            }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-extrabold text-amber-700 text-sm capitalize">
-                {cert.level} sertifikati
-              </p>
-              <span className="text-xs text-[#777] font-semibold">
-                {cert.lessonsCompleted} dars
-              </span>
-            </div>
-            <CertificateShare cert={cert} />
+            <MiniRoadmap step={currentStep} />
           </div>
-        ))}
-      </div>
-      {certificates.length > 2 && (
-        <Link
-          href="/student/certificates"
-          className="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#46a302] hover:underline min-h-[36px] py-2"
-        >
-          Barchasini ko‘rish ({certificates.length})
-          <ChevronRight size={12} />
-        </Link>
-      )}
-    </div>
-  );
-}
+        </div>
 
-function BrowseMoreGrid() {
-  const items: { href: string; icon: React.ReactNode; title: string; sub: string; tint: string }[] = [
-    {
-      href: '/student/lenta',
-      icon: <Newspaper size={20} />,
-      title: 'Lenta',
-      sub: 'Do‘stlar yangiliklari',
-      tint: 'text-[#1cb0f6] bg-[#e0f2fe] border-[#bae6fd]',
-    },
-    {
-      href: '/student/duels',
-      icon: <Swords size={20} />,
-      title: 'Duellar',
-      sub: 'Tanlovlar',
-      tint: 'text-[#ce82ff] bg-[#f5edff] border-[#e7d8ff]',
-    },
-    {
-      href: '/student/tournaments',
-      icon: <Trophy size={20} />,
-      title: 'Turnirlar',
-      sub: 'Musobaqalar',
-      tint: 'text-[#fbbf24] bg-[#fef3c7] border-[#fde68a]',
-    },
-    {
-      href: '/student/letters',
-      icon: <Mail size={20} />,
-      title: 'Harflar',
-      sub: 'Kolleksiya',
-      tint: 'text-[#10b981] bg-[#d1fae5] border-[#a7f3d0]',
-    },
-    {
-      href: '/student/errors',
-      icon: <BarChart2 size={20} />,
-      title: 'Xato tahlili',
-      sub: 'AI tavsiyalar',
-      tint: 'text-[#ef4444] bg-[#fee2e2] border-[#fecaca]',
-    },
-    {
-      href: '/student/friends',
-      icon: <Users size={20} />,
-      title: 'Do‘stlar',
-      sub: 'Aloqalar',
-      tint: 'text-[#46a302] bg-[#dcfce7] border-[#bbf7d0]',
-    },
-    {
-      href: '/student/leaderboard',
-      icon: <Trophy size={20} />,
-      title: 'Reyting',
-      sub: 'Liga',
-      tint: 'text-[#fbbf24] bg-[#fef3c7] border-[#fde68a]',
-    },
-    {
-      href: '/student/exams',
-      icon: <GraduationCap size={20} />,
-      title: 'Imtihonlar',
-      sub: 'Sinov',
-      tint: 'text-[#7c3aed] bg-[#ede9fe] border-[#ddd6fe]',
-    },
-  ];
-  return (
-    <div className="space-y-2">
-      <p className="text-xs font-bold uppercase tracking-widest text-[#7a5e2c] px-1">
-        Yana
-      </p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 md:gap-3">
-        {items.map((it) => (
-          <Link
-            key={it.href}
-            href={it.href}
-            className="bg-white rounded-2xl p-3.5 md:p-4 shadow-sm border border-[#ede9e1] flex items-center gap-3 hover:border-[#58cc02]/40 hover:shadow-md md:hover:-translate-y-0.5 transition-all"
-          >
-            <div
-              className={`w-10 h-10 md:w-11 md:h-11 rounded-xl border flex items-center justify-center shrink-0 ${it.tint}`}
+        {/* ── Friends activity preview ── */}
+        <SectionTitle
+          action={
+            <Link
+              href="/student/lenta"
+              className="sp-display text-xs"
+              style={{ color: 'var(--leaf)', fontWeight: 600 }}
             >
-              {it.icon}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-extrabold text-sm md:text-base text-[#3c3c3c] truncate">
-                {it.title}
-              </p>
-              <p className="text-[11px] md:text-xs text-[#777] font-semibold truncate">
-                {it.sub}
-              </p>
-            </div>
-          </Link>
-        ))}
+              Hammasi →
+            </Link>
+          }
+        >
+          Do‘stlar faolligi
+        </SectionTitle>
+        <div className="px-4">
+          <SocialFeed />
+        </div>
       </div>
     </div>
   );
 }
 
-function pickGreetingSubtitle(streak: number, currentStep: number): string {
-  if (streak >= 30) return `${streak} kunlik afsonaviy zanjir 👑`;
-  if (streak >= 14) return `${streak} kunlik olov 🔥 — davom etamiz`;
-  if (streak >= 7) return `${streak} kunlik zanjir 🔥`;
-  if (streak >= 3) return `${streak} kun ketma-ket — zo‘r ish!`;
-  if (currentStep === 1) return 'Birinchi qadamingizni tashlang!';
-  return `${currentStep}-qadamga keldingiz — davom etamiz`;
+/* ── Subcomponents ───────────────────────────────────────────────── */
+
+function SectionTitle({
+  children,
+  action,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="px-4 flex items-center justify-between mt-5 mb-2.5">
+      <h3
+        className="sp-display text-sm uppercase m-0"
+        style={{ letterSpacing: '0.06em', color: 'var(--ink-3)' }}
+      >
+        {children}
+      </h3>
+      {action}
+    </div>
+  );
+}
+
+function QAction({
+  href,
+  bg,
+  deep,
+  emoji,
+  title,
+  sub,
+  ink = 'var(--bone)',
+}: {
+  href: string;
+  bg: string;
+  deep: string;
+  emoji: string;
+  title: string;
+  sub: string;
+  ink?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col gap-1 p-3.5 active:translate-y-[2px] transition-transform"
+      style={{
+        background: bg,
+        color: ink,
+        border: `2px solid ${deep}`,
+        borderRadius: 'var(--r-3)',
+        boxShadow: `0 4px 0 ${deep}`,
+      }}
+    >
+      <span className="text-[28px] leading-none">{emoji}</span>
+      <span className="sp-display text-[15px]">{title}</span>
+      <span className="text-[11px] opacity-80">{sub}</span>
+    </Link>
+  );
+}
+
+/**
+ * Inline lesson roadmap — a window of 8 nodes around the student's
+ * current step. Derived purely from the real completed-lesson count
+ * (no extra fetch): nodes before the current step are done, the
+ * current step is highlighted, the rest are open.
+ */
+function MiniRoadmap({ step }: { step: number }) {
+  const start = Math.max(1, step - 4);
+  const nodes = Array.from({ length: 8 }, (_, i) => {
+    const n = start + i;
+    const state = n < step ? 'done' : n === step ? 'current' : 'open';
+    return { n, state };
+  });
+  return (
+    <div className="flex justify-between items-center gap-1">
+      {nodes.map((d, i) => (
+        <div key={d.n} className="flex items-center flex-1 last:flex-none">
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center sp-mono shrink-0"
+            style={{
+              background:
+                d.state === 'done'
+                  ? 'var(--leaf)'
+                  : d.state === 'current'
+                    ? 'var(--ember)'
+                    : 'var(--bone-2)',
+              border: `2px solid ${d.state === 'open' ? 'var(--line)' : 'var(--ink)'}`,
+              color:
+                d.state === 'open' ? 'var(--ink-3)' : 'var(--bone)',
+              fontSize: 10,
+              fontWeight: 700,
+              boxShadow: d.state === 'current' ? '0 0 0 4px var(--ember-soft)' : 'none',
+            }}
+          >
+            {d.state === 'done' ? '✓' : d.n}
+          </div>
+          {i < nodes.length - 1 && (
+            <div
+              className="flex-1 h-0.5 mx-0.5"
+              style={{
+                background: d.state === 'done' ? 'var(--leaf)' : 'var(--paper-3)',
+                borderRadius: 1,
+              }}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }

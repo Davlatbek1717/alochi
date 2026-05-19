@@ -45,6 +45,15 @@ interface StudentRow {
   activeExamId?: string;
 }
 
+interface ExamProgress {
+  totalExams: number;
+  passedCount: number;
+  currentOrder: number;
+  currentExamTitle: string | null;
+  currentGranted: boolean;
+  allDone: boolean;
+}
+
 // Track granted exams for history footer
 interface GrantedEntry {
   studentId: string;
@@ -112,6 +121,10 @@ export default function TesterExamQueuePage() {
   const [selectedExam, setSelectedExam] = useState('');
   const [granting, setGranting] = useState(false);
   const [grantError, setGrantError] = useState('');
+  // Sequence-aware grant: the student's current position + "give next N".
+  const [grantProgress, setGrantProgress] = useState<ExamProgress | null>(null);
+  const [grantNextCount, setGrantNextCount] = useState(1);
+  const [grantingNext, setGrantingNext] = useState(false);
 
   // Per-student action in-flight tracking (A9)
   const [pendingActions, setPendingActions] = useState<Set<string>>(new Set());
@@ -206,6 +219,51 @@ export default function TesterExamQueuePage() {
     setSelectedLesson(lessons[0]?.id ?? '');
     setSelectedExam(catalogueExams[0]?.id ?? '');
     setGrantError('');
+    setGrantProgress(null);
+    setGrantNextCount(1);
+    const token = localStorage.getItem('accessToken') ?? '';
+    apiRequest<ExamProgress>(
+      `/exams/student/${student.id}/progress`,
+      {},
+      token,
+    )
+      .then((r) => setGrantProgress(r.data ?? null))
+      .catch(() => setGrantProgress(null));
+  }
+
+  async function handleGrantNext() {
+    if (!grantModal) return;
+    setGrantingNext(true);
+    setGrantError('');
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      const res = await apiRequest<{
+        granted: { id: string }[];
+        progress: ExamProgress;
+      }>(
+        '/exams/grant-next',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            studentId: grantModal.studentId,
+            count: grantNextCount,
+          }),
+        },
+        token,
+      );
+      const n = res.data?.granted?.length ?? 0;
+      setGrantProgress(res.data?.progress ?? null);
+      success(
+        n > 1
+          ? `${n} ta navbatdagi imtihon berildi`
+          : 'Navbatdagi imtihon berildi',
+      );
+      setGrantModal(null);
+    } catch (err) {
+      setGrantError(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setGrantingNext(false);
+    }
   }
 
   async function handleGrant() {
@@ -352,11 +410,11 @@ export default function TesterExamQueuePage() {
   const filteredArrived = filteredRows.filter((r) => r.attendance === 'present');
   const filteredNotArrived = filteredRows.filter((r) => r.attendance !== 'present');
 
-  const chips: { key: ChipFilter; label: string }[] = [
-    { key: 'all', label: 'Hammasi' },
-    { key: 'arrived', label: 'Kelganlar' },
-    { key: 'waiting', label: 'Kutmoqda' },
-    { key: 'done', label: 'Tugatdi' },
+  const chips: { key: ChipFilter; label: string; dot: string }[] = [
+    { key: 'all',     label: 'Hammasi',   dot: 'bg-[#94a3b8]' },
+    { key: 'arrived', label: 'Kelganlar', dot: 'bg-emerald-500' },
+    { key: 'waiting', label: 'Kutmoqda',  dot: 'bg-amber-500' },
+    { key: 'done',    label: 'Tugatdi',   dot: 'bg-[#0d9488]' },
   ];
 
   return (
@@ -432,7 +490,7 @@ export default function TesterExamQueuePage() {
           <>
             {/* Search bar */}
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" aria-hidden />
               <input
                 id="exam-queue-search"
                 type="text"
@@ -440,7 +498,7 @@ export default function TesterExamQueuePage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="O'quvchi ismi bo'yicha qidirish..."
                 aria-label="O'quvchi ismi bo'yicha qidirish"
-                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 focus:border-[#0f172a]"
+                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
               />
               {search && (
                 <button
@@ -454,8 +512,9 @@ export default function TesterExamQueuePage() {
               )}
             </div>
 
-            {/* Filter chips */}
-            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-0.5">
+            {/* Filter chips — unified dot + label + count style matching the
+                rest of the staff panels */}
+            <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-0.5">
               {chips.map((c) => {
                 const isActive = chipFilter === c.key;
                 return (
@@ -463,14 +522,16 @@ export default function TesterExamQueuePage() {
                     key={c.key}
                     type="button"
                     onClick={() => setChipFilter(c.key)}
-                    className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-full border transition-colors ${
+                    aria-pressed={isActive}
+                    className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 min-h-[32px] rounded-full border transition-colors ${
                       isActive
                         ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                        : 'bg-white text-[#64748b] border-[#ede9e1] hover:bg-[#fffaf0]'
+                        : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]/40'
                     }`}
                   >
+                    <span className={`w-2 h-2 rounded-full ${c.dot}`} />
                     {c.label}
-                    <span className={isActive ? 'text-white/80' : 'text-[#94a3b8]'}>
+                    <span className={`text-[10px] font-mono ${isActive ? 'text-white/70' : 'text-[#94a3b8]'}`}>
                       {chipCounts[c.key]}
                     </span>
                   </button>
@@ -705,6 +766,71 @@ export default function TesterExamQueuePage() {
             <p className="text-xs text-[#94a3b8] mb-0.5">O&apos;quvchi</p>
             <p className="text-white font-semibold">{grantModal?.name}</p>
           </div>
+
+          {grantProgress && grantProgress.totalExams > 0 && (
+            <div className="bg-[#162032] border border-white/10 rounded-xl px-4 py-3 space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-[#94a3b8]">Imtihon ketma-ketligi</p>
+                <span
+                  className={`text-xs font-extrabold px-2 py-0.5 rounded-full ${
+                    grantProgress.allDone
+                      ? 'bg-emerald-500/15 text-emerald-400'
+                      : 'bg-violet-500/15 text-violet-300'
+                  }`}
+                >
+                  {grantProgress.allDone
+                    ? `Hammasi oʻtildi (${grantProgress.totalExams}/${grantProgress.totalExams})`
+                    : `Joriy: #${grantProgress.currentOrder} / ${grantProgress.totalExams}`}
+                </span>
+              </div>
+              {!grantProgress.allDone && (
+                <>
+                  <p className="text-[11px] text-[#94a3b8] leading-snug">
+                    {grantProgress.currentGranted
+                      ? 'Joriy imtihon allaqachon berilgan — oʻquvchi topshirishi mumkin.'
+                      : grantProgress.currentExamTitle
+                        ? `Navbatdagi: ${grantProgress.currentExamTitle}`
+                        : 'Navbatdagi imtihonni ketma-ketlik boʻyicha bering.'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      inputMode="numeric"
+                      value={grantNextCount}
+                      onChange={(e) =>
+                        setGrantNextCount(
+                          Math.max(
+                            1,
+                            Math.min(20, Number(e.target.value) || 1),
+                          ),
+                        )
+                      }
+                      className="w-16 bg-[#0f172a] border border-white/10 rounded-lg px-2.5 py-2 text-sm font-bold text-white text-center focus:outline-none focus:border-[#15803d]"
+                      aria-label="Nechta imtihon berish"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      loading={grantingNext}
+                      onClick={handleGrantNext}
+                      className="flex-1"
+                    >
+                      {grantingNext
+                        ? 'Berilmoqda...'
+                        : grantNextCount > 1
+                          ? `Navbatdagi ${grantNextCount} tani ber`
+                          : 'Navbatdagini ber'}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-[#64748b]">
+                    Yoki pastdan aniq imtihon/dars tanlab bering.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
 
           {(lessons.length > 0 || catalogueExams.length > 0) && (
             <div className="flex bg-[#162032] border border-white/10 rounded-xl p-1 gap-1">

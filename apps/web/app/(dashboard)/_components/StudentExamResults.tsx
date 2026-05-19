@@ -50,11 +50,20 @@ interface Props {
  * one-line summary; clicking opens a modal with the full AI analysis +
  * transcript when the exam was an ai_oral.
  */
+type ExamProgress = {
+  totalExams: number;
+  passedCount: number;
+  currentOrder: number;
+  currentExamTitle: string | null;
+  allDone: boolean;
+};
+
 export function StudentExamResults({ studentId, title = 'Imtihon natijalari' }: Props) {
   const [rows, setRows] = useState<ExamRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openRow, setOpenRow] = useState<ExamRow | null>(null);
+  const [progress, setProgress] = useState<ExamProgress | null>(null);
 
   useEffect(() => {
     if (!studentId) return;
@@ -67,6 +76,13 @@ export function StudentExamResults({ studentId, title = 'Imtihon natijalari' }: 
         setError(err instanceof Error ? err.message : 'Imtihon tarixi yuklanmadi'),
       )
       .finally(() => setLoading(false));
+    apiRequest<ExamProgress>(
+      `/exams/student/${studentId}/progress`,
+      {},
+      token,
+    )
+      .then((res) => setProgress(res.data ?? null))
+      .catch(() => setProgress(null));
   }, [studentId]);
 
   const completed = rows.filter((r) => r.status !== 'active');
@@ -79,6 +95,25 @@ export function StudentExamResults({ studentId, title = 'Imtihon natijalari' }: 
           <p className="text-xs font-bold text-[#64748b] uppercase tracking-widest mb-3">
             {title}
           </p>
+        )}
+
+        {progress && progress.totalExams > 0 && (
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-extrabold px-2.5 py-1 rounded-full ${
+                progress.allDone
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-violet-100 text-violet-700'
+              }`}
+            >
+              {progress.allDone
+                ? `✅ Barcha imtihonlar oʻtildi (${progress.totalExams}/${progress.totalExams})`
+                : `Joriy imtihon: #${progress.currentOrder} / ${progress.totalExams}`}
+            </span>
+            <span className="text-[11px] font-bold text-[#94a3b8]">
+              {progress.passedCount} ta oʻtilgan
+            </span>
+          </div>
         )}
 
         {loading ? (

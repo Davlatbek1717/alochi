@@ -138,6 +138,7 @@ export class MarketingService {
         school: true,
         avatarUrl: true,
         createdAt: true,
+        tenantId: true,
         studentProgress: {
           select: {
             lessonId: true,
@@ -157,6 +158,23 @@ export class MarketingService {
     const totalLessons = await this.prisma.lesson.count({
       where: { isPublished: true },
     });
+
+    // Public exam progress: how many of the tenant's published
+    // catalogue exams this student has passed, and which # they're on.
+    const [totalExams, passedExams] = await Promise.all([
+      this.prisma.exam.count({
+        where: { tenantId: student.tenantId, isPublished: true },
+      }),
+      this.prisma.examPermission.count({
+        where: {
+          studentId: student.id,
+          passed: true,
+          exam: { tenantId: student.tenantId, isPublished: true },
+        },
+      }),
+    ]);
+    const currentExam =
+      totalExams === 0 ? 0 : Math.min(passedExams + 1, totalExams);
     // Counts the home-completed pass count (matches listStudents above);
     // academyCompleted is still surfaced per row so the timeline can
     // show a "tester verified" tick separately.
@@ -190,6 +208,9 @@ export class MarketingService {
       completedLessons: completed,
       totalLessons,
       progress: progressPct,
+      passedExams,
+      totalExams,
+      currentExam,
       recent: student.studentProgress.map((p) => ({
         lessonTitle: p.lesson?.title ?? '',
         lessonOrder: p.lesson?.orderNumber ?? null,
@@ -295,7 +316,7 @@ export class MarketingService {
   // strings or JSON strings (the consumer parses where needed).
   private static DEFAULT_SETTINGS: Record<string, string> = {
     'hero.badge': "Premium Ta'lim Platformasi",
-    'hero.title': "A'LOCHI",
+    'hero.title': "A'LOJON",
     'hero.tagline': 'revolyutsiya',
     'hero.subtitle':
       "3-7 sinf o'quvchilari uchun zamonaviy ta'lim platformasi — AI suhbatlar, kamera nazorati va ota-onalar uchun Telegram hisobotlar.",
@@ -307,7 +328,7 @@ export class MarketingService {
     'contact.personal': 'https://t.me/Javohir_UH',
     'certificate.title': 'Sertifikat',
     'certificate.description':
-      "Har bir bo'limni tugatgan o'quvchi rasmiy A'lochi sertifikatini oladi.",
+      "Har bir bo'limni tugatgan o'quvchi rasmiy A'lojon sertifikatini oladi.",
     'travel.title': 'Sayohat homiylari',
     'travel.subtitle': "Eng zo'r o'quvchilarga ekskursiya yo'llanmalari",
     'prizes.title': 'Mukofotlar',

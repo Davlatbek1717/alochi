@@ -47,10 +47,46 @@ export class ExamsController {
     return this.exams.listAvailableForTester(req.user.tenantId);
   }
 
+  // Tester grants the student's next N catalogue exams in sequence
+  // order (no hand-picking). Defaults to 1.
+  @Post('grant-next')
+  @Roles(UserRole.tester)
+  grantNext(
+    @Body() body: { studentId: string; count?: number },
+    @Request() req: any,
+  ) {
+    return this.exams.grantNext(
+      req.user.userId,
+      body.studentId,
+      body.count,
+    );
+  }
+
   @Get('my-active')
   @Roles(UserRole.student)
   getMyActive(@Request() req: any) {
     return this.exams.getMyActive(req.user.userId);
+  }
+
+  // Student's own position in the tenant exam sequence (current #).
+  @Get('my-progress')
+  @Roles(UserRole.student)
+  getMyProgress(@Request() req: any) {
+    return this.exams.getStudentExamProgress(req.user.userId);
+  }
+
+  // Same progress, for staff viewing a student. Role set matches the
+  // existing /exams/student/:studentId endpoint.
+  @Get('student/:studentId/progress')
+  @Roles(
+    UserRole.tester,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.mentor,
+    UserRole.superadmin,
+  )
+  getStudentProgress(@Param('studentId') studentId: string) {
+    return this.exams.getStudentExamProgress(studentId);
   }
 
   @Post(':id/submit')
