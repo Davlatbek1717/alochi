@@ -158,12 +158,27 @@ export function OralExamRunner({
 
   // ── TTS ──────────────────────────────────────────────────────────────────
 
+  // For Uzbek exams: check whether a real uz-UZ voice is installed.
+  // Browser uz-UZ TTS is often missing or robotic on Android; fall back
+  // to en-US so at least English vocabulary is intelligible.
+  function resolvedTtsLang(text: string): string {
+    if (language !== 'uz') return 'en-US';
+    const voices = window.speechSynthesis?.getVoices() ?? [];
+    const hasUz = voices.some((v) => v.lang.startsWith('uz'));
+    if (!hasUz) return 'en-US';
+    // If the text is mostly Latin (Uzbek Latin script) and contains obvious
+    // English vocabulary markers, use en-US for better intelligibility.
+    const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+    const total = text.replace(/\s/g, '').length;
+    return latin / (total || 1) > 0.85 ? 'en-US' : 'uz-UZ';
+  }
+
   const speakAi = useCallback(
     (text: string) => {
       if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = langTag;
+      utter.lang = resolvedTtsLang(text);
       utter.rate = 0.95;
       utter.pitch = 1;
       utter.onstart = () => {
@@ -267,9 +282,16 @@ export function OralExamRunner({
     setStudentAnswer('');
     setInterim('');
     setError(null);
-    try {
-      const handle = listen({
-        lang: langTag,
+    // For English exams try en-US first; if the recogniser errors out
+    // (network locale mismatch, service unavailable for that dialect)
+    // fall back to en-GB so British-accented speech is also accepted.
+    const sttLangs: Array<'en-US' | 'en-GB' | 'uz-UZ'> =
+      language === 'en' ? ['en-US', 'en-GB'] : [langTag as 'uz-UZ'];
+    let langIndex = 0;
+
+    function tryListen(langCandidate: 'en-US' | 'en-GB' | 'uz-UZ') {
+      return listen({
+        lang: langCandidate,
         continuous: true,
         onInterim: (txt) => {
           setInterim(txt);
@@ -285,16 +307,26 @@ export function OralExamRunner({
             setError(
               'Mikrofonga ruxsat berilmadi. Brauzer sozlamalaridan ruxsat bering.',
             );
-          } else if (err === 'no-speech') {
-            // No-speech during recording — silence timer will auto-stop.
+            setPhase('ready');
             return;
           }
-          setPhase('ready');
+          if (err === 'language-not-supported' || err === 'network') {
+            langIndex += 1;
+            if (langIndex < sttLangs.length) {
+              listenHandleRef.current = tryListen(sttLangs[langIndex]);
+              return;
+            }
+          }
+          if (err !== 'no-speech') setPhase('ready');
         },
         onEnd: () => {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         },
       });
+    }
+
+    try {
+      const handle = tryListen(sttLangs[langIndex]);
       listenHandleRef.current = handle;
       setPhase('recording');
       // Arm silence timer immediately — if student says nothing, we still

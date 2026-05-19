@@ -250,26 +250,48 @@ export class AiService {
       const cleanBase64 = audioBase64.replace(/^data:[^;]+;base64,/, '');
       const audioBytes = Buffer.from(cleanBase64, 'base64');
 
-      const url =
-        `https://${azureRegion}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1` +
-        `?language=en-US&format=detailed`;
+      // Run assessment against both en-US (American) and en-GB (British)
+      // in parallel and take whichever score is higher. This ensures
+      // students with either accent are scored fairly.
+      const assess = async (lang: string): Promise<number | null> => {
+        const url =
+          `https://${azureRegion}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1` +
+          `?language=${lang}&format=detailed`;
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Ocp-Apim-Subscription-Key': azureKey,
+            'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+            'Pronunciation-Assessment': paParams,
+            Accept: 'application/json',
+          },
+          body: audioBytes,
+        });
+        if (!r.ok) return null;
+        const d = (await r.json()) as {
+          NBest?: Array<{
+            PronunciationAssessment?: { PronScore?: number; AccuracyScore?: number };
+          }>;
+        };
+        const pa = d.NBest?.[0]?.PronunciationAssessment;
+        return typeof pa?.PronScore === 'number'
+          ? pa.PronScore
+          : typeof pa?.AccuracyScore === 'number'
+            ? pa.AccuracyScore
+            : null;
+      };
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Ocp-Apim-Subscription-Key': azureKey,
-          'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
-          'Pronunciation-Assessment': paParams,
-          Accept: 'application/json',
-        },
-        body: audioBytes,
-      });
+      const [usScore, gbScore] = await Promise.all([
+        assess('en-US').catch(() => null),
+        assess('en-GB').catch(() => null),
+      ]);
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        this.logger.warn(
-          `Azure Pronunciation Assessment failed (${res.status}): ${body.slice(0, 200)}`,
-        );
+      const accuracy =
+        usScore !== null && gbScore !== null
+          ? Math.max(usScore, gbScore)
+          : (usScore ?? gbScore);
+
+      if (accuracy === null) {
         return {
           is_correct: null,
           accuracy_score: null,
@@ -278,25 +300,7 @@ export class AiService {
         };
       }
 
-      const data = (await res.json()) as {
-        NBest?: Array<{
-          PronunciationAssessment?: {
-            AccuracyScore?: number;
-            FluencyScore?: number;
-            CompletenessScore?: number;
-            PronScore?: number;
-          };
-        }>;
-      };
-      const pa = data.NBest?.[0]?.PronunciationAssessment;
-      const accuracy =
-        typeof pa?.PronScore === 'number'
-          ? pa.PronScore
-          : typeof pa?.AccuracyScore === 'number'
-            ? pa.AccuracyScore
-            : null;
-
-      if (accuracy === null) {
+      if (accuracy === 0) {
         return {
           is_correct: false,
           accuracy_score: 0,
@@ -304,10 +308,6 @@ export class AiService {
         };
       }
 
-      // 70% — same threshold as the lesson-runner Pronunciation Assessment
-      // exercises currently use client-side. `score` is the field name
-      // SpeakSentence + VocabularyAudio read; `accuracy_score` stays for
-      // any other caller still on the legacy Python service shape.
       const rounded = Math.round(accuracy);
       return {
         score: rounded,
@@ -488,17 +488,27 @@ export class AiService {
   }
 
   /**
-   * 25.H.3 / Pass 1: Text-to-speech.
+   * Text-to-speech for listening / spelling / vocabulary exercises.
    *
-   * Originally English-only; Pass 1 adds the optional `language` argument so
-   * the same endpoint serves listening / spelling exercises (en-US-Jenny)
-   * AND Uzbek vocabulary playback (uz-UZ-Madina). When the language is
-   * omitted we keep the legacy English default so older callers
-   * (vocabulary cards) keep working unchanged.
+   * Two provider paths, tried in order:
    *
-   * Defers to Azure Speech REST when `AZURE_SPEECH_KEY` is set; otherwise
-   * returns an empty placeholder buffer so the frontend stays usable in dev.
-   * Returns base64-encoded audio.
+   *   1. **Google Cloud Text-to-Speech** when `GEMINI_API_KEY` (or the
+   *      dedicated `GOOGLE_TTS_API_KEY`) is set AND the "Cloud
+   *      Text-to-Speech API" is enabled in that Google Cloud project.
+   *      Same key the rest of the AI stack already uses — no separate
+   *      account, no separate billing. 4M chars/month free tier.
+   *
+   *   2. **Azure Speech REST** when `AZURE_SPEECH_KEY` +
+   *      `AZURE_SPEECH_REGION` are set. Preserved for tenants that were
+   *      already on Azure.
+   *
+   * If neither path is configured (dev box), returns an empty buffer.
+   * The lesson runner falls back to the browser's SpeechSynthesis on
+   * any empty response, but Safari/iOS/Telegram in-app browsers don't
+   * have that, which is the user-visible "audio mavjud emas" symptom
+   * this method now closes by talking to Google directly.
+   *
+   * Returns base64-encoded MP3.
    */
   async tts(
     text: string,
@@ -508,17 +518,134 @@ export class AiService {
     audioBase64: string;
     mimeType: string;
   }> {
+    if (!text) return { audioBase64: '', mimeType: 'audio/mpeg' };
+
+    const lang = language ?? 'en';
+
+    // ── Path 1: Google Cloud Text-to-Speech ────────────────────────────
+    const googleKey =
+      process.env.GOOGLE_TTS_API_KEY || process.env.GEMINI_API_KEY;
+    if (googleKey) {
+      // Voice picks: WaveNet for English (warm + natural) and Standard
+      // for Uzbek (only voice family Cloud TTS exposes for uz-UZ at the
+      // moment). The default English voice mirrors Azure's "Jenny" choice
+      // — a friendly young-adult female reader — so existing copy aimed
+      // at kids still feels right.
+      const googleVoice =
+        lang === 'uz' ? 'uz-UZ-Standard-A' : 'en-US-Wavenet-F';
+      const languageCode = lang === 'uz' ? 'uz-UZ' : 'en-US';
+      try {
+        const res = await fetch(
+          `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              input: { text },
+              voice: { languageCode, name: googleVoice },
+              audioConfig: {
+                audioEncoding: 'MP3',
+                // Slightly slower so kids can keep up.
+                speakingRate: 0.95,
+              },
+            }),
+          },
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { audioContent?: string };
+          if (data.audioContent) {
+            return {
+              audioBase64: data.audioContent,
+              mimeType: 'audio/mpeg',
+            };
+          }
+        } else {
+          // Log once so ops can see WHY we fell through (most common:
+          // "Cloud Text-to-Speech API has not been used in project
+          // ... before or it is disabled" — fix is one click in the
+          // Cloud console).
+          const body = await res.text().catch(() => '');
+          this.logger.warn(
+            `Google TTS ${res.status} — falling through. ${body.slice(0, 200)}`,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Google TTS threw, falling through: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    // ── Path 2: Google Translate TTS (unofficial, no key) ─────────────
+    // Free fallback used by countless open-source TTS libraries for the
+    // past decade. No API key required — the same endpoint the
+    // translate.google.com page itself hits. Voice quality is "ok" (not
+    // WaveNet), but it makes Listen exercises and word audio work in
+    // Safari, Firefox, and Telegram in-app browsers that lack
+    // SpeechSynthesis even before the operator enables Cloud TTS.
+    //
+    // Hard 200-char per-request limit on Google's side — we chunk longer
+    // text on sentence/word boundaries and concatenate the MP3 frames.
+    // Most lesson sentences fit in one request.
+    try {
+      const ttsLang = lang === 'uz' ? 'uz' : 'en';
+      const chunks = splitForTranslateTts(text);
+      const buffers: Buffer[] = [];
+      for (const chunk of chunks) {
+        const url =
+          `https://translate.google.com/translate_tts?ie=UTF-8` +
+          `&q=${encodeURIComponent(chunk)}` +
+          `&tl=${ttsLang}&client=tw-ob`;
+        const res = await fetch(url, {
+          headers: {
+            // The endpoint 403s without a real-browser UA.
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept-Language': ttsLang === 'uz' ? 'uz,en;q=0.9' : 'en;q=0.9',
+            Referer: 'https://translate.google.com/',
+          },
+        });
+        if (!res.ok) {
+          this.logger.warn(
+            `Translate TTS chunk ${res.status} — falling through.`,
+          );
+          buffers.length = 0;
+          break;
+        }
+        const chunkBuf = Buffer.from(await res.arrayBuffer());
+        // Translate TTS returns HTTP 204 with a 0-byte body for languages
+        // it doesn't dub (uz being the main one we hit). Treat that as a
+        // miss so we fall through to Azure instead of returning silence.
+        if (chunkBuf.length === 0) {
+          this.logger.warn(
+            `Translate TTS returned empty body for lang=${ttsLang}.`,
+          );
+          buffers.length = 0;
+          break;
+        }
+        buffers.push(chunkBuf);
+      }
+      if (buffers.length > 0) {
+        const merged = Buffer.concat(buffers);
+        return {
+          audioBase64: merged.toString('base64'),
+          mimeType: 'audio/mpeg',
+        };
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Translate TTS threw, falling through: ${(err as Error).message}`,
+      );
+    }
+
+    // ── Path 3: Azure Speech ──────────────────────────────────────────
     const azureKey = process.env.AZURE_SPEECH_KEY;
     const azureRegion = process.env.AZURE_SPEECH_REGION;
-    if (!azureKey || !azureRegion || !text) {
+    if (!azureKey || !azureRegion) {
       return { audioBase64: '', mimeType: 'audio/mpeg' };
     }
 
-    const lang = language ?? 'en';
-    // Caller can override the voice explicitly; otherwise pick a sensible
-    // default per language. Voices we use today:
-    //   en-US-JennyNeural  — friendly American English (kid-friendly)
-    //   uz-UZ-MadinaNeural — Uzbek female
     const defaultVoice =
       lang === 'uz' ? 'uz-UZ-MadinaNeural' : 'en-US-JennyNeural';
     const voice =
@@ -934,4 +1061,49 @@ function escapeXml(s: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+/**
+ * Split text for the unofficial Google Translate TTS endpoint, which
+ * enforces a hard 200-character limit per request. Splits on sentence
+ * boundaries first (`. ! ?`), then on word boundaries, never mid-word.
+ * Returns the original string in a single-element array when it's
+ * already under the limit, which is the common case.
+ */
+function splitForTranslateTts(text: string): string[] {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return [];
+  const LIMIT = 200;
+  if (trimmed.length <= LIMIT) return [trimmed];
+
+  const out: string[] = [];
+  // First pass: sentence-level split. Keep the punctuation attached to
+  // the preceding sentence so playback rhythm matches the written text.
+  const sentences = trimmed
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (const sentence of sentences) {
+    if (sentence.length <= LIMIT) {
+      out.push(sentence);
+      continue;
+    }
+    // Second pass: word-level greedy fill so long sentences split on
+    // whitespace rather than mid-word, which Translate TTS pronounces
+    // awkwardly.
+    const words = sentence.split(/\s+/);
+    let buf = '';
+    for (const word of words) {
+      const next = buf ? `${buf} ${word}` : word;
+      if (next.length > LIMIT) {
+        if (buf) out.push(buf);
+        buf = word.length > LIMIT ? word.slice(0, LIMIT) : word;
+      } else {
+        buf = next;
+      }
+    }
+    if (buf) out.push(buf);
+  }
+  return out;
 }

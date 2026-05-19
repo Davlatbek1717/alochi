@@ -98,7 +98,11 @@ EXAM INSTRUCTIONS (from the teacher who created this exam):
 ${input.aiPrompt}
 
 CONVERSATION RULES:
-1. Speak ONLY in ${langName}. Do not switch languages mid-exam.
+1. ${
+  input.language === 'uz'
+    ? "Speak in Uzbek for all context, explanations, and questions. However, English vocabulary words, phrases, and example sentences that the student needs to learn MUST be said in English (standard English spelling/pronunciation). Example: \"Keling, 'weather' so'zi haqida gaplashamiz. What does 'cloudy' mean?\""
+    : 'Speak ONLY in English. Do not switch languages mid-exam.'
+}
 2. Keep your turns SHORT — 1-2 sentences. This is a spoken exam.
 3. Ask EXACTLY ${input.questionCount} substantive questions matching the instructions above. No fewer, no more.
 4. The first AI turn must contain a brief greeting AND question 1.
