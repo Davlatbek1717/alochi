@@ -128,12 +128,26 @@ export class CityService {
    * the student crosses into the next tier.
    */
   async getCity(studentId: string): Promise<CityResponse> {
-    const buildings = await this.prisma.studentBuilding.findMany({
-      where: { studentId },
-      orderBy: { index: 'asc' },
-    });
+    const [buildings, progressCount] = await Promise.all([
+      this.prisma.studentBuilding.findMany({
+        where: { studentId },
+        orderBy: { index: 'asc' },
+      }),
+      // Count lessons the student has actually completed in StudentProgress.
+      // This covers students who finished lessons before the city feature
+      // was deployed (they have progress rows but no building rows yet).
+      this.prisma.studentProgress.count({
+        where: {
+          studentId,
+          OR: [{ homeCompleted: true }, { academyCompleted: true }],
+        },
+      }),
+    ]);
     const total = buildings.length;
-    const tier = this.getTierForLessonCount(Math.max(1, total));
+    // Use the higher of the two counts so the stat is never incorrect for
+    // students whose completions pre-date the city feature.
+    const lessonsCompleted = Math.max(total, progressCount);
+    const tier = this.getTierForLessonCount(Math.max(1, lessonsCompleted));
     const nextTier = TIERS.find((t) => t.level === tier.level + 1);
     const nextThreshold = nextTier ? nextTier.min : null;
 
@@ -147,7 +161,7 @@ export class CityService {
         isNewest: b.index === total - 1,
       })),
       tier: { level: tier.level, name: tier.name },
-      lessonsCompleted: total,
+      lessonsCompleted,
       nextTierAt: nextThreshold,
       // Back-compat aliases
       level: tier.level,
@@ -169,10 +183,10 @@ export class CityService {
   }> {
     const city = await this.getCity(studentId);
     return {
-      level: city.tier.level,
-      name: city.tier.name,
+      level: city.level,
+      name: city.name,
       lessonsCompleted: city.lessonsCompleted,
-      nextLevelAt: city.nextTierAt,
+      nextLevelAt: city.nextLevelAt,
       buildings: city.buildings.map((b) => b.type),
     };
   }
