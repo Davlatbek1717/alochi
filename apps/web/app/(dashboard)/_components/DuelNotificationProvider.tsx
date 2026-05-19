@@ -23,7 +23,9 @@ interface DuelResult {
   score: string;
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+// Strip /api suffix: NEXT_PUBLIC_API_URL is "https://alojon.uz/api" but
+// socket.io treats the path as namespace, so we need just the origin.
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/api$/, '');
 
 export function DuelNotificationProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);

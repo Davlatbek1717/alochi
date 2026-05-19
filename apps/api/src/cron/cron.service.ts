@@ -1576,7 +1576,7 @@ export class CronService {
    * accepted until 00:00; this cron fires right after the late grace
    * cutoff so a missed mark survives.
    */
-  @Cron('0 0 * * *', {
+  @Cron('59 23 * * *', {
     name: 'video_evening_mark_missed',
     timeZone: 'Asia/Tashkent',
   })

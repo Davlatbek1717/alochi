@@ -122,7 +122,8 @@ export function SocialFeed() {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+    // Strip /api suffix so socket.io namespace resolves to /social, not /api/social
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/api$/, '');
 
     const socket = io(`${apiUrl}/social`, { auth: { token } });
 
