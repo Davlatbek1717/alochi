@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">A\'lojon</string>
+    <!-- Single source of truth for the kiosk target. Change + rebuild
+         to point at a different domain/tenant. -->
+    <string name="kiosk_url">https://alojon.uz</string>
+    <string name="admin_description">A\'lojon kiosk rejimi uchun qurilma boshqaruvi. Faqat A\'lojon ilovasi ishlaydi.</string>
+</resources>

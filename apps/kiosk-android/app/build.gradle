@@ -1,0 +1,59 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'uz.alojon.kiosk'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'uz.alojon.kiosk'
+        minSdk 24            // Lock Task API is 21+, screen pinning UX 24+
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    signingConfigs {
+        release {
+            // Supplied via environment so no secrets are committed.
+            def storeFilePath = System.getenv('KIOSK_STORE_FILE')
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+                storePassword System.getenv('KIOSK_STORE_PASSWORD')
+                keyAlias System.getenv('KIOSK_KEY_ALIAS')
+                keyPassword System.getenv('KIOSK_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Falls back to debug signing when release env vars are absent
+            // so a local "assembleRelease" still produces an installable apk.
+            signingConfig (System.getenv('KIOSK_STORE_FILE')
+                ? signingConfigs.release
+                : signingConfigs.debug)
+        }
+        debug {
+            applicationIdSuffix '.debug'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}

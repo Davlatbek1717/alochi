@@ -1,0 +1,13 @@
+# Android / Gradle build artifacts
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+captures/
+.idea/
+# Gradle wrapper jar is generated locally via `gradle wrapper`
+gradle/wrapper/gradle-wrapper.jar

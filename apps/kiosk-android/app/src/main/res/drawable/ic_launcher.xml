@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vector launcher mark (no binary assets). A simple "A" on the brand
+     ink background. The kiosk is our own HOME app so this renders fine
+     on the controlled device fleet (minSdk 24). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#0F0C2D"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#6D28D9"
+        android:pathData="M54,26 L74,82 H64 L60,70 H48 L44,82 H34 Z M51,60 H57 L54,49 Z" />
+</vector>
