@@ -30,9 +30,10 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Single-screen kiosk — size is irrelevant and a guaranteed
+            // working binary matters more than shrinking, so R8 is off.
+            minifyEnabled false
+            shrinkResources false
             // Falls back to debug signing when release env vars are absent
             // so a local "assembleRelease" still produces an installable apk.
             signingConfig (System.getenv('KIOSK_STORE_FILE')
