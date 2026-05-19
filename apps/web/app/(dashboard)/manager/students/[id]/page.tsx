@@ -4,10 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { useParams, useRouter } from 'next/navigation';
+import { StudyTimeMini } from '../../../_components/StudyTimeMini';
+import { StudentActivity } from '../../../_components/StudentActivity';
 import { ArrowLeft, User, ChevronDown, ChevronUp, Save, Video, AlertCircle, Star, Flag } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { Modal, Skeleton, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
+import { StudyTimeTrend } from '@/app/(dashboard)/_components/StudyTimeTrend';
 
 interface Lesson {
   id: string;
@@ -295,6 +298,8 @@ export default function StudentProfilePage() {
 
       {/* Body */}
       <div className="px-4 pt-5 pb-6 space-y-4">
+        <StudyTimeMini studentId={studentId} />
+        <StudentActivity studentId={studentId} />
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -350,6 +355,9 @@ export default function StudentProfilePage() {
             <p className="text-sm text-[#94a3b8]">Status belgilanmagan</p>
           )}
         </div>
+
+        {/* Kunlik o'quv vaqti — 7 kunlik trend */}
+        <StudyTimeTrend studentId={studentId} />
 
         {/* Lesson overrides */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">

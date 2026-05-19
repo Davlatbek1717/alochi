@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { StudyTimeMini } from '../../../_components/StudyTimeMini';
+import { StudentActivity } from '../../../_components/StudentActivity';
 import { ArrowLeft, Sparkles, AlertTriangle, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { apiRequest, ApiError } from '@/lib/api';
 import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
 import { Skeleton, useToast } from '@/components/ui';
 import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
 import { StudentExamResults } from '@/app/(dashboard)/_components/StudentExamResults';
+import { StudyTimeTrend } from '@/app/(dashboard)/_components/StudyTimeTrend';
 
 type AnalysisResult = {
   weakAreas: string[];
@@ -248,6 +251,8 @@ export default function StudentDetailPage() {
       />
 
       <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
+        <StudyTimeMini studentId={studentId} />
+        <StudentActivity studentId={studentId} />
         {/* AI Analysis Card */}
         <div className="bg-gradient-to-br from-[#1e1b4b] to-[#1e293b] rounded-[18px] p-4 border border-purple-900/30 relative overflow-hidden">
           <div
@@ -319,6 +324,9 @@ export default function StudentDetailPage() {
 
         {/* Imtihon natijalari */}
         <StudentExamResults studentId={studentId} />
+
+        {/* Kunlik o'quv vaqti — 7 kunlik trend */}
+        <StudyTimeTrend studentId={studentId} />
 
         {/* Parent Telegram message */}
         <div className="mt-2 p-5 rounded-[18px] bg-white border-[1.5px] border-[#ede9e1] shadow-sm">

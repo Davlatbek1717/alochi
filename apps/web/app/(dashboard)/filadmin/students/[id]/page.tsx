@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { StudyTimeMini } from '../../../_components/StudyTimeMini';
+import { StudentActivity } from '../../../_components/StudentActivity';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -20,6 +22,7 @@ import { Modal, useToast } from '@/components/ui';
 import { formatDateNumeric } from '@/lib/date-uz';
 import { ProgressMarkerModal } from '@/app/(dashboard)/_components/ProgressMarkerModal';
 import { StudentExamResults } from '@/app/(dashboard)/_components/StudentExamResults';
+import { StudyTimeTrend } from '@/app/(dashboard)/_components/StudyTimeTrend';
 
 interface UserInfo {
   id: string;
@@ -255,6 +258,8 @@ export default function FiladminStudentDetailPage() {
 
       {/* Body */}
       <div className="max-w-3xl mx-auto px-4 pt-5 pb-6 space-y-4">
+        <StudyTimeMini studentId={studentId} />
+        <StudentActivity studentId={studentId} />
         {/* Quick actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
@@ -334,6 +339,9 @@ export default function FiladminStudentDetailPage() {
 
         {/* Imtihon natijalari */}
         <StudentExamResults studentId={studentId} />
+
+        {/* Kunlik o'quv vaqti — 7 kunlik trend */}
+        <StudyTimeTrend studentId={studentId} />
 
         {/* Warnings */}
         <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
