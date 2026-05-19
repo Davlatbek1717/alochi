@@ -57,10 +57,9 @@ export class DuelService {
       where: { type: 'mcq', lessonId: { in: sharedIds } },
     });
 
-    const allQuestions = components.flatMap((c) => {
-      const cfg = c.config as { questions?: unknown[] };
-      return cfg.questions ?? [];
-    });
+    const allQuestions = components.flatMap((c) =>
+      this.normalizeMcq(c.config),
+    );
 
     if (allQuestions.length < 10) {
       throw new BadRequestException(
@@ -70,7 +69,7 @@ export class DuelService {
 
     const selectedQuestions = [...allQuestions]
       .sort(() => Math.random() - 0.5)
-      .slice(0, 10) as object[];
+      .slice(0, 10);
 
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
@@ -97,6 +96,56 @@ export class DuelService {
     );
 
     return duel;
+  }
+
+  /**
+   * MCQ components are authored in two shapes across the codebase:
+   *   - aggregate (curriculum seed + legacy aggregate POST):
+   *       { questions: [{ text, options, correct }] }
+   *   - flat (generic POST + superadmin UI lesson editor):
+   *       { question, options, correctIndex }
+   * The duel runner renders `{ text, options }` and scoring reads
+   * `.correct`. create() previously only read the aggregate shape, so
+   * duels built from UI-authored lessons collected zero questions and
+   * either failed to start or showed blank questions. Normalize both
+   * shapes here — mirrors the exam runner's extractor.
+   */
+  private normalizeMcq(
+    config: unknown,
+  ): Array<{ text: string; options: string[]; correct: number }> {
+    const cfg = config as {
+      questions?: Array<{
+        text?: string;
+        options?: string[];
+        correct?: number;
+      }>;
+      question?: string;
+      options?: string[];
+      correctIndex?: number;
+    };
+    const out: Array<{ text: string; options: string[]; correct: number }> = [];
+    if (Array.isArray(cfg?.questions) && cfg.questions.length > 0) {
+      for (const q of cfg.questions) {
+        if (q?.text && Array.isArray(q.options) && q.options.length >= 2) {
+          out.push({
+            text: q.text,
+            options: q.options,
+            correct: typeof q.correct === 'number' ? q.correct : 0,
+          });
+        }
+      }
+    } else if (
+      cfg?.question &&
+      Array.isArray(cfg.options) &&
+      cfg.options.length >= 2
+    ) {
+      out.push({
+        text: cfg.question,
+        options: cfg.options,
+        correct: typeof cfg.correctIndex === 'number' ? cfg.correctIndex : 0,
+      });
+    }
+    return out;
   }
 
   async respond(duelId: string, userId: string, accept: boolean) {
@@ -308,6 +357,70 @@ export class DuelService {
       challengerName: d.challenger.name,
       challengedName: d.challenged.name,
     }));
+  }
+
+  /**
+   * Recent COMPLETED duels among the caller's accepted friends — so a
+   * student can see how their friends did. Bidirectional friendship
+   * lookup (same pattern as the social feed). The caller's own duels
+   * are excluded (they already have /social/duels for that).
+   */
+  async listFriendsDuels(userId: string) {
+    const friendships = await this.prisma.friendship.findMany({
+      where: {
+        status: 'accepted',
+        OR: [{ userId }, { friendId: userId }],
+      },
+      select: { userId: true, friendId: true },
+    });
+    if (friendships.length === 0) return [];
+
+    const friendIds = Array.from(
+      new Set(
+        friendships.map((f) =>
+          f.userId === userId ? f.friendId : f.userId,
+        ),
+      ),
+    );
+
+    const duels = await this.prisma.duel.findMany({
+      where: {
+        status: 'completed',
+        OR: [
+          { challengerId: { in: friendIds } },
+          { challengedId: { in: friendIds } },
+        ],
+        // Exclude duels the caller was part of — those are their own.
+        NOT: [{ challengerId: userId }, { challengedId: userId }],
+      },
+      include: {
+        challenger: { select: { id: true, name: true } },
+        challenged: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
+    return duels.map((d) => {
+      const winnerName =
+        d.winnerId === d.challengerId
+          ? d.challenger.name
+          : d.winnerId === d.challengedId
+            ? d.challenged.name
+            : null;
+      return {
+        id: d.id,
+        challengerId: d.challengerId,
+        challengedId: d.challengedId,
+        challengerName: d.challenger.name,
+        challengedName: d.challenged.name,
+        challengerScore: d.challengerScore,
+        challengedScore: d.challengedScore,
+        winnerId: d.winnerId,
+        winner: winnerName,
+        createdAt: d.createdAt,
+      };
+    });
   }
 
   async expireOverdue(): Promise<void> {

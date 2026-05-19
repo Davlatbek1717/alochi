@@ -73,6 +73,12 @@ export class SocialController {
     return this.duel.listDuels(req.user.userId);
   }
 
+  // Declared BEFORE 'duels/:id' so 'friends' isn't captured as :id.
+  @Get('duels/friends')
+  listFriendsDuels(@Request() req: any) {
+    return this.duel.listFriendsDuels(req.user.userId);
+  }
+
   @Get('duels/:id')
   getDuel(@Param('id') id: string, @Request() req: any) {
     return this.duel.getDuel(id, req.user.userId);
