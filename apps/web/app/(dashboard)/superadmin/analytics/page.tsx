@@ -10,9 +10,17 @@ import { FunnelTab } from './_components/FunnelTab';
 import { LifecycleTab } from './_components/LifecycleTab';
 import { FailuresTab } from './_components/FailuresTab';
 import { ComparisonTab } from './_components/ComparisonTab';
+import { StudyTimeTab } from './_components/StudyTimeTab';
+import { ChurnTab } from './_components/ChurnTab';
+import { GrowthTab } from './_components/GrowthTab';
+import { LoyaltyTab } from './_components/LoyaltyTab';
 
 type TabId =
   | 'activity'
+  | 'studytime'
+  | 'churn'
+  | 'growth'
+  | 'loyalty'
   | 'lessons'
   | 'branches'
   | 'cohort'
@@ -23,6 +31,10 @@ type TabId =
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'activity', label: 'Faollik' },
+  { id: 'studytime', label: "O'quv vaqti" },
+  { id: 'churn', label: 'Churn xavfi' },
+  { id: 'growth', label: "O'sish" },
+  { id: 'loyalty', label: 'Sodiqlik' },
   { id: 'lessons', label: 'Darslar' },
   { id: 'branches', label: 'Filiallar' },
   { id: 'cohort', label: 'Cohort' },
@@ -127,6 +139,10 @@ export default function AnalyticsPage() {
             aria-labelledby={`tab-${active}`}
           >
             {active === 'activity' && <ActivityTab />}
+            {active === 'studytime' && <StudyTimeTab />}
+            {active === 'churn' && <ChurnTab />}
+            {active === 'growth' && <GrowthTab />}
+            {active === 'loyalty' && <LoyaltyTab />}
             {active === 'lessons' && <LessonsTab />}
             {active === 'branches' && <BranchesTab />}
             {active === 'cohort' && <CohortTab />}

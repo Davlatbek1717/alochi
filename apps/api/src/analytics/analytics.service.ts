@@ -148,6 +148,114 @@ export class AnalyticsService {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Study-time — daily average minutes + share of students below their
+  // branch minimum. ClickHouse (study_time_daily events) with a Postgres
+  // fallback (study_time_daily table) so it works without ClickHouse.
+  // ───────────────────────────────────────────────────────────────────────────
+  async getStudyTime(
+    tenantId: string,
+    days = 14,
+  ): Promise<
+    Array<{
+      day: string;
+      avgMinutes: number;
+      students: number;
+      belowPct: number;
+    }>
+  > {
+    const d = Math.min(Math.max(days, 1), 90);
+
+    if (!this.clickhouse.isReady()) {
+      return this.getStudyTimeFromPostgres(tenantId, d);
+    }
+    try {
+      const rows = await this.clickhouse.query<{
+        day: string;
+        avg_minutes: string;
+        students: string;
+        below_pct: string;
+      }>(
+        `SELECT toDate(created_at)::String AS day,
+                round(avg(JSONExtractUInt(data, 'minutes')), 1)::String AS avg_minutes,
+                count()::String AS students,
+                round(100 * countIf(JSONExtractBool(data, 'below')) / count(), 1)::String AS below_pct
+         FROM events
+         WHERE tenant_id = {tenantId:UUID}
+           AND event_type = 'study_time_daily'
+           AND created_at >= now() - INTERVAL ${d} DAY
+         GROUP BY day ORDER BY day`,
+        { tenantId },
+      );
+      return rows.map((r) => ({
+        day: r.day,
+        avgMinutes: Number(r.avg_minutes),
+        students: Number(r.students),
+        belowPct: Number(r.below_pct),
+      }));
+    } catch (err) {
+      this.logger.warn(
+        `getStudyTime ClickHouse failed, falling back to Postgres: ${(err as Error).message}`,
+      );
+      return this.getStudyTimeFromPostgres(tenantId, d);
+    }
+  }
+
+  private async getStudyTimeFromPostgres(
+    tenantId: string,
+    days: number,
+  ): Promise<
+    Array<{
+      day: string;
+      avgMinutes: number;
+      students: number;
+      belowPct: number;
+    }>
+  > {
+    try {
+      const rows = await this.prisma.$queryRaw<
+        Array<{
+          day: string;
+          avg_minutes: number;
+          students: bigint;
+          below_pct: number;
+        }>
+      >(
+        Prisma.sql`
+          SELECT
+            to_char(s.date, 'YYYY-MM-DD') AS day,
+            round(avg(s.seconds / 60.0), 1) AS avg_minutes,
+            count(*) AS students,
+            round(
+              100.0 * count(*) FILTER (
+                WHERE b.min_daily_study_minutes > 0
+                  AND floor(s.seconds / 60) < b.min_daily_study_minutes
+              ) / count(*),
+              1
+            ) AS below_pct
+          FROM study_time_daily s
+          JOIN users u
+            ON u.id = s.student_id AND u.tenant_id = ${tenantId}::uuid
+          LEFT JOIN branches b ON b.id = s.branch_id
+          WHERE s.date >= current_date - ${days}::int
+          GROUP BY 1
+          ORDER BY 1
+        `,
+      );
+      return rows.map((r) => ({
+        day: r.day,
+        avgMinutes: Number(r.avg_minutes),
+        students: Number(r.students),
+        belowPct: Number(r.below_pct),
+      }));
+    } catch (err) {
+      this.logger.warn(
+        `getStudyTimeFromPostgres failed: ${(err as Error).message}`,
+      );
+      return [];
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Cohort retention — ClickHouse only. Returns source:'unavailable' when CH
   // is down so the frontend can show an honest empty state.
   // ───────────────────────────────────────────────────────────────────────────
@@ -698,5 +806,154 @@ export class AnalyticsService {
           `ClickHouse insert failed for event ${event.id}: ${(e as Error).message}`,
         );
       });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Growth — daily new + active students (deterministic, Postgres-only).
+  // ───────────────────────────────────────────────────────────────────────────
+  async getGrowth(
+    tenantId: string,
+    days: number,
+  ): Promise<{
+    totalStudents: number;
+    days: Array<{ date: string; newStudents: number; activeStudents: number }>;
+  }> {
+    const d = Math.max(1, Math.min(90, Math.round(days) || 30));
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<
+        Array<{ day: string; new_students: number; active_students: number }>
+      >(
+        `
+        WITH series AS (
+          SELECT generate_series(
+            (CURRENT_DATE - ($2::int - 1)), CURRENT_DATE, INTERVAL '1 day'
+          )::date AS day
+        )
+        SELECT
+          s.day::text AS day,
+          (SELECT COUNT(*) FROM users u
+             WHERE u.role = 'student' AND u.tenant_id = $1::uuid
+               AND u.created_at::date = s.day) AS new_students,
+          (SELECT COUNT(DISTINCT std.student_id) FROM study_time_daily std
+             WHERE std.tenant_id = $1::uuid AND std.seconds > 0
+               AND std.date = s.day) AS active_students
+        FROM series s
+        ORDER BY s.day
+        `,
+        tenantId,
+        d,
+      );
+      const totalStudents = await this.prisma.user.count({
+        where: { role: 'student', tenantId, status: 'active' },
+      });
+      return {
+        totalStudents,
+        days: rows.map((r) => ({
+          date: r.day,
+          newStudents: Number(r.new_students) || 0,
+          activeStudents: Number(r.active_students) || 0,
+        })),
+      };
+    } catch (err) {
+      this.logger.warn(`getGrowth failed: ${(err as Error).message}`);
+      return { totalStudents: 0, days: [] };
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Loyalty — recency/streak segmentation of active students.
+  // ───────────────────────────────────────────────────────────────────────────
+  async getLoyalty(tenantId: string): Promise<{
+    counts: { loyal: number; steady: number; atRisk: number; dormant: number };
+    atRisk: Array<{ studentId: string; name: string; daysInactive: number }>;
+    dormant: Array<{ studentId: string; name: string; daysInactive: number }>;
+  }> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<
+        Array<{
+          id: string;
+          name: string;
+          streak: number;
+          red: number;
+          days_inactive: number;
+        }>
+      >(
+        `
+        WITH s AS (
+          SELECT u.id, u.name FROM users u
+          WHERE u.role = 'student' AND u.status = 'active'
+            AND u.tenant_id = $1::uuid
+        )
+        SELECT
+          s.id::text AS id,
+          s.name,
+          COALESCE((SELECT current_streak FROM student_streak ss
+                    WHERE ss.student_id = s.id), 0) AS streak,
+          CASE WHEN EXISTS (
+            SELECT 1 FROM student_status x
+            WHERE x.student_id = s.id
+              AND (x.english_status = 'qizil' OR x.critical_status = 'qizil')
+              AND x.date >= (NOW() - INTERVAL '7 days')::date
+          ) THEN 1 ELSE 0 END AS red,
+          EXTRACT(EPOCH FROM (NOW() - GREATEST(
+            COALESCE((SELECT MAX(COALESCE(sp.last_activity_at, sp.completed_at))
+                      FROM student_progress sp WHERE sp.student_id = s.id),
+                     'epoch'::timestamp),
+            COALESCE((SELECT ss.last_activity FROM student_streak ss
+                      WHERE ss.student_id = s.id), 'epoch'::timestamp),
+            COALESCE((SELECT MAX(std.date)::timestamp FROM study_time_daily std
+                      WHERE std.student_id = s.id AND std.seconds > 0),
+                     'epoch'::timestamp)
+          ))) / 86400.0 AS days_inactive
+        FROM s
+        `,
+        tenantId,
+      );
+
+      const counts = { loyal: 0, steady: 0, atRisk: 0, dormant: 0 };
+      const atRisk: Array<{
+        studentId: string;
+        name: string;
+        daysInactive: number;
+      }> = [];
+      const dormant: Array<{
+        studentId: string;
+        name: string;
+        daysInactive: number;
+      }> = [];
+
+      for (const r of rows) {
+        const di = Math.max(0, Math.round(Number(r.days_inactive) || 0));
+        const streak = Number(r.streak) || 0;
+        const red = Number(r.red) === 1;
+        if (di > 21) {
+          counts.dormant++;
+          dormant.push({ studentId: r.id, name: r.name, daysInactive: di });
+        } else if (di > 7 || red) {
+          counts.atRisk++;
+          atRisk.push({ studentId: r.id, name: r.name, daysInactive: di });
+        } else if (streak >= 7) {
+          counts.loyal++;
+        } else {
+          counts.steady++;
+        }
+      }
+      const byInactiveDesc = (
+        a: { daysInactive: number },
+        b: { daysInactive: number },
+      ) => b.daysInactive - a.daysInactive;
+      return {
+        counts,
+        atRisk: atRisk.sort(byInactiveDesc).slice(0, 25),
+        dormant: dormant.sort(byInactiveDesc).slice(0, 25),
+      };
+    } catch (err) {
+      this.logger.warn(`getLoyalty failed: ${(err as Error).message}`);
+      return {
+        counts: { loyal: 0, steady: 0, atRisk: 0, dormant: 0 },
+        atRisk: [],
+        dormant: [],
+      };
+    }
   }
 }

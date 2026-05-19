@@ -14,6 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { AnalyticsService } from './analytics.service';
+import { ChurnService } from './churn.service';
 
 enum ActivityPeriod {
   weekly = 'weekly',
@@ -25,7 +26,10 @@ enum ActivityPeriod {
 @Controller('analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnalyticsController {
-  constructor(private analytics: AnalyticsService) {}
+  constructor(
+    private analytics: AnalyticsService,
+    private churn: ChurnService,
+  ) {}
 
   @Get('lessons')
   @Roles(UserRole.superadmin)
@@ -81,5 +85,46 @@ export class AnalyticsController {
   @Roles(UserRole.superadmin)
   getComparison() {
     return this.analytics.getTenantComparison();
+  }
+
+  @Get('study-time')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getStudyTime(@Req() req: any, @Query('days') days?: string) {
+    const d = days
+      ? Math.min(Math.max(parseInt(days, 10) || 14, 1), 90)
+      : 14;
+    return this.analytics.getStudyTime(req.user.tenantId, d);
+  }
+
+  // ── AI sections (churn / growth / loyalty) ──────────────────────────
+
+  @Get('churn')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getChurn(@Req() req: any, @Query('limit') limit?: string) {
+    const lim = limit
+      ? Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200)
+      : 50;
+    return this.churn.getChurnList(req.user.tenantId, lim);
+  }
+
+  @Get('churn/metrics')
+  @Roles(UserRole.superadmin)
+  getChurnMetrics() {
+    return this.churn.getModelMetrics();
+  }
+
+  @Get('growth')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getGrowth(@Req() req: any, @Query('days') days?: string) {
+    const d = days
+      ? Math.min(Math.max(parseInt(days, 10) || 30, 1), 90)
+      : 30;
+    return this.analytics.getGrowth(req.user.tenantId, d);
+  }
+
+  @Get('loyalty')
+  @Roles(UserRole.superadmin, UserRole.filadmin)
+  getLoyalty(@Req() req: any) {
+    return this.analytics.getLoyalty(req.user.tenantId);
   }
 }

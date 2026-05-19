@@ -10,6 +10,10 @@ import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
 import { VideoCheckinService } from '../video-checkin/video-checkin.service';
 import { VideoCheckinHandler } from '../telegram/handlers/video-checkin.handler';
+import {
+  tashkentDateString,
+  dateStringToDate,
+} from '../video-checkin/lib/tashkent-time';
 
 /**
  * Tunable thresholds for the filadmin monthly KPI cron (§8.3).
@@ -288,16 +292,28 @@ export class CronService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // Real tracked study time is keyed by the Tashkent calendar date
+    // (the same key the /study-time/ping heartbeat writes), not the
+    // server-local midnight used for lesson/status windows above.
+    const studyDateObj = dateStringToDate(tashkentDateString());
+
     const students = await this.prisma.user.findMany({
       where: {
         role: 'student',
         status: 'active',
-        parentTelegramId: { not: null },
+        // Deliver the report to whichever Telegram chats are linked for
+        // this student — the parent's chat AND/OR the student's own chat
+        // (the one used for daily video check-in). One bot, both flows.
+        OR: [
+          { parentTelegramId: { not: null } },
+          { telegramId: { not: null } },
+        ],
       },
       select: {
         id: true,
         name: true,
         parentTelegramId: true,
+        telegramId: true,
         studentStreak: { select: { currentStreak: true } },
         studentStatuses: {
           where: { date: { gte: today, lt: tomorrow } },
@@ -316,12 +332,28 @@ export class CronService {
           },
           select: { id: true },
         },
+        studyTimeDaily: {
+          where: { date: studyDateObj },
+          select: { seconds: true },
+          take: 1,
+        },
       },
     });
 
     let sent = 0;
     for (const student of students) {
-      if (!student.parentTelegramId) continue;
+      // Merge recipients: the parent's linked chat + the student's own
+      // video-check-in chat. Deduped so a family using one chat for both
+      // never gets the report twice.
+      const recipients = new Set<string>();
+      if (student.parentTelegramId) {
+        recipients.add(student.parentTelegramId);
+      }
+      if (student.telegramId) {
+        recipients.add(String(student.telegramId));
+      }
+      if (recipients.size === 0) continue;
+
       const status = student.studentStatuses[0];
       const message = this.telegram.formatDailyReport({
         studentName: student.name,
@@ -330,16 +362,94 @@ export class CronService {
         englishStatus: status?.englishStatus ?? 'nomalum',
         personalStatus: status?.personalStatus ?? 'nomalum',
         criticalStatus: status?.criticalStatus ?? 'nomalum',
-        studyMinutes: student.studentProgress.length * 15,
+        studyMinutes: Math.floor(
+          (student.studyTimeDaily[0]?.seconds ?? 0) / 60,
+        ),
         streak: student.studentStreak?.currentStreak ?? 0,
       });
-      await this.telegram
-        .sendMessage(student.parentTelegramId, message)
-        .catch(() => {});
-      sent++;
+      for (const chatId of recipients) {
+        await this.telegram.sendMessage(chatId, message).catch(() => {});
+        sent++;
+      }
     }
 
-    this.logger.log(`Daily parent report: ${sent} ta ota-onaga yuborildi`);
+    this.logger.log(`Daily report: ${sent} ta xabar yuborildi`);
+  }
+
+  /**
+   * Mirror the just-finished Tashkent day's per-student study-time totals
+   * into the analytics outbox (analytics_events). The existing outbox
+   * flusher pushes these to ClickHouse — no direct CH write here, so we
+   * stay reliable even when ClickHouse is down (events sync on recovery).
+   * Runs at 01:15 server time: Tashkent is UTC+5, so "now − 24h" reliably
+   * resolves to the day that has fully closed in Tashkent.
+   */
+  @Cron('15 1 * * *', { name: 'study_time_mirror' })
+  async runStudyTimeMirror() {
+    this.logger.log('Cron: study-time ClickHouse mirror boshlanmoqda...');
+    const dateStr = tashkentDateString(
+      new Date(Date.now() - 24 * 3600 * 1000),
+    );
+    const dateObj = dateStringToDate(dateStr);
+
+    const rows = await this.prisma.studyTimeDaily.findMany({
+      where: { date: dateObj },
+      select: {
+        studentId: true,
+        tenantId: true,
+        branchId: true,
+        seconds: true,
+      },
+    });
+    if (rows.length === 0) {
+      this.logger.log(`Study-time mirror: maʼlumot yoʻq (${dateStr})`);
+      return;
+    }
+
+    const branchIds = [
+      ...new Set(
+        rows.map((r) => r.branchId).filter((b): b is string => !!b),
+      ),
+    ];
+    const branches = branchIds.length
+      ? await this.prisma.branch.findMany({
+          where: { id: { in: branchIds } },
+          select: { id: true, minDailyStudyMinutes: true },
+        })
+      : [];
+    const thByBranch = new Map(
+      branches.map((b) => [b.id, b.minDailyStudyMinutes]),
+    );
+
+    let n = 0;
+    for (const r of rows) {
+      const minutes = Math.floor(r.seconds / 60);
+      const thresholdMinutes = r.branchId
+        ? (thByBranch.get(r.branchId) ?? 0)
+        : 0;
+      const below = thresholdMinutes > 0 && minutes < thresholdMinutes;
+      await this.prisma.analyticsEvent
+        .create({
+          data: {
+            tenantId: r.tenantId,
+            eventType: 'study_time_daily',
+            studentId: r.studentId,
+            branchId: r.branchId,
+            data: { date: dateStr, minutes, thresholdMinutes, below },
+          },
+        })
+        .then(() => {
+          n++;
+        })
+        .catch((e) =>
+          this.logger.warn(
+            `study-time mirror row failed: ${(e as Error).message}`,
+          ),
+        );
+    }
+    this.logger.log(
+      `Study-time mirror: ${n} ta event yozildi (${dateStr})`,
+    );
   }
 
   @Cron('0 8 * * *', { name: 'manager_morning_alert' })
@@ -1218,6 +1328,164 @@ export class CronService {
   }
 
   /**
+   * Filadmin morning-video status report (Telegram).
+   *
+   * Two runs per day to the linked Telegram of every active filadmin:
+   *   - 06:35 Tashkent — right after the on-time window (05:00–06:30)
+   *     closes: who has submitted vs. who hasn't yet.
+   *   - 10:00 Tashkent — follow-up: who submitted (incl. late) vs. who
+   *     still hasn't.
+   *
+   * One message per branch (reusing VideoCheckinService.getTodayList),
+   * sent to each filadmin in that branch who linked their Telegram.
+   */
+  private async sendFiladminVideoReports(label: string, finalMode: boolean) {
+    const filadmins = await this.prisma.user.findMany({
+      where: {
+        role: 'filadmin',
+        status: 'active',
+        telegramId: { not: null },
+        branchId: { not: null },
+      },
+      select: { telegramId: true, branchId: true },
+    });
+    if (filadmins.length === 0) {
+      this.logger.log(`filadmin video report (${label}): linked filadmin yo'q`);
+      return;
+    }
+
+    // Group filadmins by branch so getTodayList runs once per branch.
+    const byBranch = new Map<string, bigint[]>();
+    for (const f of filadmins) {
+      if (!f.branchId || f.telegramId === null) continue;
+      const arr = byBranch.get(f.branchId) ?? [];
+      arr.push(f.telegramId);
+      byBranch.set(f.branchId, arr);
+    }
+
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fmtTime = (iso: string | null) => {
+      if (!iso) return '';
+      try {
+        return new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Tashkent',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(new Date(iso));
+      } catch {
+        return '';
+      }
+    };
+    const dateStr = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'Asia/Tashkent',
+    });
+    const CAP = 60;
+
+    let branchesSent = 0;
+    for (const [branchId, chatIds] of byBranch) {
+      try {
+        const branch = await this.prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { name: true },
+        });
+        const rows = await this.videoCheckin.getTodayList(branchId);
+        if (rows.length === 0) continue;
+
+        const done = rows.filter(
+          (r) => r.morning === 'submitted' || r.morning === 'late',
+        );
+        const notDone = rows.filter(
+          (r) => r.morning !== 'submitted' && r.morning !== 'late',
+        );
+
+        const lines: string[] = [];
+        lines.push(`📹 <b>${esc(branch?.name ?? 'Filial')} — ${label}</b>`);
+        lines.push(`📅 ${dateStr}`);
+        lines.push(
+          `✅ Tashladi: <b>${done.length}</b>  ·  ${
+            finalMode ? '❌ Tashlamadi' : '⏳ Hali yo‘q'
+          }: <b>${notDone.length}</b>  ·  Jami: ${rows.length}`,
+        );
+
+        if (done.length > 0) {
+          lines.push('');
+          lines.push('✅ <b>Video tashlaganlar</b>');
+          done.slice(0, CAP).forEach((r) => {
+            const t = fmtTime(r.morningAt);
+            const lateTag = r.morning === 'late' ? ' <i>(kech)</i>' : '';
+            lines.push(`• ${esc(r.name)}${t ? ` — ${t}` : ''}${lateTag}`);
+          });
+          if (done.length > CAP)
+            lines.push(`…va yana ${done.length - CAP} ta`);
+        }
+
+        if (notDone.length > 0) {
+          lines.push('');
+          lines.push(
+            finalMode
+              ? '❌ <b>Video tashlamaganlar</b>'
+              : '⏳ <b>Hali tashlamaganlar</b>',
+          );
+          notDone.slice(0, CAP).forEach((r) => {
+            lines.push(`• ${esc(r.name)}`);
+          });
+          if (notDone.length > CAP)
+            lines.push(`…va yana ${notDone.length - CAP} ta`);
+        }
+
+        const text = lines.join('\n');
+        await Promise.allSettled(
+          chatIds.map((chatId) => this.telegram.sendMessage(chatId, text)),
+        );
+        branchesSent++;
+      } catch (err) {
+        this.logger.warn(
+          `filadmin video report branch ${branchId} failed: ${
+            (err as Error).message
+          }`,
+        );
+      }
+    }
+    this.logger.log(
+      `filadmin video report (${label}): ${branchesSent} ta filial yuborildi`,
+    );
+  }
+
+  /** 06:35 Tashkent — morning video status to filadmin Telegram. */
+  @Cron('35 6 * * *', {
+    name: 'filadmin_video_morning_0630',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runFiladminVideoMorning0630() {
+    this.logger.log('Cron: filadmin_video_morning_0630');
+    try {
+      await this.sendFiladminVideoReports('Ertalab 06:30 holati', false);
+    } catch (err) {
+      this.logger.error(
+        `filadmin_video_morning_0630 failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /** 10:00 Tashkent — follow-up morning video status to filadmin. */
+  @Cron('0 10 * * *', {
+    name: 'filadmin_video_morning_1000',
+    timeZone: 'Asia/Tashkent',
+  })
+  async runFiladminVideoMorning1000() {
+    this.logger.log('Cron: filadmin_video_morning_1000');
+    try {
+      await this.sendFiladminVideoReports('Ertalab 10:00 — yakuniy', true);
+    } catch (err) {
+      this.logger.error(
+        `filadmin_video_morning_1000 failed: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
    * 18:00 Tashkent — mark missed for any student who hasn't submitted
    * a morning video AND hasn't sent a late one before the evening
    * window opens. The on-time morning window closed at 06:30 but late
@@ -1491,6 +1759,42 @@ export class CronService {
       this.logger.error(
         `low_pass_rate_weekly.failed: ${(err as Error).message}`,
       );
+    }
+  }
+
+  /**
+   * Nightly churn-model retrain. Best-effort: the ml-service is an
+   * optional, separately deployed Python service — if ML_SERVICE_URL is
+   * unset or the call fails, the superadmin churn list still works
+   * (it's rule-based in ChurnService). We only log; never throw.
+   */
+  @Cron('0 5 * * *', { name: 'ml_training', timeZone: 'Asia/Tashkent' })
+  async runMlTraining() {
+    const base = (process.env.ML_SERVICE_URL ?? '').replace(/\/+$/, '');
+    if (!base) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 120_000);
+    try {
+      const res = await fetch(`${base}/train`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        this.logger.warn(`ml_training: ml-service HTTP ${res.status}`);
+        return;
+      }
+      const data = (await res.json()) as { modelVersion?: string };
+      this.logger.log(
+        `ml_training: model trained (${data.modelVersion ?? 'unknown'})`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `ml_training skipped/failed: ${(err as Error).message}`,
+      );
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

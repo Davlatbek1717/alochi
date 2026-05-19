@@ -29,13 +29,13 @@ async def fetch_training_data() -> List[Dict[str, Any]]:
             features AS (
               SELECT
                 s.id AS student_id,
-                COALESCE((SELECT COUNT(DISTINCT (a.created_at::date))
+                COALESCE((SELECT COUNT(*)
                           FROM attendance_students a, snapshot_date sd
                           WHERE a.student_id = s.id
-                            AND a.is_present = false
-                            AND a.created_at >= sd.d - INTERVAL '30 days'
-                            AND a.created_at < sd.d), 0) AS absent_days_30d,
-                COALESCE((SELECT current_streak FROM student_xp WHERE student_id = s.id), 0) AS streak_value,
+                            AND a.status = 'absent'
+                            AND a.date >= (sd.d - INTERVAL '30 days')::date
+                            AND a.date < sd.d::date), 0) AS absent_days_30d,
+                COALESCE((SELECT current_streak FROM student_streak WHERE student_id = s.id), 0) AS streak_value,
                 COALESCE((SELECT COUNT(*)
                           FROM analytics_events e, snapshot_date sd
                           WHERE e.student_id = s.id
@@ -83,22 +83,21 @@ async def fetch_training_data() -> List[Dict[str, Any]]:
                           WHERE sp.student_id = s.id
                             AND COALESCE(sp.last_activity_at, sp.completed_at) >= sd.d - INTERVAL '30 days'
                             AND COALESCE(sp.last_activity_at, sp.completed_at) < sd.d), 0) AS avg_session_count,
-                COALESCE((SELECT SUM(xe.amount)::int
-                          FROM xp_events xe, snapshot_date sd
-                          WHERE xe.student_id = s.id
-                            AND xe.created_at >= sd.d - INTERVAL '7 days'
-                            AND xe.created_at < sd.d), 0) AS xp_gained_7d
+                -- No xp_events/xp ledger table exists in the current
+                -- schema; the model keeps the 9-feature slot but the
+                -- value is always 0 until an XP ledger is introduced.
+                0 AS xp_gained_7d
               FROM students s
             ),
             labels AS (
               SELECT
                 s.id AS student_id,
-                CASE WHEN COALESCE((SELECT COUNT(DISTINCT (a.created_at::date))
+                CASE WHEN COALESCE((SELECT COUNT(*)
                                     FROM attendance_students a, snapshot_date sd
                                     WHERE a.student_id = s.id
-                                      AND a.is_present = false
-                                      AND a.created_at >= sd.d
-                                      AND a.created_at < sd.d + INTERVAL '30 days'), 0) >= 7
+                                      AND a.status = 'absent'
+                                      AND a.date >= sd.d::date
+                                      AND a.date < (sd.d + INTERVAL '30 days')::date), 0) >= 7
                      THEN 1 ELSE 0 END AS churned
               FROM students s
             )
