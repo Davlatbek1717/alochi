@@ -1,6 +1,7 @@
 package uz.alojon.kiosk
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.webkit.WebResourceRequest
@@ -38,6 +40,14 @@ class MainActivity : AppCompatActivity() {
     private val allowedHost: String by lazy {
         Uri.parse(kioskUrl).host ?: "alojon.uz"
     }
+
+    // Exit gesture: 5 taps in the top-right corner within 3 s.
+    // Only active when the app is NOT device owner (personal phones).
+    private var cornerTapCount = 0
+    private var lastCornerTapMs = 0L
+    private val CORNER_DP = 80
+    private val EXIT_TAPS = 5
+    private val EXIT_WINDOW_MS = 3_000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -169,6 +179,39 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_MENU -> true
             else -> super.onKeyDown(keyCode, event)
         }
+    }
+
+    // Intercept every touch before it reaches the WebView so we can count
+    // corner taps without consuming them (the WebView still gets the event).
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN && !dpm.isDeviceOwnerApp(packageName)) {
+            val cornerPx = (CORNER_DP * resources.displayMetrics.density).toInt()
+            val decorWidth = window.decorView.width
+            if (ev.rawX > decorWidth - cornerPx && ev.rawY < cornerPx) {
+                val now = System.currentTimeMillis()
+                if (now - lastCornerTapMs > EXIT_WINDOW_MS) cornerTapCount = 0
+                lastCornerTapMs = now
+                if (++cornerTapCount >= EXIT_TAPS) {
+                    cornerTapCount = 0
+                    showExitDialog()
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun showExitDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Ilovadan chiqish")
+            .setMessage("Aʻlojon ilovasidan chiqmoqchimisiz?")
+            .setPositiveButton("Ha") { _, _ -> exitKiosk() }
+            .setNegativeButton("Yoʻq", null)
+            .show()
+    }
+
+    private fun exitKiosk() {
+        try { stopLockTask() } catch (_: Exception) {}
+        finishAndRemoveTask()
     }
 
     /** Small helper mirroring android.content.ComponentName for the
