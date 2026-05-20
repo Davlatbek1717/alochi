@@ -27,26 +27,6 @@ export class StudyTimeService {
 
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Server-side allowlist — defence in depth. The client already gates
-   * heartbeats to these routes; this rejects anything else so a crafted
-   * request can't accrue time from non-counted pages.
-   *
-   * Counted: a specific lesson runner (`/student/lessons/<id>`, including
-   * `/student/lessons/current`), `/student/review`, `/student/translate`.
-   * NOT counted: the lessons roadmap list (`/student/lessons` exactly),
-   * home, duels, leaderboard, feed, etc.
-   */
-  private isCountedRoute(route?: string): boolean {
-    if (!route) return true; // lenient: client is the primary gate
-    const r = route.split('?')[0].replace(/\/+$/, '');
-    if (/^\/student\/lessons\/[^/]+$/.test(r)) return true;
-    if (r === '/student/review' || r.startsWith('/student/review/')) return true;
-    if (r === '/student/translate' || r.startsWith('/student/translate/'))
-      return true;
-    return false;
-  }
-
   // ── Session policy (superadmin-tunable, SiteSetting key/value) ──────
   private readonly POLICY_KEYS = {
     cap: 'study.dailyCapMinutes',
@@ -180,7 +160,7 @@ export class StudyTimeService {
    */
   async recordPing(
     user: { userId: string; tenantId: string; branchId?: string | null },
-    body: { deltaSeconds?: number; route?: string },
+    body: { deltaSeconds?: number },
   ): Promise<{
     counted: boolean;
     secondsToday: number;
@@ -245,16 +225,6 @@ export class StudyTimeService {
           existing.breakUntil,
         );
       }
-    }
-
-    // Non-counted route: don't accrue, but still surface the live state.
-    if (!this.isCountedRoute(body.route)) {
-      return stateResp(
-        'ok',
-        existing?.seconds ?? 0,
-        existing?.blockStartedAt ?? null,
-        null,
-      );
     }
 
     const rawDelta = Number(body.deltaSeconds);

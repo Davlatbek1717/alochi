@@ -24,13 +24,14 @@ export class StudyTimeController {
   constructor(private studyTime: StudyTimeService) {}
 
   /**
-   * Heartbeat from the student web app. Body: `{ deltaSeconds, route }`.
+   * Heartbeat from the student web app. Body: `{ deltaSeconds }`.
+   * Counts all active (visible + not idle) time toward the daily cap.
    * Heavily clamped server-side — see StudyTimeService.
    */
   @Post('ping')
   @Roles(UserRole.student)
   ping(
-    @Body() body: { deltaSeconds?: number; route?: string },
+    @Body() body: { deltaSeconds?: number },
     @Request() req: any,
   ) {
     return this.studyTime.recordPing(
