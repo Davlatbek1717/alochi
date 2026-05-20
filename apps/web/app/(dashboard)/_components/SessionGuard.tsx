@@ -45,13 +45,13 @@ const RESUME_KEY = 'study_resume_path';
 export function SessionGuard() {
   const router = useRouter();
   const [gate, setGate] = useState<Gate | null>(null);
+  // Remaining seconds for the daily cap — ticks down 1/s, corrected on each poll.
+  const [dailyRemaining, setDailyRemaining] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
 
   const breakEndRef = useRef<number | null>(null);
   const blockEndRef = useRef<number | null>(null);
   const prevStateRef = useRef<string | null>(null);
-  const lastPollTimeRef = useRef<number>(Date.now());
-  const secondsTodayAtPollRef = useRef<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,9 +61,13 @@ export function SessionGuard() {
       try {
         const res = await apiRequest<Gate>('/study-time/gate');
         if (!cancelled) {
-          lastPollTimeRef.current = Date.now();
-          secondsTodayAtPollRef.current = res.data.secondsToday;
           setGate(res.data);
+          // Snap remaining to the authoritative server value on every poll.
+          if (res.data.dailyCapMinutes > 0) {
+            setDailyRemaining(
+              Math.max(0, res.data.dailyCapMinutes * 60 - res.data.secondsToday),
+            );
+          }
           breakEndRef.current = res.data.breakEndsAt
             ? new Date(res.data.breakEndsAt).getTime()
             : null;
@@ -121,7 +125,11 @@ export function SessionGuard() {
     const warn = gate?.state === 'ok' && (gate?.blockSecondsLeft ?? 9999) <= 600;
     const hasCap = gate?.state === 'ok' && (gate?.dailyCapMinutes ?? 0) > 0;
     if (!locked && !warn && !hasCap) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    const id = setInterval(() => {
+      setTick((t) => t + 1);
+      // Tick daily remaining down 1s — poll snaps it to server truth every 15s.
+      if (hasCap) setDailyRemaining((r) => (r !== null ? Math.max(0, r - 1) : null));
+    }, 1000);
     return () => clearInterval(id);
   }, [gate?.state, gate?.blockSecondsLeft, gate?.dailyCapMinutes]);
 
@@ -170,10 +178,6 @@ export function SessionGuard() {
 
   // ── State ok: live computations ───────────────────────────────────
   void tick; // force re-render every second
-  const elapsedSincePoll = (Date.now() - lastPollTimeRef.current) / 1000;
-  const liveSecondsToday = secondsTodayAtPollRef.current + elapsedSincePoll;
-  const dailyCapSec = gate.dailyCapMinutes * 60;
-  const dailyRemaining = Math.max(0, dailyCapSec - liveSecondsToday);
 
   const blockLeft = blockEndRef.current
     ? (blockEndRef.current - Date.now()) / 1000
@@ -183,7 +187,7 @@ export function SessionGuard() {
   return (
     <>
       {/* Daily remaining countdown — always visible for students with a cap */}
-      {gate.dailyCapMinutes > 0 && (
+      {gate.dailyCapMinutes > 0 && dailyRemaining !== null && (
         <div
           className="fixed top-14 right-3 z-[9997] inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-md select-none"
           style={{ background: '#0f0c2d', color: '#fff' }}
