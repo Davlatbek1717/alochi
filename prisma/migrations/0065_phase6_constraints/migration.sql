@@ -43,16 +43,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS "exam_permissions_student_exam_active_unique"
 
 -- Additional indexes from Phase 7 performance audit
 CREATE INDEX IF NOT EXISTS "attendance_students_branch_date_idx"
-  ON "attendance_students"("branchId", "date");
+  ON "attendance_students"("branch_id", "date");
 
 CREATE INDEX IF NOT EXISTS "attendance_students_student_date_idx"
-  ON "attendance_students"("studentId", "date");
+  ON "attendance_students"("student_id", "date");
 
 CREATE INDEX IF NOT EXISTS "payments_student_month_idx"
-  ON "payments"("studentId", "month");
-
-CREATE INDEX IF NOT EXISTS "payments_branch_month_idx"
-  ON "payments"("branchId", "month");
+  ON "payments"("student_id", "month");
 
 CREATE INDEX IF NOT EXISTS "notifications_user_read_created_idx"
   ON "notifications"("userId", "read", "createdAt");
