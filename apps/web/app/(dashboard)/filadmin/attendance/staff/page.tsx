@@ -16,13 +16,12 @@ type Row = {
   user: { id: string; name: string };
 };
 
+const TASHKENT_MS = 5 * 60 * 60 * 1000;
 function todayISO() {
-  return new Date().toISOString().split('T')[0];
+  return new Date(Date.now() + TASHKENT_MS).toISOString().slice(0, 10);
 }
 function daysAgoISO(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
+  return new Date(Date.now() + TASHKENT_MS - n * 86_400_000).toISOString().slice(0, 10);
 }
 
 export default function StaffAttendanceHistoryPage() {

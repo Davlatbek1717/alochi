@@ -407,6 +407,7 @@ export default function StudentProfilePage() {
           }}
         >
           <AccountRow href="/student/checkin" emoji="📹" title="Kunlik video" sub="Ertalab va kechki" first />
+          <AccountRow href="/student/attendance" emoji="📅" title="Davomatim" sub="Dars qatnashuvim" />
           <AccountRow href="/student/certificates" emoji="🏅" title="Sertifikatlar" sub={`${certs.length} ta`} />
           <AccountRow href="/student/letters" emoji="🔤" title="Harflar kolleksiyasi" sub={`${lettersOwned} ta`} />
           <AccountRow href="/student/groups" emoji="👥" title="Mening guruhim" sub={profile.group?.name ?? 'tayinlanmagan'} />

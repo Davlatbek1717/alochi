@@ -95,12 +95,32 @@ export class AttendanceStaffService {
   }
 
   async getDailyStaff(branchId: string, date: string) {
-    return this.prisma.attendanceStaff.findMany({
-      where: { branchId, date: new Date(date) },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-      orderBy: { user: { name: 'asc' } },
+    const targetDate = new Date(date);
+    const [staffUsers, attendanceRecords] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { branchId, role: { in: ['mentor', 'manager', 'tester'] } },
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.attendanceStaff.findMany({
+        where: { branchId, date: targetDate },
+      }),
+    ]);
+
+    const recMap = new Map(attendanceRecords.map((r) => [r.userId, r]));
+    return staffUsers.map((u) => {
+      const rec = recMap.get(u.id);
+      return {
+        id: rec?.id ?? null,
+        userId: u.id,
+        loginTime: rec?.loginTime ?? null,
+        isLate: rec?.isLate ?? false,
+        lateMinutes: rec?.lateMinutes ?? 0,
+        recognitionMethod: rec?.recognitionMethod ?? null,
+        confirmedAt: rec?.confirmedAt ?? null,
+        confirmedBy: rec?.confirmedBy ?? null,
+        user: { id: u.id, name: u.name },
+      };
     });
   }
 

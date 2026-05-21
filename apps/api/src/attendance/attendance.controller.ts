@@ -71,6 +71,16 @@ export class AttendanceController {
     return this.studentsService.markBulk(records, userId);
   }
 
+  @Get('students/my-history')
+  @Roles(UserRole.student)
+  getMyHistory(@Query('days') daysStr: string, @Request() req: any) {
+    const days = Math.min(Math.max(parseInt(daysStr, 10) || 30, 1), 180);
+    return this.studentsService.getStudentHistory(
+      (req.user as { userId: string }).userId,
+      days,
+    );
+  }
+
   @Get('students/:branchId/:date')
   @Roles(UserRole.mentor, UserRole.manager, UserRole.filadmin, UserRole.tester)
   getDailyList(

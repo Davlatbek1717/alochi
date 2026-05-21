@@ -99,6 +99,20 @@ export class AttendanceStudentsService {
     return results;
   }
 
+  async getStudentHistory(studentId: string, days: number) {
+    const TASHKENT_MS = 5 * 60 * 60 * 1000;
+    const nowTashkent = new Date(Date.now() + TASHKENT_MS);
+    const sinceUtc = new Date(
+      Date.UTC(nowTashkent.getUTCFullYear(), nowTashkent.getUTCMonth(), nowTashkent.getUTCDate() - days)
+      - TASHKENT_MS,
+    );
+    return this.prisma.attendanceStudent.findMany({
+      where: { studentId, date: { gte: sinceUtc } },
+      orderBy: { date: 'desc' },
+      select: { id: true, date: true, status: true },
+    });
+  }
+
   async getDailyList(branchId: string, date: string) {
     return this.prisma.attendanceStudent.findMany({
       where: { branchId, date: new Date(date) },

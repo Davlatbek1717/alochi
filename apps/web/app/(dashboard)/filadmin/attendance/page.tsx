@@ -8,7 +8,7 @@ import { formatTime } from '@/lib/date-uz';
 import { tashkentToday } from '@/lib/tashkent-date';
 
 type StaffRecord = {
-  id: string;
+  id: string | null;
   userId: string;
   loginTime: string | null;
   isLate: boolean;
@@ -125,18 +125,20 @@ export default function FiladminAttendancePage() {
     setConfirming(userId);
     try {
       const token = localStorage.getItem('accessToken') ?? '';
-      await apiRequest(
+      const res = await apiRequest<{ confirmedAt: string }>(
         `/attendance/staff/confirm/${userId}`,
         { method: 'POST', body: JSON.stringify({ date }) },
         token,
       );
       setRecords((prev) =>
         prev.map((r) =>
-          r.userId === userId ? { ...r, confirmedAt: new Date().toISOString() } : r,
+          r.userId === userId
+            ? { ...r, confirmedAt: res.data?.confirmedAt ?? new Date().toISOString() }
+            : r,
         ),
       );
-    } catch {
-      // user can retry
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Tasdiqlashda xatolik yuz berdi');
     } finally {
       setConfirming(null);
     }
@@ -231,9 +233,13 @@ export default function FiladminAttendancePage() {
           </div>
         ) : !error ? (
           <div className="space-y-3">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">{records.length} ta xodim</p>
+            <div className="flex items-center gap-3 text-xs font-semibold text-[#64748b] uppercase tracking-widest">
+              <span>{records.length} ta xodim</span>
+              <span className="text-emerald-600">{records.filter(r => r.loginTime).length} keldi</span>
+              <span className="text-rose-500">{records.filter(r => !r.loginTime).length} kelmadi</span>
+            </div>
             {records.map((r) => (
-              <div key={r.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
+              <div key={r.userId} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4">
                 <div className="flex items-center gap-3">
                   {/* Avatar */}
                   <div className="w-10 h-10 rounded-full bg-[#0f172a] flex items-center justify-center text-white text-sm font-bold shrink-0">
