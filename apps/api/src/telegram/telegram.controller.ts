@@ -1,12 +1,14 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   HttpCode,
   HttpStatus,
   Logger,
   UseGuards,
 } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/auth.guard';
 import { TelegramService } from './telegram.service';
 import { TelegramWebhookGuard } from './telegram-webhook.guard';
 
@@ -29,6 +31,12 @@ export class TelegramController {
   private readonly logger = new Logger(TelegramController.name);
 
   constructor(private telegram: TelegramService) {}
+
+  @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  async getBotStats() {
+    return this.telegram.getBotStats();
+  }
 
   @Post('webhook')
   @HttpCode(HttpStatus.OK)

@@ -64,6 +64,45 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private setupHandlers() {
     if (!this.bot) return;
 
+    // Global error handler — prevents unhandled rejections from crashing the bot
+    this.bot.catch((err) => {
+      this.logger.error(`Bot unhandled error: ${err.message}`, err.stack);
+    });
+
+    // Simple in-memory rate limiter: max 30 messages/min per user
+    const userMsgCounts = new Map<number, { count: number; resetAt: number }>();
+    this.bot.use(async (ctx, next) => {
+      const userId = ctx.from?.id;
+      if (!userId) return next();
+      const now = Date.now();
+      const entry = userMsgCounts.get(userId);
+      if (!entry || now > entry.resetAt) {
+        userMsgCounts.set(userId, { count: 1, resetAt: now + 60_000 });
+        return next();
+      }
+      entry.count += 1;
+      if (entry.count > 30) {
+        await ctx.reply('Juda ko\'p so\'rov. Bir daqiqadan keyin urinib ko\'ring.').catch(() => {});
+        return;
+      }
+      return next();
+    });
+
+    this.bot.command('help', async (ctx) => {
+      await ctx.reply(
+        "A'lojon bot buyruqlari:\n\n" +
+        '/start — Botni ulash\n' +
+        '/status — Bugungi holat (ota-ona)\n' +
+        '/progress — Oylik progress (ota-ona)\n' +
+        '/payment — To\'lov holati (ota-ona)\n' +
+        '/lesson — Bugungi dars (o\'quvchi)\n' +
+        '/streak — Streak holati (o\'quvchi)\n' +
+        '/rating — Reyting (o\'quvchi)\n' +
+        '/davomat — Davomat (xodim)\n' +
+        '/help — Bu yordam',
+      ).catch(() => {});
+    });
+
     this.bot.command('start', async (ctx) => {
       const payload = ctx.match?.trim();
       const telegramId = ctx.from?.id;
@@ -292,6 +331,24 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   /** Exposes the underlying bot so other handlers can register commands. */
   getBot(): Bot | null {
     return this.bot;
+  }
+
+  async getBotStats() {
+    const [linkedStudents, linkedParents, videoCheckins7d] = await Promise.all([
+      this.prisma.user.count({ where: { role: 'student', telegramId: { not: null } } }),
+      this.prisma.user.count({ where: { parentTelegramId: { not: null } } }),
+      this.prisma.videoCheckin.count({
+        where: { createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } },
+      }),
+    ]);
+
+    return {
+      botActive: !!this.bot,
+      linkedStudents,
+      linkedParents,
+      videoCheckins7d,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   /** Helper used by /davomat keyboard rendering. */
