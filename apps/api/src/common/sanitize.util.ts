@@ -1,5 +1,6 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html');
+// sanitize-html uses `export =` (CommonJS). Use import = require() so the
+// runtime value is the function itself, not a .default wrapper.
+import sanitizeHtml = require('sanitize-html');
 
 const RICH_TEXT_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ['b', 'i', 'em', 'strong', 'a', 'br', 'p', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 's'],
@@ -10,9 +11,8 @@ const RICH_TEXT_OPTIONS: sanitizeHtml.IOptions = {
   allowedSchemesByTag: {
     a: ['https', 'mailto', 'tg'],
   },
-  // Force rel="noopener noreferrer" on all links to prevent tab-napping
   transformTags: {
-    a: (_tagName, attribs) => ({
+    a: (_tagName: string, attribs: sanitizeHtml.Attributes) => ({
       tagName: 'a',
       attribs: { ...attribs, rel: 'noopener noreferrer', target: '_blank' },
     }),
