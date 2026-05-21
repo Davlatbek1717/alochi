@@ -256,79 +256,160 @@ export class AnalyticsService {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Cohort retention — ClickHouse only. Returns source:'unavailable' when CH
-  // is down so the frontend can show an honest empty state.
+  // Cohort retention — primary: ClickHouse; fallback: PostgreSQL (Prisma).
   // ───────────────────────────────────────────────────────────────────────────
   async getCohortRetention(
     tenantId: string,
     weeks = 8,
   ): Promise<
-    | { source: 'unavailable'; cohorts: [] }
-    | Array<{
-        cohortWeek: string;
-        size: number;
-        retention: Record<string, number>;
-      }>
+    Array<{
+      cohortWeek: string;
+      size: number;
+      retention: Record<string, number>;
+    }>
   > {
-    if (!this.clickhouse.isReady()) {
-      return { source: 'unavailable', cohorts: [] };
+    if (this.clickhouse.isReady()) {
+      try {
+        return await this.getCohortRetentionClickHouse(tenantId, weeks);
+      } catch (err) {
+        this.logger.warn(
+          `getCohortRetention ClickHouse failed, falling back to PG: ${(err as Error).message}`,
+        );
+      }
     }
+    return this.getCohortRetentionPg(tenantId, weeks);
+  }
 
+  private async getCohortRetentionClickHouse(
+    tenantId: string,
+    weeks: number,
+  ): Promise<Array<{ cohortWeek: string; size: number; retention: Record<string, number> }>> {
     type Row = {
       cohort_week: string;
       week_offset: string;
       cohort_size: string;
       active: string;
     };
-    try {
-      const rows = await this.clickhouse.query<Row>(
-        `SELECT
-           toString(cw.cohort_week) AS cohort_week,
-           toString(dateDiff('week', cw.cohort_week, cw.return_week)) AS week_offset,
-           toString(any(size.active_users) OVER (PARTITION BY cw.cohort_week)) AS cohort_size,
-           toString(cw.active_users) AS active
-         FROM cohort_weekly AS cw
-         LEFT JOIN (
-           SELECT tenant_id, cohort_week, active_users
-           FROM cohort_weekly
-           WHERE tenant_id = {tenantId:UUID} AND cohort_week = return_week
-         ) AS size
-           ON size.tenant_id = cw.tenant_id AND size.cohort_week = cw.cohort_week
-         WHERE cw.tenant_id = {tenantId:UUID}
-           AND cw.cohort_week >= today() - INTERVAL {weeks:UInt16} WEEK
-           AND dateDiff('week', cw.cohort_week, cw.return_week) BETWEEN 0 AND {weeks:UInt16}
-         ORDER BY cw.cohort_week DESC, cw.return_week ASC`,
-        { tenantId, weeks },
-      );
-
-      const grouped = new Map<
-        string,
-        { size: number; retention: Record<string, number> }
-      >();
-      for (const r of rows) {
-        const cohortWeek = r.cohort_week;
-        const offset = Number(r.week_offset);
-        const size = Number(r.cohort_size);
-        const active = Number(r.active);
-        const pct = size === 0 ? 0 : Math.round((active * 100) / size);
-        if (!grouped.has(cohortWeek)) {
-          grouped.set(cohortWeek, { size, retention: {} });
-        }
-        const entry = grouped.get(cohortWeek)!;
-        entry.size = size;
-        if (offset >= 0) entry.retention[`week${offset}`] = pct;
+    const rows = await this.clickhouse.query<Row>(
+      `SELECT
+         toString(cw.cohort_week) AS cohort_week,
+         toString(dateDiff('week', cw.cohort_week, cw.return_week)) AS week_offset,
+         toString(any(size.active_users) OVER (PARTITION BY cw.cohort_week)) AS cohort_size,
+         toString(cw.active_users) AS active
+       FROM cohort_weekly AS cw
+       LEFT JOIN (
+         SELECT tenant_id, cohort_week, active_users
+         FROM cohort_weekly
+         WHERE tenant_id = {tenantId:UUID} AND cohort_week = return_week
+       ) AS size
+         ON size.tenant_id = cw.tenant_id AND size.cohort_week = cw.cohort_week
+       WHERE cw.tenant_id = {tenantId:UUID}
+         AND cw.cohort_week >= today() - INTERVAL {weeks:UInt16} WEEK
+         AND dateDiff('week', cw.cohort_week, cw.return_week) BETWEEN 0 AND {weeks:UInt16}
+       ORDER BY cw.cohort_week DESC, cw.return_week ASC`,
+      { tenantId, weeks },
+    );
+    const grouped = new Map<string, { size: number; retention: Record<string, number> }>();
+    for (const r of rows) {
+      const offset = Number(r.week_offset);
+      const size = Number(r.cohort_size);
+      const active = Number(r.active);
+      const pct = size === 0 ? 0 : Math.round((active * 100) / size);
+      if (!grouped.has(r.cohort_week)) {
+        grouped.set(r.cohort_week, { size, retention: {} });
       }
-      return Array.from(grouped.entries()).map(([cohortWeek, v]) => ({
-        cohortWeek,
-        size: v.size,
-        retention: v.retention,
-      }));
-    } catch (err) {
-      this.logger.warn(
-        `getCohortRetention ClickHouse failed: ${(err as Error).message}`,
-      );
-      return { source: 'unavailable', cohorts: [] };
+      const entry = grouped.get(r.cohort_week)!;
+      entry.size = size;
+      if (offset >= 0) entry.retention[`week${offset}`] = pct;
     }
+    return Array.from(grouped.entries()).map(([cohortWeek, v]) => ({
+      cohortWeek,
+      size: v.size,
+      retention: v.retention,
+    }));
+  }
+
+  private async getCohortRetentionPg(
+    tenantId: string,
+    weeks: number,
+  ): Promise<Array<{ cohortWeek: string; size: number; retention: Record<string, number> }>> {
+    // Activity = any week a student had study time OR was marked present/late.
+    // Cohort = week the student's account was created (Tashkent local time).
+    type Row = {
+      cohort_week: string;
+      cohort_size: bigint;
+      week_offset: number | null;
+      active_count: bigint;
+    };
+
+    const rows = await this.prisma.$queryRaw<Row[]>`
+      WITH
+        cohort_users AS (
+          SELECT
+            id AS student_id,
+            DATE_TRUNC('week', created_at AT TIME ZONE 'Asia/Tashkent') AS cohort_week
+          FROM users
+          WHERE tenant_id = ${tenantId}::uuid
+            AND role = 'student'
+            AND created_at >= NOW() - (${weeks + 2}::int || ' weeks')::interval
+        ),
+        cohort_sizes AS (
+          SELECT cohort_week, COUNT(*) AS cohort_size
+          FROM cohort_users
+          GROUP BY cohort_week
+        ),
+        active_weeks AS (
+          SELECT DISTINCT student_id, DATE_TRUNC('week', date) AS active_week
+          FROM study_time_daily
+          WHERE tenant_id = ${tenantId}::uuid
+          UNION
+          SELECT DISTINCT student_id, DATE_TRUNC('week', date::timestamp) AS active_week
+          FROM attendance_students
+          WHERE tenant_id = ${tenantId}::uuid
+            AND status IN ('present', 'late')
+        ),
+        retention_data AS (
+          SELECT
+            cu.cohort_week,
+            (EXTRACT(EPOCH FROM (aw.active_week - cu.cohort_week)) / 604800)::int AS week_offset,
+            COUNT(DISTINCT aw.student_id) AS active_count
+          FROM cohort_users cu
+          JOIN active_weeks aw ON cu.student_id = aw.student_id
+            AND (EXTRACT(EPOCH FROM (aw.active_week - cu.cohort_week)) / 604800)::int
+                BETWEEN 0 AND ${weeks}
+          GROUP BY cu.cohort_week, week_offset
+        )
+      SELECT
+        TO_CHAR(cs.cohort_week, 'IYYY-"W"IW') AS cohort_week,
+        cs.cohort_size,
+        rd.week_offset,
+        COALESCE(rd.active_count, 0) AS active_count
+      FROM cohort_sizes cs
+      LEFT JOIN retention_data rd ON cs.cohort_week = rd.cohort_week
+      WHERE cs.cohort_week <= NOW() AT TIME ZONE 'Asia/Tashkent'
+        AND cs.cohort_size > 0
+      ORDER BY cs.cohort_week DESC, rd.week_offset ASC NULLS FIRST
+    `;
+
+    const grouped = new Map<string, { size: number; retention: Record<string, number> }>();
+    for (const r of rows) {
+      if (!grouped.has(r.cohort_week)) {
+        grouped.set(r.cohort_week, { size: Number(r.cohort_size), retention: {} });
+      }
+      const entry = grouped.get(r.cohort_week)!;
+      if (r.week_offset !== null) {
+        const pct =
+          entry.size === 0
+            ? 0
+            : Math.round((Number(r.active_count) * 100) / entry.size);
+        entry.retention[`week${r.week_offset}`] = pct;
+      }
+    }
+    return Array.from(grouped.entries()).map(([cohortWeek, v]) => ({
+      cohortWeek,
+      size: v.size,
+      retention: v.retention,
+    }));
   }
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -10,16 +10,7 @@ interface CohortRow {
   retention: Record<string, number>;
 }
 
-interface CohortUnavailable {
-  source: 'unavailable';
-  cohorts: [];
-}
-
-type CohortResponse = CohortRow[] | CohortUnavailable;
-
-function isUnavailable(data: CohortResponse): data is CohortUnavailable {
-  return !Array.isArray(data) && (data as CohortUnavailable).source === 'unavailable';
-}
+type CohortResponse = CohortRow[];
 
 const WEEK_OFFSETS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -49,18 +40,7 @@ export function CohortTab() {
     );
   }
 
-  if (!data || isUnavailable(data)) {
-    return (
-      <EmptyState
-        icon={<Users size={24} />}
-        title="Cohort tahlili hozircha mavjud emas"
-        description="Cohort tahlili ClickHouse ulanmagan — bu tab qo'llab-quvvatlanmaydi."
-        theme="light"
-      />
-    );
-  }
-
-  const rows = data as CohortRow[];
+  const rows = data ?? [];
 
   if (rows.length === 0) {
     return (
