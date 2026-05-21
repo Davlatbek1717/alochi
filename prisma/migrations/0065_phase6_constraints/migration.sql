@@ -1,25 +1,31 @@
 -- Phase 6 Business Logic: XOR constraints, range checks, idempotency fields
+-- Wrapped in DO blocks so re-running after a partial failure is safe.
 
 -- ExamPermission: exactly one of lesson_id / exam_id must be set (XOR)
--- Prevents phantom permissions that reference neither a lesson nor an exam.
-ALTER TABLE "exam_permissions"
-  ADD CONSTRAINT "exam_permission_xor"
-  CHECK (
-    ("lesson_id" IS NULL) <> ("exam_id" IS NULL)
-  );
+DO $$ BEGIN
+  ALTER TABLE "exam_permissions"
+    ADD CONSTRAINT "exam_permission_xor"
+    CHECK (("lesson_id" IS NULL) <> ("exam_id" IS NULL));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- StudentBuilding: tier must be between 1 and 5
-ALTER TABLE "student_buildings"
-  ADD CONSTRAINT "student_building_tier_range"
-  CHECK (tier BETWEEN 1 AND 5);
+DO $$ BEGIN
+  ALTER TABLE "student_buildings"
+    ADD CONSTRAINT "student_building_tier_range"
+    CHECK (tier BETWEEN 1 AND 5);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- KpiScore: score between -100 and 100
-ALTER TABLE "kpi_scores"
-  ADD CONSTRAINT "kpi_score_range"
-  CHECK (score BETWEEN -100 AND 100);
+DO $$ BEGIN
+  ALTER TABLE "kpi_scores"
+    ADD CONSTRAINT "kpi_score_range"
+    CHECK (score BETWEEN -100 AND 100);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Payment: add providerTxId unique + webhookEventId unique for idempotency
--- Prevents double-processing of Payme/Click webhooks that fire more than once.
 ALTER TABLE "payments"
   ADD COLUMN IF NOT EXISTS "provider_tx_id"   TEXT,
   ADD COLUMN IF NOT EXISTS "webhook_event_id" TEXT;
@@ -31,7 +37,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS "payments_webhook_event_id_key"
   ON "payments"("webhook_event_id") WHERE "webhook_event_id" IS NOT NULL;
 
 -- ExamPermission: only one active permission per student+exam at a time.
--- ExamStatus enum: active | done | failed
 CREATE UNIQUE INDEX IF NOT EXISTS "exam_permissions_student_exam_active_unique"
   ON "exam_permissions"("student_id", "exam_id")
   WHERE status = 'active' AND "exam_id" IS NOT NULL;
