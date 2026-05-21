@@ -1059,6 +1059,7 @@ model AnalyticsEvent {
 
   @@index([tenantId, eventType, createdAt])
   @@index([tenantId, branchId, createdAt])
+  @@index([studentId, createdAt])
   @@map("analytics_events")
 }
 
@@ -1410,6 +1411,7 @@ model SystemAuditLog {
 
   @@index([tenantId, createdAt(sort: Desc)])
   @@index([actorId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
   @@map("system_audit_log")
 }
 

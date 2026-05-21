@@ -1,4 +1,5 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, Inject } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   tashkentDateString,
@@ -25,7 +26,10 @@ export class StudyTimeService {
   private readonly MAX_PING_SECONDS = 90;
   private readonly MAX_DAILY_SECONDS = 12 * 3600;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+  ) {}
 
   // ── Session policy (superadmin-tunable, SiteSetting key/value) ──────
   private readonly POLICY_KEYS = {
@@ -34,12 +38,22 @@ export class StudyTimeService {
     brk: 'study.breakMinutes',
   };
 
+  private readonly POLICY_CACHE_KEY = 'study:policy';
+  private readonly POLICY_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
   /** Daily cap + work-block + forced-break minutes. 0 cap = no limit. */
   async getPolicy(): Promise<{
     dailyCapMinutes: number;
     workBlockMinutes: number;
     breakMinutes: number;
   }> {
+    const cached = await this.cache.get<{
+      dailyCapMinutes: number;
+      workBlockMinutes: number;
+      breakMinutes: number;
+    }>(this.POLICY_CACHE_KEY);
+    if (cached) return cached;
+
     const rows = await this.prisma.siteSetting.findMany({
       where: { key: { in: Object.values(this.POLICY_KEYS) } },
     });
@@ -48,11 +62,13 @@ export class StudyTimeService {
       const v = m.get(k);
       return Number.isFinite(v) && (v as number) >= 0 ? (v as number) : def;
     };
-    return {
+    const policy = {
       dailyCapMinutes: num(this.POLICY_KEYS.cap, 300), // 5h default
       workBlockMinutes: num(this.POLICY_KEYS.block, 60),
       breakMinutes: num(this.POLICY_KEYS.brk, 15),
     };
+    await this.cache.set(this.POLICY_CACHE_KEY, policy, this.POLICY_CACHE_TTL);
+    return policy;
   }
 
   /** Superadmin sets the policy (clamped to sane ranges). */
@@ -91,6 +107,7 @@ export class StudyTimeService {
         update: { value: String(value) },
       });
     }
+    await this.cache.del(this.POLICY_CACHE_KEY);
     return {
       dailyCapMinutes: next[this.POLICY_KEYS.cap],
       workBlockMinutes: next[this.POLICY_KEYS.block],

@@ -1,9 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
+
+const LEADERBOARD_TTL = 5 * 60 * 1000; // 5 minutes
 
 @Injectable()
 export class LeaderboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+  ) {}
 
   /**
    * Count lessons completed (home_completed = true) in the last 7 days
@@ -61,6 +67,10 @@ export class LeaderboardService {
   async getBranchLeaderboard(branchId: string | null | undefined) {
     if (!branchId) return [];
 
+    const cacheKey = `leaderboard:branch:${branchId}`;
+    const cached = await this.cache.get<any[]>(cacheKey);
+    if (cached) return cached;
+
     const students = await this.prisma.user.findMany({
       where: { branchId, role: 'student', status: 'active' },
       select: {
@@ -103,7 +113,7 @@ export class LeaderboardService {
       for (const g of groups) groupNameMap.set(g.id, g.name);
     }
 
-    return sorted.map((s, idx) => ({
+    const result = sorted.map((s, idx) => ({
       rank: idx + 1,
       id: s.id,
       name: s.name,
@@ -112,6 +122,8 @@ export class LeaderboardService {
       weeklyCompletedLessons: weeklyMap.get(s.id) ?? 0,
       groupName: s.groupId ? (groupNameMap.get(s.groupId) ?? null) : null,
     }));
+    await this.cache.set(cacheKey, result, LEADERBOARD_TTL);
+    return result;
   }
 
   async getGroupLeaderboard(groupId: string, tenantId: string) {
