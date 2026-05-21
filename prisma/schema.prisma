@@ -211,6 +211,15 @@ model User {
   totpBackupCodes  String[]
   totpEnforcedAt   DateTime?
 
+  // Home Visit profile fields
+  homeAddress         String?
+  homeLatitude        Float?
+  homeLongitude       Float?
+  homeNotes           String?
+  preferredVisitTime  String?
+  parentPhone         String?
+  parentName          String?
+
   @@unique([tenantId, login])
   @@index([tenantId, role])
   @@index([branchId])
@@ -1681,4 +1690,112 @@ model CheatingScore {
 
   @@unique([studentId, date])
   @@index([date, score])
+}
+
+// ---- FAZA 4: HOME VISIT MODULI ----
+
+enum VisitStatus {
+  planned
+  in_progress
+  completed
+  cancelled
+  no_show
+}
+
+model HomeVisit {
+  id                 String      @id @default(cuid())
+  studentId          String
+  visitorId          String
+  branchId           String
+  status             VisitStatus @default(planned)
+  scheduledFor       DateTime
+  startedAt          DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  durationMin        Int?
+  riskScoreAtPlan    Int?
+
+  homeAddress        String?
+  homeLatitude       Float?
+  homeLongitude      Float?
+  checkinLatitude    Float?
+  checkinLongitude   Float?
+  checkinAccuracy    Float?
+  checkinDistance    Float?
+
+  outcome            String?
+  notes              String?
+  aiSummary          String?
+  followUpDate       DateTime?
+  followUpReason     String?
+
+  parentSignatureUrl String?
+  parentPin          String?
+  parentSignedAt     DateTime?
+
+  tenantId           String
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  photos         VisitPhoto[]
+  checklistItems VisitChecklistItem[]
+  actionItems    VisitActionItem[]
+  issues         VisitIssue[]
+
+  @@index([visitorId, scheduledFor])
+  @@index([studentId, completedAt])
+  @@index([branchId, status, scheduledFor])
+}
+
+model VisitPhoto {
+  id           String   @id @default(cuid())
+  visitId      String
+  category     String
+  s3Key        String
+  thumbnailKey String
+  caption      String?
+  takenAt      DateTime @default(now())
+  geoLatitude  Float?
+  geoLongitude Float?
+
+  visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model VisitChecklistItem {
+  id          String  @id @default(cuid())
+  visitId     String
+  templateKey String
+  label       String
+  status      String
+  notes       String?
+  evidence    String?
+
+  visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model VisitActionItem {
+  id          String    @id @default(cuid())
+  visitId     String
+  description String
+  priority    String
+  assigneeId  String?
+  dueDate     DateTime?
+  status      String    @default("open")
+  completedAt DateTime?
+  generatedBy String    @default("user")
+
+  visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+}
+
+model VisitIssue {
+  id          String    @id @default(cuid())
+  visitId     String
+  category    String
+  severity    String
+  description String
+  resolution  String?
+  resolvedAt  DateTime?
+
+  visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
 }

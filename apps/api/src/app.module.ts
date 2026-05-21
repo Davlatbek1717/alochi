@@ -55,6 +55,7 @@ import { GroupsModule } from './groups/groups.module';
 import { DevicesModule } from './devices/devices.module';
 import { ActivityModule } from './activity/activity.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { VisitsModule } from './visits/visits.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -135,6 +136,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     DevicesModule,
     ActivityModule,
     MonitoringModule,
+    VisitsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
