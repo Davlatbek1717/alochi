@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
@@ -10,8 +10,15 @@ import { TenantsService } from '../tenants/tenants.service';
 import { OnboardTenantDto } from '../tenants/dto/onboard-tenant.dto';
 import { I18nService } from '../i18n/i18n.service';
 
+interface DeviceCtx {
+  ip: string;
+  userAgent: string;
+}
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -24,7 +31,13 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  async login(dto: LoginDto, tenantSlug?: string) {
+  private deviceFingerprint(ctx: DeviceCtx): string {
+    return createHash('sha256')
+      .update(`${ctx.userAgent}|${ctx.ip}`)
+      .digest('hex');
+  }
+
+  async login(dto: LoginDto, tenantSlug?: string, ctx?: DeviceCtx) {
     // Resolution rules:
     //   - If the caller passed an x-tenant-slug header, scope the lookup
     //     to that tenant and accept any role (mentor / manager / student
@@ -64,6 +77,12 @@ export class AuthService {
     }
 
     if (!user) throw new UnauthorizedException(this.i18n.t('login_failed'));
+
+    // Account lockout check (brute-force protection)
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new UnauthorizedException(this.i18n.t('account_locked'));
+    }
+
     if (user.status === UserStatus.blocked_warning)
       throw new UnauthorizedException(this.i18n.t('blocked_warning'));
     if (user.status === UserStatus.blocked_payment)
@@ -72,13 +91,25 @@ export class AuthService {
       throw new UnauthorizedException(this.i18n.t('profile_blocked'));
 
     const match = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!match) throw new UnauthorizedException(this.i18n.t('login_failed'));
+    if (!match) {
+      // Track failed attempts; lock for 15 minutes after 10 consecutive failures
+      const newCount = (user.failedLoginCount ?? 0) + 1;
+      const lockedUntil = newCount >= 10
+        ? new Date(Date.now() + 15 * 60_000)
+        : null;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginCount: newCount, ...(lockedUntil ? { lockedUntil } : {}) },
+      });
+      throw new UnauthorizedException(this.i18n.t('login_failed'));
+    }
 
     const payload = {
       sub: user.id,
       role: user.role,
       tenantId: user.tenantId,
       branchId: user.branchId,
+      groupId: user.groupId,
     };
 
     const accessToken = this.jwt.sign(payload, { expiresIn: '1h' });
@@ -89,8 +120,28 @@ export class AuthService {
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
+    const fingerprint = ctx ? this.deviceFingerprint(ctx) : undefined;
     await this.prisma.refreshToken.create({
-      data: { userId: user.id, token: this.hashToken(refreshToken), expiresAt },
+      data: {
+        userId: user.id,
+        token: this.hashToken(refreshToken),
+        expiresAt,
+        deviceFingerprint: fingerprint,
+        ipAddress: ctx?.ip,
+        userAgent: ctx?.userAgent,
+        lastUsedAt: new Date(),
+      },
+    });
+
+    // Reset failed login counter and record last login on success
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginCount: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: ctx?.ip,
+      },
     });
 
     return {
@@ -112,7 +163,7 @@ export class AuthService {
     };
   }
 
-  async refresh(token: string) {
+  async refresh(token: string, ctx?: DeviceCtx) {
     // First verify the JWT signature and expiry
     try {
       await this.jwt.verifyAsync(token, {
@@ -123,36 +174,57 @@ export class AuthService {
     }
 
     const tokenHash = this.hashToken(token);
+    const fingerprint = ctx ? this.deviceFingerprint(ctx) : undefined;
 
-    // Atomic rotation: read + delete + create live in one transaction so
-    // two parallel refresh calls (e.g. a double-tap on a slow client)
-    // can't both pass the read, both proceed, and leave the user with
-    // a deleted-then-recreated row whose hash neither client knows.
-    // The interactive form returns a typed result we surface up to the
-    // jwt-signing step below; signing happens outside the transaction
-    // because it is pure CPU and we don't want to hold a row lock for
-    // it.
+    // Atomic rotation: read + revoke + create live in one transaction.
+    // Stolen-chain detection: if the token is already revoked ("rotated"),
+    // an attacker reused a previously rotated token — we revoke ALL tokens
+    // for this user (nuclear option) to force re-login on both parties.
     const result = await this.prisma.$transaction(async (tx) => {
       const stored = await tx.refreshToken.findUnique({
         where: { token: tokenHash },
         include: { user: true },
       });
-      if (!stored || stored.expiresAt < new Date()) {
+
+      if (!stored) {
         throw new UnauthorizedException(this.i18n.t('refresh_invalid'));
       }
-      // A valid refresh token alone is not enough — the user behind it
-      // must still be active. Without this check, accounts blocked for
-      // warnings / missed payment / manual deactivation could keep
-      // minting fresh 1-hour access tokens until the refresh row
-      // expired naturally, which neutralises every form of block.
+
+      // Stolen chain detection: token was already rotated/revoked
+      if (stored.revokedAt !== null) {
+        this.logger.warn(
+          `Stolen token chain detected for user ${stored.userId} — revoking all tokens`,
+        );
+        await tx.refreshToken.updateMany({
+          where: { userId: stored.userId, revokedAt: null },
+          data: { revokedAt: new Date(), revokedReason: 'stolen_chain' },
+        });
+        throw new UnauthorizedException(this.i18n.t('refresh_invalid'));
+      }
+
+      if (stored.expiresAt < new Date()) {
+        await tx.refreshToken.update({
+          where: { id: stored.id },
+          data: { revokedAt: new Date(), revokedReason: 'expired' },
+        });
+        throw new UnauthorizedException(this.i18n.t('refresh_invalid'));
+      }
+
       if (stored.user.status !== UserStatus.active) {
-        // Burn the row inside the same transaction so the client can't
-        // keep hammering /auth/refresh with a now-useless row.
-        await tx.refreshToken.delete({ where: { id: stored.id } });
+        await tx.refreshToken.update({
+          where: { id: stored.id },
+          data: { revokedAt: new Date(), revokedReason: 'user_blocked' },
+        });
         throw new UnauthorizedException(this.i18n.t('profile_blocked'));
       }
-      await tx.refreshToken.delete({ where: { id: stored.id } });
-      return { user: stored.user };
+
+      // Mark old token as rotated (keeps audit trail, enables stolen-chain detection)
+      await tx.refreshToken.update({
+        where: { id: stored.id },
+        data: { revokedAt: new Date(), revokedReason: 'rotated' },
+      });
+
+      return { user: stored.user, oldTokenId: stored.id };
     });
 
     const payload = {
@@ -160,6 +232,7 @@ export class AuthService {
       role: result.user.role,
       tenantId: result.user.tenantId,
       branchId: result.user.branchId,
+      groupId: result.user.groupId,
     };
 
     const newAccess = this.jwt.sign(payload, { expiresIn: '1h' });
@@ -175,6 +248,11 @@ export class AuthService {
         userId: result.user.id,
         token: this.hashToken(newRefresh),
         expiresAt,
+        parentTokenId: result.oldTokenId,
+        deviceFingerprint: fingerprint,
+        ipAddress: ctx?.ip,
+        userAgent: ctx?.userAgent,
+        lastUsedAt: new Date(),
       },
     });
 

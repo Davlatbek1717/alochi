@@ -84,7 +84,7 @@ export class CronService {
     }
   }
 
-  @Cron('1 0 * * *', { name: 'payment_unblock' })
+  @Cron('3 0 * * *', { name: 'payment_unblock' })
   async runPaymentUnblock() {
     this.logger.log('Cron: payment unblock boshlanmoqda...');
 
@@ -158,7 +158,7 @@ export class CronService {
     }
   }
 
-  @Cron('1 0 * * *', { name: 'delegation_complete' })
+  @Cron('5 0 * * *', { name: 'delegation_complete' })
   async runDelegationComplete() {
     const now = new Date();
 
@@ -239,7 +239,7 @@ export class CronService {
     }
   }
 
-  @Cron('0 9 * * *', { name: 'delegation_reminder' })
+  @Cron('2 9 * * *', { name: 'delegation_reminder' })
   async runDelegationReminder() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1208,7 +1208,7 @@ export class CronService {
    * Daily 09:00 — remind assignees about tasks whose deadline is tomorrow.
    * In-app notification + Telegram (if linked).
    */
-  @Cron('0 9 * * *', { name: 'task_due_reminder' })
+  @Cron('5 9 * * *', { name: 'task_due_reminder' })
   async runTaskDueReminder() {
     this.logger.log({ event: 'task_due_reminder.start' });
     try {
@@ -1257,6 +1257,34 @@ export class CronService {
       });
     } catch (err) {
       this.logger.error(`task_due_reminder.failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * 03:00 UTC daily — purge RefreshToken rows that are both expired AND
+   * revoked for more than 30 days. Keeps the table lean; active tokens
+   * (revokedAt=null) and recently-rotated ones (needed for stolen-chain
+   * detection window) are kept.
+   */
+  @Cron('0 3 * * *', { name: 'daily_token_cleanup' })
+  async runDailyTokenCleanup() {
+    const cutoff = new Date(Date.now() - 30 * 86_400_000);
+    try {
+      const result = await this.prisma.refreshToken.deleteMany({
+        where: {
+          OR: [
+            // expired and not recently rotated
+            { expiresAt: { lt: cutoff }, revokedAt: { not: null } },
+            // very old expired tokens regardless of revocation
+            { expiresAt: { lt: new Date(Date.now() - 60 * 86_400_000) } },
+          ],
+        },
+      });
+      if (result.count > 0) {
+        this.logger.log(`daily_token_cleanup: ${result.count} token o'chirildi`);
+      }
+    } catch (err) {
+      this.logger.error(`daily_token_cleanup.failed: ${(err as Error).message}`);
     }
   }
 
@@ -1570,20 +1598,27 @@ export class CronService {
   }
 
   /**
-   * 00:00 Tashkent — mark missed for any student who hasn't submitted
-   * an evening video AND didn't send a late one before midnight. The
-   * on-time evening window closed at 22:00 but late submissions remain
-   * accepted until 00:00; this cron fires right after the late grace
-   * cutoff so a missed mark survives.
+   * 00:01 Tashkent — mark missed for any student who hasn't submitted
+   * an evening video AND didn't send a late one before midnight. Firing
+   * at 00:01 (one minute into the new Tashkent day) avoids the off-by-one
+   * where a student submitting at 23:59:xx was marked missed because the
+   * cron ran before their submission was persisted.
+   *
+   * `markAllMissedForWindow` uses `tashkentDateString(yesterday)` so it
+   * always stamps the now-closed evening window, not the new day.
    */
-  @Cron('59 23 * * *', {
+  @Cron('1 0 * * *', {
     name: 'video_evening_mark_missed',
     timeZone: 'Asia/Tashkent',
   })
   async runVideoEveningMarkMissed() {
     this.logger.log('Cron: video_evening_mark_missed');
     try {
-      await this.videoCheckin.markAllMissedForWindow('evening');
+      // The cron fires at 00:01 Tashkent (the new day). Subtract 12 hours
+      // to land firmly in the previous Tashkent calendar day so we stamp
+      // the now-closed evening window, not today's.
+      const yesterday = tashkentDateString(new Date(Date.now() - 12 * 3600_000));
+      await this.videoCheckin.markAllMissedForWindow('evening', yesterday);
     } catch (err) {
       this.logger.error(
         `video_evening_mark_missed failed: ${(err as Error).message}`,
@@ -1701,7 +1736,7 @@ export class CronService {
    * 25.K.3: Weekly Monday 09:00 — alert superadmins about lessons whose
    * student academy-completion rate fell below 50% over the last 7 days.
    */
-  @Cron('0 9 * * 1', { name: 'low_pass_rate_weekly' })
+  @Cron('10 9 * * 1', { name: 'low_pass_rate_weekly' })
   async runLowPassRateAlert() {
     try {
       const sevenDaysAgo = new Date();

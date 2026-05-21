@@ -32,6 +32,7 @@ export const API_ERRORS = {
   student_not_found: "O'quvchi topilmadi",
   parent_not_linked: 'Ota-ona Telegram ulanmagan',
   face_not_enrolled: "Yuz ro'yxatdan o'tmagan",
+  account_locked: "Hisob vaqtincha bloklangan. 15 daqiqadan so'ng urinib ko'ring.",
 } as const;
 
 export type ErrorKey = keyof typeof API_ERRORS;

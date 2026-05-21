@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('study-time')
 @ApiBearerAuth()
@@ -28,6 +29,8 @@ export class StudyTimeController {
    * Counts all active (visible + not idle) time toward the daily cap.
    * Heavily clamped server-side — see StudyTimeService.
    */
+  // Ping is expected every 60s — allow up to 2/min with some burst headroom
+  @Throttle({ short: { limit: 5, ttl: 60_000 }, medium: { limit: 5, ttl: 60_000 } })
   @Post('ping')
   @Roles(UserRole.student)
   ping(

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
 import { TelegramController } from './telegram.controller';
+import { TelegramWebhookGuard } from './telegram-webhook.guard';
 import { ConfigModule } from '@nestjs/config';
 import { ParentHandler } from './handlers/parent.handler';
 import { StudentHandler } from './handlers/student.handler';
@@ -23,6 +24,7 @@ import { VideoCheckinModule } from '../video-checkin/video-checkin.module';
   ],
   controllers: [TelegramController],
   providers: [
+    TelegramWebhookGuard,
     TelegramService,
     ParentHandler,
     StudentHandler,

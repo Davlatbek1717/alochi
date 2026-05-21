@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { FeedEventService } from '../social/feed-event.service';
+import { tashkentDateString, dateStringToDate } from '../video-checkin/lib/tashkent-time';
 
 const STREAK_MILESTONES = new Set([7, 30, 100]);
 
@@ -48,8 +49,46 @@ export class StreakService {
     return Math.abs(aDay - bDay);
   }
 
+  /**
+   * Minimum study seconds required before a day counts toward the streak.
+   * Uses the branch setting (minDailyStudyMinutes); falls back to 20 minutes.
+   * Prevents gaming by submitting one lesson answer with no real study time.
+   */
+  private async hasMetDailyMinimum(studentId: string): Promise<boolean> {
+    const today = tashkentDateString();
+    const dateObj = dateStringToDate(today);
+
+    const [studyRow, user] = await Promise.all([
+      this.prisma.studyTimeDaily.findUnique({
+        where: { studentId_date: { studentId, date: dateObj } },
+        select: { seconds: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: studentId },
+        select: { branchId: true },
+      }),
+    ]);
+
+    const branch = user?.branchId
+      ? await this.prisma.branch.findUnique({
+          where: { id: user.branchId },
+          select: { minDailyStudyMinutes: true },
+        })
+      : null;
+
+    const minSeconds = (branch?.minDailyStudyMinutes ?? 20) * 60;
+    return (studyRow?.seconds ?? 0) >= minSeconds;
+  }
+
   async recordActivity(studentId: string) {
     const today = new Date();
+
+    // Only count toward streak if the student has met the daily study minimum.
+    // This prevents gaming: one quick lesson answer can't save a streak.
+    if (!(await this.hasMetDailyMinimum(studentId))) {
+      return this.prisma.studentStreak.findUnique({ where: { studentId } });
+    }
+
     const streak = await this.prisma.studentStreak.findUnique({
       where: { studentId },
     });

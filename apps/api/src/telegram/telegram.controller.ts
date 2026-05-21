@@ -5,8 +5,10 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
 import { TelegramService } from './telegram.service';
+import { TelegramWebhookGuard } from './telegram-webhook.guard';
 
 /**
  * Receives Telegram Bot API webhook updates in production.
@@ -30,6 +32,7 @@ export class TelegramController {
 
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(TelegramWebhookGuard)
   async handleWebhook(@Body() body: unknown): Promise<void> {
     const bot = this.telegram.getBot();
     if (!bot) return;

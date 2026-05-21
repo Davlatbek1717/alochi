@@ -56,11 +56,41 @@ async function bootstrap() {
     app.getHttpAdapter().getInstance().set('trust proxy', 1);
   }
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          // Allow inline scripts required by Next.js; ideally replaced with
+          // nonce-based CSP once the frontend generates per-request nonces.
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https://cdn.alojon.uz'],
+          connectSrc: ["'self'", 'wss://alojon.uz', 'https://alojon.uz'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: [],
+        },
+      },
+      // Force HTTPS for 1 year, include subdomains
+      strictTransportSecurity: {
+        maxAge: 31_536_000,
+        includeSubDomains: true,
+        preload: true,
+      },
+      // Prevent content-type sniffing
+      xContentTypeOptions: true,
+      // Block rendering in iframes (clickjacking protection)
+      frameguard: { action: 'deny' },
+      // Don't send Referrer on cross-origin requests
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    }),
+  );
 
   // Optional path prefix used when API and web share a single domain
-  // (e.g. https://alochi.biznesjon.uz/api/...). WebSocket gateways are
-  // unaffected — they keep their default /socket.io/ path.
+  // (e.g. https://alojon.uz/api/...). WebSocket gateways are unaffected —
+  // they keep their default /socket.io/ path.
   if (process.env.API_GLOBAL_PREFIX) {
     app.setGlobalPrefix(process.env.API_GLOBAL_PREFIX);
   }
@@ -76,8 +106,8 @@ async function bootstrap() {
   // route map, including admin endpoints, to anyone on the internet.
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle("A'lochi API")
-      .setDescription("A'lochi ta'lim platformasi API hujjatlari")
+      .setTitle("A'lojon API")
+      .setDescription("A'lojon ta'lim platformasi API hujjatlari")
       .setVersion('1.0')
       .addBearerAuth()
       .build();
@@ -86,15 +116,36 @@ async function bootstrap() {
   }
 
   app.enableCors({
-    // Production: must come from an explicit allow-list (assertProdEnv
-    // guarantees the var exists). Comma-separate multiple origins —
-    // useful for staging + prod sharing one image.
+    // Production: allow alojon.uz and all subdomains, plus any explicit
+    // origins in ALLOWED_ORIGIN (comma-separated, for staging etc.).
     // Dev: reflect any origin so localhost:3000/3001 + LAN IPs work.
     origin:
       process.env.NODE_ENV === 'production'
-        ? (process.env.ALLOWED_ORIGIN ?? '').split(',').map((s) => s.trim())
+        ? (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+            const allowedOrigins = (process.env.ALLOWED_ORIGIN ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            const allowed =
+              !origin ||
+              /^https?:\/\/([\w-]+\.)?alojon\.uz$/.test(origin) ||
+              allowedOrigins.includes(origin);
+            if (allowed) {
+              cb(null, true);
+            } else {
+              cb(new Error(`CORS: origin ${origin} not allowed`));
+            }
+          }
         : true,
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-tenant-slug',
+      'x-request-id',
+      'Idempotency-Key',
+    ],
   });
 
   app.useGlobalInterceptors(new EmptyStringToUndefinedInterceptor());
@@ -114,7 +165,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
   new NestLogger('Bootstrap').log(
-    `A'lochi API listening on :${port} (${process.env.NODE_ENV ?? 'development'})`,
+    `A'lojon API listening on :${port} (${process.env.NODE_ENV ?? 'development'})`,
   );
 }
 

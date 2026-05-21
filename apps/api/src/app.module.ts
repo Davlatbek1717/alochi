@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
-import { APP_INTERCEPTOR, APP_FILTER } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { LoggerModule } from 'nestjs-pino';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { loggerConfig } from './common/logger.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
@@ -49,6 +50,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { SystemAuditModule } from './system-audit/system-audit.module';
 import { I18nModule } from './i18n/i18n.module';
 import { VideoCheckinModule } from './video-checkin/video-checkin.module';
+import { StudyTimeModule } from './study-time/study-time.module';
 import { GroupsModule } from './groups/groups.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
@@ -71,10 +73,15 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
         return { store };
       },
     }),
-    // Rate limiting removed per product decision — every endpoint is
-    // unlimited. Brute-force protection on /auth/login is now gone, so
-    // monitor login_failure rates if abuse becomes a concern and
-    // re-introduce a tighter throttle just for the auth routes.
+    // Global rate limiting. Default: 200 req/min and 10 req/sec per client.
+    // Critical endpoints (login, refresh, study-time/ping) override these
+    // with @Throttle() decorators on their handlers.
+    // Storage: in-memory (single node). When scaling to multiple instances,
+    // replace with ThrottlerStorageRedisService (nestjs-throttler-storage-redis).
+    ThrottlerModule.forRoot([
+      { name: 'short',  ttl: 1_000,   limit: 10 },   // 10 req/sec
+      { name: 'medium', ttl: 60_000,  limit: 200 },  // 200 req/min
+    ]),
     LoggerModule.forRoot(loggerConfig),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
@@ -120,9 +127,11 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     SystemAuditModule,
     I18nModule,
     VideoCheckinModule,
+    StudyTimeModule,
     GroupsModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_INTERCEPTOR, useClass: DelegationContextInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

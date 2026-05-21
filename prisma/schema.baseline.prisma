@@ -199,12 +199,6 @@ model User {
   videoCheckins            VideoCheckin[]              @relation("VideoCheckinStudent")
   studyTimeDaily           StudyTimeDaily[]            @relation("StudyTimeStudent")
 
-  // Security fields
-  lastLoginAt      DateTime?
-  lastLoginIp      String?
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime?
-
   @@unique([tenantId, login])
   @@index([tenantId, role])
   @@index([branchId])
@@ -213,39 +207,16 @@ model User {
 }
 
 model RefreshToken {
-  id                String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId            String    @map("user_id") @db.Uuid
-  token             String    @unique
-  expiresAt         DateTime  @map("expires_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-
-  // Device binding — stolen-token detection
-  deviceFingerprint String?   @map("device_fingerprint") // sha256(userAgent + ip + deviceId)
-  ipAddress         String?   @map("ip_address")
-  userAgent         String?   @map("user_agent")
-  lastUsedAt        DateTime? @map("last_used_at")
-  parentTokenId     String?   @map("parent_token_id") // rotation chain: new token points to old
-  revokedAt         DateTime? @map("revoked_at")
-  revokedReason     String?   @map("revoked_reason") // "rotated" | "stolen_chain" | "manual" | "logout"
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, revokedAt])
-  @@index([deviceFingerprint])
+  @@index([userId])
   @@map("refresh_tokens")
-}
-
-model UserStatusHistory {
-  id         String   @id @default(cuid())
-  userId     String
-  fromStatus String
-  toStatus   String
-  changedBy  String?
-  reason     String?
-  changedAt  DateTime @default(now())
-
-  @@index([userId, changedAt])
-  @@map("user_status_history")
 }
 
 enum LessonType {
@@ -456,24 +427,20 @@ model PaymentSetting {
 }
 
 model Payment {
-  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  tenantId        String   @map("tenant_id") @db.Uuid
-  studentId       String   @map("student_id") @db.Uuid
-  month           String
-  amount          Int
-  paidAt          DateTime @map("paid_at")
-  recordedBy      String   @map("recorded_by") @db.Uuid
-  unblockAt       DateTime @map("unblock_at")
-  delegationId    String?  @map("delegation_id") @db.Uuid
-  // Payment gateway idempotency — prevents double-processing of Payme/Click webhooks
-  providerTxId    String?  @unique @map("provider_tx_id")
-  webhookEventId  String?  @unique @map("webhook_event_id")
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  month        String
+  amount       Int
+  paidAt       DateTime @map("paid_at")
+  recordedBy   String   @map("recorded_by") @db.Uuid
+  unblockAt    DateTime @map("unblock_at")
+  delegationId String?  @map("delegation_id") @db.Uuid
 
   student User @relation("StudentPayments", fields: [studentId], references: [id])
 
   @@unique([studentId, month])
   @@index([tenantId, unblockAt])
-  @@index([studentId, month])
   @@map("payments")
 }
 

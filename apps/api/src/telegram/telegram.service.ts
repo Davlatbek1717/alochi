@@ -49,8 +49,11 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         // doesn't know its own identity (no api.getMe call yet) and the
         // middleware chain refuses to dispatch.
         await this.bot.init();
-        await this.bot.api.setWebhook(webhookUrl);
-        this.logger.log(`Telegram webhook: ${webhookUrl}`);
+        const webhookSecret = this.config.get<string>('TELEGRAM_WEBHOOK_SECRET');
+        await this.bot.api.setWebhook(webhookUrl, {
+          ...(webhookSecret ? { secret_token: webhookSecret } : {}),
+        });
+        this.logger.log(`Telegram webhook: ${webhookUrl}${webhookSecret ? ' (signed)' : ' (WARNING: no secret)'}`);
       }
     } else {
       this.bot.start().catch((err) => this.logger.error(err));
@@ -99,7 +102,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         await ctx.reply('Havola topilmadi yoki eskirgan.');
       } else {
         await ctx.reply(
-          "A'lochi platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
+          "A'lojon platformasiga xush kelibsiz! 🎓\n\nFarzandingizni bog'lash uchun uning profilidan havolani bosing.",
         );
       }
     });
@@ -312,7 +315,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     // Statuses arrive in Uzbek canonical (yashil/sariq/qizil); the
     // helper handles unknown / 'nomalum' values gracefully.
     return [
-      `📚 <b>A'lochi — Kunlik Hisobot</b>`,
+      `📚 <b>A'lojon — Kunlik Hisobot</b>`,
       `👦 Farzand: ${data.studentName}`,
       `📅 Sana: ${data.date}`,
       ``,

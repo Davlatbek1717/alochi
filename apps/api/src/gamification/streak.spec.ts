@@ -53,7 +53,7 @@ describe('StreakService', () => {
           create: expect.objectContaining({ currentStreak: 1 }),
         }),
       );
-      expect(result.currentStreak).toBe(1);
+      expect(result!.currentStreak).toBe(1);
     });
 
     it('increments streak by 1 when last activity was yesterday', async () => {
@@ -73,7 +73,7 @@ describe('StreakService', () => {
 
       const updateData = mockPrisma.studentStreak.update.mock.calls[0][0].data;
       expect(updateData.currentStreak).toBe(6);
-      expect(result.currentStreak).toBe(6);
+      expect(result!.currentStreak).toBe(6);
     });
 
     it('resets streak to 1 when gap is more than 1 day and no shield', async () => {
