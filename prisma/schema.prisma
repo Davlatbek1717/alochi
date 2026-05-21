@@ -1799,3 +1799,89 @@ model VisitIssue {
 
   visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
 }
+
+// ─── Faza 5: AI Analysis ──────────────────────────────────────────────────────
+
+model RiskScore {
+  id         String   @id @default(cuid())
+  studentId  String
+  date       DateTime @db.Date
+  totalScore Int
+  components Json
+  band       String
+  topReasons String[]
+  trend      String
+  prevScore  Int?
+  tenantId   String
+
+  @@unique([studentId, date])
+  @@index([band, date])
+  @@index([tenantId, date])
+}
+
+model DailyBriefing {
+  id            String    @id @default(cuid())
+  tenantId      String
+  forUserId     String
+  date          DateTime  @db.Date
+  rawData       Json
+  generatedText String
+  delivered     Boolean   @default(false)
+  deliveredAt   DateTime?
+  readAt        DateTime?
+
+  @@unique([tenantId, forUserId, date])
+}
+
+model ParentMessage {
+  id          String    @id @default(cuid())
+  studentId   String
+  parentTgId  String
+  messageType String
+  content     String
+  generatedAt DateTime  @default(now())
+  sentAt      DateTime?
+  readAt      DateTime?
+  replied     Boolean   @default(false)
+  tenantId    String
+
+  @@index([studentId, sentAt])
+  @@index([messageType, sentAt])
+}
+
+model AiInsightQuery {
+  id         String   @id @default(cuid())
+  userId     String
+  question   String
+  scope      String?
+  answer     String
+  dataRefs   Json
+  charts     Json?
+  durationMs Int
+  tokensUsed Int?
+  cost       Float?
+  rating     Int?
+  feedback   String?
+  createdAt  DateTime @default(now())
+  tenantId   String
+
+  @@index([userId, createdAt])
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  service          String
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  cost             Float
+  latencyMs        Int
+  success          Boolean
+  errorMessage     String?
+  userId           String?
+  tenantId         String?
+  createdAt        DateTime @default(now())
+
+  @@index([service, createdAt])
+  @@index([tenantId, createdAt])
+}

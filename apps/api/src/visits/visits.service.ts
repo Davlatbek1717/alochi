@@ -2,11 +2,15 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { VisitStatus } from '@prisma/client';
+import { chatText } from '../ai/llm-client';
+
+const VISIT_REPORT_SYSTEM = `Sen A'lojon ta'lim platformasida uy tashrifini rasmiylashtiruvchi yordamchisisan.
+Berilgan qaydlar va ma'lumotlar asosida qisqa professional hisobot yaz. O'zbek tilida.
+Struktura: KUZATUVLAR, MUAMMOLAR (agar bo'lsa), KEYINGI HARAKATLAR (3 tagacha).`;
 
 /** Haversine distance in metres between two GPS points. */
 function haversineMetres(
@@ -280,7 +284,11 @@ export class VisitsService {
       ? Math.round((Date.now() - visit.startedAt.getTime()) / 60_000)
       : undefined;
 
-    return this.prisma.homeVisit.update({
+    const aiSummary = await this.generateVisitReport(visit, outcome, notes).catch(
+      () => null,
+    );
+
+    const updated = await this.prisma.homeVisit.update({
       where: { id },
       data: {
         status: 'completed',
@@ -288,9 +296,71 @@ export class VisitsService {
         outcome,
         notes: notes ?? visit.notes,
         durationMin,
+        aiSummary,
       },
       include: VISIT_INCLUDE,
     });
+
+    if (aiSummary) {
+      await this.extractAndCreateActionItems(id, aiSummary).catch(() => {});
+    }
+
+    return updated;
+  }
+
+  private async generateVisitReport(
+    visit: any,
+    outcome: string,
+    notes?: string,
+  ): Promise<string> {
+    const context = {
+      scheduledFor: visit.scheduledFor,
+      homeAddress: visit.homeAddress,
+      checkinDistance: visit.checkinDistance,
+      durationMin: visit.startedAt
+        ? Math.round((Date.now() - visit.startedAt.getTime()) / 60_000)
+        : null,
+      checklistSummary: (visit.checklistItems ?? []).map((i: any) => ({
+        label: i.label,
+        status: i.status,
+      })),
+      issues: (visit.issues ?? []).map((i: any) => i.description),
+      outcome,
+      notes: notes ?? visit.notes,
+    };
+
+    return chatText(
+      [
+        { role: 'system', content: VISIT_REPORT_SYSTEM },
+        {
+          role: 'user',
+          content: `Tashrif ma'lumotlari:\n${JSON.stringify(context, null, 2)}`,
+        },
+      ],
+      { temperature: 0.5 },
+    );
+  }
+
+  private async extractAndCreateActionItems(
+    visitId: string,
+    aiSummary: string,
+  ): Promise<void> {
+    const lines = aiSummary.split('\n').filter((l) => l.trim().startsWith('□'));
+    for (const line of lines.slice(0, 5)) {
+      const match = line.match(/□\s*\[([^\]]+)\]\s*(.+)/);
+      if (!match) continue;
+      const [, priority, description] = match;
+      await this.prisma.visitActionItem.create({
+        data: {
+          id: `${visitId}:ai:${Date.now()}:${Math.random()}`,
+          visitId,
+          description: description.trim(),
+          priority: priority.toLowerCase().includes('bugun') ? 'high' : 'medium',
+          generatedBy: 'ai',
+          status: 'open',
+        },
+      });
+    }
   }
 
   // ── Reports ───────────────────────────────────────────────────────────────
