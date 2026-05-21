@@ -1099,4 +1099,101 @@ export class StudyTimeService {
       }),
     };
   }
+
+  /**
+   * Real-time presence snapshot for staff: who is actively studying right
+   * now (last study-time ping ≤ 2 minutes ago) and which lesson they last
+   * touched. Scope follows resolveScope: mentor → group, filadmin/manager
+   * → branch. Students sorted active-first, then by name.
+   */
+  async liveSnapshot(user: {
+    userId: string;
+    role: string;
+    tenantId: string;
+    branchId?: string | null;
+  }): Promise<{
+    asOf: string;
+    activeCount: number;
+    students: Array<{
+      id: string;
+      name: string;
+      isActive: boolean;
+      secondsToday: number;
+      lastPingAt: string | null;
+      currentLessonId: string | null;
+      currentLessonTitle: string | null;
+    }>;
+  }> {
+    const ACTIVE_WINDOW_MS = 2 * 60 * 1000;
+    const today = tashkentDateString();
+    const dateObj = dateStringToDate(today);
+    const scope = await this.resolveScope(user);
+    if (!scope) {
+      return { asOf: new Date().toISOString(), activeCount: 0, students: [] };
+    }
+
+    const students = await this.prisma.user.findMany({
+      where: scope.studentWhere,
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
+    const ids = students.map((s) => s.id);
+    if (!ids.length) {
+      return { asOf: new Date().toISOString(), activeCount: 0, students: [] };
+    }
+
+    const [stdRows, progRows] = await Promise.all([
+      this.prisma.studyTimeDaily.findMany({
+        where: { date: dateObj, studentId: { in: ids } },
+        select: { studentId: true, seconds: true, lastPingAt: true },
+      }),
+      this.prisma.studentProgress.findMany({
+        where: { studentId: { in: ids }, lastActivityAt: { not: null } },
+        select: {
+          studentId: true,
+          lastActivityAt: true,
+          lesson: { select: { id: true, title: true } },
+        },
+        orderBy: { lastActivityAt: 'desc' },
+      }),
+    ]);
+
+    const stdById = new Map<string, { seconds: number; lastPingAt: Date }>();
+    for (const r of stdRows) stdById.set(r.studentId, { seconds: r.seconds, lastPingAt: r.lastPingAt });
+
+    // progRows ordered desc — first hit per student is the latest
+    const lessonById = new Map<string, { id: string; title: string }>();
+    for (const r of progRows) {
+      if (!lessonById.has(r.studentId)) {
+        lessonById.set(r.studentId, { id: r.lesson.id, title: r.lesson.title });
+      }
+    }
+
+    const now = Date.now();
+    let activeCount = 0;
+    const list = students.map((s) => {
+      const std = stdById.get(s.id);
+      const lastPingAt = std?.lastPingAt ?? null;
+      const isActive = lastPingAt !== null && now - lastPingAt.getTime() <= ACTIVE_WINDOW_MS;
+      if (isActive) activeCount++;
+      const lesson = lessonById.get(s.id) ?? null;
+      return {
+        id: s.id,
+        name: s.name,
+        isActive,
+        secondsToday: std?.seconds ?? 0,
+        lastPingAt: lastPingAt?.toISOString() ?? null,
+        currentLessonId: lesson?.id ?? null,
+        currentLessonTitle: lesson?.title ?? null,
+      };
+    });
+
+    list.sort((a, b) => {
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      return a.name.localeCompare(b.name, 'uz');
+    });
+
+    return { asOf: new Date().toISOString(), activeCount, students: list };
+  }
 }

@@ -9,6 +9,7 @@ import {
   Search,
   X as XIcon,
   Users,
+  Activity,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
@@ -17,6 +18,47 @@ import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 
 type Student = { id: string; name: string; role: string };
+type StatusColor = '' | 'yashil' | 'sariq' | 'qizil';
+
+type SnapshotEntry = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  secondsToday: number;
+  lastPingAt: string | null;
+  currentLessonId: string | null;
+  currentLessonTitle: string | null;
+};
+
+function timeAgo(pingAt: string | null): string {
+  if (!pingAt) return '';
+  const secs = Math.floor((Date.now() - new Date(pingAt).getTime()) / 1000);
+  if (secs < 75) return 'hozirgina';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}d oldin`;
+  return `${Math.floor(mins / 60)}s oldin`;
+}
+type StatusRow = {
+  studentId?: string;
+  student?: { id?: string };
+  englishStatus?: string;
+  personalStatus?: string;
+  criticalStatus?: string;
+};
+
+function worstFromRow(r: StatusRow): StatusColor {
+  const order: StatusColor[] = ['qizil', 'sariq', 'yashil'];
+  for (const want of order) {
+    if (
+      r.englishStatus === want ||
+      r.personalStatus === want ||
+      r.criticalStatus === want
+    ) {
+      return want;
+    }
+  }
+  return '';
+}
 
 function getInitials(name: string): string {
   return name
@@ -51,9 +93,13 @@ function avatarTintFor(name: string): string {
 
 export default function MentorStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [statusByStudent, setStatusByStudent] = useState<Record<string, StatusColor>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'yashil' | 'sariq' | 'qizil'>('all');
+  const [snapshot, setSnapshot] = useState<SnapshotEntry[]>([]);
+  const [snapshotActiveCount, setSnapshotActiveCount] = useState(0);
 
   const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -70,28 +116,84 @@ export default function MentorStudentsPage() {
     const path = groupId
       ? `/users/group/${groupId}`
       : `/users/by-branch/${branchId}`;
-    apiRequest<Student[]>(path, {}, token)
-      .then((res) => {
-        setStudents((res.data ?? []).filter((u) => u.role === 'student'));
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "O'quvchilarni yuklab bo'lmadi");
-      })
-      .finally(() => setLoading(false));
+    try {
+      const [list, redRes, yellowRes] = await Promise.all([
+        apiRequest<Student[]>(path, {}, token),
+        apiRequest<StatusRow[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusRow[] })),
+        apiRequest<StatusRow[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusRow[] })),
+      ]);
+      setStudents((list.data ?? []).filter((u) => u.role === 'student'));
+
+      const map: Record<string, StatusColor> = {};
+      for (const r of redRes.data ?? []) {
+        const id = r.student?.id ?? r.studentId;
+        if (id) map[id] = worstFromRow(r);
+      }
+      for (const r of yellowRes.data ?? []) {
+        const id = r.student?.id ?? r.studentId;
+        // Don't downgrade an already-red row to yellow.
+        if (id && !map[id]) map[id] = worstFromRow(r);
+      }
+      setStatusByStudent(map);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "O'quvchilarni yuklab bo'lmadi");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // Live snapshot: poll every 30s while the tab is open.
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken') ?? '';
+    async function fetchSnapshot() {
+      try {
+        const res = await apiRequest<{ activeCount: number; students: SnapshotEntry[] }>(
+          '/study-time/scope/snapshot',
+          {},
+          token,
+        );
+        setSnapshotActiveCount(res.data.activeCount);
+        setSnapshot(res.data.students);
+      } catch {
+        // best-effort — silently ignore
+      }
+    }
+    fetchSnapshot();
+    const id = setInterval(fetchSnapshot, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   useFocusRevalidate(load);
   useRevalidateOnEvent(['status:updated'], load);
 
+  const statusCounts = useMemo(() => {
+    let yashil = 0;
+    let sariq = 0;
+    let qizil = 0;
+    for (const s of students) {
+      const colour = statusByStudent[s.id] ?? 'yashil';
+      if (colour === 'qizil') qizil++;
+      else if (colour === 'sariq') sariq++;
+      else yashil++;
+    }
+    return { yashil, sariq, qizil };
+  }, [students, statusByStudent]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) => s.name.toLowerCase().includes(q));
-  }, [students, search]);
+    return students.filter((s) => {
+      if (q && !s.name.toLowerCase().includes(q)) return false;
+      if (statusFilter !== 'all') {
+        const colour = statusByStudent[s.id] ?? 'yashil';
+        if (colour !== statusFilter) return false;
+      }
+      return true;
+    });
+  }, [students, search, statusFilter, statusByStudent]);
 
   return (
     <div className="min-h-full bg-[#f7f4ef] pb-4">
@@ -143,6 +245,51 @@ export default function MentorStudentsPage() {
 
       {/* Body */}
       <div className="px-4 pt-4 pb-6 space-y-3 max-w-lg mx-auto">
+
+        {/* Live snapshot panel */}
+        {snapshot.length > 0 && (
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
+            <div className="px-4 py-3 flex items-center justify-between border-b border-[#f0ece4]">
+              <div className="flex items-center gap-2">
+                <Activity size={13} className="text-emerald-500" />
+                <span className="text-xs font-extrabold text-[#0f172a]">Hozir aktiv</span>
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold"
+                  style={{
+                    background: snapshotActiveCount > 0 ? '#dcfce7' : '#f1f5f9',
+                    color: snapshotActiveCount > 0 ? '#15803d' : '#64748b',
+                  }}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${snapshotActiveCount > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}
+                  />
+                  {snapshotActiveCount} / {snapshot.length}
+                </span>
+              </div>
+            </div>
+            <ul className="divide-y divide-[#f7f4ef]">
+              {snapshot.map((s) => (
+                <li key={s.id} className="px-4 py-2.5 flex items-center gap-3">
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${s.isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-bold text-[#0f172a] truncate">{s.name}</span>
+                    {s.currentLessonTitle && (
+                      <span className="block text-[11px] text-[#64748b] font-semibold truncate">
+                        {s.currentLessonTitle}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] font-bold shrink-0" style={{ color: s.isActive ? '#15803d' : '#94a3b8' }}>
+                    {s.isActive ? timeAgo(s.lastPingAt) : s.lastPingAt ? timeAgo(s.lastPingAt) : '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Search */}
         {!loading && students.length > 0 && (
           <div className="relative">
@@ -167,6 +314,35 @@ export default function MentorStudentsPage() {
                 <XIcon size={14} />
               </button>
             )}
+          </div>
+        )}
+
+        {/* Status filter — surfaces yellow/red students fast without making
+            the mentor click into /mentor/group first. */}
+        {!loading && students.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { key: 'all',    label: 'Hammasi', count: students.length, dot: 'bg-[#94a3b8]' },
+              { key: 'yashil', label: 'Yashil',  count: statusCounts.yashil, dot: 'bg-emerald-500' },
+              { key: 'sariq',  label: 'Sariq',   count: statusCounts.sariq, dot: 'bg-amber-500' },
+              { key: 'qizil',  label: 'Qizil',   count: statusCounts.qizil, dot: 'bg-rose-500' },
+            ].map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setStatusFilter(s.key as typeof statusFilter)}
+                aria-pressed={statusFilter === s.key}
+                className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border inline-flex items-center gap-1.5 ${
+                  statusFilter === s.key
+                    ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                    : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]/40'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                {s.label}
+                <span className="text-[10px] opacity-70 font-mono">{s.count}</span>
+              </button>
+            ))}
           </div>
         )}
 

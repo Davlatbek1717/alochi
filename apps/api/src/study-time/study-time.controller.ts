@@ -187,6 +187,22 @@ export class StudyTimeController {
   }
 
   /**
+   * Live presence snapshot — who is actively studying right now (last ping
+   * ≤ 2 min) and which lesson they last touched. Mentor → own group,
+   * filadmin/manager → branch. Polled every 30s by the frontend.
+   */
+  @Get('scope/snapshot')
+  @Roles(UserRole.filadmin, UserRole.manager, UserRole.mentor)
+  liveSnapshot(@Request() req: any) {
+    return this.studyTime.liveSnapshot({
+      userId: req.user.userId,
+      role: req.user.role,
+      tenantId: req.user.tenantId,
+      branchId: req.user.branchId,
+    });
+  }
+
+  /**
    * Role-aware total study time over a date range
    * (?from=YYYY-MM-DD&to=YYYY-MM-DD, max 92 days).
    */
