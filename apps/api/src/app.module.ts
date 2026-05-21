@@ -60,6 +60,7 @@ import { RiskModule } from './risk/risk.module';
 import { BriefingModule } from './briefing/briefing.module';
 import { ParentMessagesModule } from './parent-messages/parent-messages.module';
 import { InsightsModule } from './insights/insights.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -145,6 +146,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     BriefingModule,
     ParentMessagesModule,
     InsightsModule,
+    PrivacyModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

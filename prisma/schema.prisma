@@ -1802,6 +1802,38 @@ model VisitIssue {
   visit HomeVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
 }
 
+// ─── Faza 8: PDPL / Consent & Deletion ───────────────────────────────────────
+
+model ConsentRecord {
+  id           String    @id @default(cuid())
+  userId       String
+  consentType  String
+  granted      Boolean
+  grantedAt    DateTime?
+  revokedAt    DateTime?
+  ipAddress    String?
+  userAgent    String?
+  signedDocUrl String?
+  expiresAt    DateTime?
+  tenantId     String
+
+  @@index([userId, consentType, granted])
+}
+
+model DataDeletionRequest {
+  id              String    @id @default(cuid())
+  userId          String
+  requestedAt     DateTime  @default(now())
+  scheduledFor    DateTime
+  cancelledAt     DateTime?
+  cancelledReason String?
+  completedAt     DateTime?
+  approvedBy      String?
+  status          String    @default("pending")
+
+  @@index([status, scheduledFor])
+}
+
 // ─── Faza 5: AI Analysis ──────────────────────────────────────────────────────
 
 model RiskScore {
