@@ -7,6 +7,8 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AttendanceStudentsService } from './attendance-students.service';
 import { AttendanceStaffService } from './attendance-staff.service';
@@ -32,6 +34,8 @@ export class AttendanceController {
   // came to class, and only for students in their OWN group. Testers
   // (exam queue) no longer write attendance — they read the mentor's
   // marking. Group ownership is enforced in the service.
+  private static readonly VALID_STATUSES = new Set(['present', 'absent', 'late']);
+
   @Post('students')
   @Roles(UserRole.mentor)
   markBulk(
@@ -43,6 +47,16 @@ export class AttendanceController {
       branchId: string;
       userId: string;
     };
+
+    const invalid = body.records?.find(
+      (r) => !AttendanceController.VALID_STATUSES.has(r.status),
+    );
+    if (invalid) {
+      throw new BadRequestException(
+        `Noto'g'ri status: "${invalid.status}". Faqat present, absent, late qabul qilinadi`,
+      );
+    }
+
     const date: string =
       (body as any).date ?? new Date().toISOString().split('T')[0];
 
@@ -62,7 +76,16 @@ export class AttendanceController {
   getDailyList(
     @Param('branchId') branchId: string,
     @Param('date') date: string,
+    @Request() req: any,
   ) {
+    const user = req.user as { role: string; branchId?: string | null };
+    if (
+      user.role === UserRole.mentor &&
+      user.branchId &&
+      user.branchId !== branchId
+    ) {
+      throw new ForbiddenException("Faqat o'z filialingizni ko'rishingiz mumkin");
+    }
     return this.studentsService.getDailyList(branchId, date);
   }
 

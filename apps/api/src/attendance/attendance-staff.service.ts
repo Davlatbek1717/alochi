@@ -14,15 +14,24 @@ export class AttendanceStaffService {
    * and a "now" instant. Returns 0 if not late, else minutes past
    * (workStart + grace).
    */
+  // Tashkent is UTC+5 — fixed offset, no DST.
+  private static readonly TASHKENT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
   static computeLateMinutes(
     workStart: string,
     graceMinutes: number,
     now: Date,
   ): number {
     const [hh, mm] = (workStart ?? '09:00').split(':').map(Number);
-    const startToday = new Date(now);
-    startToday.setHours(hh, mm, 0, 0);
-    const diffMin = Math.floor((now.getTime() - startToday.getTime()) / 60000);
+    // Derive today's calendar date in Tashkent
+    const tashkentNow = new Date(now.getTime() + AttendanceStaffService.TASHKENT_OFFSET_MS);
+    const year = tashkentNow.getUTCFullYear();
+    const month = tashkentNow.getUTCMonth();
+    const day = tashkentNow.getUTCDate();
+    // Build work-start as a UTC timestamp (workStart is Tashkent local)
+    const workStartUtcMs =
+      Date.UTC(year, month, day, hh, mm) - AttendanceStaffService.TASHKENT_OFFSET_MS;
+    const diffMin = Math.floor((now.getTime() - workStartUtcMs) / 60000);
     return Math.max(0, diffMin - (graceMinutes ?? 0));
   }
 
@@ -100,13 +109,17 @@ export class AttendanceStaffService {
    * in today (loginTime IS NOT NULL) for a given branch.
    */
   async getTodayCount(branchId: string): Promise<{ count: number }> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today.getTime() + 86_400_000);
+    const nowUtc = new Date();
+    const tashkentNow = new Date(nowUtc.getTime() + AttendanceStaffService.TASHKENT_OFFSET_MS);
+    const year = tashkentNow.getUTCFullYear();
+    const month = tashkentNow.getUTCMonth();
+    const day = tashkentNow.getUTCDate();
+    const todayUtc = new Date(Date.UTC(year, month, day) - AttendanceStaffService.TASHKENT_OFFSET_MS);
+    const tomorrowUtc = new Date(todayUtc.getTime() + 86_400_000);
     const count = await this.prisma.attendanceStaff.count({
       where: {
         branchId,
-        date: { gte: today, lt: tomorrow },
+        date: { gte: todayUtc, lt: tomorrowUtc },
         loginTime: { not: null },
       },
     });

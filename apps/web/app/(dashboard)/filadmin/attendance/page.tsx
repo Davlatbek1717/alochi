@@ -5,12 +5,14 @@ import { ArrowLeft, Eye, Key, Shield, Clock, CheckCircle, Download, ClipboardLis
 import { apiRequest } from '@/lib/api';
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { formatTime } from '@/lib/date-uz';
+import { tashkentToday } from '@/lib/tashkent-date';
 
 type StaffRecord = {
   id: string;
   userId: string;
   loginTime: string | null;
   isLate: boolean;
+  lateMinutes: number;
   recognitionMethod: string | null;
   confirmedAt: string | null;
   confirmedBy: string | null;
@@ -30,14 +32,6 @@ function getBranchIdFromToken(): string | null {
 function formatTimeOrDash(iso: string | null): string {
   if (!iso) return '—';
   return formatTime(iso) || '—';
-}
-
-function lateMinutes(loginTime: string | null): number {
-  if (!loginTime) return 0;
-  const login = new Date(loginTime);
-  const cutoff = new Date(login);
-  cutoff.setHours(9, 0, 0, 0);
-  return Math.max(0, Math.round((login.getTime() - cutoff.getTime()) / 60000));
 }
 
 function getInitials(name: string) {
@@ -75,7 +69,7 @@ function exportCsv(records: StaffRecord[], date: string) {
     r.user.name,
     formatTime(r.loginTime),
     r.recognitionMethod ?? '—',
-    r.isLate ? `+${lateMinutes(r.loginTime)} daq` : "O'z vaqtida",
+    r.isLate ? `+${r.lateMinutes} daq` : "O'z vaqtida",
     r.confirmedAt ? formatTime(r.confirmedAt) : "Yo'q",
   ]);
   const csv = [header, ...rows].map((row) => row.join(',')).join('\n');
@@ -88,12 +82,10 @@ function exportCsv(records: StaffRecord[], date: string) {
   URL.revokeObjectURL(url);
 }
 
-const TODAY = new Date().toISOString().split('T')[0];
-
 export default function FiladminAttendancePage() {
   const router = useRouter();
   const { error: toastError } = useToast();
-  const [date, setDate] = useState(TODAY);
+  const [date, setDate] = useState(() => tashkentToday());
   const [records, setRecords] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -195,7 +187,7 @@ export default function FiladminAttendancePage() {
                 type="date"
                 aria-label="Sana"
                 value={date}
-                max={TODAY}
+                max={tashkentToday()}
                 onChange={(e) => setDate(e.target.value)}
                 className="bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#0d9488]"
               />
@@ -251,9 +243,9 @@ export default function FiladminAttendancePage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-[#0f172a] font-semibold text-sm">{r.user.name}</p>
-                      {r.isLate && r.loginTime && (
+                      {r.isLate && (
                         <span className="inline-flex items-center gap-1 bg-[#e11d48]/10 text-[#e11d48] text-xs px-2 py-0.5 rounded-full font-medium">
-                          <Clock size={10} /> +{lateMinutes(r.loginTime)} daq
+                          <Clock size={10} /> +{r.lateMinutes} daq
                         </span>
                       )}
                       {r.confirmedAt && (

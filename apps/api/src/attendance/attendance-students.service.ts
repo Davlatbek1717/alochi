@@ -92,7 +92,6 @@ export class AttendanceStudentsService {
         .catch(() => {});
       this.events.emit('attendance.marked', {
         studentId: r.studentId,
-        lessonId: r.lessonId ?? null,
         status: r.status,
         timestamp,
       });

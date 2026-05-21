@@ -15,6 +15,16 @@ import {
 import { apiRequest } from '@/lib/api';
 import { fetchMyGroupId } from '@/lib/jwt';
 import { tashkentToday } from '@/lib/tashkent-date';
+
+function getBranchIdFromToken(): string | null {
+  try {
+    const token = localStorage.getItem('accessToken') ?? '';
+    const payload = JSON.parse(atob(token.split('.')[1])) as { branchId?: string };
+    return typeof payload.branchId === 'string' ? payload.branchId : null;
+  } catch {
+    return null;
+  }
+}
 import { Button, EmptyState, Skeleton, useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 
@@ -87,17 +97,32 @@ export default function MentorAttendancePage() {
         );
       }
       setNoGroup(false);
-      const res = await apiRequest<ApiUser[]>(
-        `/users/group/${groupId}`,
-        {},
-        token,
+      const branchId = getBranchIdFromToken();
+      const today = tashkentToday();
+
+      const [usersRes, existingAttendance] = await Promise.all([
+        apiRequest<ApiUser[]>(`/users/group/${groupId}`, {}, token),
+        branchId
+          ? apiRequest<{ studentId: string; status: string }[]>(
+              `/attendance/students/${branchId}/${today}`,
+              {},
+              token,
+            )
+              .then((r) => r.data)
+              .catch(() => [] as { studentId: string; status: string }[])
+          : Promise.resolve([] as { studentId: string; status: string }[]),
+      ]);
+
+      const attendanceMap = new Map(
+        existingAttendance.map((a) => [a.studentId, a.status as AttendanceStatus]),
       );
-      const studentList = res.data
+
+      const studentList = usersRes.data
         .filter((u) => u.role === 'student')
         .map((s) => ({
           id: s.id,
           name: s.name,
-          status: 'present' as AttendanceStatus,
+          status: attendanceMap.get(s.id) ?? ('present' as AttendanceStatus),
         }));
       setStudents(studentList);
       setOriginal(studentList);
