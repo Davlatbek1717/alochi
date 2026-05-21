@@ -1424,8 +1424,7 @@ model VideoCheckin {
   date           DateTime  @db.Date  // calendar date in Asia/Tashkent
   type           String    // 'morning' | 'evening'
   status         String    // 'submitted' | 'missed'
-  telegramFileId String?   @map("telegram_file_id")
-  videoKind      String?   @map("video_kind")    // 'video_note' | 'video'
+  videoPath      String?   @map("video_path")      // relative path from VIDEO_UPLOAD_DIR
   durationSec    Int?      @map("duration_sec")
   submittedAt    DateTime? @map("submitted_at")
   createdAt      DateTime  @default(now()) @map("created_at")

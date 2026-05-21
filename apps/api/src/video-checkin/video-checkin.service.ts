@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   GoneException,
   Injectable,
@@ -7,8 +8,10 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import { PrismaService } from '../prisma/prisma.service';
-import { tashkentDateString, dateStringToDate } from './lib/tashkent-time';
+import { tashkentDateString, dateStringToDate, currentWindowOrLate } from './lib/tashkent-time';
 
 export interface TodayCheckinRow {
   studentId: string;
@@ -46,15 +49,15 @@ export interface StudentHistoryRow {
   eveningVideoAvailable: boolean;
 }
 
-export interface ReminderRecipient {
-  studentId: string;
-  telegramId: bigint;
-}
-
-export interface PendingWindow {
-  studentId: string;
-  type: 'morning' | 'evening';
-  windowEndsAt: Date;
+export interface TodayWindowStatus {
+  canUploadMorning: boolean;
+  canUploadEvening: boolean;
+  morningStatus: 'submitted' | 'late' | 'missed' | 'pending' | null;
+  eveningStatus: 'submitted' | 'late' | 'missed' | 'pending' | null;
+  morningCheckinId: string | null;
+  eveningCheckinId: string | null;
+  morningAt: string | null;
+  eveningAt: string | null;
 }
 
 @Injectable()
@@ -67,18 +70,20 @@ export class VideoCheckinService {
     private config: ConfigService,
   ) {}
 
+  private get uploadDir(): string {
+    return this.config.get<string>('VIDEO_UPLOAD_DIR') ?? '/var/www/alochi/uploads/videos';
+  }
+
+  private fullPath(videoPath: string): string {
+    return path.join(this.uploadDir, videoPath);
+  }
+
   /**
-   * Auth-checked Telegram video proxy. Resolves the bot's file_id into
-   * the actual video bytes for playback in the dashboard. Bot token
-   * stays server-side — the caller never sees it.
-   *
-   * Authorization:
-   *  - superadmin: any check-in in their tenant
-   *  - filadmin:  any check-in for a student in their branch
-   *  - mentor:    any check-in for a student in their group
-   *  - student:   their own check-in (so /student/profile can replay)
+   * Auth-checked video file serve. Reads from local disk and returns
+   * a stream-ready absolute file path for the controller to use with
+   * Express res.sendFile().
    */
-  async getVideoBytes(
+  async getVideoFilePath(
     checkinId: string,
     caller: {
       role: string;
@@ -87,7 +92,7 @@ export class VideoCheckinService {
       branchId: string | null;
       groupId: string | null;
     },
-  ): Promise<{ buffer: Buffer; mimeType: string; durationSec: number | null }> {
+  ): Promise<{ absolutePath: string; mimeType: string }> {
     const checkin = await this.prisma.videoCheckin.findFirst({
       where: { id: checkinId, student: { tenantId: caller.tenantId } },
       include: {
@@ -100,79 +105,77 @@ export class VideoCheckinService {
     if (checkin.status !== 'submitted' && checkin.status !== 'late') {
       throw new NotFoundException('Bu vaqtga video tashlanmagan');
     }
-    if (!checkin.telegramFileId) {
+    if (!checkin.videoPath) {
       throw new GoneException('Video 2 kundan keyin avtomatik o\'chiriladi');
     }
+
     const allowed =
       caller.role === 'superadmin' ||
-      (caller.role === 'filadmin' &&
-        checkin.student.branchId === caller.branchId) ||
-      (caller.role === 'manager' &&
-        checkin.student.branchId === caller.branchId) ||
-      (caller.role === 'mentor' &&
-        checkin.student.groupId === caller.groupId) ||
+      (caller.role === 'filadmin' && checkin.student.branchId === caller.branchId) ||
+      (caller.role === 'manager' && checkin.student.branchId === caller.branchId) ||
+      (caller.role === 'mentor' && checkin.student.groupId === caller.groupId) ||
       (caller.role === 'student' && checkin.student.id === caller.userId);
     if (!allowed) throw new ForbiddenException("Ruxsat yo'q");
 
-    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
-    if (!token) throw new NotFoundException('Bot sozlanmagan');
+    const absolutePath = this.fullPath(checkin.videoPath);
+    if (!fs.existsSync(absolutePath)) {
+      throw new GoneException('Video fayl topilmadi');
+    }
 
-    // Step 1: resolve file_id → file_path via Telegram getFile.
-    const fileInfoRes = await fetch(
-      `https://api.telegram.org/bot${token}/getFile?file_id=${checkin.telegramFileId}`,
-    );
-    const fileInfo = (await fileInfoRes.json()) as {
-      ok: boolean;
-      result?: { file_path?: string };
+    const ext = path.extname(checkin.videoPath).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.mp4': 'video/mp4',
+      '.webm': 'video/webm',
+      '.mov': 'video/quicktime',
+      '.avi': 'video/x-msvideo',
+      '.mkv': 'video/x-matroska',
     };
-    if (!fileInfo.ok || !fileInfo.result?.file_path) {
-      throw new NotFoundException("Video Telegram'dan o'qib bo'lmadi");
-    }
+    const mimeType = mimeMap[ext] ?? 'video/mp4';
 
-    // Step 2: download the bytes. Round-video and rectangular video
-    // both come back as small mp4 (≤ 10 MB for 60s round, more for
-    // rect but still bounded by the bot's 90s cap), so we buffer.
-    const fileRes = await fetch(
-      `https://api.telegram.org/file/bot${token}/${fileInfo.result.file_path}`,
-    );
-    if (!fileRes.ok) {
-      throw new NotFoundException("Video yuklab bo'lmadi");
-    }
-    const buffer = Buffer.from(await fileRes.arrayBuffer());
-    const mimeType = fileRes.headers.get('content-type') ?? 'video/mp4';
-    return { buffer, mimeType, durationSec: checkin.durationSec };
+    return { absolutePath, mimeType };
   }
 
   /**
-   * Records a video submission. Upserts so re-sends within the same window
-   * update the file reference rather than failing. When `late` is true
-   * the row is stored as `status='late'` instead of `'submitted'` so
-   * attendance reports can flag the delay.
-   *
-   * A row that's already `submitted` (on-time) cannot be downgraded to
-   * `late` by a subsequent submission — the first on-time submit wins.
+   * Saves an uploaded video file and upserts the VideoCheckin record.
+   * Called by the upload endpoint. Window is detected from current Tashkent time
+   * unless the caller explicitly passes a type override (for testing).
    */
-  async recordSubmission(
+  async recordWebUpload(
     studentId: string,
-    type: 'morning' | 'evening',
-    fileId: string,
-    kind: 'video_note' | 'video',
-    durationSec: number | null,
-    late = false,
-  ) {
+    tenantId: string,
+    file: { originalname: string; mimetype: string; size: number },
+    savedRelativePath: string,
+    typeOverride?: 'morning' | 'evening',
+  ): Promise<{ checkinId: string; status: string; type: string }> {
+    const slot = typeOverride
+      ? { type: typeOverride, late: false }
+      : currentWindowOrLate();
+
+    if (!slot) {
+      // Outside any window — delete the uploaded file and reject
+      try { fs.unlinkSync(this.fullPath(savedRelativePath)); } catch { /* ignore */ }
+      throw new BadRequestException(
+        'Hozir video yuklash vaqti emas. Ertalab 05:00–06:30 yoki kechki 18:00–22:00 da yuboring.',
+      );
+    }
+
+    const { type, late } = slot;
     const dateStr = tashkentDateString();
     const date = dateStringToDate(dateStr);
-
     const status = late ? 'late' : 'submitted';
 
-    // Look up the existing row first so we never downgrade an on-time
-    // 'submitted' into 'late' on a late re-submission.
+    // Don't downgrade on-time to late on resubmit
     const existing = await this.prisma.videoCheckin.findUnique({
       where: { studentId_date_type: { studentId, date, type } },
-      select: { status: true },
+      select: { status: true, videoPath: true },
     });
-    const finalStatus =
-      existing?.status === 'submitted' ? 'submitted' : status;
+    const finalStatus = existing?.status === 'submitted' ? 'submitted' : status;
+
+    // Delete old video file if it exists (student resubmitting)
+    if (existing?.videoPath) {
+      const oldPath = this.fullPath(existing.videoPath);
+      try { fs.unlinkSync(oldPath); } catch { /* already gone */ }
+    }
 
     const row = await this.prisma.videoCheckin.upsert({
       where: { studentId_date_type: { studentId, date, type } },
@@ -181,22 +184,17 @@ export class VideoCheckinService {
         date,
         type,
         status: finalStatus,
-        telegramFileId: fileId,
-        videoKind: kind,
-        durationSec,
+        videoPath: savedRelativePath,
         submittedAt: new Date(),
       },
       update: {
         status: finalStatus,
-        telegramFileId: fileId,
-        videoKind: kind,
-        durationSec,
+        videoPath: savedRelativePath,
         submittedAt: new Date(),
       },
       include: { student: { select: { tenantId: true } } },
     });
 
-    const tenantId = row.student.tenantId;
     this.events.emit('videocheckin.changed', {
       tenantId,
       studentId,
@@ -204,7 +202,48 @@ export class VideoCheckinService {
       status: finalStatus,
     });
 
-    return row;
+    return { checkinId: row.id, status: finalStatus, type };
+  }
+
+  /**
+   * Returns the current student's today upload status + whether upload is allowed now.
+   */
+  async getTodayStatusForStudent(studentId: string): Promise<TodayWindowStatus> {
+    const dateStr = tashkentDateString();
+    const date = dateStringToDate(dateStr);
+
+    const checkins = await this.prisma.videoCheckin.findMany({
+      where: { studentId, date },
+      select: { type: true, status: true, submittedAt: true, id: true, videoPath: true },
+    });
+
+    const morning = checkins.find((c) => c.type === 'morning');
+    const evening = checkins.find((c) => c.type === 'evening');
+
+    const slot = currentWindowOrLate();
+    const canUploadMorning =
+      (!morning || (morning.status !== 'submitted' && morning.status !== 'late')) &&
+      (slot?.type === 'morning');
+    const canUploadEvening =
+      (!evening || (evening.status !== 'submitted' && evening.status !== 'late')) &&
+      (slot?.type === 'evening');
+
+    return {
+      canUploadMorning,
+      canUploadEvening,
+      morningStatus: morning?.status as TodayWindowStatus['morningStatus'] ?? null,
+      eveningStatus: evening?.status as TodayWindowStatus['eveningStatus'] ?? null,
+      morningCheckinId:
+        (morning?.status === 'submitted' || morning?.status === 'late') && morning?.videoPath
+          ? morning.id
+          : null,
+      eveningCheckinId:
+        (evening?.status === 'submitted' || evening?.status === 'late') && evening?.videoPath
+          ? evening.id
+          : null,
+      morningAt: morning?.submittedAt?.toISOString() ?? null,
+      eveningAt: evening?.submittedAt?.toISOString() ?? null,
+    };
   }
 
   /**
@@ -212,7 +251,6 @@ export class VideoCheckinService {
    * Fires notifications to filadmin(s) + mentor.
    */
   async markMissed(studentId: string, date: Date, type: 'morning' | 'evening') {
-    // Skip if already submitted (on-time) or accepted as 'late'.
     const existing = await this.prisma.videoCheckin.findUnique({
       where: { studentId_date_type: { studentId, date, type } },
     });
@@ -224,12 +262,7 @@ export class VideoCheckinService {
       update: { status: 'missed' },
       include: {
         student: {
-          select: {
-            name: true,
-            branchId: true,
-            groupId: true,
-            tenantId: true,
-          },
+          select: { name: true, branchId: true, groupId: true, tenantId: true },
         },
       },
     });
@@ -241,32 +274,18 @@ export class VideoCheckinService {
     const notifBody = `${student.name} ${typeLabel} video tashlamadi`;
     const meta = { studentId, type, date: tashkentDateString(date) };
 
-    // Notify all filadmins in the branch
     if (student.branchId) {
       const filadmins = await this.prisma.user.findMany({
-        where: {
-          role: 'filadmin',
-          branchId: student.branchId,
-          status: 'active',
-        },
+        where: { role: 'filadmin', branchId: student.branchId, status: 'active' },
         select: { id: true },
       });
       for (const fa of filadmins) {
         await this.prisma.notification
-          .create({
-            data: {
-              userId: fa.id,
-              type: 'video_missed',
-              title: notifTitle,
-              body: notifBody,
-              meta,
-            },
-          })
+          .create({ data: { userId: fa.id, type: 'video_missed', title: notifTitle, body: notifBody, meta } })
           .catch(() => undefined);
       }
     }
 
-    // Notify the group's mentor
     if (student.groupId) {
       const mentor = await this.prisma.user.findFirst({
         where: { role: 'mentor', groupId: student.groupId, status: 'active' },
@@ -274,36 +293,17 @@ export class VideoCheckinService {
       });
       if (mentor) {
         await this.prisma.notification
-          .create({
-            data: {
-              userId: mentor.id,
-              type: 'video_missed',
-              title: notifTitle,
-              body: notifBody,
-              meta,
-            },
-          })
+          .create({ data: { userId: mentor.id, type: 'video_missed', title: notifTitle, body: notifBody, meta } })
           .catch(() => undefined);
       }
     }
 
-    this.events.emit('videocheckin.changed', {
-      tenantId,
-      studentId,
-      type,
-      status: 'missed',
-    });
-
+    this.events.emit('videocheckin.changed', { tenantId, studentId, type, status: 'missed' });
     return row;
   }
 
   /**
-   * Called at window close time — marks every active student who hasn't
-   * submitted as missed in a single pass.
-   *
-   * `targetDateStr` lets the caller pin the Tashkent calendar date instead
-   * of relying on the clock at call time (important for the evening cron
-   * which fires at 00:01 of the NEW day).
+   * Marks all active students who haven't submitted as missed for the given window.
    */
   async markAllMissedForWindow(type: 'morning' | 'evening', targetDateStr?: string) {
     const dateStr = targetDateStr ?? tashkentDateString();
@@ -311,14 +311,11 @@ export class VideoCheckinService {
 
     this.logger.log(`markAllMissedForWindow: type=${type} date=${dateStr}`);
 
-    // Find all active students across all tenants
     const students = await this.prisma.user.findMany({
       where: { role: 'student', status: 'active' },
       select: { id: true },
     });
 
-    // Find students who already submitted for this window today
-    // Anyone with status='submitted' OR 'late' counts as having done it.
     const done = await this.prisma.videoCheckin.findMany({
       where: { date, type, status: { in: ['submitted', 'late'] } },
       select: { studentId: true },
@@ -329,9 +326,7 @@ export class VideoCheckinService {
     for (const student of students) {
       if (doneIds.has(student.id)) continue;
       await this.markMissed(student.id, date, type).catch((err) =>
-        this.logger.warn(
-          `markMissed failed for ${student.id}: ${(err as Error).message}`,
-        ),
+        this.logger.warn(`markMissed failed for ${student.id}: ${(err as Error).message}`),
       );
       missed++;
     }
@@ -339,21 +334,15 @@ export class VideoCheckinService {
     this.logger.log(`markAllMissedForWindow: type=${type} missed=${missed}`);
   }
 
-  /**
-   * Dashboard widget data for a branch — one row per active student showing
-   * today's morning/evening status.
-   */
+  /** Dashboard widget data for a branch. */
   async getTodayList(branchId: string): Promise<TodayCheckinRow[]> {
     const dateStr = tashkentDateString();
     const date = dateStringToDate(dateStr);
     const now = new Date();
 
-    // Determine which windows are fully closed (on-time AND late grace
-    // both expired). A student is only "missed" once both deadlines have
-    // passed without a submission.
     const nowTashkent = this.tashkentMinutes(now);
-    const morningClosed = nowTashkent >= 1080; // 18:00 — evening opens
-    const eveningClosed = nowTashkent === 0; // wraps at midnight; effectively only after the cron stamps a row
+    const morningClosed = nowTashkent >= 1080;
+    const eveningClosed = nowTashkent === 0;
 
     const students = await this.prisma.user.findMany({
       where: { branchId, role: 'student', status: 'active' },
@@ -365,7 +354,6 @@ export class VideoCheckinService {
 
     const studentIds = students.map((s) => s.id);
 
-    // Fetch today's checkins
     const checkins = await this.prisma.videoCheckin.findMany({
       where: { studentId: { in: studentIds }, date },
     });
@@ -375,21 +363,14 @@ export class VideoCheckinService {
       checkinByStudentType.set(`${c.studentId}:${c.type}`, c);
     }
 
-    // Fetch total missed counts in last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const missedCounts = await this.prisma.videoCheckin.groupBy({
       by: ['studentId'],
-      where: {
-        studentId: { in: studentIds },
-        status: 'missed',
-        date: { gte: thirtyDaysAgo },
-      },
+      where: { studentId: { in: studentIds }, status: 'missed', date: { gte: thirtyDaysAgo } },
       _count: { id: true },
     });
-    const missedCountMap = new Map(
-      missedCounts.map((m) => [m.studentId, m._count.id]),
-    );
+    const missedCountMap = new Map(missedCounts.map((m) => [m.studentId, m._count.id]));
 
     return students.map((s) => {
       const morningRow = checkinByStudentType.get(`${s.id}:morning`);
@@ -416,16 +397,12 @@ export class VideoCheckinService {
         evening: resolveEvening(),
         morningAt: morningRow?.submittedAt?.toISOString() ?? null,
         eveningAt: eveningRow?.submittedAt?.toISOString() ?? null,
-        // Surface ids only when a real video file still exists.
-        // telegramFileId is nulled by the nightly prune job after 2 days.
         morningCheckinId:
-          (morningRow?.status === 'submitted' || morningRow?.status === 'late') &&
-          morningRow?.telegramFileId
+          (morningRow?.status === 'submitted' || morningRow?.status === 'late') && morningRow?.videoPath
             ? morningRow.id
             : null,
         eveningCheckinId:
-          (eveningRow?.status === 'submitted' || eveningRow?.status === 'late') &&
-          eveningRow?.telegramFileId
+          (eveningRow?.status === 'submitted' || eveningRow?.status === 'late') && eveningRow?.videoPath
             ? eveningRow.id
             : null,
         totalMissedDays: missedCountMap.get(s.id) ?? 0,
@@ -433,14 +410,7 @@ export class VideoCheckinService {
     });
   }
 
-  /**
-   * Role-aware daily video monitoring for a single Tashkent day.
-   * mentor → own group, filadmin/manager → own branch, superadmin →
-   * whole tenant. For past days both windows are closed so any
-   * non-submitted slot resolves to 'missed'; for today the live
-   * window-close times apply (same logic as getTodayList). Future
-   * dates are clamped to today.
-   */
+  /** Role-aware daily monitoring. */
   async getMonitoring(
     requester: {
       userId: string;
@@ -453,17 +423,16 @@ export class VideoCheckinService {
   ): Promise<MonitoringResp> {
     const todayStr = tashkentDateString();
     const re = /^\d{4}-\d{2}-\d{2}$/;
-    let dateStr =
-      dateParam && re.test(dateParam) ? dateParam : todayStr;
-    if (dateStr > todayStr) dateStr = todayStr; // clamp future → today
+    let dateStr = dateParam && re.test(dateParam) ? dateParam : todayStr;
+    if (dateStr > todayStr) dateStr = todayStr;
     const isPast = dateStr < todayStr;
     const date = dateStringToDate(dateStr);
 
-    // Resolve the scoped student set.
     let studentWhere:
       | { role: 'student'; status: 'active'; tenantId: string; groupId?: string; branchId?: string }
       | null = null;
     let scope: MonitoringResp['scope'] = 'none';
+
     if (requester.role === 'mentor') {
       const mentor = await this.prisma.user.findUnique({
         where: { id: requester.userId },
@@ -471,33 +440,16 @@ export class VideoCheckinService {
       });
       const gid = mentor?.groupId ?? requester.groupId ?? null;
       if (gid) {
-        studentWhere = {
-          role: 'student',
-          status: 'active',
-          tenantId: requester.tenantId,
-          groupId: gid,
-        };
+        studentWhere = { role: 'student', status: 'active', tenantId: requester.tenantId, groupId: gid };
         scope = 'group';
       }
-    } else if (
-      requester.role === 'filadmin' ||
-      requester.role === 'manager'
-    ) {
+    } else if (requester.role === 'filadmin' || requester.role === 'manager') {
       if (requester.branchId) {
-        studentWhere = {
-          role: 'student',
-          status: 'active',
-          tenantId: requester.tenantId,
-          branchId: requester.branchId,
-        };
+        studentWhere = { role: 'student', status: 'active', tenantId: requester.tenantId, branchId: requester.branchId };
         scope = 'branch';
       }
     } else if (requester.role === 'superadmin') {
-      studentWhere = {
-        role: 'student',
-        status: 'active',
-        tenantId: requester.tenantId,
-      };
+      studentWhere = { role: 'student', status: 'active', tenantId: requester.tenantId };
       scope = 'tenant';
     }
 
@@ -528,11 +480,9 @@ export class VideoCheckinService {
     const byKey = new Map<string, (typeof checkins)[0]>();
     for (const c of checkins) byKey.set(`${c.studentId}:${c.type}`, c);
 
-    // Window-close state: past days are fully closed; today uses the
-    // live clock (mirrors getTodayList).
     const nowTashkent = this.tashkentMinutes(new Date());
     const morningClosed = isPast || nowTashkent >= 1080;
-    const eveningClosed = isPast; // evening only finalises via cron / next day
+    const eveningClosed = isPast;
 
     const summary = {
       students: students.length,
@@ -565,13 +515,9 @@ export class VideoCheckinService {
         morningAt: m?.submittedAt?.toISOString() ?? null,
         eveningAt: e?.submittedAt?.toISOString() ?? null,
         morningCheckinId:
-          (m?.status === 'submitted' || m?.status === 'late') && m?.telegramFileId
-            ? m.id
-            : null,
+          (m?.status === 'submitted' || m?.status === 'late') && m?.videoPath ? m.id : null,
         eveningCheckinId:
-          (e?.status === 'submitted' || e?.status === 'late') && e?.telegramFileId
-            ? e.id
-            : null,
+          (e?.status === 'submitted' || e?.status === 'late') && e?.videoPath ? e.id : null,
         totalMissedDays: 0,
       };
     });
@@ -588,11 +534,8 @@ export class VideoCheckinService {
     });
   }
 
-  /** Per-student 30-day history for the detail page. */
-  async getStudentHistory(
-    studentId: string,
-    days = 30,
-  ): Promise<StudentHistoryRow[]> {
+  /** Per-student 30-day history. */
+  async getStudentHistory(studentId: string, days = 30): Promise<StudentHistoryRow[]> {
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -601,7 +544,6 @@ export class VideoCheckinService {
       orderBy: { date: 'desc' },
     });
 
-    // Group by date
     const byDate = new Map<string, StudentHistoryRow>();
     for (const r of rows) {
       const dateKey = tashkentDateString(r.date);
@@ -619,7 +561,7 @@ export class VideoCheckinService {
         });
       }
       const entry = byDate.get(dateKey)!;
-      const videoAvailable = !!r.telegramFileId;
+      const videoAvailable = !!r.videoPath;
       if (r.type === 'morning') {
         entry.morning = r.status;
         entry.morningSubmittedAt = r.submittedAt?.toISOString() ?? null;
@@ -639,110 +581,46 @@ export class VideoCheckinService {
   }
 
   /**
-   * Returns students who haven't submitted yet for the given window today
-   * AND have a telegramId.
-   */
-  async getReminderRecipients(
-    type: 'morning' | 'evening',
-  ): Promise<ReminderRecipient[]> {
-    const dateStr = tashkentDateString();
-    const date = dateStringToDate(dateStr);
-
-    // Exclude both on-time ('submitted') and late ('late') submissions —
-    // either means the student already sent a video for this window.
-    const submitted = await this.prisma.videoCheckin.findMany({
-      where: { date, type, status: { in: ['submitted', 'late'] } },
-      select: { studentId: true },
-    });
-    const submittedIds = new Set(submitted.map((s) => s.studentId));
-
-    const students = await this.prisma.user.findMany({
-      where: {
-        role: 'student',
-        status: 'active',
-        telegramId: { not: null },
-      },
-      select: { id: true, telegramId: true },
-    });
-
-    return students
-      .filter((s) => !submittedIds.has(s.id) && s.telegramId !== null)
-      .map((s) => ({ studentId: s.id, telegramId: s.telegramId! }));
-  }
-
-  /**
-   * Given a Telegram user ID, returns the current open window info if any.
-   * Used by the bot to figure out which slot an incoming video counts for.
-   */
-  async pendingFromTelegram(telegramId: bigint): Promise<{
-    studentId: string;
-    type: 'morning' | 'evening';
-    windowEndsAt: Date;
-  } | null> {
-    const student = await this.prisma.user.findFirst({
-      where: { telegramId, role: 'student', status: 'active' },
-      select: { id: true },
-    });
-    if (!student) return null;
-
-    const { currentWindowOrLate, tashkentDateString: dateStr } =
-      await import('./lib/tashkent-time');
-    const slot = currentWindowOrLate();
-    if (!slot) return null;
-
-    const dateString = dateStr();
-    const date = dateStringToDate(dateString);
-
-    // Check if already submitted for this window. 'submitted' (on-time)
-    // is final — student can't resubmit. 'late' rows are also treated
-    // as final so a student doesn't keep re-uploading and resetting
-    // the late-vs-on-time flag.
-    const existing = await this.prisma.videoCheckin.findUnique({
-      where: {
-        studentId_date_type: { studentId: student.id, date, type: slot.type },
-      },
-    });
-    if (existing?.status === 'submitted' || existing?.status === 'late') {
-      return null;
-    }
-
-    // Calculate window end time in UTC. For an on-time slot we use the
-    // original boundary; for a late slot we use the late-grace cutoff
-    // (next-window-opens for morning, midnight for evening).
-    const now = new Date();
-    const windowEndsAt = new Date();
-    const { hour: nowHour, minute: nowMinute } = this.tashkentHourMinuteOf(now);
-    const nowTotalMin = nowHour * 60 + nowMinute;
-
-    if (slot.type === 'morning') {
-      const tashkentEndMin = slot.late ? 1080 : 390; // 18:00 vs 06:30
-      const diffMin = tashkentEndMin - nowTotalMin;
-      windowEndsAt.setMinutes(windowEndsAt.getMinutes() + diffMin);
-    } else {
-      const tashkentEndMin = slot.late ? 1440 : 1320; // 24:00 vs 22:00
-      const diffMin = tashkentEndMin - nowTotalMin;
-      windowEndsAt.setMinutes(windowEndsAt.getMinutes() + diffMin);
-    }
-
-    return { studentId: student.id, type: slot.type, windowEndsAt };
-  }
-
-  /**
-   * Nightly cleanup: null out telegramFileId for records older than 2 days
-   * (keeps today + yesterday). The row itself stays forever for history.
+   * Nightly cleanup: delete video files and null video_path for records
+   * older than yesterday (keeps today + yesterday). Row stays forever.
    */
   async pruneOldVideoFiles(): Promise<number> {
     const todayStr = tashkentDateString();
     const today = dateStringToDate(todayStr);
-    // Keep today (day 0) and yesterday (day -1). Prune day -2 and older.
     const cutoff = new Date(today);
-    cutoff.setDate(cutoff.getDate() - 1); // cutoff = yesterday; lt → day before yesterday and older
-    const result = await this.prisma.videoCheckin.updateMany({
-      where: { date: { lt: cutoff }, telegramFileId: { not: null } },
-      data: { telegramFileId: null },
+    cutoff.setDate(cutoff.getDate() - 1); // lt cutoff = day before yesterday and older
+
+    const toDelete = await this.prisma.videoCheckin.findMany({
+      where: { date: { lt: cutoff }, videoPath: { not: null } },
+      select: { id: true, videoPath: true },
     });
-    this.logger.log(`pruneOldVideoFiles: cleared ${result.count} file IDs`);
+
+    let deletedFiles = 0;
+    for (const row of toDelete) {
+      if (!row.videoPath) continue;
+      try {
+        fs.unlinkSync(this.fullPath(row.videoPath));
+        deletedFiles++;
+      } catch {
+        // File already gone — ignore
+      }
+    }
+
+    const result = await this.prisma.videoCheckin.updateMany({
+      where: { date: { lt: cutoff }, videoPath: { not: null } },
+      data: { videoPath: null },
+    });
+
+    this.logger.log(`pruneOldVideoFiles: deleted ${deletedFiles} files, cleared ${result.count} DB rows`);
     return result.count;
+  }
+
+  /** Update the video_path after the file has been renamed on disk. */
+  async updateVideoPath(checkinId: string, videoPath: string): Promise<void> {
+    await this.prisma.videoCheckin.update({
+      where: { id: checkinId },
+      data: { videoPath },
+    });
   }
 
   private tashkentMinutes(date: Date): number {
@@ -760,10 +638,7 @@ export class VideoCheckinService {
     const parts = formatter.formatToParts(date);
     return {
       hour: parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10),
-      minute: parseInt(
-        parts.find((p) => p.type === 'minute')?.value ?? '0',
-        10,
-      ),
+      minute: parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10),
     };
   }
 }

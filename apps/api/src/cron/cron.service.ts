@@ -9,7 +9,6 @@ import { NotificationTemplatesService } from '../notification-templates/notifica
 import { ClickHouseService } from '../clickhouse/clickhouse.service';
 import { KpiService, KPI_REASONS } from '../kpi/kpi.service';
 import { VideoCheckinService } from '../video-checkin/video-checkin.service';
-import { VideoCheckinHandler } from '../telegram/handlers/video-checkin.handler';
 import {
   tashkentDateString,
   dateStringToDate,
@@ -48,7 +47,6 @@ export class CronService {
     private templates: NotificationTemplatesService,
     private kpi: KpiService,
     private videoCheckin: VideoCheckinService,
-    private videoCheckinHandler: VideoCheckinHandler,
   ) {}
 
   @Cron('59 23 * * *', { name: 'payment_block' })
@@ -1329,229 +1327,6 @@ export class CronService {
   // ── Video check-in crons (Asia/Tashkent timezone) ──────────────────────────
 
   /**
-   * 04:55 Tashkent — "Ertalabki video vaqti yetdi" reminder.
-   * Fires 5 minutes before the morning window opens at 05:00.
-   * Only sent to students who haven't submitted morning video yet
-   * (always empty pre-window, but kept for consistency with evening).
-   */
-  @Cron('55 4 * * *', {
-    name: 'video_morning_start_reminder',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runVideoMorningStartReminder() {
-    this.logger.log('Cron: video_morning_start_reminder');
-    const bot = this.telegram.getBot();
-    if (!bot) return;
-    try {
-      const recipients =
-        await this.videoCheckin.getReminderRecipients('morning');
-      const msg =
-        'Ertalabki video tashlash vaqti yetdi (05:00–06:30). Iltimos, video yuboring!';
-      await Promise.allSettled(
-        recipients.map((r) =>
-          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
-        ),
-      );
-      this.logger.log(
-        `video_morning_start_reminder: ${recipients.length} ta yuborildi`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `video_morning_start_reminder failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /**
-   * 06:25 Tashkent — "5 daqiqa qoldi" morning last-call reminder.
-   */
-  @Cron('25 6 * * *', {
-    name: 'video_morning_lastcall_reminder',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runVideoMorningLastcallReminder() {
-    this.logger.log('Cron: video_morning_lastcall_reminder');
-    const bot = this.telegram.getBot();
-    if (!bot) return;
-    try {
-      const recipients =
-        await this.videoCheckin.getReminderRecipients('morning');
-      const msg =
-        'Ertalabki video vaqti tugayapti — 5 daqiqa qoldi! Tez video yuboring.';
-      await Promise.allSettled(
-        recipients.map((r) =>
-          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
-        ),
-      );
-      this.logger.log(
-        `video_morning_lastcall_reminder: ${recipients.length} ta yuborildi`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `video_morning_lastcall_reminder failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /**
-   * Filadmin morning-video status report (Telegram).
-   *
-   * Two runs per day to the linked Telegram of every active filadmin:
-   *   - 06:35 Tashkent — right after the on-time window (05:00–06:30)
-   *     closes: who has submitted vs. who hasn't yet.
-   *   - 10:00 Tashkent — follow-up: who submitted (incl. late) vs. who
-   *     still hasn't.
-   *
-   * One message per branch (reusing VideoCheckinService.getTodayList),
-   * sent to each filadmin in that branch who linked their Telegram.
-   */
-  private async sendFiladminVideoReports(label: string, finalMode: boolean) {
-    const filadmins = await this.prisma.user.findMany({
-      where: {
-        role: 'filadmin',
-        status: 'active',
-        telegramId: { not: null },
-        branchId: { not: null },
-      },
-      select: { telegramId: true, branchId: true },
-    });
-    if (filadmins.length === 0) {
-      this.logger.log(`filadmin video report (${label}): linked filadmin yo'q`);
-      return;
-    }
-
-    // Group filadmins by branch so getTodayList runs once per branch.
-    const byBranch = new Map<string, bigint[]>();
-    for (const f of filadmins) {
-      if (!f.branchId || f.telegramId === null) continue;
-      const arr = byBranch.get(f.branchId) ?? [];
-      arr.push(f.telegramId);
-      byBranch.set(f.branchId, arr);
-    }
-
-    const esc = (s: string) =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const fmtTime = (iso: string | null) => {
-      if (!iso) return '';
-      try {
-        return new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Asia/Tashkent',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }).format(new Date(iso));
-      } catch {
-        return '';
-      }
-    };
-    const dateStr = new Date().toLocaleDateString('en-CA', {
-      timeZone: 'Asia/Tashkent',
-    });
-    const CAP = 60;
-
-    let branchesSent = 0;
-    for (const [branchId, chatIds] of byBranch) {
-      try {
-        const branch = await this.prisma.branch.findUnique({
-          where: { id: branchId },
-          select: { name: true },
-        });
-        const rows = await this.videoCheckin.getTodayList(branchId);
-        if (rows.length === 0) continue;
-
-        const done = rows.filter(
-          (r) => r.morning === 'submitted' || r.morning === 'late',
-        );
-        const notDone = rows.filter(
-          (r) => r.morning !== 'submitted' && r.morning !== 'late',
-        );
-
-        const lines: string[] = [];
-        lines.push(`📹 <b>${esc(branch?.name ?? 'Filial')} — ${label}</b>`);
-        lines.push(`📅 ${dateStr}`);
-        lines.push(
-          `✅ Tashladi: <b>${done.length}</b>  ·  ${
-            finalMode ? '❌ Tashlamadi' : '⏳ Hali yo‘q'
-          }: <b>${notDone.length}</b>  ·  Jami: ${rows.length}`,
-        );
-
-        if (done.length > 0) {
-          lines.push('');
-          lines.push('✅ <b>Video tashlaganlar</b>');
-          done.slice(0, CAP).forEach((r) => {
-            const t = fmtTime(r.morningAt);
-            const lateTag = r.morning === 'late' ? ' <i>(kech)</i>' : '';
-            lines.push(`• ${esc(r.name)}${t ? ` — ${t}` : ''}${lateTag}`);
-          });
-          if (done.length > CAP)
-            lines.push(`…va yana ${done.length - CAP} ta`);
-        }
-
-        if (notDone.length > 0) {
-          lines.push('');
-          lines.push(
-            finalMode
-              ? '❌ <b>Video tashlamaganlar</b>'
-              : '⏳ <b>Hali tashlamaganlar</b>',
-          );
-          notDone.slice(0, CAP).forEach((r) => {
-            lines.push(`• ${esc(r.name)}`);
-          });
-          if (notDone.length > CAP)
-            lines.push(`…va yana ${notDone.length - CAP} ta`);
-        }
-
-        const text = lines.join('\n');
-        await Promise.allSettled(
-          chatIds.map((chatId) => this.telegram.sendMessage(chatId, text)),
-        );
-        branchesSent++;
-      } catch (err) {
-        this.logger.warn(
-          `filadmin video report branch ${branchId} failed: ${
-            (err as Error).message
-          }`,
-        );
-      }
-    }
-    this.logger.log(
-      `filadmin video report (${label}): ${branchesSent} ta filial yuborildi`,
-    );
-  }
-
-  /** 06:35 Tashkent — morning video status to filadmin Telegram. */
-  @Cron('35 6 * * *', {
-    name: 'filadmin_video_morning_0630',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runFiladminVideoMorning0630() {
-    this.logger.log('Cron: filadmin_video_morning_0630');
-    try {
-      await this.sendFiladminVideoReports('Ertalab 06:30 holati', false);
-    } catch (err) {
-      this.logger.error(
-        `filadmin_video_morning_0630 failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /** 10:00 Tashkent — follow-up morning video status to filadmin. */
-  @Cron('0 10 * * *', {
-    name: 'filadmin_video_morning_1000',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runFiladminVideoMorning1000() {
-    this.logger.log('Cron: filadmin_video_morning_1000');
-    try {
-      await this.sendFiladminVideoReports('Ertalab 10:00 — yakuniy', true);
-    } catch (err) {
-      this.logger.error(
-        `filadmin_video_morning_1000 failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /**
    * 18:00 Tashkent — mark missed for any student who hasn't submitted
    * a morning video AND hasn't sent a late one before the evening
    * window opens. The on-time morning window closed at 06:30 but late
@@ -1569,68 +1344,6 @@ export class CronService {
     } catch (err) {
       this.logger.error(
         `video_morning_mark_missed failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /**
-   * 17:55 Tashkent — "Kechki video vaqti yetdi" reminder.
-   */
-  @Cron('55 17 * * *', {
-    name: 'video_evening_start_reminder',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runVideoEveningStartReminder() {
-    this.logger.log('Cron: video_evening_start_reminder');
-    const bot = this.telegram.getBot();
-    if (!bot) return;
-    try {
-      const recipients =
-        await this.videoCheckin.getReminderRecipients('evening');
-      const msg =
-        'Kechki video tashlash vaqti yetdi (18:00–22:00). Iltimos, video yuboring!';
-      await Promise.allSettled(
-        recipients.map((r) =>
-          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
-        ),
-      );
-      this.logger.log(
-        `video_evening_start_reminder: ${recipients.length} ta yuborildi`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `video_evening_start_reminder failed: ${(err as Error).message}`,
-      );
-    }
-  }
-
-  /**
-   * 21:55 Tashkent — "5 daqiqa qoldi" evening last-call reminder.
-   */
-  @Cron('55 21 * * *', {
-    name: 'video_evening_lastcall_reminder',
-    timeZone: 'Asia/Tashkent',
-  })
-  async runVideoEveningLastcallReminder() {
-    this.logger.log('Cron: video_evening_lastcall_reminder');
-    const bot = this.telegram.getBot();
-    if (!bot) return;
-    try {
-      const recipients =
-        await this.videoCheckin.getReminderRecipients('evening');
-      const msg =
-        'Kechki video vaqti tugayapti — 5 daqiqa qoldi! Tez video yuboring.';
-      await Promise.allSettled(
-        recipients.map((r) =>
-          this.videoCheckinHandler.sendReminder(bot, r.telegramId, msg),
-        ),
-      );
-      this.logger.log(
-        `video_evening_lastcall_reminder: ${recipients.length} ta yuborildi`,
-      );
-    } catch (err) {
-      this.logger.error(
-        `video_evening_lastcall_reminder failed: ${(err as Error).message}`,
       );
     }
   }
@@ -1841,7 +1554,7 @@ export class CronService {
    * unset or the call fails, the superadmin churn list still works
    * (it's rule-based in ChurnService). We only log; never throw.
    */
-  // 03:00 Tashkent — null out telegramFileId for records older than 2 days
+  // 03:00 Tashkent — delete video files and null video_path for records older than 2 days
   @Cron('0 3 * * *', { name: 'video_prune', timeZone: 'Asia/Tashkent' })
   async pruneOldVideos() {
     await this.videoCheckin.pruneOldVideoFiles();

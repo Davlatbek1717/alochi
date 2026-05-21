@@ -13,14 +13,11 @@ import { GamificationTelegramHandler } from './handlers/gamification.handler';
 import { VideoCheckinHandler } from './handlers/video-checkin.handler';
 import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationTemplatesModule } from '../notification-templates/notification-templates.module';
-import { VideoCheckinModule } from '../video-checkin/video-checkin.module';
-
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
     NotificationTemplatesModule,
-    VideoCheckinModule,
   ],
   controllers: [TelegramController],
   providers: [

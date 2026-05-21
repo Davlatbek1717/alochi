@@ -4,32 +4,12 @@ import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Award,
-  GraduationCap,
-  Send,
-  ScanFace,
-  Pencil,
-  Save,
-  BookOpen,
-  Trophy,
-  Sparkles,
-  ChevronRight,
-  LogOut,
-  Mail,
-  Volume2,
-  Mic,
-} from 'lucide-react';
-import { StreakFlame } from '../_components/StreakFlame';
+import { ArrowLeft, ChevronRight, Save, LogOut, Video } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Mascot, Modal, Skeleton, Switch, useToast } from '@/components/ui';
+import { Modal, Switch, useToast } from '@/components/ui';
 import { isSoundEnabled, setSoundEnabled } from '@/lib/sound';
 import { getWebSpeechPreference, setWebSpeechPreference } from '@/lib/speech';
-import { AnimatedCounter } from '../_components/AnimatedCounter';
-import {
-  AchievementCarousel,
-  type Achievement,
-} from '../_components/AchievementCarousel';
+import { Ustoz } from '@/components/Ustoz';
 
 type Profile = {
   id: string;
@@ -54,21 +34,12 @@ type Certificate = { id: string; level?: string };
 type LettersResp = Array<{ id: string; owned: boolean }>;
 type CityData = { lessonsCompleted?: number };
 
-const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT ?? '';
 
-
-/**
- * Render the parent Telegram link as something a child can read at a
- * glance. Numeric IDs become "Ulangan" (with the raw ID hidden in the
- * tooltip for support), `@username` strings render as-is, and a missing
- * value renders as "Bogʻlanmagan".
- */
 function formatParentTelegram(value: string | null | undefined): string {
   if (!value) return 'Bogʻlanmagan';
   const trimmed = value.trim();
   if (!trimmed) return 'Bogʻlanmagan';
   if (trimmed.startsWith('@')) return trimmed;
-  // All-digit Telegram numeric IDs are useless to a child reader.
   if (/^\d+$/.test(trimmed)) return 'Ulangan';
   return trimmed;
 }
@@ -90,7 +61,7 @@ function formatMember(date?: string | null): string {
 export default function StudentProfilePage() {
   const router = useRouter();
   const toast = useToast();
-    const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [lessonsCompleted, setLessonsCompleted] = useState(0);
@@ -98,16 +69,12 @@ export default function StudentProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Edit modal
   const [editing, setEditing] = useState(false);
   const [parentTg, setParentTg] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // Logout confirmation
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  // Settings
   const [soundOn, setSoundOn] = useState(true);
   const [webSpeechOn, setWebSpeechOn] = useState(true);
   useEffect(() => {
@@ -159,11 +126,7 @@ export default function StudentProfilePage() {
     load();
   }, [load]);
 
-  // Refresh XP, streak and certificate data whenever the user returns to this
-  // tab so the profile never shows stale gamification numbers.
   useFocusRevalidate(load);
-
-  // Real-time: revalidate on certificate socket push.
   useRevalidateOnEvent(['cert:earned'], load);
 
   async function saveEdit() {
@@ -196,8 +159,6 @@ export default function StudentProfilePage() {
   }
 
   function confirmLogout() {
-    // Clear stored creds and bounce to login. Mirrors the auto-bounce
-    // path in apiRequest so the user lands in the same place.
     try {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -210,364 +171,277 @@ export default function StudentProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#fffaf0]">
-        <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-5 pb-6">
-          <Skeleton theme="light" className="h-8 w-48 mb-3" />
-          <Skeleton theme="light" className="h-4 w-32" />
-        </div>
-        <div className="px-4 pt-5 space-y-3 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-2xl" theme="light" />
-          ))}
-        </div>
+      <div className="sp-theme min-h-full p-4 space-y-4 max-w-lg mx-auto md:max-w-3xl">
+        <div className="sp-skeleton h-40 w-full" style={{ borderRadius: 'var(--r-4)' }} />
+        <div className="sp-skeleton h-24 w-full" style={{ borderRadius: 'var(--r-3)' }} />
+        <div className="sp-skeleton h-48 w-full" style={{ borderRadius: 'var(--r-3)' }} />
       </div>
     );
   }
 
   if (error || !profile) {
     return (
-      <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-6">
-        <div className="bg-white rounded-[20px] border-[1.5px] border-[#ede9e1] p-8 text-center max-w-sm w-full space-y-4">
-          <Mascot expression="sad" size={120} className="mx-auto" />
-          <p className="text-[#0f172a] font-bold text-lg">Profilni yuklab boʻlmadi</p>
-          <p className="text-[#64748b] text-sm">{error || 'Xato yuz berdi'}</p>
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-[#58cc02] text-white font-extrabold text-sm px-4 py-2.5 rounded-xl border-b-[3px] border-[#46a302] active:translate-y-[1px] active:border-b-[1px] hover:brightness-105 transition-all min-h-[44px]"
-            >
-              Qayta urinish
-            </button>
-            <Link
-              href="/student"
-              className="flex-1 inline-flex items-center justify-center gap-2 bg-white text-[#0f172a] font-extrabold text-sm px-4 py-2.5 rounded-xl border-[1.5px] border-[#ede9e1] hover:bg-[#fffaf0] transition-colors min-h-[44px]"
-            >
-              Bosh sahifaga
-            </Link>
-          </div>
+      <div className="sp-theme sp-paper-dots min-h-full flex items-center justify-center p-6">
+        <div
+          className="text-center max-w-sm w-full space-y-4 p-8"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+          }}
+        >
+          <Ustoz size={110} mood="oops" className="mx-auto" />
+          <p className="sp-display text-lg" style={{ color: 'var(--ink)' }}>
+            Profilni yuklab boʻlmadi
+          </p>
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+            {error || 'Xato yuz berdi'}
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="sp-display px-5 py-3 min-h-[44px]"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              border: '2px solid var(--leaf-deep)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: '0 4px 0 var(--leaf-deep)',
+              fontWeight: 700,
+            }}
+          >
+            Qayta urinish
+          </button>
         </div>
       </div>
     );
   }
 
-  const tgLink =
-    profile && BOT_USERNAME
-      ? `https://t.me/${BOT_USERNAME}?start=${profile.tenantId}_${profile.id}`
-      : '';
-
-
-  // Achievements only show when they unlock — no empty section.
-  const achievements: Achievement[] = [];
-  if ((streak?.streak ?? 0) >= 7) {
-    achievements.push({
-      id: 'streak-7',
-      title: '7 kun streak',
-      icon: <StreakFlame streak={streak?.streak ?? 0} size={22} showLabel={false} />,
-      rarity: (streak?.streak ?? 0) >= 30 ? 'legendary' : 'rare',
-    });
-  }
-  if (lessonsCompleted >= 10) {
-    achievements.push({
-      id: 'lessons-10',
-      title: `${lessonsCompleted} dars`,
-      icon: <BookOpen size={22} />,
-      rarity: lessonsCompleted >= 100 ? 'legendary' : 'common',
-    });
-  }
-  if (certs.length > 0) {
-    achievements.push({
-      id: 'cert',
-      title: 'Sertifikat',
-      icon: <Trophy size={22} />,
-      rarity: certs.some((c) => c.level === 'gold' || c.level === 'diamond')
-        ? 'legendary'
-        : 'common',
-    });
-  }
-  if (lettersOwned >= 12) {
-    achievements.push({
-      id: 'letters',
-      title: `${lettersOwned} harf`,
-      icon: <Sparkles size={22} />,
-      rarity: lettersOwned >= 30 ? 'legendary' : 'rare',
-    });
-  }
-  if (profile.faceEnrolled) {
-    achievements.push({
-      id: 'face',
-      title: 'Yuz ID',
-      icon: <ScanFace size={22} />,
-      rarity: 'common',
-    });
-  }
+  const member = profile.createdAt ? formatMember(profile.createdAt) : '';
 
   return (
-    <div className="min-h-full bg-[#fffaf0] pb-4">
-      {/* Hero banner — full width */}
-      <div className="bg-white border-b-[1.5px] border-[#ede9e1] px-5 pt-6 pb-5 md:px-8 md:py-8 relative overflow-hidden">
-        <div className="relative z-10 flex items-center gap-4 max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl">
+    <div className="sp-theme min-h-full pb-24">
+      <header className="px-4 pt-4 pb-3 flex items-center gap-3 max-w-lg mx-auto md:max-w-3xl">
+        <Link
+          href="/student"
+          aria-label="Orqaga"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <h1 className="sp-display text-xl leading-tight flex-1" style={{ color: 'var(--ink)' }}>
+          Profil
+        </h1>
+      </header>
+
+      <div className="px-4 max-w-lg mx-auto md:max-w-3xl space-y-4">
+        {/* Profile header card */}
+        <div
+          className="p-5 flex flex-col items-center gap-2 text-center"
+          style={{
+            background: 'var(--bone-2)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+            boxShadow: 'var(--shadow-1)',
+          }}
+        >
           <div
-            className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-[#0ea5e9] to-[#0369a1] border-[3px] border-white shadow-lg flex items-center justify-center text-white font-extrabold text-3xl md:text-4xl shrink-0"
-            aria-hidden
+            className="w-[88px] h-[88px] rounded-full flex items-center justify-center sp-display"
+            style={{
+              background: 'var(--gold-tint)',
+              border: '3px solid var(--gold-deep)',
+              color: 'var(--gold-deep)',
+              fontSize: 34,
+              fontWeight: 800,
+            }}
           >
             {profile.name.charAt(0).toUpperCase()}
           </div>
-          <div className="flex-1 min-w-0">
-            <h1
-              className="text-[#0f172a] text-2xl md:text-3xl font-extrabold truncate"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          <div className="sp-display text-xl" style={{ color: 'var(--ink)' }}>
+            {profile.name}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            <span
+              className="sp-mono text-[11px] px-2.5 py-1"
+              style={{
+                background: 'var(--leaf-tint)',
+                color: 'var(--leaf-deep)',
+                border: '1px solid var(--leaf-soft)',
+                borderRadius: 999,
+              }}
             >
-              {profile.name}
-            </h1>
-            <p className="text-[#64748b] text-xs md:text-sm truncate font-semibold">
               @{profile.login}
-            </p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              {profile.branch?.name && (
-                <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-[#64748b] bg-[#fffaf0] border border-[#ede9e1] rounded-full px-2 py-0.5 font-bold">
-                  <GraduationCap size={11} /> {profile.branch.name}
-                </span>
-              )}
-              {profile.group?.name && (
-                <span className="inline-flex items-center gap-1 text-[11px] md:text-xs text-[#46a302] bg-[#dcfce7] border border-[#bbf7d0] rounded-full px-2 py-0.5 font-bold">
-                  {profile.group.name}
-                </span>
-              )}
-              {profile.createdAt && formatMember(profile.createdAt) && (
-                <span className="text-[10px] md:text-xs text-[#94a3b8] uppercase tracking-wider font-bold">
-                  {formatMember(profile.createdAt)} dan
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="hidden sm:block shrink-0">
-            <Mascot expression="happy" size={72} className="md:!w-[96px] md:!h-[96px]" />
-          </div>
-        </div>
-      </div>
-
-      {/* Tablet: left sticky (avatar stats) + right (details) */}
-      <div className="max-w-lg mx-auto md:max-w-5xl lg:max-w-6xl px-4 md:px-6 pt-5 pb-6 md:flex md:gap-6 lg:gap-8 md:items-start">
-
-        {/* LEFT column — sticky on md+: league + stats */}
-        <div className="md:w-72 lg:w-80 shrink-0 md:sticky md:top-20 space-y-5 mb-5 md:mb-0">
-        {/* Lessons completed card */}
-        <div className="relative rounded-3xl p-4 md:p-5 text-white bg-gradient-to-br from-[#0ea5e9] to-[#0369a1] shadow-lg overflow-hidden md:hover:-translate-y-0.5 transition-all">
-          <div aria-hidden className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10" />
-          <div className="relative z-10 space-y-3">
-            <div className="flex items-center gap-3">
-              <BookOpen size={28} />
-              <div className="flex-1">
-                <p className="text-[10px] uppercase tracking-widest opacity-80 font-bold">
-                  Tugatilgan darslar
-                </p>
-                <p className="text-2xl font-extrabold leading-tight">
-                  {lessonsCompleted} ta dars
-                </p>
-              </div>
-            </div>
-            <p className="text-[11px] font-bold opacity-90">
-              Davom eting — har bir dars sizni oldinga olib boradi!
-            </p>
-          </div>
-        </div>
-
-        {/* Compact stat grid */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          <StatCard
-            icon={
-              <StreakFlame
-                streak={streak?.streak ?? 0}
-                hasShield={streak?.hasShield ?? false}
-                size={18}
-                showLabel={false}
-              />
-            }
-            value={streak?.streak ?? 0}
-            label="Streak"
-          />
-          <StatCard
-            icon={<BookOpen size={18} className="text-[#1cb0f6]" />}
-            value={lessonsCompleted}
-            label="Darslar"
-          />
-          <StatCard
-            icon={<Award size={18} className="text-[#ce82ff]" />}
-            value={certs.length}
-            label="Sertif."
-          />
-        </div>
-
-        {/* Achievements */}
-        {achievements.length > 0 && (
-          <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
-                Yutuqlar
-              </p>
-              <span className="text-[10px] text-[#94a3b8] font-bold">
-                {achievements.length} ta
-              </span>
-            </div>
-            <AchievementCarousel items={achievements.slice(0, 6)} />
-          </section>
-        )}
-        </div>{/* end LEFT column */}
-
-        {/* RIGHT column — details, settings, links */}
-        <div className="flex-1 min-w-0 space-y-5">
-        {/* Profile fields with edit button */}
-        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
-              Maʼlumotlar
-            </p>
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-1 text-xs font-bold text-[#46a302] hover:underline min-h-[44px] px-2"
-            >
-              <Pencil size={12} /> Tahrirlash
-            </button>
-          </div>
-          <div className="space-y-3">
-            <Field
-              label={'Ota-ona Telegram'}
-              value={formatParentTelegram(profile.parentTelegramId)}
-            />
-            <Field
-              label={'Tug\'ilgan sana'}
-              value={
-                profile.birthDate
-                  ? profile.birthDate.slice(0, 10)
-                  : 'Belgilanmagan'
-              }
-            />
-            {tgLink && !profile.parentTelegramLinked && (
-              <a
-                href={tgLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-[#1cb0f6]/10 border border-[#1cb0f6]/20 rounded-xl px-3 py-2.5 flex items-center gap-2 hover:bg-[#1cb0f6]/15 transition-colors"
+            </span>
+            {profile.branch?.name && (
+              <span
+                className="sp-mono text-[11px] px-2.5 py-1"
+                style={{
+                  background: 'var(--paper-2)',
+                  color: 'var(--ink-2)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 999,
+                }}
               >
-                <Send size={14} className="text-[#1cb0f6] shrink-0" />
-                <span className="text-xs font-bold text-[#0369a1] flex-1">
-                  Ota-onangizni Telegram orqali ulang
-                </span>
-                <ChevronRight size={14} className="text-[#1cb0f6] shrink-0" />
-              </a>
+                {profile.group?.name ? `${profile.group.name} · ` : ''}
+                {profile.branch.name}
+              </span>
             )}
           </div>
-        </section>
-
-        {/* Settings */}
-        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5 space-y-4">
-          <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
-            Sozlamalar
-          </p>
-          <SettingRow
-            icon={<Volume2 size={16} className="text-[#fbbf24]" />}
-            title="Ovoz effektlari"
-            sub="Toʻgʻri javob, xato va daraja ovozlari"
-            checked={soundOn}
-            onChange={toggleSound}
-            label="Ovoz effektlari"
-          />
-          <div className="border-t border-[#f3eedf]" />
-          <SettingRow
-            icon={<Mic size={16} className="text-[#46a302]" />}
-            title="Brauzer ovozi (Web Speech)"
-            sub="Tezkor brauzer talaffuzi va ovoz aniqlash"
-            checked={webSpeechOn}
-            onChange={toggleWebSpeech}
-            label="Brauzer ovozi"
-          />
-        </section>
-
-        {/* Telegram bot linking section */}
-        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-5">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-[#1cb0f6]/10 flex items-center justify-center">
-              <Send size={15} className="text-[#1cb0f6]" />
+          {member && (
+            <div className="sp-eyebrow" style={{ fontSize: 9 }}>
+              {member} dan beri
             </div>
-            <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
-              Telegram bot ulash
+          )}
+
+          <div className="grid grid-cols-3 gap-2.5 w-full mt-2">
+            {[
+              { k: 'Zanjir', v: streak?.streak ?? 0, sub: 'kun' },
+              { k: 'Qadam', v: lessonsCompleted, sub: 'dars' },
+              { k: 'Sertifikat', v: certs.length, sub: 'ta' },
+            ].map((s) => (
+              <div
+                key={s.k}
+                className="text-center p-2.5"
+                style={{ background: 'var(--paper-2)', borderRadius: 'var(--r-2)' }}
+              >
+                <div className="sp-display text-xl" style={{ color: 'var(--leaf-deep)' }}>
+                  {s.v}
+                </div>
+                <div className="sp-eyebrow" style={{ fontSize: 9 }}>
+                  {s.k} · {s.sub}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Daily video checkin link */}
+        <Link
+          href="/student/checkin"
+          className="flex items-center gap-4 p-4"
+          style={{
+            background: 'var(--leaf-tint)',
+            border: '1.5px solid var(--leaf-soft)',
+            borderRadius: 'var(--r-3)',
+          }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'var(--leaf)', color: 'var(--bone)' }}
+          >
+            <Video size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="sp-display text-sm" style={{ color: 'var(--leaf-deep)' }}>
+              Kunlik video yuborish
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--leaf-deep)', opacity: 0.7 }}>
+              Ertalab 05:00–06:30 • Kechki 18:00–22:00
             </p>
           </div>
-          {profile.telegramId ? (
-            <div className="flex flex-col gap-1">
-              <p className="text-sm font-bold text-emerald-700 flex items-center gap-1.5">
-                Bot ulangan. Har kuni video tashlang.
-              </p>
-              <p className="text-xs text-[#64748b]">
-                05:00–06:30 ertalabki video • 18:00–22:00 kechki video
-              </p>
-            </div>
-          ) : BOT_USERNAME ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs text-[#64748b] leading-relaxed">
-                Har kuni ikki marta video tashlashingiz kerak:<br />
-                <strong>Ertalab 05:00–06:30</strong> va <strong>Kechki 18:00–22:00</strong>.<br />
-                Faqat bot ichida yozilgan video qabul qilinadi (forward qilinmagan).
-              </p>
-              <a
-                href={`https://t.me/${BOT_USERNAME}?start=link_${profile.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-[#1cb0f6] text-white font-extrabold text-sm px-4 py-2.5 rounded-xl hover:bg-[#0ea5e9] transition-colors min-h-[44px]"
-              >
-                <Send size={14} /> Botni ulash
-              </a>
-            </div>
-          ) : null}
+          <ChevronRight size={16} style={{ color: 'var(--leaf-deep)' }} />
+        </Link>
+
+        {/* Settings list */}
+        <section
+          className="overflow-hidden"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-3)',
+          }}
+        >
+          <div className="sp-eyebrow px-4 pt-3.5 pb-1">Sozlamalar</div>
+          <SettingToggle
+            emoji="🔔"
+            label="Ota-ona Telegram"
+            value={formatParentTelegram(profile.parentTelegramId)}
+          />
+          <SettingToggle
+            emoji="🎂"
+            label="Tug‘ilgan sana"
+            value={profile.birthDate ? profile.birthDate.slice(0, 10) : 'Belgilanmagan'}
+          />
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+            style={{ borderTop: '1px solid var(--line)' }}
+          >
+            <span style={{ fontSize: 20 }}>✏️</span>
+            <span className="flex-1 text-sm" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+              Ma’lumotlarni tahrirlash
+            </span>
+            <ChevronRight size={16} style={{ color: 'var(--ink-4)' }} />
+          </button>
+          <div
+            className="flex items-center gap-3 px-4 py-3"
+            style={{ borderTop: '1px solid var(--line)' }}
+          >
+            <span style={{ fontSize: 20 }}>🎵</span>
+            <span className="flex-1 text-sm" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+              Ovoz effektlari
+            </span>
+            <Switch checked={soundOn} onChange={toggleSound} label="Ovoz effektlari" />
+          </div>
+          <div
+            className="flex items-center gap-3 px-4 py-3"
+            style={{ borderTop: '1px solid var(--line)' }}
+          >
+            <span style={{ fontSize: 20 }}>🎙</span>
+            <span className="flex-1 text-sm" style={{ color: 'var(--ink)', fontWeight: 500 }}>
+              Brauzer ovozi
+            </span>
+            <Switch checked={webSpeechOn} onChange={toggleWebSpeech} label="Brauzer ovozi" />
+          </div>
         </section>
 
-        {/* Account quick links */}
-        <section className="bg-white rounded-3xl border-[1.5px] border-[#ede9e1] p-2 divide-y divide-[#f3eedf]">
-          <AccountRow
-            href="/student/certificates"
-            icon={<Award size={18} className="text-[#fbbf24]" />}
-            title="Sertifikatlar"
-            sub={`${certs.length} ta sertifikat`}
-          />
-          <AccountRow
-            href="/student/letters"
-            icon={<Mail size={18} className="text-[#10b981]" />}
-            title="Harflar kolleksiyasi"
-            sub={`${lettersOwned} ta to'plangan`}
-          />
-          <AccountRow
-            href="/student/groups"
-            icon={<GraduationCap size={18} className="text-[#1cb0f6]" />}
-            title="Mening guruhim"
-            sub={profile.group?.name ?? "Guruh tayinlanmagan"}
-          />
+        {/* Account links */}
+        <section
+          className="overflow-hidden"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-3)',
+          }}
+        >
+          <AccountRow href="/student/checkin" emoji="📹" title="Kunlik video" sub="Ertalab va kechki" first />
+          <AccountRow href="/student/certificates" emoji="🏅" title="Sertifikatlar" sub={`${certs.length} ta`} />
+          <AccountRow href="/student/letters" emoji="🔤" title="Harflar kolleksiyasi" sub={`${lettersOwned} ta`} />
+          <AccountRow href="/student/groups" emoji="👥" title="Mening guruhim" sub={profile.group?.name ?? 'tayinlanmagan'} />
           <AccountRow
             href="/profile/enroll"
-            icon={
-              <ScanFace
-                size={18}
-                className={
-                  profile.faceEnrolled ? 'text-[#10b981]' : 'text-[#94a3b8]'
-                }
-              />
-            }
-            title={profile.faceEnrolled ? 'Yuz ID — faol' : 'Yuz ID ro\'yxat'}
-            sub={profile.faceEnrolled ? "Davomatga ulangan" : "Bir martalik ro'yxatdan o'tish"}
+            emoji="🪪"
+            title={profile.faceEnrolled ? 'Yuz ID — faol' : "Yuz ID ro‘yxat"}
+            sub={profile.faceEnrolled ? 'Davomatga ulangan' : "Bir martalik ro‘yxat"}
           />
         </section>
 
         {/* Logout */}
         <button
           onClick={() => setLogoutOpen(true)}
-          className="w-full bg-white rounded-3xl border-[1.5px] border-[#fecaca] p-4 flex items-center justify-center gap-2 text-sm font-extrabold text-[#dc2626] hover:bg-rose-50 transition-colors min-h-[44px]"
+          className="sp-display w-full flex items-center justify-center gap-2 py-3.5 min-h-[44px]"
+          style={{
+            background: 'var(--bone)',
+            color: 'var(--ember-deep)',
+            border: '1.5px solid var(--ember-soft)',
+            borderRadius: 'var(--r-3)',
+            fontWeight: 700,
+          }}
         >
-          <LogOut size={16} /> {'Profildan chiqish'}
+          <LogOut size={16} /> Profildan chiqish
         </button>
-        </div>{/* end RIGHT column */}
-      </div>{/* end 2-col flex */}
 
-      {/* Edit profile modal */}
+        <div
+          className="sp-mono text-center text-[11px] pt-2"
+          style={{ color: 'var(--ink-4)' }}
+        >
+          A’lojon{profile.branch?.name ? ` · ${profile.branch.name}` : ''}
+        </div>
+      </div>
+
+      {/* Edit modal */}
       <Modal
         open={editing}
         onClose={() => setEditing(false)}
@@ -578,14 +452,22 @@ export default function StudentProfilePage() {
           <>
             <button
               onClick={() => setEditing(false)}
-              className="px-4 py-2 text-sm font-bold text-[#64748b] hover:text-[#0f172a]"
+              className="px-4 py-2 text-sm font-bold"
+              style={{ color: 'var(--ink-3)' }}
             >
               Bekor qilish
             </button>
             <button
               onClick={saveEdit}
               disabled={saving}
-              className="px-4 py-2 rounded-xl text-sm font-extrabold text-white bg-[#58cc02] border-b-[3px] border-[#46a302] hover:brightness-105 active:translate-y-[1px] active:border-b-[1px] disabled:bg-[#e8e0d0] disabled:border-[#cbbf9c] flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl text-sm sp-display flex items-center gap-1.5 disabled:opacity-60"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                boxShadow: '0 3px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
             >
               <Save size={14} /> {saving ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
@@ -596,7 +478,7 @@ export default function StudentProfilePage() {
           <div>
             <label
               htmlFor="parent-tg"
-              className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1"
+              className="sp-eyebrow block mb-1.5"
             >
               Ota-ona Telegram ID
             </label>
@@ -605,26 +487,24 @@ export default function StudentProfilePage() {
               value={parentTg}
               onChange={(e) => setParentTg(e.target.value)}
               placeholder="@username yoki raqam"
-              className={`w-full bg-[#fffaf0] border-[1.5px] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none transition-colors ${
-                parentTg && !/^(@[a-zA-Z0-9_]{4,}|\d{5,})$/.test(parentTg.trim())
-                  ? 'border-rose-400 focus:border-rose-500'
-                  : 'border-[#ede9e1] focus:border-[#46a302]'
-              }`}
+              className="w-full px-3 py-2.5 text-sm outline-none"
+              style={{
+                background: 'var(--bone-2)',
+                border: `1.5px solid ${
+                  parentTg && !/^(@[a-zA-Z0-9_]{4,}|\d{5,})$/.test(parentTg.trim())
+                    ? 'var(--ember)'
+                    : 'var(--line-2)'
+                }`,
+                borderRadius: 'var(--r-2)',
+                color: 'var(--ink)',
+              }}
             />
-            <p className="mt-1 text-[11px] text-[#94a3b8] font-semibold">
-              Format: @username (kamida 4 harf) yoki raqamli ID (kamida 5 ta raqam)
+            <p className="text-[11px] mt-1" style={{ color: 'var(--ink-4)' }}>
+              Format: @username (4+ harf) yoki raqamli ID (5+ raqam)
             </p>
-            {parentTg && !/^(@[a-zA-Z0-9_]{4,}|\d{5,})$/.test(parentTg.trim()) && (
-              <p className="mt-0.5 text-[11px] text-rose-500 font-semibold">
-                Noto&apos;g&apos;ri format. Masalan: @dadasi yoki 123456789
-              </p>
-            )}
           </div>
           <div>
-            <label
-              htmlFor="birth-date"
-              className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1"
-            >
+            <label htmlFor="birth-date" className="sp-eyebrow block mb-1.5">
               Tugʻilgan sana
             </label>
             <input
@@ -632,13 +512,19 @@ export default function StudentProfilePage() {
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full bg-[#fffaf0] border-[1.5px] border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#46a302]"
+              className="w-full px-3 py-2.5 text-sm outline-none"
+              style={{
+                background: 'var(--bone-2)',
+                border: '1.5px solid var(--line-2)',
+                borderRadius: 'var(--r-2)',
+                color: 'var(--ink)',
+              }}
             />
           </div>
         </div>
       </Modal>
 
-      {/* Logout confirmation */}
+      {/* Logout modal */}
       <Modal
         open={logoutOpen}
         onClose={() => setLogoutOpen(false)}
@@ -649,20 +535,28 @@ export default function StudentProfilePage() {
           <>
             <button
               onClick={() => setLogoutOpen(false)}
-              className="px-4 py-2 text-sm font-bold text-[#64748b] hover:text-[#0f172a]"
+              className="px-4 py-2 text-sm font-bold"
+              style={{ color: 'var(--ink-3)' }}
             >
               Bekor qilish
             </button>
             <button
               onClick={confirmLogout}
-              className="px-4 py-2 rounded-xl text-sm font-extrabold text-white bg-rose-600 border-b-[3px] border-rose-700 hover:brightness-105 active:translate-y-[1px] active:border-b-[1px] flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl text-sm sp-display flex items-center gap-1.5"
+              style={{
+                background: 'var(--ember)',
+                color: 'var(--bone)',
+                border: '2px solid var(--ember-deep)',
+                boxShadow: '0 3px 0 var(--ember-deep)',
+                fontWeight: 700,
+              }}
             >
               <LogOut size={14} /> Chiqish
             </button>
           </>
         }
       >
-        <p className="text-sm text-[#64748b] font-semibold leading-relaxed">
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--ink-3)' }}>
           Qayta kirish uchun login va parolingizni kiritishingiz kerak bo&apos;ladi.
         </p>
       </Modal>
@@ -670,98 +564,60 @@ export default function StudentProfilePage() {
   );
 }
 
-function StatCard({
-  icon,
+function SettingToggle({
+  emoji,
+  label,
   value,
-  label,
 }: {
-  icon: React.ReactNode;
-  value: number;
+  emoji: string;
   label: string;
+  value: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 text-center motion-safe:[animation:count-up-fade_400ms_ease-out] min-w-0">
-      <div className="flex justify-center mb-1">{icon}</div>
-      <p className="text-lg font-extrabold text-[#0f172a] leading-tight">
-        <AnimatedCounter value={value} />
-      </p>
-      <p className="text-[10px] text-[#64748b] uppercase tracking-wider font-bold truncate">
+    <div
+      className="flex items-center gap-3 px-4 py-3.5"
+      style={{ borderTop: '1px solid var(--line)' }}
+    >
+      <span style={{ fontSize: 20 }}>{emoji}</span>
+      <span className="flex-1 text-sm" style={{ color: 'var(--ink)', fontWeight: 500 }}>
         {label}
-      </p>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider mb-0.5">
-        {label}
-      </p>
-      <p className="text-sm text-[#0f172a] font-semibold">{value}</p>
-    </div>
-  );
-}
-
-function SettingRow({
-  icon,
-  title,
-  sub,
-  checked,
-  onChange,
-  label,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-start gap-3 flex-1 min-w-0">
-        <div className="w-9 h-9 rounded-xl bg-[#fffaf0] border border-[#ede9e1] flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-extrabold text-[#0f172a]">{title}</p>
-          <p className="text-xs text-[#64748b] font-semibold mt-0.5 leading-snug">
-            {sub}
-          </p>
-        </div>
-      </div>
-      <Switch checked={checked} onChange={onChange} label={label} />
+      </span>
+      <span className="text-xs" style={{ color: 'var(--ink-3)' }}>
+        {value}
+      </span>
     </div>
   );
 }
 
 function AccountRow({
   href,
-  icon,
+  emoji,
   title,
   sub,
+  first,
 }: {
   href: string;
-  icon: React.ReactNode;
+  emoji: string;
   title: string;
   sub: string;
+  first?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 p-3 hover:bg-[#fffaf0] transition-colors rounded-2xl"
+      className="flex items-center gap-3 px-4 py-3.5"
+      style={{ borderTop: first ? 'none' : '1px solid var(--line)' }}
     >
-      <div className="w-10 h-10 rounded-xl bg-[#fffaf0] border border-[#ede9e1] flex items-center justify-center shrink-0">
-        {icon}
-      </div>
+      <span style={{ fontSize: 20 }}>{emoji}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-extrabold text-[#0f172a] truncate">{title}</p>
-        <p className="text-[11px] text-[#64748b] font-semibold truncate">
+        <p className="sp-display text-sm truncate" style={{ color: 'var(--ink)' }}>
+          {title}
+        </p>
+        <p className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>
           {sub}
         </p>
       </div>
-      <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
+      <ChevronRight size={16} style={{ color: 'var(--ink-4)' }} />
     </Link>
   );
 }

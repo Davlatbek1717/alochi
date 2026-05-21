@@ -1,20 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Context } from 'grammy';
 import { PrismaService } from '../../prisma/prisma.service';
-import { VideoCheckinService } from '../../video-checkin/video-checkin.service';
-import {
-  currentWindowOrLate,
-  nextWindowLabel,
-} from '../../video-checkin/lib/tashkent-time';
 
 @Injectable()
 export class VideoCheckinHandler {
   private readonly logger = new Logger(VideoCheckinHandler.name);
 
-  constructor(
-    private prisma: PrismaService,
-    private videoCheckinService: VideoCheckinService,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   /**
    * Handles `/start link_<userId>` payload — links the student's Telegram
@@ -55,19 +47,8 @@ export class VideoCheckinHandler {
       if (user.role === 'student') {
         await ctx.reply(
           `Salom, ${user.name}! Profilingiz muvaffaqiyatli bog'landi.\n\n` +
-            `Endi har kuni:\n` +
-            `• 05:00–06:30 — ertalabki video\n` +
-            `• 18:00–22:00 — kechki video\n\n` +
-            `Video yuboring: bot ichida dumaloq yoki to'g'riburchak video yozing. ` +
-            `Forward qilingan video qabul qilinmaydi.`,
-        );
-      } else if (user.role === 'filadmin') {
-        await ctx.reply(
-          `Salom, ${user.name}! Hisobingiz bog'landi.\n\n` +
-            `Endi har kuni filialingiz bo'yicha ertalabki video hisobotini ` +
-            `shu yerda olasiz:\n` +
-            `• 06:35 — kim video tashladi / tashlamadi\n` +
-            `• 10:00 — yakuniy holat`,
+            `Kunlik video yuborish endi A'lojon saytida: alojon.uz\n` +
+            `Profilingizga kiring va "Kunlik video" bo'limiga o'ting.`,
         );
       } else {
         await ctx.reply(
@@ -82,138 +63,24 @@ export class VideoCheckinHandler {
   }
 
   /**
-   * Handles incoming video or video_note messages.
+   * Video upload has moved to the web app. Inform and redirect.
    */
   async handleVideo(ctx: Context): Promise<void> {
-    const telegramId = ctx.from?.id;
-    if (!telegramId) return;
-
-    // 1. Lookup student by telegramId
-    const student = await this.prisma.user.findFirst({
-      where: {
-        telegramId: BigInt(telegramId),
-        role: 'student',
-        status: 'active',
-      },
-      select: { id: true, name: true },
-    });
-
-    if (!student) {
-      await ctx.reply(
-        "Profilingiz hali bog'lanmagan. A'lojon profilingizdan 'Botni ulash' tugmasini bosing.",
-      );
-      return;
-    }
-
-    // 2. Check if forwarded
-    const msg = ctx.message;
-    if (!msg) return;
-
-    const isForwarded =
-      'forward_origin' in msg ||
-      'forward_from' in msg ||
-      'forward_from_chat' in msg ||
-      'forward_sender_name' in msg ||
-      'forward_date' in msg;
-
-    if (isForwarded) {
-      await ctx.reply(
-        "Forward qilingan video qabul qilinmaydi. Iltimos, bot ichida to'g'ridan-to'g'ri video yozing.",
-      );
-      return;
-    }
-
-    // 3. Check current window — accepts late submissions too. A slot is
-    //    open for late grace until the next slot opens (morning) or until
-    //    midnight (evening).
-    const slot = currentWindowOrLate();
-    if (!slot) {
-      await ctx.reply(
-        'Hozir video tashlash vaqti emas.\n\nVaqtlar:\n• Ertalab: 05:00–06:30\n• Kechki: 18:00–22:00\n\nKechikkan videolar ham qabul qilinadi (kechki vaqti boshlangunga qadar yoki yarim tunga qadar).',
-      );
-      return;
-    }
-
-    // 4. Check if already submitted for this window today
-    const pending = await this.videoCheckinService.pendingFromTelegram(
-      BigInt(telegramId),
+    await ctx.reply(
+      "Video yuborish endi A'lojon saytida mavjud.\n\nalojon.uz ga kiring → Profil → Kunlik video.",
     );
-    if (!pending) {
-      const nextLabel = nextWindowLabel(slot.type);
-      await ctx.reply(
-        `Bu vaqt uchun videoni allaqachon yubordingiz. Keyingi vaqt: ${nextLabel}.`,
-      );
-      return;
-    }
-
-    // 5. Extract fileId + duration; enforce 90s limit
-    let fileId: string;
-    let kind: 'video_note' | 'video';
-    let durationSec: number | null = null;
-
-    if (msg.video_note) {
-      fileId = msg.video_note.file_id;
-      kind = 'video_note';
-      durationSec = msg.video_note.duration ?? null;
-    } else if (msg.video) {
-      fileId = msg.video.file_id;
-      kind = 'video';
-      durationSec = msg.video.duration ?? null;
-    } else {
-      // Shouldn't happen given the handler filter, but guard anyway
-      await ctx.reply('Faqat video xabar qabul qilinadi.');
-      return;
-    }
-
-    if (durationSec !== null && durationSec > 90) {
-      await ctx.reply(
-        "Video juda uzun. 90 sekundgacha bo'lishi kerak. Iltimos, qisqaroq video yuboring.",
-      );
-      return;
-    }
-
-    // 6. Record and reply
-    try {
-      await this.videoCheckinService.recordSubmission(
-        student.id,
-        slot.type,
-        fileId,
-        kind,
-        durationSec,
-        slot.late,
-      );
-
-      const nextLabel = nextWindowLabel(slot.type);
-      if (slot.late) {
-        await ctx.reply(
-          `Video kechikib qabul qilindi (kechikdi deb belgilandi). Keyingi safar vaqtida yuboring. Yana ${nextLabel} da kutamiz.`,
-        );
-      } else {
-        await ctx.reply(`Qabul qilindi! Yana ${nextLabel} da kutamiz.`);
-      }
-    } catch (err) {
-      this.logger.error(`recordSubmission failed for ${student.id}: ${err}`);
-      await ctx.reply("Xatolik yuz berdi. Iltimos, qayta urinib ko'ring.");
-    }
   }
 
-  /**
-   * Handles non-video messages — instructs the student to send a video.
-   * Should only be called for students (not commands).
-   */
   async handleNonVideo(ctx: Context): Promise<void> {
     const telegramId = ctx.from?.id;
     if (!telegramId) return;
-
-    // Only reply if this user is a linked student (avoid spamming all users)
     const isStudent = await this.prisma.user.findFirst({
       where: { telegramId: BigInt(telegramId), role: 'student' },
       select: { id: true },
     });
     if (!isStudent) return;
-
     await ctx.reply(
-      'Faqat video xabar qabul qilinadi. Bot ichida video yoki dumaloq video yozing.',
+      "Video yuborish endi A'lojon saytida mavjud.\n\nalojon.uz ga kiring → Profil → Kunlik video.",
     );
   }
 
