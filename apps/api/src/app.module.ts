@@ -52,6 +52,7 @@ import { I18nModule } from './i18n/i18n.module';
 import { VideoCheckinModule } from './video-checkin/video-checkin.module';
 import { StudyTimeModule } from './study-time/study-time.module';
 import { GroupsModule } from './groups/groups.module';
+import { DevicesModule } from './devices/devices.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -129,6 +130,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     VideoCheckinModule,
     StudyTimeModule,
     GroupsModule,
+    DevicesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

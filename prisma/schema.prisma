@@ -1455,3 +1455,128 @@ model StudyTimeDaily {
   @@index([date])
   @@map("study_time_daily")
 }
+
+// ---- FAZA 2: DEVICE MANAGEMENT ----
+
+enum DeviceStatus {
+  active
+  inactive
+  lost
+  damaged
+  retired
+  suspicious
+}
+
+model Device {
+  id              String       @id @default(cuid())
+  serialNumber    String       @unique
+  imei            String?
+  macAddress      String?
+  manufacturer    String?
+  model           String?
+  osVersion       String?
+  appVersion      String?
+  androidId       String?      @unique
+  enrollmentToken String?      @unique
+  purchasedAt     DateTime?
+  branchId        String
+  tenantId        String
+  status          DeviceStatus @default(active)
+  lastSeenAt      DateTime?
+  batteryLevel    Int?
+  storageFreePct  Int?
+  policyVersion   Int          @default(1)
+  fcmToken        String?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  enrollments DeviceEnrollment[]
+  events      DeviceEvent[]
+  commands    DeviceCommand[]
+  healthPings DeviceHealthPing[]
+
+  @@index([branchId, status])
+  @@index([tenantId, status])
+  @@index([lastSeenAt])
+}
+
+model DeviceEnrollment {
+  id           String    @id @default(cuid())
+  deviceId     String
+  studentId    String
+  enrolledAt   DateTime  @default(now())
+  unenrolledAt DateTime?
+  active       Boolean   @default(true)
+  enrolledBy   String
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, active])
+  @@index([studentId, active])
+}
+
+model DevicePolicy {
+  id                      String   @id @default(cuid())
+  branchId                String   @unique
+  allowedHoursStart       String   @default("06:00")
+  allowedHoursEnd         String   @default("23:00")
+  allowedDomains          String[]
+  screenshotIntervalSec   Int      @default(300)
+  cameraIntervalSec       Int      @default(900)
+  pingIntervalSec         Int      @default(60)
+  wifiSsidWhitelist       String[]
+  blockCameraOutsideHours Boolean  @default(true)
+  forceUpdateMinVersion   String?
+  policyVersion           Int      @default(1)
+  updatedAt               DateTime @updatedAt
+}
+
+model DeviceEvent {
+  id         String   @id @default(cuid())
+  deviceId   String
+  type       String
+  severity   String   @default("info")
+  payload    Json?
+  occurredAt DateTime
+  receivedAt DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, occurredAt])
+  @@index([type, occurredAt])
+}
+
+model DeviceCommand {
+  id            String    @id @default(cuid())
+  deviceId      String
+  type          String
+  payload       Json?
+  status        String    @default("pending")
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  sentAt        DateTime?
+  ackedAt       DateTime?
+  completedAt   DateTime?
+  resultPayload Json?
+  expiresAt     DateTime
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, status])
+}
+
+model DeviceHealthPing {
+  id             String   @id @default(cuid())
+  deviceId       String
+  batteryLevel   Int?
+  storageFreePct Int?
+  networkType    String?
+  signalStrength Int?
+  appVersion     String?
+  pingedAt       DateTime @default(now())
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([deviceId, pingedAt])
+}

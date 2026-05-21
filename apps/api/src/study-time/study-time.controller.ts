@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { StudyTimeService } from './study-time.service';
@@ -34,9 +35,19 @@ export class StudyTimeController {
   @Post('ping')
   @Roles(UserRole.student)
   ping(
-    @Body() body: { deltaSeconds?: number },
+    @Body() body: { deltaSeconds?: number; clientTimestamp?: number },
     @Request() req: any,
   ) {
+    if (body?.clientTimestamp !== undefined) {
+      const driftMs = Math.abs(Date.now() - body.clientTimestamp);
+      if (driftMs > 5 * 60 * 1000) {
+        throw new BadRequestException({
+          code: 'CLOCK_SKEW',
+          message: 'Qurilma vaqti server vaqtidan 5 daqiqadan ko\'proq farq qiladi',
+          driftSeconds: Math.round(driftMs / 1000),
+        });
+      }
+    }
     return this.studyTime.recordPing(
       {
         userId: req.user.userId,
