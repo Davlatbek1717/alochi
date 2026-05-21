@@ -210,6 +210,53 @@ export class ProgressService {
   }
 
   /**
+   * Records the result of a self-scored practice exam.
+   * practiceScore is always updated to the latest attempt.
+   * practicePassedAt is set only on the first passing attempt (score >= 70)
+   * so the timestamp reflects when the student first proved readiness.
+   */
+  async savePracticeScore(
+    studentId: string,
+    lessonId: string,
+    score: number,
+  ): Promise<{ practiceScore: number; practicePassedAt: Date | null; passed: boolean }> {
+    const PASS_THRESHOLD = 70;
+    const clamped = Math.max(0, Math.min(100, Math.round(score)));
+    const passed = clamped >= PASS_THRESHOLD;
+
+    const existing = await this.prisma.studentProgress.findUnique({
+      where: { studentId_lessonId: { studentId, lessonId } },
+      select: { practicePassedAt: true },
+    });
+
+    const newPassedAt =
+      passed && !existing?.practicePassedAt ? new Date() : (existing?.practicePassedAt ?? null);
+
+    const row = await this.prisma.studentProgress.upsert({
+      where: { studentId_lessonId: { studentId, lessonId } },
+      create: {
+        studentId,
+        lessonId,
+        sessionCount: 0,
+        homeCompleted: false,
+        practiceScore: clamped,
+        practicePassedAt: newPassedAt,
+      },
+      update: {
+        practiceScore: clamped,
+        ...(passed && !existing?.practicePassedAt ? { practicePassedAt: new Date() } : {}),
+      },
+      select: { practiceScore: true, practicePassedAt: true },
+    });
+
+    return {
+      practiceScore: row.practiceScore ?? clamped,
+      practicePassedAt: row.practicePassedAt,
+      passed,
+    };
+  }
+
+  /**
    * Start an academy session for a student. Creates a StudentProgress row
    * (or updates lastActivityAt if one already exists). Returns the row.
    */

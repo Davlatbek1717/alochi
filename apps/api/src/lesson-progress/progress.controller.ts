@@ -51,6 +51,19 @@ export class ProgressController {
     );
   }
 
+  @Post(':lessonId/practice-exam')
+  @Roles(UserRole.student, UserRole.tester)
+  async savePracticeExam(
+    @Param('lessonId') lessonId: string,
+    @Body() body: { score: number },
+    @Request() req: any,
+  ) {
+    if (typeof body?.score !== 'number' || !Number.isFinite(body.score)) {
+      throw new BadRequestException('score majburiy raqam');
+    }
+    return this.progress.savePracticeScore(req.user.userId, lessonId, body.score);
+  }
+
   @Post(':lessonId/complete-academy/:studentId')
   @Roles(UserRole.tester, UserRole.mentor)
   completeAcademy(
