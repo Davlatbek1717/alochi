@@ -32,6 +32,7 @@ import { FeedbackWidget } from './_components/FeedbackWidget';
 import { ProgressBar } from './_components/ProgressBar';
 import { LessonIntro } from './_components/LessonIntro';
 import { CompletionScreen } from './_components/CompletionScreen';
+import { PracticeExam } from './_components/PracticeExam';
 import { apiRequest, ApiError } from '@/lib/api';
 import { Button, Modal } from '@/components/ui';
 import { Ustoz } from '@/components/Ustoz';
@@ -94,6 +95,8 @@ type ProgressEntry = {
   sessionCount: number;
   homeCompleted: boolean;
   academyCompleted: boolean;
+  practiceScore: number | null;
+  practicePassedAt: string | null;
 };
 
 type StreakData = {
@@ -119,7 +122,8 @@ type Step =
   | 'speak_sentence'
   | 'speak_words'
   | 'ai_tutor'
-  | 'done';
+  | 'done'
+  | 'practice';
 
 /** The set of *exercise* steps shown in the progress bar (excludes intro/done). */
 const EXERCISE_STEPS: Step[] = [
@@ -750,28 +754,36 @@ export default function LessonPage() {
     const lessonHomeCompleted = progress?.homeCompleted ?? sessionsDone >= totalSessions;
     const handlePrimary = () => {
       if (!lessonHomeCompleted) {
-        // Start another rotation through the same lesson. Reload over
-        // navigate so every state resets cleanly (hearts, wrong counter,
-        // step pointer, fetched data).
         if (typeof window !== 'undefined') {
           window.location.reload();
         }
         return;
       }
+      if (!progress?.practicePassedAt) {
+        setStep('practice');
+        return;
+      }
       router.push('/student/lessons');
     };
+    const primaryLabel = !lessonHomeCompleted
+      ? 'Yana ishlash'
+      : !progress?.practicePassedAt
+        ? 'Mashq imtihonni boshlash'
+        : 'Keyingi dars';
     return (
       <>
         <CompletionScreen
           streak={streakAfter ?? undefined}
           accuracy={accuracy}
           notice={
-            lesson.hasExam && lessonHomeCompleted
-              ? 'Bu darsda imtihon bor. Akademiyaga kelib tester ruxsatini oling.'
-              : undefined
+            progress?.practicePassedAt
+              ? `✅ Mashq imtihon o'tildi (${progress.practiceScore ?? '—'}%). Mentorga ayting!`
+              : lesson.hasExam && lessonHomeCompleted
+                ? "Bu darsda imtihon bor. Mashq imtihonni o'ting."
+                : undefined
           }
           onPrimary={handlePrimary}
-          primaryLabel={lessonHomeCompleted ? 'Keyingi dars' : 'Yana ishlash'}
+          primaryLabel={primaryLabel}
           onSecondary={() => router.push('/student')}
           errorBanner={sessionError ? 'Sessiyani saqlashda xato yuz berdi.' : undefined}
           onRetry={sessionError ? completeSession : undefined}
@@ -781,6 +793,28 @@ export default function LessonPage() {
         />
         <FeedbackWidget lessonId={id} />
       </>
+    );
+  }
+
+  // ─── Practice exam screen ────────────────────────────────────────────────
+  if (step === 'practice') {
+    return (
+      <PracticeExam
+        lessonId={lesson.id}
+        componentsData={lesson.components_data}
+        componentFlags={lesson.components}
+        onComplete={() => {
+          const token = localStorage.getItem('accessToken') ?? '';
+          apiRequest<ProgressEntry[]>('/progress/my', {}, token)
+            .then((res) => {
+              const updated = res.data.find((p) => p.lessonId === lesson.id);
+              if (updated) setProgress(updated);
+            })
+            .catch(() => {})
+            .finally(() => setStep('done'));
+        }}
+        onExit={() => router.push('/student/lessons')}
+      />
     );
   }
 
