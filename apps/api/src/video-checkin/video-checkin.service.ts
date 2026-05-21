@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  GoneException,
   Injectable,
   Logger,
   NotFoundException,
@@ -39,6 +40,10 @@ export interface StudentHistoryRow {
   evening: string | null;
   morningSubmittedAt: string | null;
   eveningSubmittedAt: string | null;
+  morningCheckinId: string | null;
+  eveningCheckinId: string | null;
+  morningVideoAvailable: boolean;
+  eveningVideoAvailable: boolean;
 }
 
 export interface ReminderRecipient {
@@ -92,8 +97,11 @@ export class VideoCheckinService {
       },
     });
     if (!checkin) throw new NotFoundException('Video topilmadi');
-    if (checkin.status !== 'submitted' || !checkin.telegramFileId) {
+    if (checkin.status !== 'submitted' && checkin.status !== 'late') {
       throw new NotFoundException('Bu vaqtga video tashlanmagan');
+    }
+    if (!checkin.telegramFileId) {
+      throw new GoneException('Video 2 kundan keyin avtomatik o\'chiriladi');
     }
     const allowed =
       caller.role === 'superadmin' ||
@@ -408,14 +416,16 @@ export class VideoCheckinService {
         evening: resolveEvening(),
         morningAt: morningRow?.submittedAt?.toISOString() ?? null,
         eveningAt: eveningRow?.submittedAt?.toISOString() ?? null,
-        // Surface ids for submitted and late rows — both have a real
-        // video to play. Missed/pending slots have nothing to play.
+        // Surface ids only when a real video file still exists.
+        // telegramFileId is nulled by the nightly prune job after 2 days.
         morningCheckinId:
-          morningRow?.status === 'submitted' || morningRow?.status === 'late'
+          (morningRow?.status === 'submitted' || morningRow?.status === 'late') &&
+          morningRow?.telegramFileId
             ? morningRow.id
             : null,
         eveningCheckinId:
-          eveningRow?.status === 'submitted' || eveningRow?.status === 'late'
+          (eveningRow?.status === 'submitted' || eveningRow?.status === 'late') &&
+          eveningRow?.telegramFileId
             ? eveningRow.id
             : null,
         totalMissedDays: missedCountMap.get(s.id) ?? 0,
@@ -555,9 +565,13 @@ export class VideoCheckinService {
         morningAt: m?.submittedAt?.toISOString() ?? null,
         eveningAt: e?.submittedAt?.toISOString() ?? null,
         morningCheckinId:
-          m?.status === 'submitted' || m?.status === 'late' ? m.id : null,
+          (m?.status === 'submitted' || m?.status === 'late') && m?.telegramFileId
+            ? m.id
+            : null,
         eveningCheckinId:
-          e?.status === 'submitted' || e?.status === 'late' ? e.id : null,
+          (e?.status === 'submitted' || e?.status === 'late') && e?.telegramFileId
+            ? e.id
+            : null,
         totalMissedDays: 0,
       };
     });
@@ -598,15 +612,26 @@ export class VideoCheckinService {
           evening: null,
           morningSubmittedAt: null,
           eveningSubmittedAt: null,
+          morningCheckinId: null,
+          eveningCheckinId: null,
+          morningVideoAvailable: false,
+          eveningVideoAvailable: false,
         });
       }
       const entry = byDate.get(dateKey)!;
+      const videoAvailable = !!r.telegramFileId;
       if (r.type === 'morning') {
         entry.morning = r.status;
         entry.morningSubmittedAt = r.submittedAt?.toISOString() ?? null;
+        entry.morningCheckinId =
+          (r.status === 'submitted' || r.status === 'late') && videoAvailable ? r.id : null;
+        entry.morningVideoAvailable = videoAvailable;
       } else {
         entry.evening = r.status;
         entry.eveningSubmittedAt = r.submittedAt?.toISOString() ?? null;
+        entry.eveningCheckinId =
+          (r.status === 'submitted' || r.status === 'late') && videoAvailable ? r.id : null;
+        entry.eveningVideoAvailable = videoAvailable;
       }
     }
 
@@ -700,6 +725,24 @@ export class VideoCheckinService {
     }
 
     return { studentId: student.id, type: slot.type, windowEndsAt };
+  }
+
+  /**
+   * Nightly cleanup: null out telegramFileId for records older than 2 days
+   * (keeps today + yesterday). The row itself stays forever for history.
+   */
+  async pruneOldVideoFiles(): Promise<number> {
+    const todayStr = tashkentDateString();
+    const today = dateStringToDate(todayStr);
+    // Keep today (day 0) and yesterday (day -1). Prune day -2 and older.
+    const cutoff = new Date(today);
+    cutoff.setDate(cutoff.getDate() - 1); // cutoff = yesterday; lt → day before yesterday and older
+    const result = await this.prisma.videoCheckin.updateMany({
+      where: { date: { lt: cutoff }, telegramFileId: { not: null } },
+      data: { telegramFileId: null },
+    });
+    this.logger.log(`pruneOldVideoFiles: cleared ${result.count} file IDs`);
+    return result.count;
   }
 
   private tashkentMinutes(date: Date): number {

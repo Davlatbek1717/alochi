@@ -1841,6 +1841,12 @@ export class CronService {
    * unset or the call fails, the superadmin churn list still works
    * (it's rule-based in ChurnService). We only log; never throw.
    */
+  // 03:00 Tashkent — null out telegramFileId for records older than 2 days
+  @Cron('0 3 * * *', { name: 'video_prune', timeZone: 'Asia/Tashkent' })
+  async pruneOldVideos() {
+    await this.videoCheckin.pruneOldVideoFiles();
+  }
+
   @Cron('0 5 * * *', { name: 'ml_training', timeZone: 'Asia/Tashkent' })
   async runMlTraining() {
     const base = (process.env.ML_SERVICE_URL ?? '').replace(/\/+$/, '');
