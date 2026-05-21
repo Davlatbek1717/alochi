@@ -177,82 +177,102 @@ export class DuelService {
     answer: number,
     answerMs?: number,
   ) {
-    const duel = await this.prisma.duel.findUnique({ where: { id: duelId } });
-    if (!duel) throw new BadRequestException('Duel topilmadi');
-    if (duel.status !== 'active')
+    // Pre-flight: fast rejection before acquiring the lock
+    const preFlight = await this.prisma.duel.findUnique({
+      where: { id: duelId },
+      select: { status: true, expiresAt: true, challengerId: true, challengedId: true },
+    });
+    if (!preFlight) throw new BadRequestException('Duel topilmadi');
+    if (preFlight.status !== 'active')
       throw new BadRequestException('Duel faol emas');
-    if (new Date() > duel.expiresAt)
+    if (new Date() > preFlight.expiresAt)
       throw new BadRequestException("Duel muddati o'tdi");
-
-    if (userId !== duel.challengerId && userId !== duel.challengedId) {
+    if (userId !== preFlight.challengerId && userId !== preFlight.challengedId) {
       throw new ForbiddenException("Ruxsat yo'q");
     }
 
-    const existing = await this.prisma.duelAnswer.findUnique({
-      where: { duelId_userId_questionIdx: { duelId, userId, questionIdx } },
-    });
-    if (existing)
-      throw new BadRequestException('Bu savol allaqachon javoblangan');
+    // All score-critical writes run inside a serialised transaction.
+    // SELECT FOR UPDATE on the duel row prevents two concurrent last-question
+    // submissions from both reading stale counts and both declaring a winner.
+    type SideEffects = {
+      isCorrect: boolean;
+      winnerId?: string;
+      loserId?: string;
+      score?: string;
+    };
 
-    const questions = duel.questions as Array<{ correct: number }>;
-    if (questionIdx < 0 || questionIdx >= questions.length) {
-      throw new BadRequestException("Savol indeksi noto'g'ri");
-    }
-    const question = questions[questionIdx];
-    const isCorrect = question != null && answer === question.correct;
-    const isChallenger = userId === duel.challengerId;
+    const result = await this.prisma.$transaction(
+      async (tx): Promise<SideEffects> => {
+        // Lock the duel row; other concurrent transactions will wait here.
+        const rows = await tx.$queryRaw<Array<{
+          id: string;
+          status: string;
+          expires_at: Date;
+          challenger_id: string;
+          challenged_id: string;
+          challenger_score: number;
+          challenged_score: number;
+          questions: unknown;
+        }>>`SELECT * FROM "duels" WHERE id = ${duelId} FOR UPDATE`;
 
-    await this.prisma.duelAnswer.create({
-      data: {
-        duelId,
-        userId,
-        questionIdx,
-        answer,
-        isCorrect,
-        answerMs: answerMs != null && answerMs >= 0 ? answerMs : null,
-      },
-    });
+        const duel = rows[0];
+        if (!duel || duel.status !== 'active') {
+          throw new BadRequestException('Duel faol emas');
+        }
 
-    if (isCorrect) {
-      await this.prisma.duel.update({
-        where: { id: duelId },
-        data: isChallenger
-          ? { challengerScore: { increment: 1 } }
-          : { challengedScore: { increment: 1 } },
-      });
-    }
-
-    const [challengerCount, challengedCount] = await Promise.all([
-      this.prisma.duelAnswer.count({
-        where: { duelId, userId: duel.challengerId },
-      }),
-      this.prisma.duelAnswer.count({
-        where: { duelId, userId: duel.challengedId },
-      }),
-    ]);
-
-    if (challengerCount >= 10 && challengedCount >= 10) {
-      // Atomic status transition — only first concurrent caller gets count > 0
-      const updated = await this.prisma.duel.updateMany({
-        where: { id: duelId, status: 'active' },
-        data: { status: 'completed' },
-      });
-
-      if (updated.count > 0) {
-        // Re-read scores after all increments are committed to determine correct winner
-        const freshDuel = await this.prisma.duel.findUnique({
-          where: { id: duelId },
+        const existing = await tx.duelAnswer.findUnique({
+          where: { duelId_userId_questionIdx: { duelId, userId, questionIdx } },
         });
-        if (freshDuel) {
-          // Compute speed bonus per side: avg of max(0, 5000 - answerMs) / 100
-          const allAnswers = await this.prisma.duelAnswer.findMany({
+        if (existing) throw new BadRequestException('Bu savol allaqachon javoblangan');
+
+        const questions = duel.questions as Array<{ correct: number }>;
+        if (questionIdx < 0 || questionIdx >= questions.length) {
+          throw new BadRequestException("Savol indeksi noto'g'ri");
+        }
+        const isCorrect = answer === questions[questionIdx]?.correct;
+        const isChallenger = userId === duel.challenger_id;
+
+        await tx.duelAnswer.create({
+          data: {
+            duelId,
+            userId,
+            questionIdx,
+            answer,
+            isCorrect,
+            answerMs: answerMs != null && answerMs >= 0 ? answerMs : null,
+          },
+        });
+
+        if (isCorrect) {
+          await tx.duel.update({
+            where: { id: duelId },
+            data: isChallenger
+              ? { challengerScore: { increment: 1 } }
+              : { challengedScore: { increment: 1 } },
+          });
+        }
+
+        const [challengerCount, challengedCount] = await Promise.all([
+          tx.duelAnswer.count({ where: { duelId, userId: duel.challenger_id } }),
+          tx.duelAnswer.count({ where: { duelId, userId: duel.challenged_id } }),
+        ]);
+
+        if (challengerCount >= 10 && challengedCount >= 10) {
+          // Mark completed while we still hold the lock — only one path through here.
+          await tx.duel.update({
+            where: { id: duelId },
+            data: { status: 'completed' },
+          });
+
+          const freshDuel = await tx.duel.findUnique({ where: { id: duelId } });
+          if (!freshDuel) return { isCorrect };
+
+          const allAnswers = await tx.duelAnswer.findMany({
             where: { duelId },
-            select: { userId: true, answerMs: true, isCorrect: true },
+            select: { userId: true, answerMs: true },
           });
           const speedBonus = (uid: string): number => {
-            const rows = allAnswers.filter(
-              (a) => a.userId === uid && a.answerMs != null,
-            );
+            const rows = allAnswers.filter((a) => a.userId === uid && a.answerMs != null);
             if (rows.length === 0) return 0;
             const sum = rows.reduce(
               (s, r) => s + Math.max(0, 5000 - (r.answerMs ?? 5000)) / 100,
@@ -260,14 +280,9 @@ export class DuelService {
             );
             return Math.round(sum / rows.length);
           };
-          const challengerSpeed = speedBonus(freshDuel.challengerId);
-          const challengedSpeed = speedBonus(freshDuel.challengedId);
-          const challengerFinal =
-            freshDuel.challengerScore * 10 + challengerSpeed;
-          const challengedFinal =
-            freshDuel.challengedScore * 10 + challengedSpeed;
 
-          // Final winner: highest combined score, ties → challenger.
+          const challengerFinal = freshDuel.challengerScore * 10 + speedBonus(freshDuel.challengerId);
+          const challengedFinal = freshDuel.challengedScore * 10 + speedBonus(freshDuel.challengedId);
           const winnerId =
             challengerFinal >= challengedFinal
               ? freshDuel.challengerId
@@ -277,39 +292,42 @@ export class DuelService {
               ? freshDuel.challengedId
               : freshDuel.challengerId;
 
-          await this.prisma.duel.update({
-            where: { id: duelId },
-            data: { winnerId },
-          });
+          await tx.duel.update({ where: { id: duelId }, data: { winnerId } });
 
-          const score = `${challengerFinal}-${challengedFinal}`;
-
-          this.gateway.emitDuelResult(winnerId, {
-            won: true,
-            score,
-          });
-          this.gateway.emitDuelResult(loserId, {
-            won: false,
-            score,
-          });
-
-          const winner = await this.prisma.user.findUnique({
-            where: { id: winnerId },
-            select: { tenantId: true },
-          });
-          if (winner) {
-            this.feedEvent
-              .emit(winner.tenantId, winnerId, 'duel_won', {
-                opponentId: loserId,
-                score,
-              })
-              .catch(() => {});
-          }
+          return {
+            isCorrect,
+            winnerId,
+            loserId,
+            score: `${challengerFinal}-${challengedFinal}`,
+          };
         }
+
+        return { isCorrect };
+      },
+      // Serializable isolation ensures the FOR UPDATE sees committed data
+      { isolationLevel: 'Serializable' },
+    );
+
+    // Side effects after commit — safe to emit/log outside the transaction
+    if (result.winnerId && result.loserId && result.score) {
+      this.gateway.emitDuelResult(result.winnerId, { won: true, score: result.score });
+      this.gateway.emitDuelResult(result.loserId, { won: false, score: result.score });
+
+      const winner = await this.prisma.user.findUnique({
+        where: { id: result.winnerId },
+        select: { tenantId: true },
+      });
+      if (winner) {
+        this.feedEvent
+          .emit(winner.tenantId, result.winnerId, 'duel_won', {
+            opponentId: result.loserId,
+            score: result.score,
+          })
+          .catch(() => {});
       }
     }
 
-    return { isCorrect };
+    return { isCorrect: result.isCorrect };
   }
 
   async getDuel(duelId: string, requesterId: string) {

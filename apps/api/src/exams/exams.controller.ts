@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
   Request,
 } from '@nestjs/common';
 import { ExamsService } from './exams.service';
@@ -14,6 +15,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { IdempotencyInterceptor } from '../common/interceptors/idempotency.interceptor';
 
 @ApiTags('exams')
 @ApiBearerAuth()
@@ -50,6 +52,7 @@ export class ExamsController {
   // Tester grants the student's next N catalogue exams in sequence
   // order (no hand-picking). Defaults to 1.
   @Post('grant-next')
+  @UseInterceptors(IdempotencyInterceptor)
   @Roles(UserRole.tester)
   grantNext(
     @Body() body: { studentId: string; count?: number },

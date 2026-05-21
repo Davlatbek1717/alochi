@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { CacheService } from './cache.service';
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { IdempotencyInterceptor } from '../common/interceptors/idempotency.interceptor';
 
 @ApiTags('face')
 @ApiBearerAuth()
@@ -69,6 +71,7 @@ export class FaceController {
    * ValidationPipe (forbidNonWhitelisted: true) → HTTP 400.
    */
   @Post('enroll')
+  @UseInterceptors(IdempotencyInterceptor)
   async enroll(@Body() body: EnrollFaceDto) {
     const enrolled = await this.faceService.enrollFromVectors(
       body.user_id,

@@ -55,9 +55,22 @@ export class WarningsService {
     ]);
 
     if (activeCount >= blockLimit) {
+      const student = await this.prisma.user.findUnique({
+        where: { id: dto.studentId },
+        select: { status: true },
+      });
       await this.prisma.user.update({
         where: { id: dto.studentId },
         data: { status: 'blocked_warning' },
+      });
+      await this.prisma.userStatusHistory.create({
+        data: {
+          userId: dto.studentId,
+          fromStatus: student?.status ?? 'active',
+          toStatus: 'blocked_warning',
+          changedBy: dto.givenBy,
+          reason: `warning_count_${activeCount}`,
+        },
       });
       this.events.emit('student.blocked', {
         studentId: dto.studentId,

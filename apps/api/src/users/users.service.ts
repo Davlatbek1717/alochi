@@ -2,11 +2,12 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { Prisma, UserRole } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
@@ -15,6 +16,18 @@ export interface BlockStatusResult {
   reason: 'warning' | 'payment' | null;
   blockedAt: Date | null;
   unblockAt: Date | null;
+}
+
+// Valid user status transitions. All others are rejected.
+const STATUS_TRANSITIONS: Record<string, string[]> = {
+  active: ['blocked_warning', 'blocked_payment', 'inactive'],
+  blocked_warning: ['active', 'blocked_payment', 'inactive'],
+  blocked_payment: ['active', 'inactive'],
+  inactive: ['active'],
+};
+
+export function canTransitionStatus(from: string, to: string): boolean {
+  return STATUS_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 @Injectable()
@@ -379,9 +392,21 @@ export class UsersService {
     id: string,
     tenantId: string,
     status: 'active' | 'inactive',
+    changedBy?: string,
+    reason?: string,
   ) {
-    await this.findById(id, tenantId);
-    return this.prisma.user.update({ where: { id }, data: { status } });
+    const user = await this.findById(id, tenantId);
+    const from = user.status as string;
+    if (from !== status && !canTransitionStatus(from, status)) {
+      throw new BadRequestException(
+        `Status transition ${from} → ${status} ruxsat etilmagan`,
+      );
+    }
+    const updated = await this.prisma.user.update({ where: { id }, data: { status } });
+    await this.prisma.userStatusHistory.create({
+      data: { userId: id, fromStatus: from, toStatus: status, changedBy, reason },
+    });
+    return updated;
   }
 
   async getProfile(userId: string) {
@@ -598,9 +623,19 @@ export class UsersService {
       return this.prisma.user.findUniqueOrThrow({ where: { id } });
     }
 
+    const fromStatus = user.status;
     const updated = await this.prisma.user.update({
       where: { id },
       data: { status: 'active' },
+    });
+    await this.prisma.userStatusHistory.create({
+      data: {
+        userId: id,
+        fromStatus,
+        toStatus: 'active',
+        changedBy: actorId,
+        reason: reason ?? 'manual_unblock',
+      },
     });
 
     this.events.emit('student.unblocked', {

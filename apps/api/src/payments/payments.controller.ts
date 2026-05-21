@@ -6,6 +6,7 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
   Request,
   BadRequestException,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import {
   DelegationPermissionGuard,
   RequiresDelegationPermission,
 } from '../delegations/guards/delegation-permission.guard';
+import { IdempotencyInterceptor } from '../common/interceptors/idempotency.interceptor';
 
 @ApiTags('payments')
 @ApiBearerAuth()
@@ -74,6 +76,7 @@ export class PaymentsController {
    * Replaces legacy POST /payments (body.studentId).
    */
   @Post(':studentId')
+  @UseInterceptors(IdempotencyInterceptor)
   @Roles(UserRole.filadmin)
   @RequiresDelegationPermission('payments')
   markPaid(

@@ -68,15 +68,34 @@ export class CronService {
       });
       const paidIds = paidStudents.map((p) => p.studentId);
 
-      const result = await this.prisma.user.updateMany({
+      // Collect IDs before bulk-update so we can write status history
+      const toBlock = await this.prisma.user.findMany({
         where: {
           tenantId: setting.tenantId,
           role: 'student',
           status: 'active',
           id: { notIn: paidIds },
         },
+        select: { id: true },
+      });
+      const toBlockIds = toBlock.map((u) => u.id);
+
+      const result = await this.prisma.user.updateMany({
+        where: { id: { in: toBlockIds } },
         data: { status: 'blocked_payment' },
       });
+
+      if (toBlockIds.length > 0) {
+        await this.prisma.userStatusHistory.createMany({
+          data: toBlockIds.map((uid) => ({
+            userId: uid,
+            fromStatus: 'active',
+            toStatus: 'blocked_payment',
+            reason: 'payment_cron',
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       this.logger.log(
         `Tenant ${setting.tenantId}: ${result.count} o'quvchi bloklandi`,
@@ -102,6 +121,15 @@ export class CronService {
       const result = await this.prisma.user.updateMany({
         where: { id: { in: ids }, status: 'blocked_payment' },
         data: { status: 'active' },
+      });
+      await this.prisma.userStatusHistory.createMany({
+        data: ids.map((uid) => ({
+          userId: uid,
+          fromStatus: 'blocked_payment',
+          toStatus: 'active',
+          reason: 'payment_unblock_cron',
+        })),
+        skipDuplicates: true,
       });
       this.logger.log(`${result.count} o'quvchi to'lov blokidan chiqarildi`);
     }
@@ -193,6 +221,16 @@ export class CronService {
 
     if (result.count > 0) {
       this.logger.log(`${result.count} delegatsiya avtomatik yakunlandi`);
+    }
+  }
+
+  @Cron('7 0 * * *', { name: 'chat_ban_expire' })
+  async runChatBanExpire() {
+    const result = await this.prisma.chatBan.deleteMany({
+      where: { expiresAt: { not: null, lt: new Date() } },
+    });
+    if (result.count > 0) {
+      this.logger.log(`${result.count} chat ban muddati o'tgani o'chirildi`);
     }
   }
 
