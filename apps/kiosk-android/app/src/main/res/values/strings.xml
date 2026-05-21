@@ -5,4 +5,25 @@
          to point at a different domain/tenant. -->
     <string name="kiosk_url">https://alojon.uz</string>
     <string name="admin_description">A\'lojon kiosk rejimi uchun qurilma boshqaruvi. Faqat A\'lojon ilovasi ishlaydi.</string>
+
+    <!-- Admin unlock UI -->
+    <string name="admin_login_title">Admin kirish</string>
+    <string name="admin_password_hint">Admin parol</string>
+    <string name="set_password_title">Admin parol o\'rnatish</string>
+    <string name="set_password_message">Kioskni boshqarish uchun parol o\'rnatmoqchi bo\'lsangiz, parolingizni kiriting. Parolni eslab qoling — agar unutsangiz, qurilmani qayta sozlash kerak bo\'ladi.</string>
+    <string name="set_password_hint">Yangi parol (kamida 4 belgi)</string>
+    <string name="admin_menu_title">Admin menyu</string>
+
+    <!-- Admin menu options -->
+    <string name="menu_unblock_apps">Ilovalarni vaqtincha ochish</string>
+    <string name="menu_change_password">Parolni o\'zgartirish</string>
+    <string name="menu_exit_kiosk">Kioskdan chiqish</string>
+
+    <!-- Feedback messages -->
+    <string name="ok">OK</string>
+    <string name="cancel">Bekor qilish</string>
+    <string name="wrong_password">Noto\'g\'ri parol</string>
+    <string name="password_set">Parol o\'rnatildi</string>
+    <string name="password_too_short">Parol kamida 4 belgidan iborat bo\'lishi kerak</string>
+    <string name="apps_unblocked_notice">Ilovalar vaqtincha ochildi. A\'lojon ilovasiga qaytganingizda qayta bloklanadi.</string>
 </resources>

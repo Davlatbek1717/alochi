@@ -10,10 +10,13 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.EditText
+import android.widget.Toast
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -30,6 +33,10 @@ import androidx.appcompat.app.AppCompatActivity
  *     mode is entered, which the OS itself enforces (status bar,
  *     recents, other apps all blocked). Without device owner the app
  *     still runs but the OS guarantees are absent (see PROVISIONING.md).
+ *  3. App blocking — browser, YouTube, and social media apps are
+ *     suspended via DevicePolicyManager.setPackagesSuspended() whenever
+ *     this activity is in the foreground. Unblocking requires the admin
+ *     password (5 corner taps → password dialog).
  */
 class MainActivity : AppCompatActivity() {
 
@@ -41,8 +48,7 @@ class MainActivity : AppCompatActivity() {
         Uri.parse(kioskUrl).host ?: "alojon.uz"
     }
 
-    // Exit gesture: 5 taps in the top-right corner within 3 s.
-    // Only active when the app is NOT device owner (personal phones).
+    // Secret gesture: 5 taps in the top-right corner within 3 s → admin menu.
     private var cornerTapCount = 0
     private var lastCornerTapMs = 0L
     private val CORNER_DP = 80
@@ -74,18 +80,15 @@ class MainActivity : AppCompatActivity() {
                     request: WebResourceRequest
                 ): Boolean {
                     val host = request.url.host ?: return true
-                    // Fence navigation to the kiosk domain (and its
-                    // subdomains). Anything else is refused so a crafted
-                    // link can't open a browser / escape the kiosk.
-                    val ok = host == allowedHost ||
-                        host.endsWith(".$allowedHost")
-                    return !ok // true = we handled it (i.e. blocked)
+                    val ok = host == allowedHost || host.endsWith(".$allowedHost")
+                    return !ok
                 }
             }
         }
         setContentView(webView)
         enterImmersive()
         enforceKioskPolicies()
+        BlockedAppsManager.applyBlocking(this)
 
         if (savedInstanceState == null) {
             webView.loadUrl(kioskUrl)
@@ -97,14 +100,12 @@ class MainActivity : AppCompatActivity() {
     private fun enforceKioskPolicies() {
         val admin = KioskDeviceAdminReceiver.componentName(this)
         if (!dpm.isDeviceOwnerApp(packageName)) {
-            // Still try plain screen-pinning as a weaker fallback.
             startLockTaskSafely()
             return
         }
 
         dpm.setLockTaskPackages(admin, arrayOf(packageName))
 
-        // Make this the persistent HOME so Home button stays in-app.
         val filter = IntentFilter(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             addCategory(Intent.CATEGORY_DEFAULT)
@@ -116,7 +117,6 @@ class MainActivity : AppCompatActivity() {
         )
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Don't let the lock screen / keyguard interrupt the kiosk.
             dpm.setKeyguardDisabled(admin, true)
             dpm.setStatusBarDisabled(admin, true)
         }
@@ -134,10 +134,7 @@ class MainActivity : AppCompatActivity() {
                 am.isInLockTaskMode
             }
             if (!locked) startLockTask()
-        } catch (_: Exception) {
-            // Screen pinning may require user confirmation when not
-            // device owner — ignore; the app-level fencing still holds.
-        }
+        } catch (_: Exception) {}
     }
 
     private fun enterImmersive() {
@@ -156,6 +153,9 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         enterImmersive()
         startLockTaskSafely()
+        // Re-block every time the kiosk comes to foreground (after admin
+        // temporarily exits, or after any background stint).
+        BlockedAppsManager.applyBlocking(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -163,15 +163,11 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) enterImmersive()
     }
 
-    // Back navigates WebView history; it can never finish the activity
-    // (which would expose the launcher).
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (webView.canGoBack()) webView.goBack()
-        // else: swallow — do NOT call super (would exit the kiosk).
     }
 
-    // Eat hardware keys that could disrupt the kiosk.
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
             KeyEvent.KEYCODE_HOME,
@@ -181,10 +177,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Intercept every touch before it reaches the WebView so we can count
-    // corner taps without consuming them (the WebView still gets the event).
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN && !dpm.isDeviceOwnerApp(packageName)) {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
             val cornerPx = (CORNER_DP * resources.displayMetrics.density).toInt()
             val decorWidth = window.decorView.width
             if (ev.rawX > decorWidth - cornerPx && ev.rawY < cornerPx) {
@@ -192,21 +186,88 @@ class MainActivity : AppCompatActivity() {
                 if (now - lastCornerTapMs > EXIT_WINDOW_MS) cornerTapCount = 0
                 lastCornerTapMs = now
                 if (++cornerTapCount >= EXIT_TAPS) {
+                    showAdminPrompt()
                     cornerTapCount = 0
-                    showExitDialog()
                 }
             }
         }
         return super.dispatchTouchEvent(ev)
     }
 
-    private fun showExitDialog() {
+    // ─── Admin unlock flow ────────────────────────────────────────────────
+
+    private fun showAdminPrompt() {
+        if (!AdminAuth.isPasswordSet(this)) {
+            showSetPasswordDialog()
+            return
+        }
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = getString(R.string.admin_password_hint)
+        }
         AlertDialog.Builder(this)
-            .setTitle("Ilovadan chiqish")
-            .setMessage("Aʻlojon ilovasidan chiqmoqchimisiz?")
-            .setPositiveButton("Ha") { _, _ -> exitKiosk() }
-            .setNegativeButton("Yoʻq", null)
+            .setTitle(R.string.admin_login_title)
+            .setView(input)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                if (AdminAuth.checkPassword(this, input.text.toString())) {
+                    showAdminMenu()
+                } else {
+                    Toast.makeText(this, R.string.wrong_password, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun showSetPasswordDialog() {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = getString(R.string.set_password_hint)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.set_password_title)
+            .setMessage(R.string.set_password_message)
+            .setView(input)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                val pw = input.text.toString().trim()
+                if (pw.length >= 4) {
+                    AdminAuth.setPassword(this, pw)
+                    Toast.makeText(this, R.string.password_set, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, R.string.password_too_short, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showAdminMenu() {
+        val isDeviceOwner = dpm.isDeviceOwnerApp(packageName)
+        val options = buildList {
+            add(getString(R.string.menu_unblock_apps))
+            add(getString(R.string.menu_change_password))
+            if (!isDeviceOwner) add(getString(R.string.menu_exit_kiosk))
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.admin_menu_title)
+            .setItems(options) { _, which ->
+                val label = options[which]
+                when (label) {
+                    getString(R.string.menu_unblock_apps) -> temporarilyUnblock()
+                    getString(R.string.menu_change_password) -> showSetPasswordDialog()
+                    getString(R.string.menu_exit_kiosk) -> exitKiosk()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun temporarilyUnblock() {
+        BlockedAppsManager.removeBlocking(this)
+        // Exit lock task so the admin can actually switch to other apps.
+        try { stopLockTask() } catch (_: Exception) {}
+        Toast.makeText(this, R.string.apps_unblocked_notice, Toast.LENGTH_LONG).show()
     }
 
     private fun exitKiosk() {
@@ -214,20 +275,15 @@ class MainActivity : AppCompatActivity() {
         finishAndRemoveTask()
     }
 
-    /** Small helper mirroring android.content.ComponentName for the
-     *  persistent-preferred-activity registration. */
     @Suppress("FunctionName")
     private fun ComponentNameOf(ctx: Context, cls: Class<out Activity>) =
         android.content.ComponentName(ctx.packageName, cls.name)
 
     override fun onDestroy() {
-        // Defensive: if the OS ever tears us down, drop the WebView
-        // cleanly so a relaunch (HOME role / BootReceiver) is clean.
         try {
             webView.stopLoading()
             webView.destroy()
-        } catch (_: Exception) {
-        }
+        } catch (_: Exception) {}
         super.onDestroy()
     }
 
