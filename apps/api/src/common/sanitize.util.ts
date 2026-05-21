@@ -1,11 +1,6 @@
-import sanitizeHtml from 'sanitize-html';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sanitizeHtml = require('sanitize-html') as typeof import('sanitize-html');
 
-/**
- * Allowed HTML for rich-text fields authored by staff (lesson hints,
- * AI tutor context, warning notes, visit notes).
- * Stricter than the editor allows — attacker-uploaded content always
- * passes through this before being stored or returned to clients.
- */
 const RICH_TEXT_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ['b', 'i', 'em', 'strong', 'a', 'br', 'p', 'ul', 'ol', 'li', 'code', 'pre', 'blockquote', 's'],
   allowedAttributes: {
@@ -17,7 +12,10 @@ const RICH_TEXT_OPTIONS: sanitizeHtml.IOptions = {
   },
   // Force rel="noopener noreferrer" on all links to prevent tab-napping
   transformTags: {
-    a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer', target: '_blank' }),
+    a: (_tagName, attribs) => ({
+      tagName: 'a',
+      attribs: { ...attribs, rel: 'noopener noreferrer', target: '_blank' },
+    }),
   },
 };
 
