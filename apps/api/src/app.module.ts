@@ -53,6 +53,8 @@ import { VideoCheckinModule } from './video-checkin/video-checkin.module';
 import { StudyTimeModule } from './study-time/study-time.module';
 import { GroupsModule } from './groups/groups.module';
 import { DevicesModule } from './devices/devices.module';
+import { ActivityModule } from './activity/activity.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { DelegationContextInterceptor } from './common/interceptors/delegation-context.interceptor';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
@@ -131,6 +133,8 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     StudyTimeModule,
     GroupsModule,
     DevicesModule,
+    ActivityModule,
+    MonitoringModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

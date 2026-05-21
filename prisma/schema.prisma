@@ -1491,10 +1491,11 @@ model Device {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  enrollments DeviceEnrollment[]
-  events      DeviceEvent[]
-  commands    DeviceCommand[]
-  healthPings DeviceHealthPing[]
+  enrollments  DeviceEnrollment[]
+  events       DeviceEvent[]
+  commands     DeviceCommand[]
+  healthPings  DeviceHealthPing[]
+  screenshots  ScreenCapture[]
 
   @@index([branchId, status])
   @@index([tenantId, status])
@@ -1579,4 +1580,105 @@ model DeviceHealthPing {
   device Device @relation(fields: [deviceId], references: [id])
 
   @@index([deviceId, pingedAt])
+}
+
+// ---- FAZA 3: ACTIVITY MONITORING ----
+
+model ScreenCapture {
+  id           String    @id @default(cuid())
+  deviceId     String
+  studentId    String
+  capturedAt   DateTime  @default(now())
+  s3Key        String
+  thumbnailKey String
+  width        Int
+  height       Int
+  byteSize     Int
+  ocrText      String?
+  appPackage   String?
+  url          String?
+  suspicious   Boolean   @default(false)
+  reviewedAt   DateTime?
+  reviewedBy   String?
+  reviewNote   String?
+  tenantId     String
+
+  device Device @relation(fields: [deviceId], references: [id])
+
+  @@index([studentId, capturedAt])
+  @@index([deviceId, capturedAt])
+  @@index([suspicious, capturedAt])
+}
+
+model PresenceCheck {
+  id           String    @id @default(cuid())
+  deviceId     String
+  studentId    String
+  capturedAt   DateTime  @default(now())
+  s3Key        String
+  matchScore   Float?
+  matched      Boolean
+  faceDetected Boolean
+  liveness     Boolean?
+  multipleFaces Boolean  @default(false)
+  expiresAt    DateTime
+  tenantId     String
+
+  @@index([studentId, capturedAt])
+  @@index([matched, capturedAt])
+  @@index([expiresAt])
+}
+
+model PageActivity {
+  id               String    @id @default(cuid())
+  studentId        String
+  deviceId         String?
+  sessionId        String
+  url              String
+  pageType         String
+  resourceId       String?
+  enteredAt        DateTime
+  leftAt           DateTime?
+  durationSec      Int?
+  scrollDepthPct   Int?
+  interactionCount Int       @default(0)
+  blurEventsCount  Int       @default(0)
+  exitReason       String?
+  tenantId         String
+
+  @@index([studentId, enteredAt])
+  @@index([pageType, enteredAt])
+  @@index([resourceId])
+}
+
+model CheatingSignal {
+  id           String    @id @default(cuid())
+  studentId    String
+  deviceId     String?
+  signalType   String
+  severity     Int
+  detectedAt   DateTime  @default(now())
+  context      Json
+  aiAssessment String?
+  resolved     Boolean   @default(false)
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  resolution   String?
+  tenantId     String
+
+  @@index([studentId, detectedAt])
+  @@index([resolved, severity])
+}
+
+model CheatingScore {
+  id           String   @id @default(cuid())
+  studentId    String
+  date         DateTime @db.Date
+  score        Int
+  signalsCount Int
+  topReasons   String[]
+  tenantId     String
+
+  @@unique([studentId, date])
+  @@index([date, score])
 }
