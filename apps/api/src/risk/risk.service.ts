@@ -96,7 +96,7 @@ export class RiskService {
     const ago3 = new Date(now - 3 * 86_400_000);
     const ago14 = new Date(now - 14 * 86_400_000);
 
-    const [progressTotal, progressDone, videoCheckins, warnings, cheating, presence] =
+    const [progressTotal, progressDone, videoCheckins, warnings, cheating, presence, paymentRow, paymentSetting, latestStatus] =
       await Promise.all([
         // 7-day lessons attempted
         this.prisma.studentProgress.count({
@@ -129,6 +129,22 @@ export class RiskService {
         this.prisma.presenceCheck.count({
           where: { studentId, tenantId, matched: false, capturedAt: { gte: ago7 } },
         }),
+        // payment for current month
+        this.prisma.payment.findFirst({
+          where: { studentId, tenantId, month: new Date().toISOString().slice(0, 7) },
+          select: { paidAt: true },
+        }),
+        // payment end day setting
+        this.prisma.paymentSetting.findFirst({
+          where: { tenantId },
+          select: { paymentEndDay: true },
+        }),
+        // latest student status
+        this.prisma.studentStatus.findFirst({
+          where: { studentId },
+          orderBy: { createdAt: 'desc' },
+          select: { englishStatus: true, personalStatus: true, criticalStatus: true },
+        }),
       ]);
 
     const passRate =
@@ -151,6 +167,21 @@ export class RiskService {
         ? 5
         : 0;
 
+    // Payment overdue signal (max 10)
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const endDay = paymentSetting?.paymentEndDay ?? 10;
+    const todayDay = new Date().getDate();
+    const isOverdue = !paymentRow?.paidAt && todayDay > endDay;
+    const paymentScore = isOverdue ? 10 : 0;
+
+    // StudentStatus red-flag signal (max 5)
+    const redCount = [
+      latestStatus?.englishStatus,
+      latestStatus?.personalStatus,
+      latestStatus?.criticalStatus,
+    ].filter((s) => s === 'red').length;
+    const studentStatusScore = Math.min(5, redCount * 2);
+
     return {
       passRate: passRateScore,
       videoCheckin: videoMissScore,
@@ -158,6 +189,8 @@ export class RiskService {
       cheating: cheatingScore,
       presence: presenceScore,
       streak: streakScore,
+      payment: paymentScore,
+      studentStatus: studentStatusScore,
     };
   }
 

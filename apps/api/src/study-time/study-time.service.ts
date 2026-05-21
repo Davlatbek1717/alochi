@@ -1,10 +1,20 @@
 import { Injectable, ForbiddenException, Inject } from '@nestjs/common';
 import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   tashkentDateString,
   dateStringToDate,
 } from '../video-checkin/lib/tashkent-time';
+
+type PingSession = {
+  rowId: string;
+  seconds: number;
+  lastPingAtMs: number;
+  blockStartedAtMs: number | null;
+  breakUntilMs: number | null;
+  capReachedAtMs: number | null;
+};
 
 /**
  * Daily study-time accounting.
@@ -25,6 +35,15 @@ import {
 export class StudyTimeService {
   private readonly MAX_PING_SECONDS = 90;
   private readonly MAX_DAILY_SECONDS = 12 * 3600;
+  private readonly SESSION_CACHE_TTL_MS = 15 * 60 * 1000;
+  private readonly PENDING_TTL_MS = 26 * 3600 * 1000;
+
+  private sessionCacheKey(userId: string, date: string) {
+    return `study:session:${userId}:${date}`;
+  }
+  private pendingCacheKey(userId: string, date: string) {
+    return `study:pending:${userId}:${date}`;
+  }
 
   constructor(
     private prisma: PrismaService,
@@ -174,6 +193,11 @@ export class StudyTimeService {
    * forced into a `breakMinutes` break; at `dailyCapMinutes` they're
    * locked for the rest of the Tashkent day. Returns the session state
    * so the client can show a countdown / force logout.
+   *
+   * Hot path is fully Redis-resident: session state is cached for 15 min
+   * and pending seconds are buffered in Redis. DB writes only happen on
+   * state changes (break/cap) or via the 5-min flush cron, cutting DB
+   * write load from ~8 writes/sec (500 students × 60 s) to near zero.
    */
   async recordPing(
     user: { userId: string; tenantId: string; branchId?: string | null },
@@ -193,10 +217,29 @@ export class StudyTimeService {
     const blockSec = policy.workBlockMinutes * 60;
     const breakMs = policy.breakMinutes * 60 * 1000;
     const now = new Date();
+    const nowMs = now.getTime();
 
-    const existing = await this.prisma.studyTimeDaily.findUnique({
-      where: { studentId_date: { studentId: user.userId, date: dateObj } },
-    });
+    // ── Load session: Redis cache → DB fallback ──────────────────────────
+    const sessKey = this.sessionCacheKey(user.userId, today);
+    const pendKey = this.pendingCacheKey(user.userId, today);
+    let sess = await this.cache.get<PingSession>(sessKey);
+
+    if (!sess) {
+      const row = await this.prisma.studyTimeDaily.findUnique({
+        where: { studentId_date: { studentId: user.userId, date: dateObj } },
+      });
+      if (row) {
+        const pending = (await this.cache.get<number>(pendKey)) ?? 0;
+        sess = {
+          rowId: row.id,
+          seconds: row.seconds + pending,
+          lastPingAtMs: row.lastPingAt.getTime(),
+          blockStartedAtMs: row.blockStartedAt?.getTime() ?? null,
+          breakUntilMs: row.breakUntil?.getTime() ?? null,
+          capReachedAtMs: row.capReachedAt?.getTime() ?? null,
+        };
+      }
+    }
 
     const stateResp = (
       state: 'ok' | 'break' | 'cap',
@@ -212,7 +255,7 @@ export class StudyTimeService {
           ? Math.max(
               0,
               blockSec -
-                Math.floor((now.getTime() - blockStartedAt.getTime()) / 1000),
+                Math.floor((nowMs - blockStartedAt.getTime()) / 1000),
             )
           : state === 'ok'
             ? blockSec
@@ -221,128 +264,192 @@ export class StudyTimeService {
       dailyCapMinutes: policy.dailyCapMinutes,
     });
 
-    // Already capped / mid-break — never accrue, just report the lock.
-    if (existing) {
-      if (existing.capReachedAt || (capSec > 0 && existing.seconds >= capSec)) {
-        if (!existing.capReachedAt) {
+    // ── Gate: already capped or mid-break ────────────────────────────────
+    if (sess) {
+      if (sess.capReachedAtMs || (capSec > 0 && sess.seconds >= capSec)) {
+        if (!sess.capReachedAtMs) {
           await this.prisma.studyTimeDaily.update({
-            where: { id: existing.id },
+            where: { id: sess.rowId },
             data: { capReachedAt: now },
           });
+          sess.capReachedAtMs = nowMs;
+          await this.cache.set(sessKey, sess, this.SESSION_CACHE_TTL_MS);
         }
-        return {
-          ...stateResp('cap', existing.seconds, null, null),
-        };
+        return { ...stateResp('cap', sess.seconds, null, null) };
       }
-      if (existing.breakUntil && now.getTime() < existing.breakUntil.getTime()) {
+      if (sess.breakUntilMs && nowMs < sess.breakUntilMs) {
         return stateResp(
           'break',
-          existing.seconds,
+          sess.seconds,
           null,
-          existing.breakUntil,
+          new Date(sess.breakUntilMs),
         );
       }
     }
 
+    // ── Compute effective delta ───────────────────────────────────────────
     const rawDelta = Number(body.deltaSeconds);
     const delta =
       Number.isFinite(rawDelta) && rawDelta > 0
         ? Math.min(rawDelta, this.MAX_PING_SECONDS)
         : 0;
 
-    if (existing) {
-      const wallclock = (now.getTime() - existing.lastPingAt.getTime()) / 1000;
-      const effective = Math.round(
+    const breakJustEnded =
+      sess?.breakUntilMs != null && nowMs >= sess.breakUntilMs;
+    let blockStartedAtMs: number | null = sess
+      ? breakJustEnded
+        ? nowMs
+        : (sess.blockStartedAtMs ?? nowMs)
+      : nowMs;
+
+    let effective: number;
+    if (sess) {
+      const wallclock = (nowMs - sess.lastPingAtMs) / 1000;
+      effective = Math.round(
         Math.max(0, Math.min(delta, wallclock, this.MAX_PING_SECONDS)),
       );
-      const seconds = Math.min(
-        existing.seconds + effective,
-        this.MAX_DAILY_SECONDS,
+    } else {
+      effective = Math.round(
+        Math.max(0, Math.min(delta, this.MAX_PING_SECONDS)),
       );
-      // A finished break restarts the work block fresh.
-      const breakJustEnded =
-        existing.breakUntil != null &&
-        now.getTime() >= existing.breakUntil.getTime();
-      let blockStartedAt: Date | null = breakJustEnded
-        ? now
-        : (existing.blockStartedAt ?? now);
-      let breakUntil: Date | null = breakJustEnded ? null : null;
-      let capReachedAt: Date | null = null;
-      let state: 'ok' | 'break' | 'cap' = 'ok';
-
-      if (capSec > 0 && seconds >= capSec) {
-        capReachedAt = now;
-        state = 'cap';
-        blockStartedAt = null;
-      } else if (
-        blockSec > 0 &&
-        now.getTime() - blockStartedAt.getTime() >= blockSec * 1000
-      ) {
-        breakUntil = breakMs > 0 ? new Date(now.getTime() + breakMs) : null;
-        state = breakMs > 0 ? 'break' : 'ok';
-        blockStartedAt = breakMs > 0 ? null : now;
-      }
-
-      await this.prisma.studyTimeDaily.update({
-        where: { id: existing.id },
-        data: {
-          seconds,
-          lastPingAt: now,
-          blockStartedAt,
-          breakUntil,
-          capReachedAt,
-        },
-      });
-      return {
-        ...stateResp(state, seconds, blockStartedAt, breakUntil),
-        counted: effective > 0,
-      };
     }
 
-    // First ping of the day — open a fresh block.
-    const effective = Math.round(
-      Math.max(0, Math.min(delta, this.MAX_PING_SECONDS)),
-    );
-    try {
-      const created = await this.prisma.studyTimeDaily.create({
+    const prevSeconds = sess?.seconds ?? 0;
+    const newSeconds = Math.min(prevSeconds + effective, this.MAX_DAILY_SECONDS);
+
+    let breakUntilMs: number | null = null;
+    let capReachedAtMs: number | null = null;
+    let state: 'ok' | 'break' | 'cap' = 'ok';
+
+    if (capSec > 0 && newSeconds >= capSec) {
+      capReachedAtMs = nowMs;
+      state = 'cap';
+      blockStartedAtMs = null;
+    } else if (
+      blockSec > 0 &&
+      blockStartedAtMs !== null &&
+      nowMs - blockStartedAtMs >= blockSec * 1000
+    ) {
+      breakUntilMs = breakMs > 0 ? nowMs + breakMs : null;
+      state = breakMs > 0 ? 'break' : 'ok';
+      blockStartedAtMs = breakMs > 0 ? null : nowMs;
+    }
+
+    const blockAt = blockStartedAtMs ? new Date(blockStartedAtMs) : null;
+    const breakAt = breakUntilMs ? new Date(breakUntilMs) : null;
+    const capAt = capReachedAtMs ? new Date(capReachedAtMs) : null;
+
+    // ── Persist ──────────────────────────────────────────────────────────
+    if (!sess) {
+      // First ping of day — create DB row immediately.
+      try {
+        const created = await this.prisma.studyTimeDaily.create({
+          data: {
+            studentId: user.userId,
+            tenantId: user.tenantId,
+            branchId: user.branchId ?? null,
+            date: dateObj,
+            seconds: effective,
+            lastPingAt: now,
+            blockStartedAt: now,
+            ...(capAt ? { capReachedAt: capAt } : {}),
+            ...(breakAt ? { breakUntil: breakAt } : {}),
+          },
+        });
+        sess = {
+          rowId: created.id,
+          seconds: newSeconds,
+          lastPingAtMs: nowMs,
+          blockStartedAtMs,
+          breakUntilMs,
+          capReachedAtMs,
+        };
+      } catch {
+        const row = await this.prisma.studyTimeDaily.findUnique({
+          where: { studentId_date: { studentId: user.userId, date: dateObj } },
+        });
+        if (!row) return stateResp('ok', 0, now, null);
+        sess = {
+          rowId: row.id,
+          seconds: row.seconds,
+          lastPingAtMs: row.lastPingAt.getTime(),
+          blockStartedAtMs: row.blockStartedAt?.getTime() ?? null,
+          breakUntilMs: row.breakUntil?.getTime() ?? null,
+          capReachedAtMs: row.capReachedAt?.getTime() ?? null,
+        };
+      }
+    } else if (state !== 'ok') {
+      // State change (break / cap) → write through to DB and clear buffer.
+      await this.prisma.studyTimeDaily.update({
+        where: { id: sess.rowId },
         data: {
-          studentId: user.userId,
-          tenantId: user.tenantId,
-          branchId: user.branchId ?? null,
-          date: dateObj,
-          seconds: effective,
+          seconds: newSeconds,
           lastPingAt: now,
-          blockStartedAt: now,
+          blockStartedAt: blockAt,
+          breakUntil: breakAt,
+          capReachedAt: capAt,
         },
       });
-      return {
-        ...stateResp('ok', created.seconds, now, null),
-        counted: effective > 0,
-      };
-    } catch {
-      const row = await this.prisma.studyTimeDaily.findUnique({
-        where: { studentId_date: { studentId: user.userId, date: dateObj } },
-      });
-      if (!row) {
-        return stateResp('ok', 0, now, null);
-      }
-      const seconds = Math.min(
-        row.seconds + effective,
-        this.MAX_DAILY_SECONDS,
+      await this.cache.del(pendKey);
+    } else {
+      // Normal ping — buffer seconds in Redis, skip DB write.
+      const currentPending = (await this.cache.get<number>(pendKey)) ?? 0;
+      await this.cache.set(
+        pendKey,
+        currentPending + effective,
+        this.PENDING_TTL_MS,
       );
+    }
+
+    // ── Update session cache ──────────────────────────────────────────────
+    await this.cache.set(
+      sessKey,
+      {
+        rowId: sess!.rowId,
+        seconds: newSeconds,
+        lastPingAtMs: nowMs,
+        blockStartedAtMs,
+        breakUntilMs,
+        capReachedAtMs,
+      } satisfies PingSession,
+      this.SESSION_CACHE_TTL_MS,
+    );
+
+    return {
+      ...stateResp(state, newSeconds, blockAt, breakAt),
+      counted: effective > 0,
+    };
+  }
+
+  /** Flush buffered ping-seconds from Redis to PostgreSQL every 5 minutes. */
+  @Cron('*/5 * * * *', { timeZone: 'Asia/Tashkent' })
+  async flushPendingToDb(): Promise<void> {
+    const today = tashkentDateString();
+    const dateObj = dateStringToDate(today);
+
+    const rows = await this.prisma.studyTimeDaily.findMany({
+      where: { date: dateObj },
+      select: { id: true, studentId: true },
+    });
+
+    for (const row of rows) {
+      const key = this.pendingCacheKey(row.studentId, today);
+      const snapshot = await this.cache.get<number>(key);
+      if (!snapshot || snapshot <= 0) continue;
+
       await this.prisma.studyTimeDaily.update({
         where: { id: row.id },
-        data: { seconds, lastPingAt: now },
+        data: { seconds: { increment: snapshot }, lastPingAt: new Date() },
       });
-      return {
-        ...stateResp(
-          'ok',
-          seconds,
-          row.blockStartedAt ?? now,
-          null,
-        ),
-        counted: effective > 0,
-      };
+
+      // Subtract flushed amount; keep any seconds added by pings during flush.
+      const current = (await this.cache.get<number>(key)) ?? snapshot;
+      const remainder = Math.max(0, current - snapshot);
+      if (remainder === 0) {
+        await this.cache.del(key);
+      } else {
+        await this.cache.set(key, remainder, this.PENDING_TTL_MS);
+      }
     }
   }
 
