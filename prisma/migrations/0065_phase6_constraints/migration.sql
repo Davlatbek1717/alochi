@@ -10,12 +10,12 @@ ALTER TABLE "exam_permissions"
 
 -- StudentBuilding: tier must be between 1 and 5
 ALTER TABLE "student_buildings"
-  ADD CONSTRAINT IF NOT EXISTS "student_building_tier_range"
+  ADD CONSTRAINT "student_building_tier_range"
   CHECK (tier BETWEEN 1 AND 5);
 
 -- KpiScore: score between -100 and 100
 ALTER TABLE "kpi_scores"
-  ADD CONSTRAINT IF NOT EXISTS "kpi_score_range"
+  ADD CONSTRAINT "kpi_score_range"
   CHECK (score BETWEEN -100 AND 100);
 
 -- Payment: add providerTxId unique + webhookEventId unique for idempotency
