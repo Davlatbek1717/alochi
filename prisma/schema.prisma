@@ -200,16 +200,16 @@ model User {
   studyTimeDaily           StudyTimeDaily[]            @relation("StudyTimeStudent")
 
   // Security fields
-  lastLoginAt      DateTime?
-  lastLoginIp      String?
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime?
+  lastLoginAt      DateTime? @map("last_login_at")
+  lastLoginIp      String?   @map("last_login_ip")
+  failedLoginCount Int       @default(0) @map("failed_login_count")
+  lockedUntil      DateTime? @map("locked_until")
 
   // 2FA (TOTP) — enforced for superadmin/filadmin
-  totpSecret       String?
-  totpEnabled      Boolean   @default(false)
-  totpBackupCodes  String[]
-  totpEnforcedAt   DateTime?
+  totpSecret       String?   @map("totp_secret")
+  totpEnabled      Boolean   @default(false) @map("totp_enabled")
+  totpBackupCodes  String[]  @map("totp_backup_codes")
+  totpEnforcedAt   DateTime? @map("totp_enforced_at")
 
   // Home Visit profile fields
   homeAddress         String?
