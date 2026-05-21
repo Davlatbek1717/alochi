@@ -52,4 +52,4 @@ CREATE INDEX IF NOT EXISTS "payments_student_month_idx"
   ON "payments"("student_id", "month");
 
 CREATE INDEX IF NOT EXISTS "notifications_user_read_created_idx"
-  ON "notifications"("userId", "read", "createdAt");
+  ON "notifications"("user_id", "is_read", "created_at");
