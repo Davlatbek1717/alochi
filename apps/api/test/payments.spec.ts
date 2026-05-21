@@ -92,10 +92,10 @@ describe('PaymentsService', () => {
       ];
       mockPrisma.payment.findMany.mockResolvedValue(payments);
 
-      const result = await service.getStudentPayments('s1');
+      const result = await service.getStudentPayments('s1', 't1');
 
       expect(mockPrisma.payment.findMany).toHaveBeenCalledWith({
-        where: { studentId: 's1' },
+        where: { studentId: 's1', tenantId: 't1' },
         orderBy: { month: 'desc' },
       });
       expect(result).toEqual(payments);

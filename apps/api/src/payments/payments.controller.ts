@@ -67,8 +67,11 @@ export class PaymentsController {
    */
   @Get(':studentId/status')
   @Roles(UserRole.filadmin, UserRole.manager)
-  getStudentPayments(@Param('studentId') studentId: string) {
-    return this.payments.getStudentPayments(studentId);
+  getStudentPayments(
+    @Param('studentId') studentId: string,
+    @Request() req: any,
+  ) {
+    return this.payments.getStudentPayments(studentId, req.user.tenantId);
   }
 
   /**

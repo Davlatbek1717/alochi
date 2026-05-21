@@ -83,8 +83,8 @@ export class VideoCheckinService {
       groupId: string | null;
     },
   ): Promise<{ buffer: Buffer; mimeType: string; durationSec: number | null }> {
-    const checkin = await this.prisma.videoCheckin.findUnique({
-      where: { id: checkinId },
+    const checkin = await this.prisma.videoCheckin.findFirst({
+      where: { id: checkinId, student: { tenantId: caller.tenantId } },
       include: {
         student: {
           select: { tenantId: true, branchId: true, groupId: true, id: true },
@@ -94,9 +94,6 @@ export class VideoCheckinService {
     if (!checkin) throw new NotFoundException('Video topilmadi');
     if (checkin.status !== 'submitted' || !checkin.telegramFileId) {
       throw new NotFoundException('Bu vaqtga video tashlanmagan');
-    }
-    if (checkin.student.tenantId !== caller.tenantId) {
-      throw new ForbiddenException('Boshqa tenant');
     }
     const allowed =
       caller.role === 'superadmin' ||
