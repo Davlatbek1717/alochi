@@ -5,6 +5,8 @@ interface VideoPlayerProps {
   youtubeUrl: string;
   onCompleted: () => void;
   lessonId?: string;
+  /** Called ~every 200ms during playback with (watched_seconds, total_seconds). */
+  onWatchProgress?: (watched: number, duration: number) => void;
 }
 
 /**
@@ -148,7 +150,7 @@ declare global {
  * All existing behaviour kept: 1× speed enforcement, restore-on-mount,
  * progress save every 5s, prune stale entries, ≥90% triggers onCompleted.
  */
-export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerProps) {
+export function VideoPlayer({ youtubeUrl, onCompleted, lessonId, onWatchProgress }: VideoPlayerProps) {
   const playerRef = useRef<YTPlayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const watchedRef = useRef(0);
@@ -264,6 +266,7 @@ export function VideoPlayer({ youtubeUrl, onCompleted, lessonId }: VideoPlayerPr
                   watchedRef.current = percent;
                   setPercentWatched(percent);
                 }
+                onWatchProgress?.(watchedRef.current / 100 * duration, duration);
 
                 if (watchedRef.current >= 90 && !completedRef.current) {
                   completedRef.current = true;

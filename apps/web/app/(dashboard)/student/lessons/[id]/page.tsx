@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { X, ArrowRight, AlertTriangle } from 'lucide-react';
 import { VideoPlayer } from './_components/VideoPlayer';
@@ -33,7 +33,8 @@ import { ProgressBar } from './_components/ProgressBar';
 import { LessonIntro } from './_components/LessonIntro';
 import { CompletionScreen } from './_components/CompletionScreen';
 import { apiRequest, ApiError } from '@/lib/api';
-import { Button, Skeleton, Modal, Mascot } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
+import { Ustoz } from '@/components/Ustoz';
 
 type ComponentFlags = {
   mcq?: boolean;
@@ -191,6 +192,8 @@ export default function LessonPage() {
   // stays mid-failure, freezing the lesson.
   const [cycleKey, setCycleKey] = useState(0);
   const [videoCompleted, setVideoCompleted] = useState(false);
+  const videoWatchedSecondsRef = useRef(0);
+  const videoDurationRef = useRef(0);
   const [completing, setCompleting] = useState(false);
   const [sessionError, setSessionError] = useState(false);
   const [exitModalOpen, setExitModalOpen] = useState(false);
@@ -295,7 +298,15 @@ export default function LessonPage() {
         `/progress/${lesson.id}/complete-session`,
         {
           method: 'POST',
-          body: JSON.stringify({ accuracy: sessionAccuracy }),
+          body: JSON.stringify({
+            accuracy: sessionAccuracy,
+            ...(videoDurationRef.current > 0
+              ? {
+                  videoWatched: Math.round(videoWatchedSecondsRef.current),
+                  videoDuration: Math.round(videoDurationRef.current),
+                }
+              : {}),
+          }),
         },
         token,
       );
@@ -626,17 +637,20 @@ export default function LessonPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#fffaf0]">
-        <div className="px-4 pt-5 pb-4 sticky top-0 bg-[#fffaf0] z-30 border-b border-[#f3eedf]">
+      <div className="sp-theme min-h-full">
+        <div
+          className="px-4 pt-5 pb-4 sticky top-0 z-30"
+          style={{ background: 'var(--paper)', borderBottom: '1px solid var(--line)' }}
+        >
           <div className="flex items-center gap-3">
-            <Skeleton theme="light" className="w-10 h-10 rounded-full shrink-0" />
-            <Skeleton theme="light" className="flex-1 h-2 rounded-full" />
-            <Skeleton theme="light" className="w-20 h-6 rounded-full shrink-0" />
+            <div className="sp-skeleton w-10 h-10 rounded-full shrink-0" />
+            <div className="sp-skeleton flex-1 h-2 rounded-full" />
+            <div className="sp-skeleton w-20 h-6 rounded-full shrink-0" />
           </div>
         </div>
         <div className="px-4 pt-6 space-y-4 max-w-md mx-auto md:max-w-3xl lg:max-w-4xl">
-          <Skeleton theme="light" className="w-full aspect-video rounded-2xl" />
-          <Skeleton theme="light" className="h-12 w-full rounded-2xl" />
+          <div className="sp-skeleton w-full aspect-video" style={{ borderRadius: 'var(--r-3)' }} />
+          <div className="sp-skeleton h-12 w-full" style={{ borderRadius: 'var(--r-3)' }} />
         </div>
       </div>
     );
@@ -644,34 +658,49 @@ export default function LessonPage() {
 
   if (error || !lesson) {
     return (
-      <div className="min-h-full bg-[#fffaf0] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
-          <div className="flex justify-center">
-            <Mascot expression="sad" size={120} animated />
-          </div>
-          <p
-            className="text-[#3c3c3c] font-extrabold text-lg"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
+      <div className="sp-theme sp-paper-dots min-h-full flex items-center justify-center p-4">
+        <div
+          className="text-center max-w-sm w-full space-y-4 p-8"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--ember-soft)',
+            borderRadius: 'var(--r-4)',
+          }}
+        >
+          <Ustoz size={120} mood="oops" className="mx-auto" />
+          <p className="sp-display text-lg" style={{ color: 'var(--ink)' }}>
             {error || 'Dars topilmadi'}
           </p>
           <div className="space-y-2">
-            <Button
-              variant="duo"
-              size="lg"
-              fullWidth
+            <button
+              type="button"
               onClick={() => loadLesson()}
+              className="sp-display w-full py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-3)',
+                boxShadow: '0 4px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
             >
               Qayta urinish
-            </Button>
-            <Button
-              variant="ghost"
-              size="md"
-              fullWidth
+            </button>
+            <button
+              type="button"
               onClick={() => router.push('/student/lessons')}
+              className="sp-display w-full py-2.5 min-h-[44px]"
+              style={{
+                background: 'transparent',
+                color: 'var(--ink-2)',
+                border: '1.5px solid var(--line-2)',
+                borderRadius: 'var(--r-3)',
+                fontWeight: 700,
+              }}
             >
               Darslar ro&apos;yxati
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -757,7 +786,7 @@ export default function LessonPage() {
 
   // ─── Running lesson ───────────────────────────────────────────────────────
   return (
-    <div className="min-h-full bg-[#fffaf0]">
+    <div className="sp-theme min-h-full">
       {/* Exit confirmation modal — cream theme to match the page. */}
       <Modal
         open={exitModalOpen}
@@ -790,25 +819,26 @@ export default function LessonPage() {
       >
         <div className="flex items-center gap-4">
           <div className="shrink-0">
-            <Mascot expression="sad" size={88} animated />
+            <Ustoz size={88} mood="oops" />
           </div>
-          <p
-            className="text-sm font-semibold text-[#3c3c3c] leading-snug"
-            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-          >
+          <p className="sp-display text-sm leading-snug" style={{ color: 'var(--ink)' }}>
             Joriy jarayoningiz saqlanmaydi. Haqiqatan ham chiqmoqchimisiz?
           </p>
         </div>
       </Modal>
 
-      {/* Sticky cream header: ✕ + progress bar */}
-      <header className="sticky top-0 z-30 bg-[#fffaf0] border-b border-[#f3eedf]">
+      {/* Sticky header: ✕ + progress bar */}
+      <header
+        className="sticky top-0 z-30"
+        style={{ background: 'var(--paper)', borderBottom: '1px solid var(--line)' }}
+      >
         <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 py-3 flex items-center gap-3">
           <button
             type="button"
             onClick={handleBackClick}
             aria-label="Yopish"
-            className="w-10 h-10 rounded-full flex items-center justify-center text-[#777] hover:text-[#3c3c3c] hover:bg-[#f3eedf] transition-colors shrink-0"
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
+            style={{ color: 'var(--ink-3)' }}
           >
             <X size={22} strokeWidth={2.5} />
           </button>
@@ -821,12 +851,20 @@ export default function LessonPage() {
         {progress ? (
           <div className="max-w-md mx-auto md:max-w-3xl lg:max-w-4xl px-4 pb-2 flex items-center justify-between">
             <p
-              className="text-xs font-extrabold text-[#7a5e2c] uppercase tracking-wider truncate"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+              className="sp-display text-xs uppercase tracking-wider truncate"
+              style={{ color: 'var(--ink-3)' }}
             >
               {lesson.title}
             </p>
-            <span className="text-[10px] font-bold text-[#777] bg-[#f3eedf] border border-[#e8e0d0] px-2 py-0.5 rounded-full shrink-0 ml-2">
+            <span
+              className="sp-mono text-[10px] px-2 py-0.5 shrink-0 ml-2"
+              style={{
+                background: 'var(--paper-2)',
+                color: 'var(--ink-3)',
+                border: '1px solid var(--line)',
+                borderRadius: 999,
+              }}
+            >
               {progress.sessionCount}/{lesson.nRepetitions}
             </span>
           </div>
@@ -841,6 +879,10 @@ export default function LessonPage() {
               youtubeUrl={lesson.youtubeUrl}
               lessonId={id}
               onCompleted={() => setVideoCompleted(true)}
+              onWatchProgress={(watched, duration) => {
+                videoWatchedSecondsRef.current = watched;
+                videoDurationRef.current = duration;
+              }}
             />
             {videoCompleted ? (
               <Button
@@ -1026,17 +1068,26 @@ export default function LessonPage() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed inset-0 z-40 bg-[#fffaf0]/85 backdrop-blur-sm flex items-center justify-center p-6"
+          className="sp-theme fixed inset-0 z-40 backdrop-blur-sm flex items-center justify-center p-6"
+          style={{ background: 'color-mix(in srgb, var(--paper) 85%, transparent)' }}
         >
-          <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] shadow-xl px-6 py-6 flex flex-col items-center gap-3 max-w-xs">
-            <Mascot expression="idle" size={96} animated />
-            <p
-              className="text-[#3c3c3c] font-extrabold text-base text-center"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-            >
+          <div
+            className="px-6 py-6 flex flex-col items-center gap-3 max-w-xs"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-4)',
+              boxShadow: 'var(--shadow-2)',
+            }}
+          >
+            <Ustoz size={96} mood="calm" className="sp-anim-float" />
+            <p className="sp-display text-base text-center" style={{ color: 'var(--ink)' }}>
               Saqlanmoqda...
             </p>
-            <span className="w-5 h-5 border-2 border-[#58cc02]/30 border-t-[#58cc02] rounded-full animate-spin" />
+            <span
+              className="w-5 h-5 rounded-full animate-spin"
+              style={{ border: '2px solid var(--leaf-soft)', borderTopColor: 'var(--leaf)' }}
+            />
           </div>
         </div>
       )}
@@ -1055,17 +1106,33 @@ interface SkipPanelProps {
  * the user an explicit way to skip ahead instead of getting stuck. */
 function SkipPanel({ label, onSkip }: SkipPanelProps) {
   return (
-    <div className="bg-white rounded-3xl border-[1.5px] border-[#e8e0d0] p-6 text-center space-y-3">
-      <AlertTriangle size={28} className="text-[#fbbf24] mx-auto" />
-      <p
-        className="text-[#3c3c3c] font-extrabold text-sm"
-        style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-      >
+    <div
+      className="p-6 text-center space-y-3"
+      style={{
+        background: 'var(--bone)',
+        border: '1.5px solid var(--line)',
+        borderRadius: 'var(--r-3)',
+      }}
+    >
+      <AlertTriangle size={28} className="mx-auto" style={{ color: 'var(--gold)' }} />
+      <p className="sp-display text-sm" style={{ color: 'var(--ink)' }}>
         {label}
       </p>
-      <Button variant="duo" size="md" onClick={onSkip}>
+      <button
+        type="button"
+        onClick={onSkip}
+        className="sp-display px-5 py-2.5 min-h-[44px] active:translate-y-[2px] transition-transform"
+        style={{
+          background: 'var(--leaf)',
+          color: 'var(--bone)',
+          border: '2px solid var(--leaf-deep)',
+          borderRadius: 'var(--r-3)',
+          boxShadow: '0 4px 0 var(--leaf-deep)',
+          fontWeight: 700,
+        }}
+      >
         Davom etish
-      </Button>
+      </button>
     </div>
   );
 }
