@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { I18nService } from '../i18n/i18n.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { sanitizeRichText } from '../common/sanitize.util';
 
 @Injectable()
 export class LessonsService {
@@ -51,6 +52,7 @@ export class LessonsService {
         nRepetitions: rest.nRepetitions ?? 3,
         type: type as any,
         hasExam: hasExam ?? false,
+        aiTutorContext: rest.aiTutorContext ? sanitizeRichText(rest.aiTutorContext) : rest.aiTutorContext,
         components: {
           mcq: mcqEnabled ?? false,
           word_order: wordOrderEnabled ?? false,
@@ -181,7 +183,12 @@ export class LessonsService {
       ...rest
     } = dto;
 
-    const data: Record<string, unknown> = { ...rest };
+    const data: Record<string, unknown> = {
+      ...rest,
+      ...(rest.aiTutorContext !== undefined
+        ? { aiTutorContext: rest.aiTutorContext ? sanitizeRichText(rest.aiTutorContext) : rest.aiTutorContext }
+        : {}),
+    };
     if (type) data.type = type as any;
 
     const componentsPatch: Record<string, boolean> = {};

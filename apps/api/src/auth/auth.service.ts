@@ -104,6 +104,16 @@ export class AuthService {
       throw new UnauthorizedException(this.i18n.t('login_failed'));
     }
 
+    // When 2FA is enabled, issue a short-lived challenge token instead of
+    // real access/refresh tokens. The client must complete /auth/2fa/challenge.
+    if (user.totpEnabled) {
+      const tempToken = this.jwt.sign(
+        { sub: user.id, purpose: '2fa_challenge' },
+        { expiresIn: '5m' },
+      );
+      return { requires2fa: true, tempToken };
+    }
+
     const payload = {
       sub: user.id,
       role: user.role,
@@ -157,6 +167,61 @@ export class AuthService {
         // mentor group). Omitting them forced those pages to fall
         // through to an empty state — they had no branch to scope
         // queries against. The JWT already carries both fields.
+        branchId: user.branchId,
+        groupId: user.groupId,
+      },
+    };
+  }
+
+  /**
+   * Issue a full token pair for a known userId (called after 2FA challenge passes).
+   * Reads the user from DB to build the JWT payload correctly.
+   */
+  async issueTokensForUserId(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        tenantId: true,
+        branchId: true,
+        groupId: true,
+        status: true,
+      },
+    });
+    if (!user || user.status !== UserStatus.active) {
+      throw new UnauthorizedException(this.i18n.t('profile_blocked'));
+    }
+
+    const payload = {
+      sub: user.id,
+      role: user.role,
+      tenantId: user.tenantId,
+      branchId: user.branchId,
+      groupId: user.groupId,
+    };
+
+    const accessToken = this.jwt.sign(payload, { expiresIn: '1h' });
+    const refreshToken = this.jwt.sign(payload, {
+      secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: '7d',
+    });
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    await this.prisma.refreshToken.create({
+      data: { userId: user.id, token: this.hashToken(refreshToken), expiresAt },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
         branchId: user.branchId,
         groupId: user.groupId,
       },

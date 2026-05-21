@@ -29,6 +29,7 @@ export class BranchesService {
       workStartTime: b.workStartTime,
       lateGraceMinutes: b.lateGraceMinutes,
       chatLocked: b.chatLocked,
+      minDailyStudyMinutes: b.minDailyStudyMinutes,
       userCount: b._count.users,
     }));
   }
@@ -49,6 +50,7 @@ export class BranchesService {
       workStartTime?: string;
       lateGraceMinutes?: number;
       chatLocked?: boolean;
+      minDailyStudyMinutes?: number;
     },
   ) {
     await this.findById(id, tenantId);
@@ -57,6 +59,7 @@ export class BranchesService {
       workStartTime?: string;
       lateGraceMinutes?: number;
       chatLocked?: boolean;
+      minDailyStudyMinutes?: number;
     } = {};
     if (data.name !== undefined) patch.name = data.name;
     if (data.workStartTime !== undefined)
@@ -64,6 +67,13 @@ export class BranchesService {
     if (data.lateGraceMinutes !== undefined)
       patch.lateGraceMinutes = data.lateGraceMinutes;
     if (data.chatLocked !== undefined) patch.chatLocked = data.chatLocked;
+    if (data.minDailyStudyMinutes !== undefined) {
+      // Clamp to a sane range (0 = no requirement, max 12h).
+      patch.minDailyStudyMinutes = Math.max(
+        0,
+        Math.min(720, Math.round(data.minDailyStudyMinutes)),
+      );
+    }
     return this.prisma.branch.update({ where: { id }, data: patch });
   }
 

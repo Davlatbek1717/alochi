@@ -34,13 +34,16 @@ export class VideoCheckinHandler {
     }
 
     try {
-      const student = await this.prisma.user.findFirst({
-        where: { id: userId, role: 'student' },
-        select: { id: true, name: true },
+      // Works for ANY role — students link to submit videos; staff
+      // (filadmin / manager / mentor / tester / superadmin) link to
+      // receive reports & notifications on their own Telegram.
+      const user = await this.prisma.user.findFirst({
+        where: { id: userId },
+        select: { id: true, name: true, role: true },
       });
 
-      if (!student) {
-        await ctx.reply("O'quvchi topilmadi yoki havola eskirgan.");
+      if (!user) {
+        await ctx.reply("Foydalanuvchi topilmadi yoki havola eskirgan.");
         return;
       }
 
@@ -49,14 +52,29 @@ export class VideoCheckinHandler {
         data: { telegramId: BigInt(telegramId) },
       });
 
-      await ctx.reply(
-        `Salom, ${student.name}! Profilingiz muvaffaqiyatli bog'landi.\n\n` +
-          `Endi har kuni:\n` +
-          `• 05:00–06:30 — ertalabki video\n` +
-          `• 18:00–22:00 — kechki video\n\n` +
-          `Video yuboring: bot ichida dumaloq yoki to'g'riburchak video yozing. ` +
-          `Forward qilingan video qabul qilinmaydi.`,
-      );
+      if (user.role === 'student') {
+        await ctx.reply(
+          `Salom, ${user.name}! Profilingiz muvaffaqiyatli bog'landi.\n\n` +
+            `Endi har kuni:\n` +
+            `• 05:00–06:30 — ertalabki video\n` +
+            `• 18:00–22:00 — kechki video\n\n` +
+            `Video yuboring: bot ichida dumaloq yoki to'g'riburchak video yozing. ` +
+            `Forward qilingan video qabul qilinmaydi.`,
+        );
+      } else if (user.role === 'filadmin') {
+        await ctx.reply(
+          `Salom, ${user.name}! Hisobingiz bog'landi.\n\n` +
+            `Endi har kuni filialingiz bo'yicha ertalabki video hisobotini ` +
+            `shu yerda olasiz:\n` +
+            `• 06:35 — kim video tashladi / tashlamadi\n` +
+            `• 10:00 — yakuniy holat`,
+        );
+      } else {
+        await ctx.reply(
+          `Salom, ${user.name}! Hisobingiz muvaffaqiyatli bog'landi. ` +
+            `Muhim bildirishnoma va hisobotlarni shu yerda olasiz.`,
+        );
+      }
     } catch (err) {
       this.logger.error(`handleStart link error: ${err}`);
       await ctx.reply("Xatolik yuz berdi. Keyinroq urinib ko'ring.");
@@ -82,7 +100,7 @@ export class VideoCheckinHandler {
 
     if (!student) {
       await ctx.reply(
-        "Profilingiz hali bog'lanmagan. A'lochi profilingizdan 'Botni ulash' tugmasini bosing.",
+        "Profilingiz hali bog'lanmagan. A'lojon profilingizdan 'Botni ulash' tugmasini bosing.",
       );
       return;
     }

@@ -19,28 +19,28 @@ const DEFAULT_CERT_LEVELS: CertLevel[] = [
   {
     level: 'diamond',
     minLessons: 500,
-    label: "Olmos A'lochi",
+    label: "Olmos A'lojon",
     emoji: '💎',
     imageUrl: null,
   },
   {
     level: 'gold',
     minLessons: 250,
-    label: "Oltin A'lochi",
+    label: "Oltin A'lojon",
     emoji: '🥇',
     imageUrl: null,
   },
   {
     level: 'silver',
     minLessons: 100,
-    label: "Kumush A'lochi",
+    label: "Kumush A'lojon",
     emoji: '🥈',
     imageUrl: null,
   },
   {
     level: 'bronze',
     minLessons: 50,
-    label: "Bronza A'lochi",
+    label: "Bronza A'lojon",
     emoji: '🥉',
     imageUrl: null,
   },
@@ -61,10 +61,10 @@ const LEVEL_IMAGE_KEYS: Record<CertLevel['level'], string> = {
 };
 
 const CERT_NAMES: Record<string, string> = {
-  bronze: "🥉 Bronze A'lochi",
-  silver: "🥈 Silver A'lochi",
-  gold: "🥇 Gold A'lochi",
-  diamond: "💎 Diamond A'lochi",
+  bronze: "🥉 Bronze A'lojon",
+  silver: "🥈 Silver A'lojon",
+  gold: "🥇 Gold A'lojon",
+  diamond: "💎 Diamond A'lojon",
 };
 
 @Injectable()
@@ -212,7 +212,7 @@ export class CertificatesService {
     if (existing) return null;
 
     const qrCode = await QRCode.toDataURL(
-      `https://alochi.com/verify/${tenantId}/${studentId}/${eligible.level}`,
+      `https://alojon.uz/verify/${tenantId}/${studentId}/${eligible.level}`,
     );
 
     const certificate = await this.prisma.certificate.create({
@@ -280,10 +280,10 @@ export class CertificatesService {
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
     const levelLabels: Record<string, string> = {
-      bronze: "🥉 Bronze A'lochi",
-      silver: "🥈 Silver A'lochi",
-      gold: "🥇 Gold A'lochi",
-      diamond: "💎 Diamond A'lochi",
+      bronze: "🥉 Bronze A'lojon",
+      silver: "🥈 Silver A'lojon",
+      gold: "🥇 Gold A'lojon",
+      diamond: "💎 Diamond A'lojon",
     };
 
     doc

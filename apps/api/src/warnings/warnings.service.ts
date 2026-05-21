@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { sanitizePlainText } from '../common/sanitize.util';
 
 interface GiveWarningDto {
   tenantId: string;
@@ -32,6 +33,7 @@ export class WarningsService {
     if (!dto.reasonText.trim()) {
       throw new BadRequestException('Ogohlantirish sababi majburiy');
     }
+    dto.reasonText = sanitizePlainText(dto.reasonText);
 
     const warning = await this.prisma.warning.create({ data: dto });
 

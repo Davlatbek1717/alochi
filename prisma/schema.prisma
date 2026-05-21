@@ -205,6 +205,12 @@ model User {
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
 
+  // 2FA (TOTP) — enforced for superadmin/filadmin
+  totpSecret       String?
+  totpEnabled      Boolean   @default(false)
+  totpBackupCodes  String[]
+  totpEnforcedAt   DateTime?
+
   @@unique([tenantId, login])
   @@index([tenantId, role])
   @@index([branchId])

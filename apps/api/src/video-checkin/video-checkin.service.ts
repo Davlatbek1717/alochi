@@ -295,9 +295,13 @@ export class VideoCheckinService {
   /**
    * Called at window close time — marks every active student who hasn't
    * submitted as missed in a single pass.
+   *
+   * `targetDateStr` lets the caller pin the Tashkent calendar date instead
+   * of relying on the clock at call time (important for the evening cron
+   * which fires at 00:01 of the NEW day).
    */
-  async markAllMissedForWindow(type: 'morning' | 'evening') {
-    const dateStr = tashkentDateString();
+  async markAllMissedForWindow(type: 'morning' | 'evening', targetDateStr?: string) {
+    const dateStr = targetDateStr ?? tashkentDateString();
     const date = dateStringToDate(dateStr);
 
     this.logger.log(`markAllMissedForWindow: type=${type} date=${dateStr}`);
@@ -407,13 +411,16 @@ export class VideoCheckinService {
         evening: resolveEvening(),
         morningAt: morningRow?.submittedAt?.toISOString() ?? null,
         eveningAt: eveningRow?.submittedAt?.toISOString() ?? null,
-        // Surface ids only when the student actually submitted — used
-        // by the dashboard to wire the play button. Missed/pending
-        // slots have nothing to play.
+        // Surface ids for submitted and late rows — both have a real
+        // video to play. Missed/pending slots have nothing to play.
         morningCheckinId:
-          morningRow?.status === 'submitted' ? morningRow.id : null,
+          morningRow?.status === 'submitted' || morningRow?.status === 'late'
+            ? morningRow.id
+            : null,
         eveningCheckinId:
-          eveningRow?.status === 'submitted' ? eveningRow.id : null,
+          eveningRow?.status === 'submitted' || eveningRow?.status === 'late'
+            ? eveningRow.id
+            : null,
         totalMissedDays: missedCountMap.get(s.id) ?? 0,
       };
     });
@@ -619,8 +626,10 @@ export class VideoCheckinService {
     const dateStr = tashkentDateString();
     const date = dateStringToDate(dateStr);
 
+    // Exclude both on-time ('submitted') and late ('late') submissions —
+    // either means the student already sent a video for this window.
     const submitted = await this.prisma.videoCheckin.findMany({
-      where: { date, type, status: 'submitted' },
+      where: { date, type, status: { in: ['submitted', 'late'] } },
       select: { studentId: true },
     });
     const submittedIds = new Set(submitted.map((s) => s.studentId));

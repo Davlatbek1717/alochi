@@ -34,8 +34,12 @@ export class BranchesController {
 
   @Get('by-tenant/:tenantId')
   @Roles(UserRole.superadmin, UserRole.filadmin)
-  findByTenant(@Param('tenantId') tenantId: string) {
-    return this.branches.findByTenant(tenantId);
+  findByTenant(@Param('tenantId') tenantId: string, @Request() req: any) {
+    // Non-superadmin callers are always scoped to their own tenant; ignore
+    // the URL param so a filadmin cannot enumerate another tenant's branches.
+    const effectiveTenantId =
+      req.user.role === UserRole.superadmin ? tenantId : req.user.tenantId;
+    return this.branches.findByTenant(effectiveTenantId);
   }
 
   @Get(':id/stats')
@@ -54,6 +58,7 @@ export class BranchesController {
       workStartTime?: string;
       lateGraceMinutes?: number;
       chatLocked?: boolean;
+      minDailyStudyMinutes?: number;
     },
     @Request() req: any,
   ) {
