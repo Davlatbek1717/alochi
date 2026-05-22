@@ -67,7 +67,8 @@ export default function StaffAttendanceHistoryPage() {
       {/* Dark header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -93,7 +94,7 @@ export default function StaffAttendanceHistoryPage() {
       </div>
 
       {/* Body */}
-      <div className="p-5 space-y-4">
+      <div className="px-4 pt-5 pb-6 space-y-4">
         {/* Date filters */}
         <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4">
           <div className="flex flex-col sm:flex-row gap-2">

@@ -162,7 +162,8 @@ export default function PromotionReportPage() {
       {/* Dark header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -188,7 +189,7 @@ export default function PromotionReportPage() {
       </div>
 
       {/* Body */}
-      <div className="p-5 space-y-5">
+      <div className="px-4 pt-5 pb-6 space-y-5">
         {/* Create form */}
         <section className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-5">
           <p className="text-xs font-bold text-[#64748b] uppercase tracking-widest mb-4">

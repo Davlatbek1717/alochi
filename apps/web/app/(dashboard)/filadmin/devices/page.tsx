@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Tablet, Plus, Trash2, AlertTriangle, Wifi } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { formatDateTime } from '@/lib/date-uz';
+import { Modal, useToast } from '@/components/ui';
 
 type Device = {
   id: string;
@@ -39,6 +40,8 @@ export default function FiladminDevicesPage() {
   const [addError, setAddError] = useState('');
   const [newToken, setNewToken] = useState('');
   const [deactivating, setDeactivating] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
+  const toast = useToast();
 
   const branchId = getBranchIdFromToken();
 
@@ -83,15 +86,18 @@ export default function FiladminDevicesPage() {
     }
   }
 
-  async function deactivate(id: string) {
-    if (!confirm("Planshetni o'chirishni tasdiqlaysizmi?")) return;
+  async function confirmDeactivate() {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
     setDeactivating(id);
     try {
       const token = localStorage.getItem('accessToken') ?? '';
       await apiRequest(`/devices/${id}`, { method: 'DELETE' }, token);
       setDevices((prev) => prev.filter((d) => d.id !== id));
+      toast.success("Qurilma o'chirildi");
     } catch {
-      // silent — user can retry
+      toast.error("O'chirishda xato yuz berdi");
     } finally {
       setDeactivating(null);
     }
@@ -120,7 +126,8 @@ export default function FiladminDevicesPage() {
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="relative z-10">
@@ -211,7 +218,7 @@ export default function FiladminDevicesPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => deactivate(d.id)}
+                    onClick={() => setDeleteTarget(d)}
                     disabled={deactivating === d.id}
                     aria-label={`${d.deviceName} qurilmasini o'chirish`}
                     className="text-[#e11d48] hover:bg-[#e11d48]/10 p-2 rounded-xl disabled:opacity-50 transition-colors shrink-0"
@@ -224,6 +231,31 @@ export default function FiladminDevicesPage() {
           )}
         </div>
       </div>
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Qurilmani o'chirish"
+        theme="light"
+      >
+        <p className="text-sm text-[#64748b] mb-5">
+          <span className="font-semibold text-[#0f172a]">{deleteTarget?.deviceName}</span> planshetini tizimdan
+          o&apos;chirishni tasdiqlaysizmi? Bu amalni qaytarib bo&apos;lmaydi.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setDeleteTarget(null)}
+            className="px-4 py-2 rounded-xl border border-[#ede9e1] text-sm font-semibold text-[#64748b] hover:bg-[#f7f4ef] transition-colors"
+          >
+            Bekor qilish
+          </button>
+          <button
+            onClick={confirmDeactivate}
+            className="px-4 py-2 rounded-xl bg-[#e11d48] text-white text-sm font-bold hover:bg-rose-700 transition-colors"
+          >
+            O&apos;chirish
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

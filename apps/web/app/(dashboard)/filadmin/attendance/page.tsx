@@ -167,7 +167,8 @@ export default function FiladminAttendancePage() {
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10"
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div className="relative z-10">
@@ -207,7 +208,7 @@ export default function FiladminAttendancePage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-3">
+      <div className="px-4 pt-5 pb-6 space-y-3">
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
