@@ -53,7 +53,7 @@ const STATIC_COLS: { title: string; links: { label: string; href: string }[] }[]
       title: 'Markazlar uchun',
       links: [
         { label: "Demo so'rash", href: '#pricing' },
-        { label: "Bog'lanish", href: 'mailto:hello@alochi.com' },
+        { label: "Bog'lanish", href: 'mailto:hello@alojon.uz' },
         { label: 'Hujjatlar', href: '#faq' },
       ],
     },
@@ -116,7 +116,7 @@ export function Footer({ cms }: FooterProps) {
                 className="h-10 w-10 brightness-110 transition-transform duration-300 group-hover:rotate-[-8deg]"
               />
               <span className="font-display text-2xl font-bold text-white tracking-tight">
-                A&apos;lochi
+                A&apos;lojon
               </span>
             </Link>
             <p className="mt-5 text-sm text-slate-400 max-w-xs leading-relaxed">
@@ -178,7 +178,7 @@ export function Footer({ cms }: FooterProps) {
         {/* Bottom row */}
         <div className="mt-14 pt-8 border-t border-white/8 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between text-xs text-slate-500">
           <span>
-            © 2026 A&apos;lochi. Barcha huquqlar himoyalangan.
+            © 2026 A&apos;lojon. Barcha huquqlar himoyalangan.
           </span>
           <span className="inline-flex items-center gap-1.5 font-semibold">
             Made in Uzbekistan <span aria-hidden>🇺🇿</span>

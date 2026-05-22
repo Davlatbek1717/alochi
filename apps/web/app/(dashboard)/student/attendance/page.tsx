@@ -87,7 +87,7 @@ export default function StudentAttendancePage() {
             </div>
             <div>
               <p className="text-white font-bold text-lg">Davomatim</p>
-              <p className="text-[#64748b] text-xs">So'nggi {days} kun</p>
+              <p className="text-[#64748b] text-xs">So&apos;nggi {days} kun</p>
             </div>
           </div>
         </div>

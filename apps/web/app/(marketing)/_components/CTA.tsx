@@ -65,7 +65,7 @@ export function CTA({ onDemoClick }: Props) {
               platformasiga oling.
             </h2>
             <p className="mt-7 text-lg text-[var(--ink-2)] leading-relaxed max-w-xl">
-              Tizimga kirib, A&apos;lochi platformasini bugundan ishlatishni
+              Tizimga kirib, A&apos;lojon platformasini bugundan ishlatishni
               boshlang. Markazingiz, mentorlar va o&apos;quvchilar bir
               joyda — barchasi 30 daqiqada sozlanadi.
             </p>

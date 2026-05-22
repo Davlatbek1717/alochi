@@ -1,5 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Fraunces, JetBrains_Mono, Nunito } from "next/font/google";
+import {
+  Manrope,
+  Fraunces,
+  JetBrains_Mono,
+  Nunito,
+  Bricolage_Grotesque,
+  Lexend,
+} from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui";
 import { DevServiceWorkerCleanup } from "@/components/DevServiceWorkerCleanup";
@@ -35,7 +42,8 @@ const mono = JetBrains_Mono({
 });
 
 // Student panel keeps Nunito — the rounded, friendly tone is
-// intentional for the kids' experience.
+// intentional for the kids' experience (legacy screens not yet
+// migrated to the new design system).
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin", "cyrillic"],
@@ -43,10 +51,30 @@ const nunito = Nunito({
   display: "swap",
 });
 
+// ── Student panel redesign ("sp-theme") fonts ──────────────────────
+// Display — Bricolage Grotesque: characterful variable grotesque used
+// for headings, hero text, buttons and the brand mark in the new
+// student experience. Variable font (no weight prop) so 400–800 sweeps
+// are available in CSS.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// UI / body — Lexend: tuned for child reading proficiency. All running
+// text in the new student panel.
+const lexend = Lexend({
+  variable: "--font-lexend",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "A'lochi — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
-    template: "%s · A'lochi",
+    default: "A'lojon — O'zbekistondagi zamonaviy ta'lim SaaS platformasi",
+    template: "%s · A'lojon",
   },
   description:
     "3–7 sinf o'quvchilari uchun zamonaviy ta'lim platformasi: AI suhbat, kamera nazorati va ota-ona uchun Telegram hisobotlar.",
@@ -54,7 +82,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "A'lochi",
+    title: "A'lojon",
   },
 };
 
@@ -73,7 +101,7 @@ export default function RootLayout({
   return (
     <html lang="uz">
       <body
-        className={`${manrope.variable} ${fraunces.variable} ${mono.variable} ${nunito.variable} antialiased`}
+        className={`${manrope.variable} ${fraunces.variable} ${mono.variable} ${nunito.variable} ${bricolage.variable} ${lexend.variable} antialiased`}
       >
         <DevServiceWorkerCleanup />
         <StaleAssetReloader />

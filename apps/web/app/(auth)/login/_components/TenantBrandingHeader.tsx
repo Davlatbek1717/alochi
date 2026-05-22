@@ -9,7 +9,7 @@ interface BrandingData {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
-function useTenantBranding(): BrandingData | null {
+export function useTenantBranding(): BrandingData | null {
   const searchParams = useSearchParams();
   const slug = searchParams.get('tenant');
   const [branding, setBranding] = useState<BrandingData | null>(null);
@@ -30,7 +30,7 @@ function useTenantBranding(): BrandingData | null {
             : (json as BrandingData);
         setBranding(data);
       })
-      .catch(() => { /* silently ignore — fallback to "A'lochi" */ });
+      .catch(() => { /* silently ignore — fallback to "A'lojon" */ });
     return () => { cancelled = true; };
   }, [slug]);
 
@@ -39,11 +39,11 @@ function useTenantBranding(): BrandingData | null {
 
 /**
  * TenantBrandingLogo — the brand logo/name shown in the left panel (desktop)
- * or above the form (mobile). Replaces the hardcoded "A'lochi" text.
+ * or above the form (mobile). Replaces the hardcoded "A'lojon" text.
  */
 export function TenantBrandingLogo({ mobile = false }: { mobile?: boolean }) {
   const branding = useTenantBranding();
-  const displayName = branding?.brandName ?? "A'lochi";
+  const displayName = branding?.brandName ?? "A'lojon";
 
   const content = (
     <>

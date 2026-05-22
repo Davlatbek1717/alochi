@@ -9,7 +9,7 @@ export function CertificateSection({ cms }: Props) {
   const title = cms?.title || 'Sertifikat';
   const description =
     cms?.description ||
-    "Har bir boʿlimni tugatgan oʿquvchi rasmiy Aʿlochi sertifikatini oladi. Sertifikat QR-kod orqali tekshiriladi va ota-onalarga Telegram orqali yuboriladi.";
+    "Har bir boʿlimni tugatgan oʿquvchi rasmiy A'lojon sertifikatini oladi. Sertifikat QR-kod orqali tekshiriladi va ota-onalarga Telegram orqali yuboriladi.";
 
   return (
     <section
@@ -63,7 +63,7 @@ export function CertificateSection({ cms }: Props) {
                 {/* Brand */}
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-2xl font-extrabold text-[#1e1b4b] tracking-tight">
-                    A&apos;LOCHI
+                    A&apos;LOJON
                   </span>
                   <span className="text-xs font-extrabold uppercase tracking-widest text-[#6d28d9] bg-[#6d28d9]/8 px-2.5 py-1 rounded-full">
                     Rasmiy

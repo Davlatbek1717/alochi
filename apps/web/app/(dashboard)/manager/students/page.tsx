@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Users, Search, Filter } from 'lucide-react';
+import { Users, Search, X } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Skeleton, useToast } from '@/components/ui';
 import { getBranchIdFromToken, getGroupIdFromToken } from '@/lib/jwt';
@@ -146,33 +146,52 @@ export default function ManagerStudentsPage() {
       </div>
 
       <div className="px-4 pt-5 pb-6 space-y-4">
-        {/* Search + filter */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ism boʻyicha qidirish..."
-              className="w-full bg-white border border-[#ede9e1] rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a]"
-            />
-          </div>
-          <div className="flex gap-2 items-center flex-wrap">
-            <Filter size={14} className="text-[#94a3b8]" />
-            {(['all', 'yashil', 'sariq', 'qizil'] as StatusFilter[]).map((f) => (
+        {/* Search */}
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" aria-hidden />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Ism boʻyicha qidirish"
+            placeholder="Ism boʻyicha qidirish..."
+            className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 placeholder:text-[#94a3b8]"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="Qidiruvni tozalash"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8]"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Status filter chips — matches the unified design language */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest">Holat</p>
+          <div className="flex flex-wrap gap-1.5">
+            {([
+              { key: 'all',    label: 'Hammasi', count: students.length, dot: 'bg-[#94a3b8]' },
+              { key: 'yashil', label: 'Yashil',  count: counts.yashil,   dot: 'bg-emerald-500' },
+              { key: 'sariq',  label: 'Sariq',   count: counts.sariq,    dot: 'bg-amber-500' },
+              { key: 'qizil',  label: 'Qizil',   count: counts.qizil,    dot: 'bg-rose-500' },
+            ] as { key: StatusFilter; label: string; count: number; dot: string }[]).map((s) => (
               <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                  filter === f
-                    ? 'bg-[#0f172a] text-white'
-                    : 'bg-white text-[#64748b] border border-[#ede9e1]'
+                key={s.key}
+                type="button"
+                onClick={() => setFilter(s.key)}
+                aria-pressed={filter === s.key}
+                className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border inline-flex items-center gap-1.5 ${
+                  filter === s.key
+                    ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                    : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]/40'
                 }`}
               >
-                {FILTER_LABEL[f]}
-                {f !== 'all' && (
-                  <span className="ml-1 text-[10px] opacity-70">({counts[f]})</span>
-                )}
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                {s.label}
+                <span className="text-[10px] opacity-70 font-mono">{s.count}</span>
               </button>
             ))}
           </div>
@@ -196,7 +215,9 @@ export default function ManagerStudentsPage() {
         ) : (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-              {filtered.length} ta oʻquvchi
+              {filtered.length === students.length
+                ? `${students.length} ta oʻquvchi`
+                : `${filtered.length} / ${students.length} ta oʻquvchi`}
             </p>
             {filtered.map((s) => (
               <UserCard

@@ -19,10 +19,10 @@ type Certificate = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  bronze: "Bronze A'lochi",
-  silver: "Silver A'lochi",
-  gold: "Gold A'lochi",
-  diamond: "Diamond A'lochi",
+  bronze: "Bronze A'lojon",
+  silver: "Silver A'lojon",
+  gold: "Gold A'lojon",
+  diamond: "Diamond A'lojon",
 };
 
 const LEVEL_ICON: Record<string, React.ReactNode> = {

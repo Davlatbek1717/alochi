@@ -29,6 +29,8 @@ const BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000').re
 
 export function DuelNotificationProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
+  const challengeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [challenge, setChallenge] = useState<DuelChallenge | null>(null);
   const [result, setResult] = useState<DuelResult | null>(null);
 
@@ -40,13 +42,15 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
     socketRef.current = socket;
 
     socket.on('duel:challenged', (data: DuelChallenge) => {
+      if (challengeTimerRef.current) clearTimeout(challengeTimerRef.current);
       setChallenge(data);
-      setTimeout(() => setChallenge(null), 30_000);
+      challengeTimerRef.current = setTimeout(() => setChallenge(null), 30_000);
     });
 
     socket.on('duel:result', (data: DuelResult) => {
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       setResult(data);
-      setTimeout(() => setResult(null), 5_000);
+      resultTimerRef.current = setTimeout(() => setResult(null), 5_000);
     });
 
     // Revalidation bridge — forward server-push events as window CustomEvents
@@ -64,7 +68,11 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
       });
     }
 
-    return () => { socket.disconnect(); };
+    return () => {
+      socket.disconnect();
+      if (challengeTimerRef.current) clearTimeout(challengeTimerRef.current);
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+    };
   }, []);
 
   async function acceptDuel() {
@@ -79,14 +87,19 @@ export function DuelNotificationProvider({ children }: { children: React.ReactNo
     setChallenge(null);
   }
 
-  function rejectDuel() {
+  async function rejectDuel() {
     if (!challenge) return;
+    const duelId = challenge.duelId;
+    setChallenge(null);
+    if (challengeTimerRef.current) {
+      clearTimeout(challengeTimerRef.current);
+      challengeTimerRef.current = null;
+    }
     const token = localStorage.getItem('accessToken') ?? '';
-    apiRequest(`/social/duels/${challenge.duelId}/respond`, {
+    await apiRequest(`/social/duels/${duelId}/respond`, {
       method: 'PATCH',
       body: JSON.stringify({ accept: false }),
     }, token).catch(() => {});
-    setChallenge(null);
   }
 
   return (

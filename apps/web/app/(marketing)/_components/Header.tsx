@@ -45,7 +45,7 @@ export function Header({ onDemoClick }: Props) {
         <Link
           href="/"
           className="flex items-center gap-2.5 shrink-0 group"
-          aria-label="A'lochi bosh sahifa"
+          aria-label="A'lojon bosh sahifa"
         >
           <span className="relative inline-flex items-center justify-center">
             <span
@@ -63,7 +63,7 @@ export function Header({ onDemoClick }: Props) {
             />
           </span>
           <span className="font-display text-2xl font-extrabold text-[var(--ink)] tracking-tight leading-none">
-            A&apos;lochi
+            A&apos;lojon
           </span>
         </Link>
 

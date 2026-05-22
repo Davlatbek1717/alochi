@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from routers import ai_tutor, evaluation, speech, face_recognition
 
-app = FastAPI(title="A'lochi AI Service", version="1.0.0")
+app = FastAPI(title="A'lojon AI Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

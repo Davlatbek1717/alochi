@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   A'LOCHI DESIGN TOKENS
+   A'LOJON DESIGN TOKENS
    ─────────────────────────────────────────────────────────────────────────
    Editorial-modern, warm, distinctly Uzbek. Built on 4 pillars:
    1. Typography: Fraunces (display, optical sizing) + Manrope (body, Cyrillic).
@@ -53,7 +53,7 @@
   --status-yellow: #d97706;
   --status-red: #b91c1c;
 
-  /* ── A'lochi student panel — Duolingo-grade (preserved) ───────────── */
+  /* ── A'lojon student panel — Duolingo-grade (preserved) ───────────── */
   --alc-primary: #58cc02;
   --alc-primary-dark: #46a302;
   --alc-correct: #10b981;
@@ -152,6 +152,173 @@
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
   --radius-2xl: var(--r-2xl);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   STUDENT PANEL REDESIGN — "sp-theme" DESIGN TOKENS
+   ─────────────────────────────────────────────────────────────────────────
+   The 2026 student-facing redesign (A'lojon) — warm cream surfaces,
+   forest-green primary, terracotta attention, gold achievement, rooted
+   in Central Asian visual culture.
+
+   SCOPED on purpose: these tokens reuse names that already exist at
+   :root with different values (--ink, --line, --ok/--warn/--bad, the
+   radius + shadow scale). Declaring them under `.sp-theme` keeps the
+   staff panels and marketing site (which read the :root tokens)
+   completely unaffected — zero regression. Apply `.sp-theme` on the
+   root element of every migrated student screen + the login screen.
+
+   Fonts resolve to the next/font variables wired in app/layout.tsx.
+   Never hardcode hex values in student screens — use these vars.
+   ─────────────────────────────────────────────────────────────────── */
+
+.sp-theme {
+  /* surfaces */
+  --paper: #f5f1e8;        /* primary background, warm cream */
+  --paper-2: #ede5d2;      /* recessed surface */
+  --paper-3: #e5ddc7;      /* line / track surface */
+  --bone: #faf7ef;         /* card background */
+  --bone-2: #fffdf7;       /* elevated card */
+
+  /* ink (text) */
+  --ink: #1f1714;
+  --ink-2: #3e2f26;
+  --ink-3: #6b5b4e;
+  --ink-4: #9a8b7c;
+
+  /* primary — forest leaf */
+  --leaf: #1f5e40;
+  --leaf-2: #2b7551;
+  --leaf-deep: #143e2a;
+  --leaf-soft: #d5e3d4;
+  --leaf-tint: #ebf2e6;
+
+  /* ember — terracotta (attention / secondary CTA / error) */
+  --ember: #c8462c;
+  --ember-2: #e55a33;
+  --ember-deep: #8e2e1b;
+  --ember-soft: #f4d2c2;
+  --ember-tint: #fbeae0;
+
+  /* gold — achievements / gamification */
+  --gold: #d9a441;
+  --gold-2: #e8bb5f;
+  --gold-deep: #8b6418;
+  --gold-soft: #f4e3b8;
+  --gold-tint: #faf1d7;
+
+  /* sky — informational counterpoint */
+  --sky: #4a7a99;
+  --sky-soft: #c8dae5;
+
+  /* status semantics */
+  --ok: #2b7551;
+  --warn: #d9a441;
+  --bad: #c8462c;
+
+  /* lines */
+  --line: #e5ddc7;
+  --line-2: #d4c9ae;
+
+  /* shadows — soft elevation + skeumorphic "press" depth */
+  --shadow-1: 0 1px 0 rgba(31, 23, 20, 0.04), 0 2px 8px rgba(31, 23, 20, 0.06);
+  --shadow-2: 0 2px 0 rgba(31, 23, 20, 0.06), 0 8px 24px rgba(31, 23, 20, 0.08);
+  --shadow-press: inset 0 -3px 0 rgba(31, 23, 20, 0.15);
+  --shadow-leaf-press: inset 0 -4px 0 var(--leaf-deep);
+  --shadow-ember-press: inset 0 -4px 0 var(--ember-deep);
+  --shadow-gold-press: inset 0 -4px 0 var(--gold-deep);
+
+  /* radii */
+  --r-1: 6px;
+  --r-2: 12px;
+  --r-3: 18px;
+  --r-4: 24px;
+  --r-pill: 999px;
+
+  /* typography — resolves to next/font variables (app/layout.tsx) */
+  --f-display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
+  --f-ui: var(--font-lexend), "Lexend", system-ui, sans-serif;
+  --f-mono: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-feature-settings: "ss01" on;
+}
+
+/* Typographic helpers — only active inside .sp-theme */
+.sp-theme .sp-display {
+  font-family: var(--f-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.sp-theme .sp-mono {
+  font-family: var(--f-mono);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+.sp-theme .sp-eyebrow {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Paper dot texture overlay (hero / featured surfaces) */
+.sp-theme .sp-paper-dots {
+  background-image: radial-gradient(
+    circle,
+    rgba(31, 23, 20, 0.045) 1px,
+    transparent 1px
+  );
+  background-size: 14px 14px;
+}
+
+/* sp-theme motion (distinct keyframe names — no collision with the
+   :root animations defined below). Gated by the reduced-motion block. */
+@keyframes sp-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes sp-pop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes sp-shake {
+  10%, 90%        { transform: translateX(-2px); }
+  20%, 80%        { transform: translateX(3px); }
+  30%, 50%, 70%   { transform: translateX(-5px); }
+  40%, 60%        { transform: translateX(5px); }
+}
+@keyframes sp-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@keyframes sp-sparkle {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50%      { opacity: 1; transform: scale(1.1); }
+}
+@keyframes sp-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.sp-theme .sp-anim-float  { animation: sp-float 3.5s ease-in-out infinite; }
+.sp-theme .sp-anim-pop    { animation: sp-pop 0.35s cubic-bezier(0.2, 0.7, 0.3, 1.2); }
+.sp-theme .sp-anim-shake  { animation: sp-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+.sp-theme .sp-anim-slide  { animation: sp-slide-up 0.35s ease-out; }
+.sp-theme .sp-anim-sparkle { animation: sp-sparkle 2.2s ease-in-out infinite; }
+.sp-theme .sp-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--paper-2) 0%,
+    var(--paper-3) 50%,
+    var(--paper-2) 100%
+  );
+  background-size: 800px 100%;
+  animation: sp-shimmer 1.6s linear infinite;
+  border-radius: var(--r-2);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────── */

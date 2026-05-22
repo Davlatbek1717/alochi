@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeftRight, Copy, Languages, Loader2, Volume2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, ArrowLeftRight, Copy, Loader2, Volume2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
 import { useToast } from '@/components/ui';
@@ -8,21 +9,12 @@ import { useToast } from '@/components/ui';
 type Lang = 'uz' | 'en';
 
 const LANG_LABEL: Record<Lang, string> = {
-  uz: "O'zbek",
-  en: 'Ingliz',
+  uz: "🇺🇿 O'zbek",
+  en: '🇬🇧 English',
 };
 
 const MAX_CHARS = 2000;
 
-/**
- * Student translator tool — paste Uzbek or English, get the other side.
- *
- * - Direction is a single uz↔en toggle (no manual lang select on each side).
- * - Submits on Enter (Shift+Enter for newline) and via the button.
- * - Live char counter + 2000-char cap (mirrors the backend DTO limit).
- * - "Play" button uses browser SpeechSynthesis when available (Chrome/Edge).
- * - Copy-to-clipboard for the translation.
- */
 export default function StudentTranslatePage() {
   const toast = useToast();
   const [fromLang, setFromLang] = useState<Lang>('uz');
@@ -41,8 +33,6 @@ export default function StudentTranslatePage() {
   }, []);
 
   function swap() {
-    // Swap direction + move the translated text to the source slot so the
-    // student can chain "translate → tweak → translate back" naturally.
     setFromLang(toLang);
     setSource(translation);
     setTranslation(source);
@@ -94,7 +84,7 @@ export default function StudentTranslatePage() {
       navigator.clipboard.writeText(translation);
       toast.success('Nusxalandi');
     } catch {
-      toast.error("Nusxalashda xatolik");
+      toast.error('Nusxalashda xatolik');
     }
   }
 
@@ -120,144 +110,165 @@ export default function StudentTranslatePage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
-        <div
-          aria-hidden
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, #58cc02 0%, transparent 70%)',
-            transform: 'translate(30%, -30%)',
-          }}
-        />
-        <div className="relative z-10 flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#58cc02]/20 border border-[#58cc02]/30 flex items-center justify-center shrink-0">
-            <Languages size={20} className="text-[#58cc02]" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-widest">
-              AI tarjimon
-            </p>
-            <p className="text-white text-lg font-bold">Tarjima</p>
-          </div>
+    <div className="sp-theme min-h-full pb-24">
+      <header className="px-4 pt-4 pb-3 flex items-center gap-3 max-w-2xl mx-auto">
+        <Link
+          href="/student"
+          aria-label="Orqaga"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="sp-eyebrow">AI tarjimon</div>
+          <h1 className="sp-display text-xl leading-tight" style={{ color: 'var(--ink)' }}>
+            Tarjima
+          </h1>
         </div>
-      </div>
+      </header>
 
-      {/* Body */}
-      <div className="px-4 pt-5 pb-24 space-y-3 max-w-2xl mx-auto">
+      <div className="px-4 max-w-2xl mx-auto space-y-3">
         {/* Direction toggle */}
-        <div className="flex items-center justify-center gap-3 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-4 py-3">
-          <span className="text-sm font-extrabold text-[#0f172a] flex-1 text-center">
+        <div
+          className="flex items-center gap-2 p-1"
+          style={{
+            background: 'var(--bone-2)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 999,
+          }}
+        >
+          <span
+            className="flex-1 text-center py-2 sp-display text-[13px]"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              borderRadius: 999,
+            }}
+          >
             {LANG_LABEL[fromLang]}
           </span>
           <button
             type="button"
             onClick={swap}
             aria-label="Tilni almashtirish"
-            className="w-10 h-10 rounded-xl bg-[#f7f4ef] border border-[#ede9e1] hover:bg-[#ede9e1] flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'var(--bone)', border: '1.5px solid var(--line-2)', color: 'var(--ink)' }}
           >
-            <ArrowLeftRight size={16} className="text-[#0f172a]" />
+            <ArrowLeftRight size={15} />
           </button>
-          <span className="text-sm font-extrabold text-[#0f172a] flex-1 text-center">
+          <span
+            className="flex-1 text-center py-2 sp-display text-[13px]"
+            style={{ color: 'var(--ink-2)' }}
+          >
             {LANG_LABEL[toLang]}
           </span>
         </div>
 
         {/* Source */}
-        <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
-              {LANG_LABEL[fromLang]} ({fromLang})
-            </p>
-            <p
-              className={[
-                'text-[10px] font-mono font-bold',
-                source.length > MAX_CHARS * 0.9
-                  ? 'text-amber-600'
-                  : 'text-[#94a3b8]',
-              ].join(' ')}
-            >
-              {source.length}/{MAX_CHARS}
-            </p>
-          </div>
+        <div className="relative">
           <textarea
             value={source}
             onChange={(e) => setSource(e.target.value.slice(0, MAX_CHARS))}
             onKeyDown={onKeyDown}
-            rows={4}
-            placeholder={
-              fromLang === 'uz'
-                ? "Tarjima qilmoqchi bo'lgan matnni shu yerga yozing..."
-                : 'Type the text you want to translate...'
-            }
-            className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-[#58cc02] resize-none"
+            rows={5}
+            placeholder="matnni yozing yoki yopishtiring…"
+            className="w-full p-3.5 text-[15px] resize-none outline-none"
+            style={{
+              background: 'var(--bone-2)',
+              border: '2px solid var(--line-2)',
+              borderRadius: 'var(--r-3)',
+              color: 'var(--ink)',
+              fontFamily: 'var(--f-ui)',
+            }}
           />
+          <span
+            className="sp-mono absolute bottom-3 right-3 text-[10px]"
+            style={{ color: source.length > MAX_CHARS * 0.9 ? 'var(--ember-deep)' : 'var(--ink-4)' }}
+          >
+            {source.length}/{MAX_CHARS}
+          </span>
         </div>
 
         <button
           type="button"
           onClick={() => void handleTranslate()}
           disabled={!source.trim() || submitting}
-          className="w-full bg-[#58cc02] hover:brightness-105 text-white font-extrabold uppercase tracking-wide text-sm py-3.5 min-h-[52px] rounded-2xl border-b-[4px] border-[#46a302] active:translate-y-[2px] active:border-b-[2px] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          className="sp-display w-full py-3.5 min-h-[52px] flex items-center justify-center gap-2 active:translate-y-[2px] transition-transform disabled:opacity-50"
+          style={{
+            background: 'var(--leaf)',
+            color: 'var(--bone)',
+            border: '2px solid var(--leaf-deep)',
+            borderRadius: 'var(--r-3)',
+            boxShadow: '0 4px 0 var(--leaf-deep)',
+            fontWeight: 700,
+          }}
         >
           {submitting ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              Tarjima qilinmoqda...
+              Tarjima qilinmoqda…
             </>
           ) : (
             'Tarjima qilish'
           )}
         </button>
 
-        {/* Translation */}
+        {/* Result */}
         <div
-          className={[
-            'rounded-2xl border-[1.5px] p-4',
-            translation
-              ? 'bg-emerald-50 border-emerald-200'
-              : 'bg-white border-[#ede9e1]',
-          ].join(' ')}
+          className="p-4"
+          style={{
+            background: translation ? 'var(--leaf-tint)' : 'var(--bone)',
+            border: `1.5px solid ${translation ? 'var(--leaf-soft)' : 'var(--line)'}`,
+            borderRadius: 'var(--r-3)',
+          }}
         >
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-extrabold uppercase tracking-widest text-[#64748b]">
-              {LANG_LABEL[toLang]} ({toLang})
-            </p>
+            <div className="sp-eyebrow" style={{ color: 'var(--leaf-deep)' }}>
+              tarjima
+            </div>
             {translation && (
               <div className="flex items-center gap-1">
                 {ttsAvailable && (
                   <button
                     type="button"
                     onClick={speakTranslation}
-                    aria-label="Audio o'qish"
-                    className="w-9 h-9 rounded-xl bg-white border border-[#ede9e1] hover:bg-violet-50 hover:border-violet-200 flex items-center justify-center transition-colors"
+                    aria-label="Talaffuz"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: 'var(--bone)', border: '1px solid var(--leaf-soft)', color: 'var(--leaf-deep)' }}
                   >
-                    <Volume2 size={14} className="text-[#0f172a]" />
+                    <Volume2 size={14} />
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={copyTranslation}
                   aria-label="Nusxalash"
-                  className="w-9 h-9 rounded-xl bg-white border border-[#ede9e1] hover:bg-violet-50 hover:border-violet-200 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'var(--bone)', border: '1px solid var(--leaf-soft)', color: 'var(--leaf-deep)' }}
                 >
-                  <Copy size={14} className="text-[#0f172a]" />
+                  <Copy size={14} />
                 </button>
               </div>
             )}
           </div>
           {translation ? (
-            <p className="text-sm text-[#0f172a] leading-relaxed whitespace-pre-wrap">
+            <p
+              className="sp-display text-lg whitespace-pre-wrap"
+              style={{ color: 'var(--leaf-deep)' }}
+            >
               {translation}
             </p>
           ) : (
-            <p className="text-sm text-[#94a3b8] italic">
+            <p className="text-sm italic" style={{ color: 'var(--ink-4)' }}>
               Tarjima shu yerda paydo boʻladi.
             </p>
           )}
           {note && (
-            <p className="text-xs text-[#0f172a]/70 mt-3 italic border-t border-emerald-200 pt-2">
+            <p
+              className="text-xs mt-3 italic pt-2"
+              style={{ color: 'var(--ink-2)', borderTop: '1px solid var(--leaf-soft)' }}
+            >
               💡 {note}
             </p>
           )}

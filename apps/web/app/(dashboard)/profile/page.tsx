@@ -210,6 +210,46 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Telegram (staff self-link — receive reports & notifications) */}
+        {profile.role !== 'student' && (
+          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-4">
+              Telegram bot
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center shrink-0">
+                  <Send size={18} className="text-sky-500" />
+                </div>
+                <div>
+                  <p className="text-[#0f172a] text-sm font-semibold">
+                    Hisobingizni botga ulang
+                  </p>
+                  <p className="text-[#64748b] text-xs mt-0.5">
+                    {profile.role === 'filadmin'
+                      ? "Ulagandan so'ng har kuni 06:35 va 10:00 da filialingiz bo'yicha video hisoboti shu Telegramga keladi."
+                      : "Ulagandan so'ng muhim bildirishnoma va hisobotlarni shu Telegramda olasiz."}
+                  </p>
+                </div>
+              </div>
+              {BOT_USERNAME ? (
+                <a
+                  href={`https://t.me/${BOT_USERNAME}?start=link_${profile.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white px-4 py-3 rounded-xl text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                >
+                  <Send size={16} /> Botni ulash
+                </a>
+              ) : (
+                <p className="text-xs text-[#94a3b8]">
+                  NEXT_PUBLIC_TELEGRAM_BOT sozlanmagan
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Account info */}
         <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5">
           <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-4">Hisob ma&apos;lumotlari</p>

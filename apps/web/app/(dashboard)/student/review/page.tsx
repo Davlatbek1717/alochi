@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle, XCircle, Trophy, RefreshCw } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, EmptyState, useToast } from '@/components/ui';
+import { useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { Ustoz } from '@/components/Ustoz';
 
 type ReviewItem = { word: string; easeFactor: number; interval: number };
 
@@ -58,92 +59,154 @@ export default function ReviewPage() {
     setSubmitting(false);
   }
 
+  // ── Loading ──
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f7f4ef]">
-        <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
-          <Skeleton className="h-4 w-20 mb-4 rounded" />
-          <Skeleton className="h-1.5 w-full rounded-full" />
+      <div className="sp-theme min-h-full flex flex-col">
+        <div className="px-5 pt-5 pb-6" style={{ background: 'var(--leaf-deep)' }}>
+          <div className="sp-skeleton h-4 w-20 mb-4" />
+          <div className="sp-skeleton h-1.5 w-full" />
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-4">
-          <Skeleton className="w-full max-w-sm h-48 rounded-[24px]" />
+        <div className="flex-1 flex items-center justify-center px-6 py-12">
+          <div className="sp-skeleton w-full max-w-sm h-72" style={{ borderRadius: 'var(--r-4)' }} />
         </div>
       </div>
     );
   }
 
+  // ── Error ──
   if (loadError) {
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex items-center justify-center p-6">
-        <div className="bg-white rounded-[24px] border-[1.5px] border-rose-200 p-8 text-center max-w-sm w-full space-y-4">
-          <p className="text-5xl" aria-hidden>📡</p>
-          <p className="text-[#0f172a] font-extrabold text-base">Yuklab bo&apos;lmadi</p>
-          <p className="text-[#64748b] text-sm">{loadError}</p>
-          <p className="text-[#94a3b8] text-xs">Internet aloqasini tekshiring</p>
-          <Button
-            variant="duo"
-            size="lg"
-            fullWidth
+      <div className="sp-theme sp-paper-dots min-h-full flex items-center justify-center p-6">
+        <div
+          className="text-center max-w-sm w-full space-y-4 p-8"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+          }}
+        >
+          <Ustoz size={110} mood="oops" className="mx-auto" />
+          <p className="sp-display text-base" style={{ color: 'var(--ink)' }}>
+            Internet bilan muammo
+          </p>
+          <p className="sp-mono text-xs" style={{ color: 'var(--ink-3)' }}>
+            {loadError}
+          </p>
+          <button
+            type="button"
             onClick={load}
+            className="sp-display inline-flex items-center justify-center px-6 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              border: '2px solid var(--leaf-deep)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: '0 4px 0 var(--leaf-deep)',
+              fontWeight: 700,
+            }}
           >
             Qayta urinish
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
+  // ── Empty ──
   if (items.length === 0) {
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6">
-        <div className="bg-white rounded-[24px] border-[1.5px] border-[#ede9e1] w-full max-w-sm">
-          <EmptyState
-            theme="light"
-            icon={<RefreshCw size={28} />}
-            title="Bugun takrorlanadigan so'z yo'q!"
-            description="Darslarni bajarib so'z boyligingizni oshiring."
-            action={
-              <Button
-                variant="duo"
-                size="lg"
-                onClick={() => router.push('/student')}
-              >
-                Bosh sahifaga
-              </Button>
-            }
-          />
+      <div className="sp-theme sp-paper-dots min-h-full flex flex-col items-center justify-center px-6">
+        <div
+          className="w-full max-w-sm text-center p-8 space-y-4"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-4)',
+          }}
+        >
+          <Ustoz size={120} mood="calm" className="mx-auto" />
+          <p className="sp-display text-lg" style={{ color: 'var(--ink)' }}>
+            Bugun takrorlanadigan so‘z yo‘q!
+          </p>
+          <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+            Darslarni bajarib so‘z boyligingizni oshiring.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/student')}
+            className="sp-display inline-flex items-center justify-center px-6 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+            style={{
+              background: 'var(--leaf)',
+              color: 'var(--bone)',
+              border: '2px solid var(--leaf-deep)',
+              borderRadius: 'var(--r-3)',
+              boxShadow: '0 4px 0 var(--leaf-deep)',
+              fontWeight: 700,
+            }}
+          >
+            Bosh sahifaga
+          </button>
         </div>
       </div>
     );
   }
 
+  // ── Done ──
   if (done) {
     const pct = Math.round((correct / items.length) * 100);
     return (
-      <div className="min-h-full bg-[#f7f4ef] flex flex-col items-center justify-center px-6 text-center">
-        <Trophy size={56} className="text-[#fbbf24] mb-4" />
-        <h2 className="text-2xl font-black text-[#0f172a] mb-1" style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}>
+      <div className="sp-theme min-h-full flex flex-col items-center justify-center px-6 text-center">
+        <Ustoz size={132} mood="cheer" className="sp-anim-pop" />
+        <h2 className="sp-display text-2xl mt-2 mb-1" style={{ color: 'var(--ink)' }}>
           Barakalla!
         </h2>
-        <p className="text-[#64748b] text-sm mb-6">{items.length} ta so&apos;zdan {correct} tasini bildingiz</p>
-        <div className="w-full max-w-xs bg-white rounded-2xl p-5 shadow-sm border-[1.5px] border-[#ede9e1] mb-6">
-          <div className="flex justify-between text-sm font-semibold mb-2">
-            <span className="text-[#58cc02]">To&apos;g&apos;ri</span>
-            <span className="text-[#0f172a]">{correct}/{items.length}</span>
+        <p className="text-sm mb-6" style={{ color: 'var(--ink-3)' }}>
+          {items.length} ta so‘zdan {correct} tasini bildingiz
+        </p>
+        <div
+          className="w-full max-w-xs p-5 mb-6"
+          style={{
+            background: 'var(--bone)',
+            border: '1.5px solid var(--line)',
+            borderRadius: 'var(--r-3)',
+            boxShadow: 'var(--shadow-1)',
+          }}
+        >
+          <div className="flex justify-between text-sm sp-display mb-2">
+            <span style={{ color: 'var(--leaf)' }}>To‘g‘ri</span>
+            <span style={{ color: 'var(--ink)' }}>
+              {correct}/{items.length}
+            </span>
           </div>
-          <div className="h-3 bg-[#f3eedf] rounded-full overflow-hidden">
-            <div className="h-full bg-[#58cc02] rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+          <div
+            className="h-3 overflow-hidden"
+            style={{ background: 'var(--paper-3)', borderRadius: 999 }}
+          >
+            <div
+              className="h-full transition-all duration-500"
+              style={{ width: `${pct}%`, background: 'var(--leaf)', borderRadius: 999 }}
+            />
           </div>
-          <p className="text-3xl font-black text-[#0f172a] mt-3">{pct}%</p>
+          <p className="sp-display text-3xl mt-3" style={{ color: 'var(--ink)' }}>
+            {pct}%
+          </p>
         </div>
-        <Button
-          variant="duo"
-          size="lg"
-          className="!px-8"
+        <button
+          type="button"
           onClick={() => router.push('/student')}
+          className="sp-display inline-flex items-center justify-center px-8 py-3 min-h-[44px] active:translate-y-[2px] transition-transform"
+          style={{
+            background: 'var(--leaf)',
+            color: 'var(--bone)',
+            border: '2px solid var(--leaf-deep)',
+            borderRadius: 'var(--r-3)',
+            boxShadow: '0 4px 0 var(--leaf-deep)',
+            fontWeight: 700,
+          }}
         >
           Bosh sahifaga
-        </Button>
+        </button>
       </div>
     );
   }
@@ -152,22 +215,28 @@ export default function ReviewPage() {
   const progress = (current / items.length) * 100;
 
   return (
-    <div className="min-h-full bg-[#f7f4ef] flex flex-col">
+    <div className="sp-theme min-h-full flex flex-col">
       {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-6">
-        <div className="flex items-center justify-between mb-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl">
+      <div className="px-5 pt-5 pb-6" style={{ background: 'var(--leaf-deep)' }}>
+        <div className="flex items-center justify-between mb-4 max-w-lg mx-auto md:max-w-2xl">
           <button
             onClick={() => router.push('/student')}
-            className="text-[#94a3b8] flex items-center gap-1 text-sm hover:text-white transition-colors min-h-[44px]"
+            className="flex items-center gap-1 text-sm min-h-[44px]"
+            style={{ color: 'var(--leaf-soft)' }}
           >
             <ArrowLeft size={16} /> Chiqish
           </button>
-          <span className="text-[#94a3b8] text-sm font-mono">{current + 1} / {items.length}</span>
+          <span className="sp-mono text-sm" style={{ color: 'var(--leaf-soft)' }}>
+            {current + 1} / {items.length}
+          </span>
         </div>
-        <div className="max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div
+          className="max-w-lg mx-auto md:max-w-2xl h-1.5 overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 999 }}
+        >
           <div
-            className="h-full bg-[#fbbf24] rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
+            className="h-full transition-all duration-300"
+            style={{ width: `${progress}%`, background: 'var(--gold)', borderRadius: 999 }}
           />
         </div>
       </div>
@@ -176,59 +245,90 @@ export default function ReviewPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <button
           onClick={() => setFlipped((f) => !f)}
-          className="w-full max-w-sm md:max-w-lg focus:outline-none focus:ring-2 focus:ring-[#58cc02] focus:ring-offset-2 rounded-[24px]"
+          className="w-full max-w-sm md:max-w-lg focus:outline-none"
           aria-label={flipped ? 'Kartani yopish' : 'Kartani aylantirish'}
         >
-          <div className={`bg-white rounded-[24px] shadow-lg border-[1.5px] p-10 md:p-14 text-center transition-all duration-200 ${
-            flipped ? 'bg-[#ede9fe] border-[#a78bfa]' : 'border-[#ede9e1]'
-          }`}>
+          <div
+            className="p-10 md:p-14 text-center transition-all duration-200"
+            style={{
+              background: flipped ? 'var(--leaf-tint)' : 'var(--bone-2)',
+              border: '2px solid var(--ink)',
+              borderRadius: 'var(--r-4)',
+              boxShadow: '0 6px 0 var(--ink)',
+            }}
+          >
             {!flipped ? (
               <>
-                <p className="text-4xl md:text-5xl lg:text-6xl font-black text-[#0f172a] mb-3">{item.word}</p>
-                <p className="text-[#94a3b8] text-sm md:text-base">Tarjimasini bilsangiz kartani aylantiring</p>
-                <div className="mt-4 text-xs text-[#94a3b8] bg-[#f7f4ef] rounded-xl px-3 py-1.5 inline-block">
-                  Bosing
+                <div className="sp-eyebrow mb-3">inglizcha</div>
+                <p
+                  className="sp-display text-4xl md:text-5xl"
+                  style={{ color: 'var(--leaf-deep)' }}
+                >
+                  {item.word}
+                </p>
+                <p className="text-sm mt-3" style={{ color: 'var(--ink-3)' }}>
+                  Tarjimasini bilsangiz kartani aylantiring
+                </p>
+                <div
+                  className="sp-eyebrow mt-5 inline-block px-3 py-1.5"
+                  style={{ background: 'var(--paper-2)', borderRadius: 999 }}
+                >
+                  ⤺ bos
                 </div>
               </>
             ) : (
               <>
-                <p className="text-sm font-semibold text-[#6d28d9] uppercase tracking-wider mb-3">Tarjima</p>
-                <p className="text-2xl font-bold text-[#0f172a]">{item.word}</p>
-                <p className="text-[#94a3b8] text-sm mt-3">Bildingizmi?</p>
+                <div className="sp-eyebrow mb-3">savol</div>
+                <p className="sp-display text-2xl" style={{ color: 'var(--ink)' }}>
+                  {item.word}
+                </p>
+                <p className="text-sm mt-3" style={{ color: 'var(--ink-3)' }}>
+                  Bu so‘zni bildingizmi?
+                </p>
               </>
             )}
           </div>
         </button>
 
         {flipped && (
-          <div className="flex gap-4 mt-6 w-full max-w-sm md:max-w-lg">
-            <Button
-              variant="danger"
-              size="lg"
-              fullWidth
-              loading={submitting}
-              icon={<XCircle size={18} />}
-              className="!bg-[#ff4b4b]/10 !border-[#ff4b4b]/30 !text-[#ff4b4b] hover:!bg-[#ff4b4b]/20 !rounded-[18px] !py-4 border-b-[3px]"
+          <div className="flex gap-3 mt-6 w-full max-w-sm md:max-w-lg">
+            <button
+              type="button"
+              disabled={submitting}
               onClick={() => answer(false)}
+              className="sp-display flex-1 py-4 min-h-[44px] active:translate-y-[2px] transition-transform disabled:opacity-60"
+              style={{
+                background: 'var(--ember)',
+                color: 'var(--bone)',
+                border: '2px solid var(--ember-deep)',
+                borderRadius: 'var(--r-3)',
+                boxShadow: '0 4px 0 var(--ember-deep)',
+                fontWeight: 700,
+              }}
             >
               Bilmadim
-            </Button>
-            <Button
-              variant="success"
-              size="lg"
-              fullWidth
-              loading={submitting}
-              icon={<CheckCircle size={18} />}
-              className="!bg-[#58cc02]/10 !border-[#58cc02]/30 !text-[#58cc02] hover:!bg-[#58cc02]/20 !rounded-[18px] !py-4 border-b-[3px]"
+            </button>
+            <button
+              type="button"
+              disabled={submitting}
               onClick={() => answer(true)}
+              className="sp-display flex-1 py-4 min-h-[44px] active:translate-y-[2px] transition-transform disabled:opacity-60"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-3)',
+                boxShadow: '0 4px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
             >
               Bildim
-            </Button>
+            </button>
           </div>
         )}
 
         {!flipped && (
-          <p className="text-[#94a3b8] text-xs mt-6">
+          <p className="sp-mono text-xs mt-6" style={{ color: 'var(--ink-4)' }}>
             Interval: {item.interval} kun · EF: {item.easeFactor.toFixed(1)}
           </p>
         )}

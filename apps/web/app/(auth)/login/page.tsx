@@ -7,7 +7,7 @@ import {
 import { Zap, Trophy, BarChart2 } from 'lucide-react';
 
 export const metadata = {
-  title: "Kirish — A'lochi",
+  title: "Kirish — A'lojon",
 };
 
 const FEATURES = [
@@ -36,7 +36,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-3 mb-16">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] opacity-50" />
                 <span className="font-display text-white text-2xl font-bold tracking-tight">
-                  A&apos;lochi
+                  A&apos;lojon
                 </span>
               </div>
             }
@@ -75,7 +75,7 @@ export default function LoginPage() {
         </div>
 
         <p className="relative z-10 text-[#475569] text-xs">
-          © 2026 A&apos;lochi. Barcha huquqlar himoyalangan.
+          © 2026 A&apos;lojon. Barcha huquqlar himoyalangan.
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-3 mb-10 lg:hidden">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand)] to-[var(--brand-deep)] opacity-50" />
                 <span className="font-display text-white text-2xl font-bold tracking-tight">
-                  A&apos;lochi
+                  A&apos;lojon
                 </span>
               </div>
             }
@@ -105,30 +105,11 @@ export default function LoginPage() {
             <TenantBrandingLogo mobile />
           </Suspense>
 
-          <Suspense
-            fallback={
-              <div className="mb-8">
-                <h2 className="font-display text-[var(--ink)] text-3xl font-bold lg:block hidden">
-                  Xush kelibsiz
-                </h2>
-                <h2 className="font-display text-white text-3xl font-bold lg:hidden">
-                  Xush kelibsiz
-                </h2>
-                <p className="text-[var(--ink-3)] text-sm mt-1.5 lg:block hidden">
-                  Hisobingizga kiring
-                </p>
-                <p className="text-[#94a3b8] text-sm mt-1.5 lg:hidden">
-                  Hisobingizga kiring
-                </p>
-              </div>
-            }
-          >
+          <Suspense fallback={<div className="mb-8 h-14" />}>
             <LoginCardTitle />
           </Suspense>
 
-          <div className="bg-[var(--surface)] rounded-3xl p-7 shadow-[var(--shadow-3)] border border-[var(--line)]">
-            <LoginForm />
-          </div>
+          <LoginForm />
         </div>
       </div>
     </div>

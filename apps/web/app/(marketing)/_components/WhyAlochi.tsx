@@ -49,7 +49,7 @@ export function WhyAlochi() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="max-w-3xl">
-          <span className="section-eyebrow">Nega A&apos;lochi?</span>
+          <span className="section-eyebrow">Nega A&apos;lojon?</span>
           <h2
             id="why-h2"
             className={[
@@ -71,7 +71,7 @@ export function WhyAlochi() {
           </h2>
           <p className="mt-6 text-lg text-[var(--ink-2)] leading-relaxed max-w-2xl">
             Boshqa LMS&apos;lar darslarni shunchaki video qilib qo&apos;yadi.
-            A&apos;lochi — bola jalb qiluvchi, AI tushuntiruvchi, ota-ona
+            A&apos;lojon — bola jalb qiluvchi, AI tushuntiruvchi, ota-ona
             xabardor bo&apos;lgan tirik tizim.
           </p>
         </div>

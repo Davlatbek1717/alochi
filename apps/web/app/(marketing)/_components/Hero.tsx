@@ -133,9 +133,13 @@ export function Hero({ cms }: Props) {
               className="absolute left-[58%] top-[42%] -translate-x-1/2 -translate-y-1/2 w-[260px] h-[260px] rounded-full bg-[var(--brand)]/10 blur-3xl"
             />
 
-            {/* Mascot center */}
+            {/* Mascot center — scaled down on small screens so it never
+                collides with / overflows past the floating cards inside
+                the shorter mobile column. */}
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <Mascot expression="happy" size={280} animated />
+              <div className="scale-[0.62] sm:scale-[0.8] lg:scale-100 origin-center">
+                <Mascot expression="happy" size={280} animated />
+              </div>
             </div>
 
             {/* Floating: AI tutor card (top-right) */}

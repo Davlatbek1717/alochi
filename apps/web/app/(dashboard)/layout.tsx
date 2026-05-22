@@ -7,6 +7,8 @@ import Sidebar from './_components/Sidebar';
 import { DuelNotificationProvider } from './_components/DuelNotificationProvider';
 import { NotificationBell } from './_components/NotificationBell';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { StudyTimeHeartbeat } from './_components/StudyTimeHeartbeat';
+import { SessionGuard } from './_components/SessionGuard';
 import { ToastProvider, Button } from '@/components/ui';
 import { apiRequest } from '@/lib/api';
 
@@ -38,8 +40,9 @@ const ROLE_HOME: Record<string, string> = {
   student: '/student',
 };
 
-/** Routes that don't belong to any one role (e.g. delegations). */
-const SHARED_PREFIXES = ['/delegations'];
+/** Routes that don't belong to any one role (e.g. delegations,
+ *  the shared staff profile + face-enroll). */
+const SHARED_PREFIXES = ['/delegations', '/profile'];
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
@@ -76,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               .then((res) => {
                 if (res.data.brandName) setBrandName(res.data.brandName);
               })
-              .catch(() => { /* silently ignore — fallback to "A'lochi" */ });
+              .catch(() => { /* silently ignore — fallback to "A'lojon" */ });
           }
         }
       }
@@ -128,6 +131,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ToastProvider>
     <DuelNotificationProvider>
+      {user?.role === 'student' && <StudyTimeHeartbeat />}
+      {user?.role === 'student' && <SessionGuard />}
       <div className="flex flex-col min-h-screen bg-[var(--background)] overflow-x-hidden">
         {/* Skip to main content — keyboard a11y */}
         <a
@@ -176,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {user?.name ?? '…'}
               </p>
               <p className="text-[10px] text-white/55 truncate leading-tight font-medium tracking-wide">
-                {brandName ?? "A'lochi"}
+                {brandName ?? "A'lojon"}
               </p>
             </div>
           </div>

@@ -317,7 +317,7 @@ export default function KioskPage() {
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center mx-auto mb-3">
           <GraduationCap size={24} className="text-white" />
         </div>
-        <p className="text-white text-xl font-black">A&apos;lochi</p>
+        <p className="text-white text-xl font-black">A&apos;lojon</p>
         <p className="text-[#94a3b8] text-sm mt-0.5">Xodimlar Kirishi</p>
       </div>
 

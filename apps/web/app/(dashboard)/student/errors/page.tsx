@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles, AlertTriangle, BookOpen, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Mascot, Skeleton } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
+import { Ustoz } from '@/components/Ustoz';
 
 type AnalysisResult = { weakAreas: string[]; recommendation: string };
 
@@ -16,7 +17,6 @@ export default function ErrorAnalysisPage() {
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
-    // Backend derives studentId from JWT — no localStorage.user lookup needed
     setLoading(true);
     setError('');
     apiRequest<AnalysisResult>('/ai/analyze-errors', {}, token)
@@ -31,135 +31,156 @@ export default function ErrorAnalysisPage() {
 
   useFocusRevalidate(load);
 
-  const severityColor = (i: number) => {
-    if (i <= 1) return {
-      dot: 'bg-[#ff4b4b]',
-      bar: 'bg-[#ff4b4b]',
-      badge: 'bg-[#ff4b4b]/10 text-[#b91c1c] border-[#ff4b4b]/30',
-    };
-    if (i === 2) return {
-      dot: 'bg-[#fbbf24]',
-      bar: 'bg-[#fbbf24]',
-      badge: 'bg-[#fbbf24]/10 text-[#92400e] border-[#fbbf24]/30',
-    };
-    return {
-      dot: 'bg-[#58cc02]',
-      bar: 'bg-[#58cc02]',
-      badge: 'bg-[#58cc02]/10 text-[#166534] border-[#58cc02]/30',
-    };
-  };
-
-  const barWidth = (i: number) => {
-    const ws = [85, 65, 45, 25];
-    return `${ws[i] ?? Math.max(10, 85 - i * 18)}%`;
-  };
+  const severity = (i: number) =>
+    i <= 1 ? 'var(--ember)' : i === 2 ? 'var(--gold)' : 'var(--leaf)';
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-        <button
-          onClick={() => router.push('/student')}
-          className="flex items-center gap-2 text-[#94a3b8] text-sm font-medium mb-4 relative z-10 min-h-[44px] hover:text-white transition-colors"
+    <div className="sp-theme min-h-full pb-24">
+      <header className="px-4 pt-4 pb-3 flex items-center gap-3 max-w-lg mx-auto md:max-w-2xl">
+        <Link
+          href="/student"
+          aria-label="Orqaga"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
         >
-          <ArrowLeft size={16} /> Bosh sahifaga
-        </button>
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles size={16} className="text-violet-400" />
-            <span className="text-violet-400 text-xs font-semibold uppercase tracking-wider">AI Tahlil</span>
-          </div>
-          <p className="text-white text-xl font-bold">Mening Xatolarim</p>
-          <p className="text-[#94a3b8] text-xs mt-1">Kuchsiz mavzular va tavsiyalar</p>
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="sp-eyebrow">AI tomonidan</div>
+          <h1 className="sp-display text-xl leading-tight" style={{ color: 'var(--ink)' }}>
+            Xato tahlili
+          </h1>
         </div>
-      </div>
+      </header>
 
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-2xl lg:max-w-3xl md:space-y-5">
-        {/* AI Recommendation */}
-        <div className="bg-gradient-to-br from-[#1e1b4b] to-[#1e293b] rounded-[18px] p-4 border border-purple-900/30 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-20"
-            style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
-          <div className="flex items-center gap-2 mb-3 relative z-10">
-            <Sparkles size={13} className="text-violet-400" />
-            <span className="text-violet-400 text-xs font-semibold uppercase tracking-wider">AI Tavsiya</span>
-          </div>
-          {loading ? (
-            <div className="space-y-2 relative z-10">
-              <div className="h-4 bg-white/10 rounded animate-pulse w-full" />
-              <div className="h-4 bg-white/10 rounded animate-pulse w-3/4" />
+      <div className="px-4 max-w-lg mx-auto md:max-w-2xl space-y-4">
+        {/* Ustoz advice card */}
+        <div
+          className="flex gap-3 p-4"
+          style={{
+            background: 'var(--leaf-tint)',
+            border: '1.5px solid var(--leaf-soft)',
+            borderRadius: 'var(--r-3)',
+          }}
+        >
+          <Ustoz size={70} mood="study" className="shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="sp-eyebrow" style={{ color: 'var(--leaf-deep)' }}>
+              Ustozdan maslahat
             </div>
-          ) : error ? (
-            <div className="flex items-start gap-2 relative z-10">
-              <AlertTriangle size={14} className="text-[#fbbf24] shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-[#fbbf24]/80 text-sm">
-                  {error.toLowerCase().includes('internet') || error.toLowerCase().includes('network') || error.toLowerCase().includes('fetch')
+            {loading ? (
+              <div className="space-y-2 mt-2">
+                <div className="sp-skeleton h-3.5 w-full" />
+                <div className="sp-skeleton h-3.5 w-3/4" />
+              </div>
+            ) : error ? (
+              <>
+                <p className="text-sm mt-1.5" style={{ color: 'var(--ember-deep)' }}>
+                  {error.toLowerCase().includes('internet') ||
+                  error.toLowerCase().includes('network') ||
+                  error.toLowerCase().includes('fetch')
                     ? 'Internet aloqasini tekshiring'
                     : error}
                 </p>
                 <button
                   onClick={load}
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-white/70 hover:text-white transition-colors"
+                  className="sp-display text-xs mt-2 underline"
+                  style={{ color: 'var(--ink-2)' }}
                 >
-                  <RefreshCw size={11} /> Qayta urinish
+                  Qayta urinish
                 </button>
-              </div>
-            </div>
-          ) : analysis?.recommendation ? (
-            <p className="text-white/85 text-sm leading-relaxed relative z-10">{analysis.recommendation}</p>
-          ) : (
-            <p className="text-[#94a3b8] text-sm relative z-10">
-              Hali yetarli ma&apos;lumot yo&apos;q. Darslarni bajarib savollarni javob bering.
-            </p>
-          )}
+              </>
+            ) : analysis?.recommendation ? (
+              <p className="text-[13px] leading-relaxed mt-1.5" style={{ color: 'var(--ink-2)' }}>
+                {analysis.recommendation}
+              </p>
+            ) : (
+              <p className="text-[13px] mt-1.5" style={{ color: 'var(--ink-3)' }}>
+                Hali yetarli ma’lumot yo‘q. Darslarni bajarib savollarni javob bering.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => router.push('/student/lessons')}
+              className="sp-display mt-3 inline-flex items-center px-4 py-2 text-xs active:translate-y-[1px] transition-transform"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-2)',
+                boxShadow: '0 3px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
+            >
+              Mashqlarni boshlash
+            </button>
+          </div>
         </div>
 
         {/* Weak areas */}
         {!loading && !error && analysis && analysis.weakAreas.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Kuchsiz mavzular</p>
-            <div className="space-y-2">
-              {analysis.weakAreas.map((topic, i) => {
-                const c = severityColor(i);
-                return (
-                  <div key={topic}>
-                    <div className="bg-white rounded-[14px] px-4 py-3 md:py-4 flex items-center gap-3 border-[1.5px] border-[#ede9e1] md:hover:-translate-y-0.5 md:hover:shadow-md transition-all">
-                      <div className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
-                      <p className="flex-1 text-[#0f172a] text-sm font-semibold">{topic}</p>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${c.badge}`}>
-                        {i === 0 ? 'Juda kuchsiz' : i === 1 ? 'Kuchsiz' : i === 2 ? "O'rtacha" : 'Yaxshi'}
-                      </span>
-                    </div>
-                    <div className="px-4 -mt-0.5">
-                      <div className="h-1 bg-[#ede9e1] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${c.bar}`} style={{ width: barWidth(i) }} />
-                      </div>
-                    </div>
+          <div className="space-y-2">
+            <p
+              className="sp-display text-sm uppercase px-1"
+              style={{ letterSpacing: '0.06em', color: 'var(--ink-3)' }}
+            >
+              Tez-tez qilinadigan xatolar
+            </p>
+            {analysis.weakAreas.map((topic, i) => (
+              <div
+                key={topic}
+                className="flex items-center gap-3 p-3.5"
+                style={{
+                  background: 'var(--bone)',
+                  border: '1.5px solid var(--line)',
+                  borderRadius: 'var(--r-3)',
+                  boxShadow: 'var(--shadow-1)',
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center sp-display shrink-0"
+                  style={{
+                    background: 'var(--ember-tint)',
+                    border: '1.5px solid var(--ember-soft)',
+                    color: 'var(--ember-deep)',
+                    fontWeight: 800,
+                  }}
+                >
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="sp-display text-sm" style={{ color: 'var(--ink)' }}>
+                    {topic}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: severity(i) }}
+                />
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty */}
         {!loading && !error && (!analysis || analysis.weakAreas.length === 0) && (
-          <div className="bg-white rounded-[18px] p-10 text-center border-[1.5px] border-[#ede9e1]">
-            <Mascot expression="happy" size={100} className="mx-auto mb-3" animated />
-            <p className="text-[#0f172a] font-extrabold">Yaxshi natija!</p>
-            <p className="text-[#64748b] text-sm mt-1">Kamida 5 ta savolga javob bering va AI tahlil qiladi.</p>
+          <div
+            className="p-10 text-center"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-4)',
+            }}
+          >
+            <Ustoz size={110} mood="cheer" className="mx-auto" />
+            <p className="sp-display mt-3" style={{ color: 'var(--ink)' }}>
+              Yaxshi natija!
+            </p>
+            <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
+              Kamida 5 ta savolga javob bering va AI tahlil qiladi.
+            </p>
           </div>
         )}
-
-        {/* CTA */}
-        <button
-          onClick={() => router.push('/student/lessons')}
-          className="w-full bg-[#6d28d9] hover:brightness-105 text-white py-4 rounded-[18px] font-extrabold text-sm border-b-[4px] border-[#4c1d95] active:translate-y-[2px] active:border-b-[2px] transition-all flex items-center justify-center gap-2 min-h-[44px]"
-          style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-        >
-          <BookOpen size={16} /> Darslarga o&apos;tish
-        </button>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ from train import train
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Alochi ML Churn Service")
+app = FastAPI(title="A'lojon ML Churn Service")
 
 
 class PredictRequest(BaseModel):

@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, UserPlus, Check, X, Swords, UserX, Search, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowLeft, Search, Loader2, Swords, Plus } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { Button, Skeleton, EmptyState, Mascot, useToast } from '@/components/ui';
+import { useToast } from '@/components/ui';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
+import { Ustoz } from '@/components/Ustoz';
 
 type Friend = { id: string; name: string; role: string; status: string };
 type PendingRequest = { id: string; name: string; role: string };
@@ -18,10 +20,12 @@ function getInitials(name: string | null | undefined) {
 
 export default function FriendsPage() {
   const toast = useToast();
+  const router = useRouter();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pending, setPending] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [tab, setTab] = useState<'friends' | 'requests'>('friends');
 
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,7 +36,6 @@ export default function FriendsPage() {
 
   const [responding, setResponding] = useState<string | null>(null);
   const [challenging, setChallenging] = useState<string | null>(null);
-  const router = useRouter();
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -53,9 +56,7 @@ export default function FriendsPage() {
     load();
   }, [load]);
 
-  // Refresh friend list when user returns to this tab
   useFocusRevalidate(load);
-  // Refresh when duel or status events arrive (new challenge = new friend connection)
   useRevalidateOnEvent(['status:updated'], load);
 
   async function handleRespond(id: string, accept: boolean) {
@@ -97,8 +98,7 @@ export default function FriendsPage() {
     }
   }
 
-  // Debounced typeahead: 300ms after the user stops typing, fetch matching
-  // users. Less than 2 chars clears the list immediately.
+  // Debounced typeahead — 300ms after the user stops typing.
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const q = searchQuery.trim();
@@ -149,74 +149,74 @@ export default function FriendsPage() {
   }
 
   return (
-    <div className="min-h-full bg-[#f7f4ef]">
-      {/* Header */}
-      <div className="bg-[#0f172a] px-5 pt-5 pb-6 md:px-8 md:py-8 relative overflow-hidden">
-        <div
-          className="absolute top-0 right-0 w-48 h-48 md:w-72 md:h-72 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
-        />
-        <div className="relative z-10 flex items-end justify-between max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-          <div>
-            <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider mb-1">O&apos;quvchi</p>
-            <p className="text-white text-xl md:text-2xl font-bold">Do&apos;stlar</p>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={<UserPlus size={14} />}
-            className="!bg-[#58cc02] hover:!bg-[#46a302] !border-[#46a302] !rounded-xl border-b-[3px]"
-            onClick={() => setShowForm((v) => !v)}
-          >
-            Qo&apos;shish
-          </Button>
+    <div className="sp-theme min-h-full pb-24">
+      <header className="px-4 pt-4 pb-3 flex items-center gap-3 max-w-lg mx-auto md:max-w-3xl">
+        <Link
+          href="/student"
+          aria-label="Orqaga"
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--bone-2)', border: '1.5px solid var(--line)', color: 'var(--ink)' }}
+        >
+          <ArrowLeft size={18} />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <div className="sp-eyebrow">aloqalar</div>
+          <h1 className="sp-display text-xl leading-tight" style={{ color: 'var(--ink)' }}>
+            Do‘stlar
+          </h1>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          aria-label="Do‘st qo‘shish"
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 active:translate-y-[2px] transition-transform"
+          style={{
+            background: 'var(--leaf)',
+            color: 'var(--bone)',
+            border: '1.5px solid var(--leaf-deep)',
+            boxShadow: '0 3px 0 var(--leaf-deep)',
+          }}
+        >
+          <Plus size={20} />
+        </button>
+      </header>
 
-      <div className="px-4 md:px-6 pt-5 pb-6 space-y-4 max-w-lg mx-auto md:max-w-3xl lg:max-w-5xl xl:max-w-6xl">
-        {/* Load error */}
-        {loadError && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-rose-200 p-6 text-center space-y-3">
-            <Mascot expression="sad" size={80} className="mx-auto" />
-            <p className="text-[#0f172a] font-extrabold">Yuklab bo&apos;lmadi</p>
-            <p className="text-[#64748b] text-sm">{loadError}</p>
-            <p className="text-[#94a3b8] text-xs">Internet aloqasini tekshiring</p>
-            <Button variant="duo" size="md" onClick={load}>Qayta urinish</Button>
-          </div>
-        )}
-
-        {/* Add friend form */}
+      <div className="px-4 max-w-lg mx-auto md:max-w-3xl space-y-3">
+        {/* Add-friend search */}
         {showForm && (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Yangi do&apos;st qidirish</p>
-            <div>
-              <label htmlFor="friend-search" className="block text-xs font-bold text-[#64748b] uppercase tracking-wider mb-1">
-                Login yoki ism
-              </label>
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
-                <input
-                  id="friend-search"
-                  type="text"
-                  placeholder="masalan: odilov"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoFocus
-                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl pl-10 pr-10 py-3 text-[#0f172a] text-sm focus:outline-none focus:border-[#58cc02] focus:ring-1 focus:ring-[#58cc02]"
-                />
-                {searching && (
-                  <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] animate-spin" />
-                )}
-              </div>
-              <p className="text-[11px] text-[#94a3b8] mt-1.5">Kamida 2 ta belgi yozing</p>
+          <div
+            className="p-4 space-y-3"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--line)',
+              borderRadius: 'var(--r-3)',
+            }}
+          >
+            <div className="sp-eyebrow">Yangi do‘st qidirish</div>
+            <div
+              className="flex items-center gap-2 px-3.5"
+              style={{
+                background: 'var(--bone-2)',
+                border: '1.5px solid var(--line)',
+                borderRadius: 'var(--r-3)',
+              }}
+            >
+              <Search size={16} style={{ color: 'var(--ink-3)' }} />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="login yoki ism bo‘yicha qidir…"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoFocus
+                className="flex-1 py-3 bg-transparent outline-none text-sm"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--f-ui)' }}
+              />
+              {searching && <Loader2 size={16} className="animate-spin" style={{ color: 'var(--ink-3)' }} />}
             </div>
-
-            {/* Search results */}
             {searchQuery.trim().length >= 2 && !searching && candidates.length === 0 && (
-              <p className="text-sm text-[#64748b] text-center py-4">
+              <p className="text-sm text-center py-3" style={{ color: 'var(--ink-3)' }}>
                 Hech kim topilmadi
               </p>
             )}
@@ -227,19 +227,27 @@ export default function FriendsPage() {
                     key={c.id}
                     onClick={() => handleSendRequestTo(c)}
                     disabled={sendingTo !== null}
-                    className="w-full flex items-center gap-3 bg-[#f7f4ef] hover:bg-[#ede9e1] disabled:opacity-50 rounded-xl px-3 py-2.5 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left disabled:opacity-50"
+                    style={{ background: 'var(--bone-2)', borderRadius: 'var(--r-2)' }}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-[#58cc02]/15 flex items-center justify-center text-[#46a302] font-black text-sm shrink-0">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center sp-display shrink-0"
+                      style={{ background: 'var(--leaf-tint)', color: 'var(--leaf-deep)', fontWeight: 800 }}
+                    >
                       {getInitials(c.name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0f172a] truncate">{c.name}</p>
-                      <p className="text-[11px] text-[#94a3b8] truncate">@{c.login} · {c.role}</p>
+                      <p className="sp-display text-sm truncate" style={{ color: 'var(--ink)' }}>
+                        {c.name}
+                      </p>
+                      <p className="text-[11px] truncate" style={{ color: 'var(--ink-3)' }}>
+                        @{c.login} · {c.role}
+                      </p>
                     </div>
                     {sendingTo === c.id ? (
-                      <Loader2 size={16} className="text-[#46a302] animate-spin shrink-0" />
+                      <Loader2 size={16} className="animate-spin" style={{ color: 'var(--leaf-deep)' }} />
                     ) : (
-                      <UserPlus size={16} className="text-[#46a302] shrink-0" />
+                      <Plus size={16} style={{ color: 'var(--leaf-deep)' }} />
                     )}
                   </button>
                 ))}
@@ -248,119 +256,228 @@ export default function FriendsPage() {
           </div>
         )}
 
-        {/* Pending requests */}
+        {/* Tabs */}
+        <div
+          className="flex gap-1 p-1"
+          style={{ background: 'var(--paper-2)', borderRadius: 999 }}
+        >
+          {([
+            { k: 'friends', l: `Do‘stlar (${friends.length})` },
+            { k: 'requests', l: `So‘rovlar (${pending.length})` },
+          ] as const).map((t) => (
+            <button
+              key={t.k}
+              onClick={() => setTab(t.k)}
+              className="flex-1 py-2 sp-display text-[13px]"
+              style={{
+                background: tab === t.k ? 'var(--bone-2)' : 'transparent',
+                color: tab === t.k ? 'var(--ink)' : 'var(--ink-3)',
+                borderRadius: 999,
+                boxShadow: tab === t.k ? 'var(--shadow-1)' : 'none',
+              }}
+            >
+              {t.l}
+            </button>
+          ))}
+        </div>
+
+        {loadError && (
+          <div
+            className="p-6 text-center space-y-3"
+            style={{
+              background: 'var(--bone)',
+              border: '1.5px solid var(--ember-soft)',
+              borderRadius: 'var(--r-3)',
+            }}
+          >
+            <Ustoz size={80} mood="oops" className="mx-auto" />
+            <p className="sp-display" style={{ color: 'var(--ink)' }}>
+              Yuklab bo‘lmadi
+            </p>
+            <p className="text-sm" style={{ color: 'var(--ink-3)' }}>
+              {loadError}
+            </p>
+            <button
+              type="button"
+              onClick={load}
+              className="sp-display px-5 py-2.5 min-h-[44px]"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-3)',
+                boxShadow: '0 4px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
+            >
+              Qayta urinish
+            </button>
+          </div>
+        )}
+
         {loading ? (
-          <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-            <Skeleton theme="light" className="h-3 w-32 rounded" />
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
-                <Skeleton theme="light" className="w-9 h-9 rounded-xl shrink-0" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton theme="light" className="h-3.5 w-28 rounded" />
-                  <Skeleton theme="light" className="h-2.5 w-16 rounded" />
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="sp-skeleton h-16" style={{ borderRadius: 'var(--r-3)' }} />
+            ))}
+          </div>
+        ) : tab === 'friends' ? (
+          friends.length === 0 ? (
+            <EmptyCard
+              title="Hali do‘stlar yo‘q"
+              sub="Do‘st qo‘shish uchun yuqoridagi tugmani bosing"
+            />
+          ) : (
+            <div className="space-y-2">
+              {friends.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center gap-3 p-3"
+                  style={{
+                    background: 'var(--bone)',
+                    border: '1.5px solid var(--line)',
+                    borderRadius: 'var(--r-3)',
+                    boxShadow: 'var(--shadow-1)',
+                  }}
+                >
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center sp-display shrink-0"
+                    style={{
+                      background: 'var(--sky-soft)',
+                      color: 'var(--sky)',
+                      border: '2px solid var(--ink)',
+                      fontWeight: 800,
+                    }}
+                  >
+                    {getInitials(f.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="sp-display text-sm truncate" style={{ color: 'var(--ink)' }}>
+                      {f.name}
+                    </div>
+                    <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                      {f.role}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleChallenge(f.id)}
+                    disabled={!!challenging}
+                    className="sp-display inline-flex items-center gap-1.5 px-3.5 py-2 text-xs active:translate-y-[1px] transition-transform disabled:opacity-50"
+                    style={{
+                      background: 'var(--ember)',
+                      color: 'var(--bone)',
+                      border: '2px solid var(--ember-deep)',
+                      borderRadius: 'var(--r-2)',
+                      boxShadow: '0 3px 0 var(--ember-deep)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {challenging === f.id ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Swords size={13} />
+                    )}
+                    duel
+                  </button>
                 </div>
+              ))}
+            </div>
+          )
+        ) : pending.length === 0 ? (
+          <EmptyCard
+            title="So‘rov yo‘q"
+            sub="Yangi do‘stlik so‘rovlari shu yerda ko‘rinadi"
+          />
+        ) : (
+          <div className="space-y-2">
+            {pending.map((req) => (
+              <div
+                key={req.id}
+                className="flex items-center gap-3 p-3"
+                style={{
+                  background: 'var(--bone)',
+                  border: '1.5px solid var(--line)',
+                  borderRadius: 'var(--r-3)',
+                  boxShadow: 'var(--shadow-1)',
+                }}
+              >
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center sp-display shrink-0"
+                  style={{
+                    background: 'var(--gold-tint)',
+                    color: 'var(--gold-deep)',
+                    border: '2px solid var(--ink)',
+                    fontWeight: 800,
+                  }}
+                >
+                  {getInitials(req.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="sp-display text-sm truncate" style={{ color: 'var(--ink)' }}>
+                    {req.name}
+                  </div>
+                  <div className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                    {req.role}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRespond(req.id, true)}
+                  disabled={responding === req.id}
+                  className="sp-display px-3.5 py-2 text-xs active:translate-y-[1px] transition-transform disabled:opacity-50"
+                  style={{
+                    background: 'var(--leaf)',
+                    color: 'var(--bone)',
+                    border: '2px solid var(--leaf-deep)',
+                    borderRadius: 'var(--r-2)',
+                    boxShadow: '0 3px 0 var(--leaf-deep)',
+                    fontWeight: 700,
+                  }}
+                >
+                  qabul
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRespond(req.id, false)}
+                  disabled={responding === req.id}
+                  className="sp-display px-3 py-2 text-xs disabled:opacity-50"
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--ember-deep)',
+                    border: '1.5px solid var(--ember-soft)',
+                    borderRadius: 'var(--r-2)',
+                    fontWeight: 700,
+                  }}
+                >
+                  rad
+                </button>
               </div>
             ))}
           </div>
-        ) : (
-          <>
-            {pending.length > 0 && (
-              <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-                  Kutilayotgan so&apos;rovlar — {pending.length}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {pending.map((req) => (
-                    <div key={req.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#fbbf24]/20 flex items-center justify-center text-[#92400e] font-black text-sm shrink-0">
-                        {getInitials(req.name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0f172a] truncate">{req.name}</p>
-                        <p className="text-[10px] text-[#94a3b8]">{req.role}</p>
-                      </div>
-                      <button
-                        onClick={() => handleRespond(req.id, true)}
-                        disabled={responding === req.id}
-                        className="w-8 h-8 bg-[#58cc02]/15 text-[#46a302] rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-[#58cc02]/30 transition-colors"
-                        aria-label="Qabul qilish"
-                      >
-                        {responding === req.id ? (
-                          <span className="w-3 h-3 border border-[#46a302]/40 border-t-[#46a302] rounded-full animate-spin" />
-                        ) : (
-                          <Check size={15} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleRespond(req.id, false)}
-                        disabled={responding === req.id}
-                        className="w-8 h-8 bg-[#ff4b4b]/10 text-[#ff4b4b] rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-[#ff4b4b]/20 transition-colors"
-                        aria-label="Rad etish"
-                      >
-                        <X size={15} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Friends list */}
-            <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-5 space-y-3">
-              <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-                Do&apos;stlarim — {friends.length}
-              </p>
-              {friends.length === 0 ? (
-                <EmptyState
-                  theme="light"
-                  icon={<UserX size={24} />}
-                  title="Hali do'stlar yo'q"
-                  description="Do'st qo'shish uchun yuqoridagi tugmani bosing"
-                  className="py-6"
-                />
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {friends.map((f) => (
-                    <div key={f.id} className="flex items-center gap-3 bg-[#f7f4ef] rounded-xl px-3 py-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#0f172a]/10 flex items-center justify-center text-[#0f172a] font-black text-sm shrink-0">
-                        {getInitials(f.name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#0f172a] truncate">{f.name}</p>
-                        <p className="text-[10px] text-[#94a3b8]">{f.role}</p>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        loading={challenging === f.id}
-                        disabled={!!challenging}
-                        icon={<Swords size={12} />}
-                        className="!bg-[#0f172a] hover:!bg-[#1e293b] !border-[#0f172a] !rounded-xl !text-xs"
-                        onClick={() => handleChallenge(f.id)}
-                      >
-                        Duel
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Big add button if no friends and form not shown */}
-            {friends.length === 0 && pending.length === 0 && !showForm && (
-              <Button
-                variant="duo"
-                size="lg"
-                fullWidth
-                icon={<Users size={16} />}
-                onClick={() => setShowForm(true)}
-              >
-                Do&apos;st qo&apos;shish
-              </Button>
-            )}
-          </>
         )}
       </div>
+    </div>
+  );
+}
+
+function EmptyCard({ title, sub }: { title: string; sub: string }) {
+  return (
+    <div
+      className="p-8 text-center"
+      style={{
+        background: 'var(--bone)',
+        border: '1.5px solid var(--line)',
+        borderRadius: 'var(--r-4)',
+      }}
+    >
+      <Ustoz size={110} mood="calm" className="mx-auto" />
+      <p className="sp-display mt-3" style={{ color: 'var(--ink)' }}>
+        {title}
+      </p>
+      <p className="text-sm mt-1" style={{ color: 'var(--ink-3)' }}>
+        {sub}
+      </p>
     </div>
   );
 }

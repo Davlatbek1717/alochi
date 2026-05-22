@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import {
@@ -20,103 +21,101 @@ import {
   Megaphone,
   UserCog,
   Send,
+  Search,
+  Plus,
+  Sparkles,
+  UserX,
+  GraduationCap,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel';
 
-const NAV_CARDS = [
+type Card = {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+};
+
+type Group = {
+  id: string;
+  label: string;
+  iconBg: string;
+  iconColor: string;
+  cards: Card[];
+};
+
+// ── Navigation grouped into four clusters ─────────────────────────────────
+// Was a flat 13-card grid that took "scan everything" to find anything.
+// Categorise by what the filadmin is *doing* (students, staff, finance, infra)
+// so each cluster fits in roughly one screen and is colour-coded for scan.
+const NAV_GROUPS: Group[] = [
   {
-    href: '/filadmin/attendance',
-    icon: <BarChart2 size={22} />,
-    title: 'Davomat',
-    description: 'Kunlik qatnashuvni belgilash',
-    color: 'hover:border-teal-300 hover:bg-teal-50',
+    id: 'students',
+    label: "O'quvchilar va intizom",
+    iconBg: 'bg-emerald-50',
+    iconColor: 'text-emerald-700',
+    cards: [
+      { href: '/filadmin/attendance',        icon: <BarChart2 size={20} />,    title: 'Davomat',           description: 'Kunlik qatnashuvni belgilash' },
+      { href: '/filadmin/warnings',          icon: <AlertTriangle size={20} />, title: 'Ogohlantirishlar', description: 'Intizom muammolarini qayd etish' },
+      { href: '/filadmin/blocked-students',  icon: <UserX size={20} />,         title: 'Bloklanganlar',     description: "Bloklangan o'quvchilar ro'yxati" },
+      { href: '/filadmin/study-time',        icon: <Clock size={20} />,         title: "O'quv vaqti",       description: "Kunlik o'quv vaqti va kam ishlaganlar" },
+      { href: '/filadmin/tournaments',       icon: <Trophy size={20} />,        title: 'Turnirlar',         description: 'Musobaqalarni boshqarish' },
+    ],
   },
   {
-    href: '/filadmin/payments',
-    icon: <CreditCard size={22} />,
-    title: "To'lovlar",
-    description: "O'quvchi to'lovlarini boshqarish",
-    color: 'hover:border-emerald-300 hover:bg-emerald-50',
+    id: 'staff',
+    label: 'Xodimlar va vazifalar',
+    iconBg: 'bg-indigo-50',
+    iconColor: 'text-indigo-700',
+    cards: [
+      { href: '/filadmin/staff',             icon: <UserCog size={20} />,      title: 'Xodimlar',          description: 'Mentor / menejer / tester boshqaruvi' },
+      { href: '/filadmin/attendance/staff',  icon: <Clock size={20} />,         title: 'Xodim davomat tarixi', description: 'Oxirgi 7 kun tarixi' },
+      { href: '/filadmin/kpi',               icon: <Star size={20} />,          title: 'KPI Mukofot',       description: 'Xodimlarga ball berish' },
+      { href: '/filadmin/tasks',             icon: <ClipboardList size={20} />, title: 'Vazifalar',         description: 'Topshiriqlarni boshqarish' },
+    ],
   },
   {
-    href: '/filadmin/warnings',
-    icon: <AlertTriangle size={22} />,
-    title: 'Ogohlantirishlar',
-    description: 'Intizom muammolarini qayd etish',
-    color: 'hover:border-rose-300 hover:bg-rose-50',
+    id: 'finance',
+    label: 'Moliya va hisobotlar',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-700',
+    cards: [
+      { href: '/filadmin/payments',          icon: <CreditCard size={20} />,    title: "To'lovlar",          description: "O'quvchi to'lovlarini boshqarish" },
+      { href: '/filadmin/promotion-report',  icon: <Megaphone size={20} />,     title: 'Reklama hisoboti',   description: 'Promotion natijalari' },
+    ],
   },
   {
-    href: '/filadmin/kpi',
-    icon: <Star size={22} />,
-    title: 'KPI Mukofot',
-    description: 'Xodimlarga ball berish',
-    color: 'hover:border-amber-300 hover:bg-amber-50',
-  },
-  {
-    href: '/filadmin/devices',
-    icon: <Tablet size={22} />,
-    title: 'Planshetlar',
-    description: 'Kiosk qurilmalarni boshqarish',
-    color: 'hover:border-violet-300 hover:bg-violet-50',
-  },
-  {
-    href: '/filadmin/tournaments',
-    icon: <Trophy size={22} />,
-    title: 'Turnirlar',
-    description: 'Musobaqalarni boshqarish',
-    color: 'hover:border-amber-300 hover:bg-amber-50',
-  },
-  {
-    href: '/filadmin/tasks',
-    icon: <ClipboardList size={22} />,
-    title: 'Vazifalar',
-    description: 'Topshiriqlarni boshqarish',
-    color: 'hover:border-orange-300 hover:bg-orange-50',
-  },
-  {
-    href: '/filadmin/blocked-students',
-    icon: <AlertTriangle size={22} />,
-    title: 'Bloklanganlar',
-    description: 'Bloklangan oʻquvchilar roʻyxati',
-    color: 'hover:border-rose-300 hover:bg-rose-50',
-  },
-  {
-    href: '/filadmin/attendance/staff',
-    icon: <Clock size={22} />,
-    title: 'Xodim davomat tarixi',
-    description: 'Davomat tarixi (oxirgi 7 kun)',
-    color: 'hover:border-cyan-300 hover:bg-cyan-50',
-  },
-  {
-    href: '/filadmin/video-guides',
-    icon: <Video size={22} />,
-    title: "Video qo'llanmalar",
-    description: 'Foydalanuvchilar uchun videolar',
-    color: 'hover:border-blue-300 hover:bg-blue-50',
-  },
-  {
-    href: '/filadmin/promotion-report',
-    icon: <Megaphone size={22} />,
-    title: 'Reklama hisoboti',
-    description: 'Promotion natijalari',
-    color: 'hover:border-fuchsia-300 hover:bg-fuchsia-50',
-  },
-  {
-    href: '/filadmin/staff',
-    icon: <UserCog size={22} />,
-    title: 'Xodimlar',
-    description: 'Mentor / menejer / tester boshqaruvi',
-    color: 'hover:border-indigo-300 hover:bg-indigo-50',
-  },
-  {
-    href: '/delegations',
-    icon: <Send size={22} />,
-    title: 'Delegatsiya',
-    description: 'Vakolat berish va boshqarish',
-    color: 'hover:border-blue-300 hover:bg-blue-50',
+    id: 'infra',
+    label: 'Infratuzilma va boshqaruv',
+    iconBg: 'bg-violet-50',
+    iconColor: 'text-violet-700',
+    cards: [
+      { href: '/filadmin/groups',            icon: <GraduationCap size={20} />, title: 'Guruhlar',          description: "Guruh va mentor tayinlash" },
+      { href: '/filadmin/devices',           icon: <Tablet size={20} />,        title: 'Planshetlar',       description: 'Kiosk qurilmalar' },
+      { href: '/filadmin/video-guides',      icon: <Video size={20} />,         title: "Video qo'llanmalar", description: 'Foydalanuvchilar uchun video' },
+      { href: '/delegations',                icon: <Send size={20} />,          title: 'Delegatsiya',        description: 'Vakolat berish va boshqarish' },
+    ],
   },
 ];
+
+// Most-pressed buttons across the panel. Tapping a quick action lands on
+// the page where "Yangi ..." is the obvious next click.
+const QUICK_ACTIONS = [
+  { href: '/filadmin/attendance',  icon: <BarChart2 size={16} />,    label: 'Davomat',         tone: 'emerald' },
+  { href: '/filadmin/warnings',    icon: <AlertTriangle size={16} />, label: 'Ogohlantirish',   tone: 'rose' },
+  { href: '/filadmin/payments',    icon: <CreditCard size={16} />,    label: "To'lov",          tone: 'amber' },
+  { href: '/filadmin/tasks',       icon: <ClipboardList size={16} />, label: 'Vazifa',          tone: 'indigo' },
+];
+
+const TONE_COLORS: Record<string, string> = {
+  emerald: 'text-emerald-700',
+  rose: 'text-rose-700',
+  amber: 'text-amber-700',
+  indigo: 'text-indigo-700',
+};
+
+const ALL_CARDS: Card[] = NAV_GROUPS.flatMap((g) => g.cards);
 
 type DashboardStats = {
   attendanceCount: number;
@@ -135,8 +134,10 @@ const INITIAL_STATS: DashboardStats = {
 };
 
 export default function FiladminDashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS);
   const [branchId, setBranchId] = useState('');
+  const [query, setQuery] = useState('');
 
   const load = useCallback(() => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -187,34 +188,51 @@ export default function FiladminDashboard() {
     load();
   }, [load]);
 
-  // Refresh dashboard stats whenever the filadmin returns to this tab so
-  // attendance and task counts reflect the latest state.
   useFocusRevalidate(load);
-
-  // Real-time: revalidate on socket push for status or KPI mutations.
   useRevalidateOnEvent(['status:updated', 'kpi:updated'], load);
 
   const totalStatus = stats.statusYashil + stats.statusSariq + stats.statusQizil;
   const pct = (n: number) => (totalStatus > 0 ? Math.round((n / totalStatus) * 100) : 0);
+
+  // Client-side card search
+  const trimmedQuery = query.trim().toLowerCase();
+  const filteredCards = useMemo<Card[]>(() => {
+    if (!trimmedQuery) return [];
+    return ALL_CARDS.filter(
+      (c) =>
+        c.title.toLowerCase().includes(trimmedQuery) ||
+        c.description.toLowerCase().includes(trimmedQuery),
+    );
+  }, [trimmedQuery]);
+
+  function onSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' && filteredCards.length > 0) {
+      e.preventDefault();
+      router.push(filteredCards[0].href);
+    }
+    if (e.key === 'Escape') setQuery('');
+  }
 
   return (
     <div className="min-h-full bg-[#f7f4ef]">
       {/* Header */}
       <div className="bg-[#0f172a] px-5 pt-5 pb-8 relative overflow-hidden">
         <div
-          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-10"
+          aria-hidden
+          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-10 pointer-events-none"
           style={{ background: 'radial-gradient(circle, #0d9488 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
         />
         <div
-          className="absolute bottom-0 left-0 w-40 h-40 rounded-full opacity-8"
+          aria-hidden
+          className="absolute bottom-0 left-0 w-40 h-40 rounded-full opacity-8 pointer-events-none"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(-30%, 30%)' }}
         />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#0d9488]/20 border border-[#0d9488]/30 flex items-center justify-center shrink-0">
               <Building2 size={20} className="text-[#0d9488]" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[#94a3b8] text-xs font-medium uppercase tracking-wider">Filial boshqaruvi</p>
               <p className="text-white text-lg font-bold">Filadmin Paneli</p>
             </div>
@@ -239,7 +257,7 @@ export default function FiladminDashboard() {
               <p className="text-[10px] text-[#64748b] uppercase tracking-wider mt-1">Kutilayotgan vazifa</p>
             </div>
           </div>
-          {/* Status pie (simple bar visualization — Recharts pie added later) */}
+          {/* Status pie (simple bar visualization) */}
           <div className="bg-white rounded-[18px] p-4 border-[1.5px] border-[#ede9e1] mt-3">
             <div className="flex items-center gap-2 mb-3">
               <CheckCircle size={16} className="text-[#0f172a]" />
@@ -264,7 +282,97 @@ export default function FiladminDashboard() {
           </div>
         </div>
 
-        {/* Video check-ins panel */}
+        {/* Quick actions row */}
+        <div>
+          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-2">
+            Tezkor harakatlar
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {QUICK_ACTIONS.map((q) => (
+              <button
+                key={q.href}
+                type="button"
+                onClick={() => router.push(q.href)}
+                className="flex items-center justify-center gap-2 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-3 py-2.5 min-h-[44px] text-sm font-bold text-[#0f172a] hover:bg-[#f7f4ef] hover:border-[#0d9488]/40 transition-colors"
+              >
+                <span className={TONE_COLORS[q.tone] ?? 'text-[#0d9488]'}>{q.icon}</span>
+                <span className="truncate">{q.label}</span>
+                <Plus size={13} className="text-[#94a3b8] ml-auto shrink-0" />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+            aria-hidden
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onSearchKeyDown}
+            aria-label="Bo'limni qidirish"
+            placeholder="Bo'limni qidiring (masalan: davomat, kpi, planshet)..."
+            className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-2xl pl-10 pr-3 py-3 min-h-[44px] text-sm text-[#0f172a] focus:outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 placeholder:text-[#94a3b8]"
+          />
+        </div>
+
+        {/* Filtered view OR grouped nav */}
+        {trimmedQuery ? (
+          <div>
+            <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-2">
+              {filteredCards.length > 0
+                ? `${filteredCards.length} ta natija — Enter bilan birinchisiga o‘tish`
+                : 'Hech narsa topilmadi'}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {filteredCards.map((c) => (
+                <NavCardLink key={c.href} card={c} iconBg="bg-[#f7f4ef]" iconColor="text-[#0f172a]" />
+              ))}
+            </div>
+            {filteredCards.length === 0 && (
+              <div className="bg-white rounded-2xl border-[1.5px] border-dashed border-[#ede9e1] p-6 text-center">
+                <Sparkles size={20} className="text-[#94a3b8] mx-auto mb-2" />
+                <p className="text-sm text-[#64748b]">
+                  Boshqacha so‘zlar bilan qidirib ko‘ring
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          NAV_GROUPS.map((group) => (
+            <section key={group.id} aria-labelledby={`group-${group.id}`}>
+              <h2
+                id={`group-${group.id}`}
+                className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest mb-2 flex items-center gap-2"
+              >
+                <span className={`w-1 h-3.5 rounded ${group.iconBg.replace('-50', '-400')}`} />
+                {group.label}
+                <span className="text-[10px] font-mono font-semibold text-[#94a3b8]">
+                  {group.cards.length}
+                </span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {group.cards.map((c) => (
+                  <NavCardLink
+                    key={c.href}
+                    card={c}
+                    iconBg={group.iconBg}
+                    iconColor={group.iconColor}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
+
+        {/* Video check-ins panel — pinned at the bottom because it's a live
+            data widget filadmins want at the end of a glance, not in the
+            middle of nav scanning. */}
         {branchId && (
           <div>
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Kunlik video</p>
@@ -274,29 +382,33 @@ export default function FiladminDashboard() {
             />
           </div>
         )}
-
-        <div>
-          <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest mb-3">Tezkor navigatsiya</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {NAV_CARDS.map((card) => (
-              <Link
-                key={card.href}
-                href={card.href}
-                className={`bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] text-left ${card.color}`}
-              >
-                <div className="w-11 h-11 rounded-xl bg-[#f7f4ef] flex items-center justify-center text-[#0f172a] shrink-0">
-                  {card.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
-                  <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.description}</p>
-                </div>
-                <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
-              </Link>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
+  );
+}
+
+function NavCardLink({
+  card,
+  iconBg,
+  iconColor,
+}: {
+  card: Card;
+  iconBg: string;
+  iconColor: string;
+}) {
+  return (
+    <Link
+      href={card.href}
+      className="bg-white rounded-[18px] p-4 min-w-0 flex items-center gap-3 border-[1.5px] border-[#ede9e1] transition-all hover:scale-[1.02] hover:border-[#0d9488]/40 hover:bg-[#0d9488]/[0.03]"
+    >
+      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconBg} ${iconColor}`}>
+        {card.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[#0f172a] text-sm font-bold truncate">{card.title}</p>
+        <p className="text-[#64748b] text-xs mt-0.5 truncate">{card.description}</p>
+      </div>
+      <ChevronRight size={16} className="text-[#94a3b8] shrink-0" />
+    </Link>
   );
 }

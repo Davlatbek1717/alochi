@@ -7,7 +7,8 @@ import {
   Pencil,
   Power,
   KeyRound,
-  Filter,
+  Search,
+  X,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import {
@@ -69,6 +70,10 @@ export default function FiladminStaffPage() {
   const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StaffRole | ''>('');
+  // Client-side search by name + login. Live filtered on top of the role +
+  // status filters — no extra API hit per keystroke.
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   // Create modal
   const [createOpen, setCreateOpen] = useState(false);
@@ -119,7 +124,24 @@ export default function FiladminStaffPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = filter ? staff.filter((s) => s.role === filter) : staff;
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return staff.filter((s) => {
+      if (filter && s.role !== filter) return false;
+      if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+      if (q) {
+        const hay = `${s.name} ${s.login}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [staff, filter, statusFilter, search]);
+
+  const roleCounts = useMemo(() => ({
+    mentor: staff.filter((s) => s.role === 'mentor').length,
+    manager: staff.filter((s) => s.role === 'manager').length,
+    tester: staff.filter((s) => s.role === 'tester').length,
+  }), [staff]);
 
   async function createStaff() {
     if (!form.name.trim() || !form.login.trim() || form.password.length < 6) {
@@ -274,32 +296,89 @@ export default function FiladminStaffPage() {
       </div>
 
       <div className="px-4 pt-4 pb-6 space-y-4">
-        {/* Filter */}
-        <div className="flex gap-2 items-center flex-wrap">
-          <Filter size={14} className="text-[#94a3b8]" />
-          <button
-            onClick={() => setFilter('')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-              filter === ''
-                ? 'bg-[#0f172a] text-white'
-                : 'bg-white text-[#64748b] border border-[#ede9e1]'
-            }`}
-          >
-            Hammasi
-          </button>
-          {ROLE_OPTIONS.map((r) => (
+        {/* Search */}
+        <div className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" aria-hidden />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Ism yoki login boʻyicha qidirish"
+            placeholder="Ism yoki login boʻyicha qidirish..."
+            className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200 placeholder:text-[#94a3b8]"
+          />
+          {search && (
             <button
-              key={r}
-              onClick={() => setFilter(r)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                filter === r
-                  ? 'bg-[#0f172a] text-white'
-                  : 'bg-white text-[#64748b] border border-[#ede9e1]'
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Qidiruvni tozalash"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8]"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Role chips */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest">Rol</p>
+          <div className="flex gap-1.5 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setFilter('')}
+              aria-pressed={filter === ''}
+              className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border ${
+                filter === ''
+                  ? 'bg-violet-600 text-white border-violet-600'
+                  : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-violet-300 hover:bg-violet-50'
               }`}
             >
-              {ROLE_LABEL[r]}
+              Hammasi
+              <span className="ml-1.5 text-[10px] opacity-70 font-mono">{staff.length}</span>
             </button>
-          ))}
+            {ROLE_OPTIONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setFilter(r)}
+                aria-pressed={filter === r}
+                className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border ${
+                  filter === r
+                    ? 'bg-violet-600 text-white border-violet-600'
+                    : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-violet-300 hover:bg-violet-50'
+                }`}
+              >
+                {ROLE_LABEL[r]}
+                <span className="ml-1.5 text-[10px] opacity-70 font-mono">{roleCounts[r]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status chips */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest">Holat</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {[
+              { key: 'all',      label: 'Hammasi',   dot: 'bg-[#94a3b8]' },
+              { key: 'active',   label: 'Faol',      dot: 'bg-emerald-500' },
+              { key: 'inactive', label: 'Faolsiz',   dot: 'bg-rose-500' },
+            ].map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setStatusFilter(s.key as typeof statusFilter)}
+                aria-pressed={statusFilter === s.key}
+                className={`px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border inline-flex items-center gap-1.5 ${
+                  statusFilter === s.key
+                    ? 'bg-[#0f172a] text-white border-[#0f172a]'
+                    : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]/40'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {!me.branchId && !loading ? (
@@ -324,14 +403,22 @@ export default function FiladminStaffPage() {
             <EmptyState
               icon={<UserCog size={28} />}
               title="Xodim yo‘q"
-              description="Birinchi xodimni qo‘shing"
+              description={
+                search
+                  ? `"${search}" bo‘yicha hech narsa topilmadi`
+                  : staff.length === 0
+                    ? 'Birinchi xodimni qo‘shing'
+                    : 'Filtrlarni o‘zgartiring'
+              }
               theme="light"
             />
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-              {filtered.length} ta xodim
+              {filtered.length === staff.length
+                ? `${staff.length} ta xodim`
+                : `${filtered.length} / ${staff.length} ta xodim`}
             </p>
             {filtered.map((u) => (
               <div

@@ -9,8 +9,23 @@ const withPWA = withPWAInit({
   fallbacks: {
     document: '/offline',
   },
+  // CRITICAL: next-pwa's built-in default runtimeCaching list ships
+  // async `cacheWillUpdate` plugins. When the service worker is bundled,
+  // those async functions are down-levelled to reference the SWC helper
+  // `_async_to_generator`, but the helper is NOT inlined into sw.js —
+  // producing a runtime "ReferenceError: _async_to_generator is not
+  // defined" in `cacheWillUpdate` that breaks every cache write.
+  // We supply our own complete, intentionally security-scoped caching
+  // list (all sync — no async callbacks), so the defaults must NOT be
+  // merged in. Setting this to false is the documented fix.
+  extendDefaultRuntimeCaching: false,
   workboxOptions: {
     disableDevLogs: true,
+    // Inject the SWC async-helper shim at the top of sw.js. next-pwa
+    // emits bare `_async_to_generator(...)` calls without defining the
+    // helper; this importScripts defines it on the worker global before
+    // any cache logic runs. See public/swc-helpers.js.
+    importScripts: ['/swc-helpers.js'],
     runtimeCaching: [
       // /api/** must NEVER be cached — RBAC + tenant scoping must always re-check on the server
       {
@@ -25,6 +40,25 @@ const withPWA = withPWAInit({
       {
         urlPattern: /\/[^/]+\/login(\/|$)/,
         handler: 'NetworkOnly',
+      },
+      // Hashed, immutable Next build assets — safe to cache aggressively.
+      // Sync handler + workbox ExpirationPlugin only (no async callbacks).
+      {
+        urlPattern: /\/_next\/static\/.*/i,
+        handler: 'CacheFirst',
+        options: {
+          cacheName: 'next-static',
+          expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+        },
+      },
+      // Static media (images, fonts) — keep the app shell usable offline.
+      {
+        urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico|woff2?|ttf)$/i,
+        handler: 'StaleWhileRevalidate',
+        options: {
+          cacheName: 'static-media',
+          expiration: { maxEntries: 120, maxAgeSeconds: 30 * 24 * 60 * 60 },
+        },
       },
       // documents fall back to network-first (still works offline via fallback page)
       {
