@@ -11,12 +11,15 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.media.RingtoneManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.StatFs
 import android.telephony.TelephonyManager
 import android.util.Log
@@ -257,6 +260,8 @@ class DeviceMonitorService : Service() {
                     val body = collectTelemetry()
                     DeviceApi.heartbeat(this, body)
                 }
+                "MESSAGE" -> showMessage(cmd.payload?.optString("text") ?: "")
+                "RING" -> ringDevice()
                 "REBOOT" -> if (!deviceOwnerReboot()) status = "failed"
                 "WIPE_USER_DATA", "FACTORY_RESET" -> if (!deviceOwnerWipe()) status = "failed"
                 else -> status = "failed"
@@ -266,6 +271,49 @@ class DeviceMonitorService : Service() {
             status = "failed"
         }
         if (cmd.id.isNotBlank()) DeviceApi.ackCommand(this, cmd.id, status)
+    }
+
+    private fun showMessage(text: String) {
+        if (text.isBlank()) return
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            nm.getNotificationChannel("alojon_msg") == null
+        ) {
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    "alojon_msg",
+                    getString(R.string.app_name),
+                    NotificationManager.IMPORTANCE_HIGH,
+                ),
+            )
+        }
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, "alojon_msg")
+        } else {
+            @Suppress("DEPRECATION") Notification.Builder(this)
+        }
+        nm.notify(
+            4712,
+            builder
+                .setContentTitle(getString(R.string.app_name))
+                .setContentText(text)
+                .setStyle(Notification.BigTextStyle().bigText(text))
+                .setSmallIcon(R.drawable.ic_launcher)
+                .setAutoCancel(true)
+                .build(),
+        )
+    }
+
+    private fun ringDevice() {
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            val rt = RingtoneManager.getRingtone(applicationContext, uri) ?: return
+            rt.play()
+            Handler(Looper.getMainLooper()).postDelayed({
+                try { rt.stop() } catch (_: Exception) {}
+            }, 15_000)
+        } catch (_: Exception) {}
     }
 
     private fun deviceOwnerReboot(): Boolean {

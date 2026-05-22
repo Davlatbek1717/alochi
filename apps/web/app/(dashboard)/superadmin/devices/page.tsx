@@ -16,6 +16,8 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
+  Volume2,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
@@ -221,6 +223,40 @@ export default function SuperadminDevicesPage() {
     }
   }
 
+  async function ring(d: Device) {
+    setBusy(d.id);
+    try {
+      await apiRequest(`/devices/${d.id}/ring`, { method: 'POST' }, token());
+      toast.success('Tovush buyrugʻi yuborildi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const [msgTarget, setMsgTarget] = useState<Device | null>(null);
+  const [msgText, setMsgText] = useState('');
+  async function doMessage() {
+    if (!msgTarget || !msgText.trim()) return;
+    const id = msgTarget.id;
+    setMsgTarget(null);
+    setBusy(id);
+    try {
+      await apiRequest(
+        `/devices/${id}/message`,
+        { method: 'POST', body: JSON.stringify({ text: msgText.trim() }) },
+        token(),
+      );
+      toast.success('Xabar yuborildi');
+      setMsgText('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const [wipeTarget, setWipeTarget] = useState<Device | null>(null);
   async function doWipe() {
     if (!wipeTarget) return;
@@ -388,6 +424,20 @@ export default function SuperadminDevicesPage() {
                     >
                       <Crosshair size={13} /> Joylashuv
                     </button>
+                    <button
+                      onClick={() => { setMsgTarget(d); setMsgText(''); }}
+                      disabled={busy === d.id}
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] disabled:opacity-50 transition-colors"
+                    >
+                      <MessageSquare size={13} /> Xabar
+                    </button>
+                    <button
+                      onClick={() => ring(d)}
+                      disabled={busy === d.id}
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] disabled:opacity-50 transition-colors"
+                    >
+                      <Volume2 size={13} /> Tovush
+                    </button>
                     {d.lastLatitude != null && (
                       <a
                         href={`https://www.openstreetmap.org/?mlat=${d.lastLatitude}&mlon=${d.lastLongitude}#map=17/${d.lastLatitude}/${d.lastLongitude}`}
@@ -552,6 +602,36 @@ export default function SuperadminDevicesPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Message modal */}
+      <Modal open={msgTarget !== null} onClose={() => setMsgTarget(null)} title="Ekranga xabar" theme="light">
+        <p className="text-sm text-[#64748b] mb-3">
+          <span className="font-semibold text-[#0f172a]">{msgTarget?.model || msgTarget?.serialNumber}</span>{' '}
+          planshetida bildirishnoma sifatida koʻrsatiladi.
+        </p>
+        <textarea
+          value={msgText}
+          onChange={(e) => setMsgText(e.target.value)}
+          rows={3}
+          placeholder="Xabar matni..."
+          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a] resize-none mb-4"
+        />
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setMsgTarget(null)}
+            className="px-4 py-2 rounded-xl border border-[#ede9e1] text-sm font-semibold text-[#64748b] hover:bg-[#f7f4ef]"
+          >
+            Bekor
+          </button>
+          <button
+            onClick={doMessage}
+            disabled={!msgText.trim()}
+            className="px-4 py-2 rounded-xl bg-[#0f172a] text-white text-sm font-bold hover:bg-[#1e293b] disabled:opacity-50"
+          >
+            Yuborish
+          </button>
+        </div>
       </Modal>
 
       {/* Wipe confirm modal (destructive) */}

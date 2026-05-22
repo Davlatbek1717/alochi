@@ -262,6 +262,30 @@ export class DevicesController {
     return this.svc.issueLocate(id, req.user.tenantId, req.user.userId);
   }
 
+  @Post(':id/message')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  message(
+    @Param('id') id: string,
+    @Body() body: { text: string },
+    @Request() req: any,
+  ) {
+    return this.svc.issueCommand(
+      id,
+      req.user.tenantId,
+      'MESSAGE',
+      { text: body?.text ?? '' },
+      req.user.userId,
+    );
+  }
+
+  @Post(':id/ring')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  ring(@Param('id') id: string, @Request() req: any) {
+    return this.svc.issueCommand(id, req.user.tenantId, 'RING', undefined, req.user.userId);
+  }
+
   // Device-owner only on the tablet side; arrives via heartbeat/FCM.
   @Post(':id/reboot')
   @Roles(UserRole.superadmin)
