@@ -40,6 +40,8 @@ export default function SuperadminGroupsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [groupStudents, setGroupStudents] = useState<Record<string, { id: string; name: string }[]>>({});
+  const [groupStudentsLoading, setGroupStudentsLoading] = useState<Record<string, boolean>>({});
   const [pickerGroup, setPickerGroup] = useState<string | null>(null);
   const [pickerSelected, setPickerSelected] = useState<string[]>([]);
   const [addingStudents, setAddingStudents] = useState(false);
@@ -81,10 +83,6 @@ export default function SuperadminGroupsPage() {
     return allUsers
       .filter((u) => u.role === 'mentor' && u.branchId === branchId && !leadingIds.has(u.id))
       .map((u) => ({ id: u.id, name: u.name }));
-  }
-
-  function studentsInGroup(groupId: string) {
-    return allUsers.filter((u) => u.role === 'student' && u.groupId === groupId);
   }
 
   function studentsWithoutGroupInBranch(branchId: string) {
@@ -151,11 +149,36 @@ export default function SuperadminGroupsPage() {
     }
   }
 
+  async function toggleExpand(groupId: string) {
+    const isNowExpanded = !(expanded[groupId] ?? false);
+    setExpanded((p) => ({ ...p, [groupId]: isNowExpanded }));
+    if (isNowExpanded && !groupStudents[groupId]) {
+      setGroupStudentsLoading((p) => ({ ...p, [groupId]: true }));
+      try {
+        const res = await apiRequest<{ id: string; name: string }[]>(`/users/group/${groupId}`, {}, token());
+        setGroupStudents((p) => ({ ...p, [groupId]: res.data ?? [] }));
+      } catch {
+        setGroupStudents((p) => ({ ...p, [groupId]: [] }));
+      } finally {
+        setGroupStudentsLoading((p) => ({ ...p, [groupId]: false }));
+      }
+    }
+  }
+
+  async function refreshGroupStudents(groupId: string) {
+    try {
+      const res = await apiRequest<{ id: string; name: string }[]>(`/users/group/${groupId}`, {}, token());
+      setGroupStudents((p) => ({ ...p, [groupId]: res.data ?? [] }));
+    } catch {
+      // ignore refresh errors
+    }
+  }
+
   async function removeStudent(groupId: string, studentId: string) {
     try {
       await apiRequest(`/groups/${groupId}/students/${studentId}`, { method: 'DELETE' }, token());
       toast.success("O'quvchi guruhdan chiqarildi");
-      await load();
+      await Promise.all([load(), refreshGroupStudents(groupId)]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     }
@@ -170,9 +193,10 @@ export default function SuperadminGroupsPage() {
         body: JSON.stringify({ studentIds: pickerSelected }),
       }, token());
       toast.success("O'quvchilar qo'shildi");
+      const gId = pickerGroup;
       setPickerGroup(null);
       setPickerSelected([]);
-      await load();
+      await Promise.all([load(), refreshGroupStudents(gId)]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
@@ -231,7 +255,8 @@ export default function SuperadminGroupsPage() {
         ) : (
           filteredGroups.map((g) => {
             const isExpanded = expanded[g.id] ?? false;
-            const inGroup = studentsInGroup(g.id);
+            const inGroup = groupStudents[g.id] ?? [];
+            const isLoadingStudents = groupStudentsLoading[g.id] ?? false;
             const branchName = g.branch?.name ?? branches.find((b) => b.id === g.branchId)?.name ?? '';
             return (
               <div key={g.id} className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
@@ -254,7 +279,7 @@ export default function SuperadminGroupsPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => startEdit(g)} className="w-8 h-8 rounded-xl bg-[#f7f4ef] border border-[#ede9e1] flex items-center justify-center hover:bg-violet-50 hover:border-violet-200 transition-colors" title="Tahrirlash"><Pencil size={13} className="text-[#64748b]" /></button>
                     <button onClick={() => setDeleteTarget(g)} className="w-8 h-8 rounded-xl bg-[#f7f4ef] border border-[#ede9e1] flex items-center justify-center hover:bg-rose-50 hover:border-rose-200 transition-colors" title="O'chirish"><Trash2 size={13} className="text-[#94a3b8]" /></button>
-                    <button onClick={() => setExpanded((p) => ({ ...p, [g.id]: !isExpanded }))} className="w-8 h-8 rounded-xl bg-[#f7f4ef] border border-[#ede9e1] flex items-center justify-center hover:bg-[#ede9e1] transition-colors">{isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
+                    <button onClick={() => toggleExpand(g.id)} className="w-8 h-8 rounded-xl bg-[#f7f4ef] border border-[#ede9e1] flex items-center justify-center hover:bg-[#ede9e1] transition-colors">{isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</button>
                   </div>
                 </div>
 
@@ -264,7 +289,11 @@ export default function SuperadminGroupsPage() {
                       <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">Oʻquvchilar</p>
                       <button onClick={() => { setPickerGroup(g.id); setPickerSelected([]); }} className="flex items-center gap-1.5 text-xs font-bold text-[#7c3aed] hover:underline"><UserPlus size={12} />Qoʻshish</button>
                     </div>
-                    {inGroup.length === 0 ? (
+                    {isLoadingStudents ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3].map((i) => <Skeleton key={i} theme="light" className="h-9 rounded-xl" />)}
+                      </div>
+                    ) : inGroup.length === 0 ? (
                       <p className="text-xs text-[#94a3b8] italic">Guruhda oʻquvchi yoʻq</p>
                     ) : (
                       inGroup.map((s) => (
