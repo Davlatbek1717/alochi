@@ -409,7 +409,7 @@ export default function TesterExamQueuePage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-15 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -455,7 +455,7 @@ export default function TesterExamQueuePage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-4 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-6 space-y-4 max-w-lg mx-auto">
         {error && (
           <div className="bg-rose-50 border-[1.5px] border-rose-200 rounded-2xl px-4 py-3">
             <p className="text-rose-700 text-sm font-bold">{error}</p>

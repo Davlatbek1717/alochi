@@ -120,7 +120,7 @@ export default function TesterTasksPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-15 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -144,18 +144,19 @@ export default function TesterTasksPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
         {/* Search + filter chips — shown only when tasks exist */}
         {!loading && tasks.length > 0 && (
           <>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none" aria-hidden />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                aria-label="Vazifa nomi bo'yicha qidirish"
                 placeholder="Vazifa nomi bo'yicha qidirish..."
-                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400"
+                className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
               />
               {search && (
                 <button
@@ -169,13 +170,13 @@ export default function TesterTasksPage() {
               )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 pb-0.5">
+            <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-0.5">
               {(
                 [
-                  { key: 'all', label: 'Hammasi', count: counts.all },
-                  { key: 'pending', label: 'Kutilmoqda', count: counts.pending },
-                  { key: 'done', label: 'Bajarilgan', count: counts.done },
-                ] as { key: FilterMode; label: string; count: number }[]
+                  { key: 'all',     label: 'Hammasi',    count: counts.all,     dot: 'bg-[#94a3b8]' },
+                  { key: 'pending', label: 'Kutilmoqda', count: counts.pending, dot: 'bg-amber-500' },
+                  { key: 'done',    label: 'Bajarilgan', count: counts.done,    dot: 'bg-emerald-500' },
+                ] as { key: FilterMode; label: string; count: number; dot: string }[]
               ).map((f) => {
                 const isActive = filter === f.key;
                 return (
@@ -183,14 +184,18 @@ export default function TesterTasksPage() {
                     key={f.key}
                     type="button"
                     onClick={() => setFilter(f.key)}
-                    className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-extrabold px-3 py-1.5 rounded-full border transition-colors ${
+                    aria-pressed={isActive}
+                    className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 min-h-[32px] rounded-full border transition-colors ${
                       isActive
                         ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                        : 'bg-white text-[#64748b] border-[#ede9e1] hover:bg-[#fffaf0]'
+                        : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0f172a]/40'
                     }`}
                   >
+                    <span className={`w-2 h-2 rounded-full ${f.dot}`} />
                     {f.label}
-                    <span className={isActive ? 'text-white/80' : 'text-[#94a3b8]'}>{f.count}</span>
+                    <span className={`text-[10px] font-mono ${isActive ? 'text-white/70' : 'text-[#94a3b8]'}`}>
+                      {f.count}
+                    </span>
                   </button>
                 );
               })}

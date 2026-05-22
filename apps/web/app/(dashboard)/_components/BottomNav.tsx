@@ -18,6 +18,7 @@ import {
   Swords,
   Trophy,
   Languages,
+  Wrench,
 } from 'lucide-react';
 
 type Tab = {
@@ -49,7 +50,9 @@ const NAV_TABS: Record<string, Tab[]> = {
   tester: [
     { href: '/tester', icon: <Home size={20} />, label: 'Bosh' },
     { href: '/tester/lessons/current', icon: <FlaskConical size={20} />, label: 'Sinov' },
-    { href: '/tester/exam-queue', icon: <ClipboardList size={20} />, label: 'Imtihon' },
+    { href: '/tester/exam-queue', icon: <GraduationCap size={20} />, label: 'Imtihon' },
+    { href: '/tester/tasks', icon: <ClipboardList size={20} />, label: 'Vazifalar' },
+    { href: '/tester/tech-issues', icon: <Wrench size={20} />, label: 'Texnik' },
   ],
   manager: [
     { href: '/manager', icon: <Home size={20} />, label: 'Bosh' },

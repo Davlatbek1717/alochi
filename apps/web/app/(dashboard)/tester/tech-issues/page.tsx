@@ -169,7 +169,7 @@ export default function TesterTechIssuesPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-15 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -196,7 +196,7 @@ export default function TesterTechIssuesPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-5 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-6 space-y-5 max-w-lg mx-auto">
         {/* Report form */}
         <form onSubmit={submit} className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4 space-y-4">
           {/* Category picker */}

@@ -130,9 +130,9 @@ export default function TesterDashboard() {
 
   // Tester is dedicated supervisory staff — the dashboard surfaces
   // exam-queue throughput, branch attendance, KPI progress, and
-  // outstanding tasks. No student gamification (XP, streak, virtual
-  // city, daily quests, certificates) — those belonged to a copy
-  // of the student dashboard and were never meaningful for staff.
+  // outstanding tasks. The first card (exam queue) is always primary
+  // because that's the tester's lead daily task; everything else is
+  // a quick-tap from the same grid.
   const navCards = [
     {
       href: '/tester/exam-queue',
@@ -180,7 +180,7 @@ export default function TesterDashboard() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-56 h-56 rounded-full opacity-15 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
