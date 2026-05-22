@@ -1,7 +1,18 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Upload, Play, CheckCircle, XCircle, Clock } from 'lucide-react';
+import {
+  ArrowLeft,
+  Play,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Camera,
+  Video,
+  Square,
+  RotateCcw,
+  Send,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast } from '@/components/ui';
 
@@ -81,21 +92,182 @@ interface VideoCardProps {
   onUploadDone: () => void;
 }
 
+/** Max in-app recording length (seconds). */
+const MAX_REC_SEC = 90;
+
+/** Pick the best MediaRecorder container the browser supports. */
+function pickRecorderMime(): string {
+  if (typeof MediaRecorder === 'undefined') return '';
+  const candidates = [
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ];
+  for (const c of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(c)) return c;
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+}
+
+type RecPhase = 'idle' | 'live' | 'recording' | 'recorded';
+
 function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, canUpload, onUploadDone }: VideoCardProps) {
   const toast = useToast();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
 
+  // In-app camera recording state
+  const [recPhase, setRecPhase] = useState<RecPhase>('idle');
+  const [elapsed, setElapsed] = useState(0);
+  const [camError, setCamError] = useState('');
+  const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordedBlobRef = useRef<Blob | null>(null);
+  const previewRef = useRef<HTMLVideoElement | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const isDone = status === 'submitted' || status === 'late';
 
-  async function handleFile(file: File) {
-    if (!file.type.startsWith('video/')) {
-      toast.error('Faqat video fayl tanlang');
+  // Bind the live camera stream to the preview element whenever it's shown.
+  useEffect(() => {
+    if ((recPhase === 'live' || recPhase === 'recording') && previewRef.current && streamRef.current) {
+      previewRef.current.srcObject = streamRef.current;
+      previewRef.current.play().catch(() => {});
+    }
+  }, [recPhase]);
+
+  // Auto-stop at the max length.
+  useEffect(() => {
+    if (recPhase === 'recording' && elapsed >= MAX_REC_SEC) stopRecording();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsed, recPhase]);
+
+  // Release the camera + timers when the card unmounts.
+  useEffect(() => {
+    return () => {
+      stopTimer();
+      stopStream();
+      if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function stopStream() {
+    try {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    } catch {
+      /* ignore */
+    }
+    streamRef.current = null;
+  }
+
+  function stopTimer() {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+
+  async function openCamera() {
+    setCamError('');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError('Bu qurilmada kamera mavjud emas yoki ruxsat berilmagan.');
       return;
     }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: true,
+      });
+      streamRef.current = stream;
+      setRecPhase('live');
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : '';
+      setCamError(
+        name === 'NotAllowedError'
+          ? "Kameraga ruxsat berilmadi. Sozlamalardan ruxsat bering."
+          : name === 'NotFoundError'
+            ? 'Kamera topilmadi.'
+            : "Kamerani ochib bo'lmadi.",
+      );
+    }
+  }
+
+  function startRecording() {
+    const stream = streamRef.current;
+    if (!stream) return;
+    chunksRef.current = [];
+    const mime = pickRecorderMime();
+    let rec: MediaRecorder;
+    try {
+      rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    } catch {
+      rec = new MediaRecorder(stream);
+    }
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    rec.onstop = () => {
+      const type = rec.mimeType || mime || 'video/webm';
+      const blob = new Blob(chunksRef.current, { type });
+      recordedBlobRef.current = blob;
+      setRecordedUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return URL.createObjectURL(blob);
+      });
+      setRecPhase('recorded');
+    };
+    recorderRef.current = rec;
+    rec.start();
+    setRecPhase('recording');
+    setElapsed(0);
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+  }
+
+  function stopRecording() {
+    stopTimer();
+    try {
+      recorderRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function retake() {
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedUrl(null);
+    recordedBlobRef.current = null;
+    setElapsed(0);
+    setRecPhase('live'); // camera stays open
+  }
+
+  function cancelCamera() {
+    stopTimer();
+    stopStream();
+    if (recordedUrl) URL.revokeObjectURL(recordedUrl);
+    setRecordedUrl(null);
+    recordedBlobRef.current = null;
+    setElapsed(0);
+    setRecPhase('idle');
+  }
+
+  async function submitRecording() {
+    const blob = recordedBlobRef.current;
+    if (!blob) return;
+    const mime = blob.type || 'video/webm';
+    const ext = mime.includes('mp4') ? 'mp4' : 'webm';
+    const file = new File([blob], `${label}-${Date.now()}.${ext}`, { type: mime });
+
     if (file.size > 200 * 1024 * 1024) {
       toast.error('Video hajmi 200 MB dan oshmasin');
       return;
@@ -103,7 +275,6 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
 
     setUploading(true);
     setProgress(0);
-
     const token = localStorage.getItem('accessToken') ?? '';
     const form = new FormData();
     form.append('video', file);
@@ -132,6 +303,7 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
         xhr.send(form);
       });
       toast.success(`${label} video muvaffaqiyatli yuklandi`);
+      cancelCamera();
       onUploadDone();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Yuklashda xatolik');
@@ -148,6 +320,9 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? '';
     setVideoUrl(`${apiBase}/video-checkins/${checkinId}/video?t=${Date.now()}&token=${encodeURIComponent(token)}`);
   }
+
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const ss = String(elapsed % 60).padStart(2, '0');
 
   return (
     <div
@@ -172,7 +347,7 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
         </p>
       )}
 
-      {/* Video playback */}
+      {/* Video playback for an already-submitted clip */}
       {isDone && checkinId && (
         <div className="space-y-2">
           {playing && videoUrl ? (
@@ -180,6 +355,7 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
               src={videoUrl}
               controls
               autoPlay
+              playsInline
               className="w-full rounded-xl"
               style={{ maxHeight: 320, background: '#000' }}
             />
@@ -201,43 +377,142 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
         </div>
       )}
 
-      {/* Upload section */}
+      {/* In-app camera recorder */}
       {canUpload && !isDone && (
         <div className="space-y-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="video/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handleFile(f);
-              e.target.value = '';
-            }}
-          />
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => inputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 py-3 sp-display min-h-[48px] disabled:opacity-60"
-            style={{
-              background: uploading ? 'var(--bone-2)' : 'var(--leaf)',
-              color: uploading ? 'var(--ink)' : 'var(--bone)',
-              border: `2px solid ${uploading ? 'var(--line)' : 'var(--leaf-deep)'}`,
-              borderRadius: 'var(--r-2)',
-              boxShadow: uploading ? 'none' : '0 3px 0 var(--leaf-deep)',
-              fontWeight: 700,
-            }}
-          >
-            <Upload size={15} />
-            {uploading ? `Yuklanmoqda... ${progress}%` : `${label} video yuklash`}
-          </button>
-          {uploading && (
-            <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: 'var(--line)' }}>
-              <div
-                className="h-full transition-all"
-                style={{ width: `${progress}%`, background: 'var(--leaf)' }}
-              />
+          {camError && (
+            <p className="text-xs" style={{ color: 'var(--ember-deep)' }}>{camError}</p>
+          )}
+
+          {recPhase === 'idle' && (
+            <button
+              type="button"
+              onClick={openCamera}
+              className="w-full flex items-center justify-center gap-2 py-3 sp-display min-h-[48px]"
+              style={{
+                background: 'var(--leaf)',
+                color: 'var(--bone)',
+                border: '2px solid var(--leaf-deep)',
+                borderRadius: 'var(--r-2)',
+                boxShadow: '0 3px 0 var(--leaf-deep)',
+                fontWeight: 700,
+              }}
+            >
+              <Camera size={16} /> {label} video yozib olish
+            </button>
+          )}
+
+          {(recPhase === 'live' || recPhase === 'recording') && (
+            <div className="space-y-2">
+              <div className="relative">
+                <video
+                  ref={previewRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full rounded-xl"
+                  style={{ maxHeight: 360, background: '#000', transform: 'scaleX(-1)' }}
+                />
+                {recPhase === 'recording' && (
+                  <div
+                    className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-full"
+                    style={{ background: 'rgba(0,0,0,0.55)' }}
+                  >
+                    <span className="w-2 h-2 rounded-full motion-safe:animate-pulse" style={{ background: '#ef4444' }} />
+                    <span className="text-xs sp-mono" style={{ color: '#fff' }}>{mm}:{ss}</span>
+                  </div>
+                )}
+              </div>
+
+              {recPhase === 'live' ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 sp-display min-h-[48px]"
+                    style={{
+                      background: 'var(--ember)',
+                      color: 'var(--bone)',
+                      border: '2px solid var(--ember-deep)',
+                      borderRadius: 'var(--r-2)',
+                      boxShadow: '0 3px 0 var(--ember-deep)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Video size={16} /> Yozishni boshlash
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelCamera}
+                    className="px-4 py-3 sp-display min-h-[48px]"
+                    style={{ background: 'var(--bone-2)', color: 'var(--ink)', border: '1.5px solid var(--line)', borderRadius: 'var(--r-2)' }}
+                  >
+                    Bekor
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="w-full flex items-center justify-center gap-2 py-3 sp-display min-h-[48px]"
+                  style={{ background: 'var(--ink)', color: 'var(--bone)', border: '2px solid var(--ink)', borderRadius: 'var(--r-2)', fontWeight: 700 }}
+                >
+                  <Square size={14} /> To&apos;xtatish ({mm}:{ss})
+                </button>
+              )}
+            </div>
+          )}
+
+          {recPhase === 'recorded' && (
+            <div className="space-y-2">
+              {recordedUrl && (
+                <video
+                  src={recordedUrl}
+                  controls
+                  playsInline
+                  className="w-full rounded-xl"
+                  style={{ maxHeight: 360, background: '#000' }}
+                />
+              )}
+              {uploading ? (
+                <div className="space-y-1">
+                  <div
+                    className="w-full flex items-center justify-center gap-2 py-3 sp-display min-h-[48px]"
+                    style={{ background: 'var(--bone-2)', color: 'var(--ink)', border: '1.5px solid var(--line)', borderRadius: 'var(--r-2)' }}
+                  >
+                    Yuklanmoqda... {progress}%
+                  </div>
+                  <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: 'var(--line)' }}>
+                    <div className="h-full transition-all" style={{ width: `${progress}%`, background: 'var(--leaf)' }} />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={retake}
+                    className="px-4 py-3 sp-display min-h-[48px] flex items-center gap-1.5"
+                    style={{ background: 'var(--bone-2)', color: 'var(--ink)', border: '1.5px solid var(--line)', borderRadius: 'var(--r-2)' }}
+                  >
+                    <RotateCcw size={15} /> Qayta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitRecording}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 sp-display min-h-[48px]"
+                    style={{
+                      background: 'var(--leaf)',
+                      color: 'var(--bone)',
+                      border: '2px solid var(--leaf-deep)',
+                      borderRadius: 'var(--r-2)',
+                      boxShadow: '0 3px 0 var(--leaf-deep)',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Send size={15} /> Yuborish
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -290,8 +565,8 @@ export default function StudentCheckinPage() {
 
       <div className="px-4 max-w-lg mx-auto md:max-w-3xl space-y-3">
         <p className="text-sm leading-relaxed" style={{ color: 'var(--ink-3)' }}>
-          Har kuni ikki marta video yuboring: <strong style={{ color: 'var(--ink-2)' }}>ertalab 05:00–06:30</strong> va{' '}
-          <strong style={{ color: 'var(--ink-2)' }}>kechki 18:00–22:00</strong>. Oynadan keyin ham kech qolish imkoni bor.
+          Har kuni ikki marta video yozib yuboring: <strong style={{ color: 'var(--ink-2)' }}>ertalab 05:00–06:30</strong> va{' '}
+          <strong style={{ color: 'var(--ink-2)' }}>kechki 18:00–22:00</strong>. Video shu yerda, kamera orqali yoziladi.
         </p>
 
         {loading ? (
