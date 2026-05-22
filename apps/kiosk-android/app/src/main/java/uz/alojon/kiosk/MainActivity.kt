@@ -1,5 +1,6 @@
 package uz.alojon.kiosk
 
+import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
@@ -17,6 +18,8 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -54,6 +57,7 @@ class MainActivity : AppCompatActivity() {
     private val CORNER_DP = 80
     private val EXIT_TAPS = 5
     private val EXIT_WINDOW_MS = 3_000L
+    private val REQ_MEDIA_PERMS = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,14 +88,56 @@ class MainActivity : AppCompatActivity() {
                     return !ok
                 }
             }
+            // Grant the in-app web page (alojon.uz) access to the camera and
+            // microphone so the daily check-in video records inside the kiosk
+            // without any prompt. The OS-level runtime permissions are granted
+            // separately (auto-granted when device owner; requested otherwise).
+            webChromeClient = object : WebChromeClient() {
+                override fun onPermissionRequest(request: PermissionRequest) {
+                    runOnUiThread { request.grant(request.resources) }
+                }
+            }
         }
         setContentView(webView)
         enterImmersive()
         enforceKioskPolicies()
         BlockedAppsManager.applyBlocking(this)
+        ensureMediaPermissions()
 
         if (savedInstanceState == null) {
             webView.loadUrl(kioskUrl)
+        }
+    }
+
+    /**
+     * Make sure CAMERA + RECORD_AUDIO are granted at the OS level so the
+     * in-app check-in video recorder works with no prompt. When the app is
+     * device owner we silently auto-grant (production tablets); otherwise we
+     * fall back to a normal runtime request (sideloaded test installs).
+     */
+    private fun ensureMediaPermissions() {
+        val perms = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        if (dpm.isDeviceOwnerApp(packageName)) {
+            val admin = KioskDeviceAdminReceiver.componentName(this)
+            perms.forEach { perm ->
+                try {
+                    dpm.setPermissionGrantState(
+                        admin,
+                        packageName,
+                        perm,
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED,
+                    )
+                } catch (_: Exception) {}
+            }
+            return
+        }
+        val missing = perms.filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            try {
+                requestPermissions(missing.toTypedArray(), REQ_MEDIA_PERMS)
+            } catch (_: Exception) {}
         }
     }
 
