@@ -33,6 +33,7 @@ import {
   Send,
   Swords,
   User,
+  Tablet,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
@@ -60,6 +61,7 @@ const NAV: Record<string, NavEntry[]> = {
   superadmin: [
     { label: 'Bosh sahifa', href: '/superadmin', icon: <Home size={16} /> },
     { label: 'Filiallar', href: '/superadmin/branches', icon: <Building2 size={16} /> },
+    { label: 'Qurilmalar', href: '/superadmin/devices', icon: <Tablet size={16} /> },
     {
       label: 'Foydalanuvchilar',
       icon: <Users size={16} />,

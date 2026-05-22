@@ -1,0 +1,425 @@
+'use client';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Tablet,
+  MapPin,
+  Battery,
+  Lock,
+  Unlock,
+  Crosshair,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+} from 'lucide-react';
+import { apiRequest } from '@/lib/api';
+import { useToast, Modal } from '@/components/ui';
+
+type Enrollment = { studentId: string; enrolledAt: string };
+type Device = {
+  id: string;
+  serialNumber: string;
+  model: string | null;
+  manufacturer: string | null;
+  branchId: string;
+  status: string;
+  lastSeenAt: string | null;
+  batteryLevel: number | null;
+  blocked: boolean;
+  blockReason: string | null;
+  lastLatitude: number | null;
+  lastLongitude: number | null;
+  lastLocationAt: string | null;
+  enrollments: Enrollment[];
+};
+
+const ONLINE_MS = 3 * 60 * 1000; // seen within 3 min = online
+
+function isOnline(d: Device): boolean {
+  if (!d.lastSeenAt) return false;
+  return Date.now() - new Date(d.lastSeenAt).getTime() < ONLINE_MS;
+}
+
+function ago(iso: string | null): string {
+  if (!iso) return 'hech qachon';
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'hozir';
+  if (s < 3600) return `${Math.floor(s / 60)} daqiqa oldin`;
+  if (s < 86400) return `${Math.floor(s / 3600)} soat oldin`;
+  return `${Math.floor(s / 86400)} kun oldin`;
+}
+
+const token = () =>
+  typeof window === 'undefined' ? '' : localStorage.getItem('accessToken') ?? '';
+
+export default function SuperadminDevicesPage() {
+  const toast = useToast();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [blockTarget, setBlockTarget] = useState<Device | null>(null);
+  const [blockReason, setBlockReason] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await apiRequest<Device[]>('/devices', {}, token());
+      setDevices(res.data ?? []);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Yuklab boʻlmadi');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 30_000); // refresh every 30s
+    return () => clearInterval(t);
+  }, [load]);
+
+  async function doBlock() {
+    if (!blockTarget) return;
+    const id = blockTarget.id;
+    setBusy(id);
+    try {
+      await apiRequest(
+        `/devices/${id}/block`,
+        { method: 'POST', body: JSON.stringify({ reason: blockReason.trim() || undefined }) },
+        token(),
+      );
+      toast.success('Qurilma bloklandi');
+      setBlockTarget(null);
+      setBlockReason('');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function unblock(d: Device) {
+    setBusy(d.id);
+    try {
+      await apiRequest(`/devices/${d.id}/unblock`, { method: 'POST' }, token());
+      toast.success('Blok ochildi');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function locate(d: Device) {
+    setBusy(d.id);
+    try {
+      await apiRequest(`/devices/${d.id}/locate`, { method: 'POST' }, token());
+      toast.success('Joylashuv soʻraldi — keyingi aloqada yangilanadi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const stats = useMemo(() => {
+    const online = devices.filter(isOnline).length;
+    const blocked = devices.filter((d) => d.blocked).length;
+    return { total: devices.length, online, blocked };
+  }, [devices]);
+
+  const located = devices.filter(
+    (d) => typeof d.lastLatitude === 'number' && typeof d.lastLongitude === 'number',
+  );
+
+  return (
+    <div className="min-h-full bg-[#f7f4ef]">
+      {/* Header */}
+      <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
+        <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+              <Tablet size={20} className="text-violet-400" />
+            </div>
+            <div>
+              <p className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-widest">Superadmin</p>
+              <p className="text-white text-lg font-extrabold leading-tight">Qurilmalar</p>
+              <p className="text-[#475569] text-[11px] font-bold mt-0.5">
+                {stats.total} ta · {stats.online} online · {stats.blocked} bloklangan
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => load()}
+            aria-label="Yangilash"
+            className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition-colors"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="px-4 pt-5 pb-6 space-y-4 max-w-3xl mx-auto">
+        {/* Map */}
+        <DeviceMap devices={located} />
+
+        {/* List */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] h-24 animate-pulse" />
+            ))}
+          </div>
+        ) : devices.length === 0 ? (
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-10 text-center">
+            <Tablet size={32} className="text-[#94a3b8] mx-auto mb-3" />
+            <p className="text-[#64748b] font-semibold">Qurilmalar yoʻq</p>
+            <p className="text-[#94a3b8] text-xs mt-1">
+              Filialda planshet roʻyxatdan oʻtkazilgach shu yerda koʻrinadi.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2.5">
+            {devices.map((d) => {
+              const online = isOnline(d);
+              return (
+                <div
+                  key={d.id}
+                  className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        d.blocked
+                          ? 'bg-rose-50 border border-rose-200 text-rose-600'
+                          : 'bg-violet-50 border border-violet-100 text-violet-600'
+                      }`}
+                    >
+                      <Tablet size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-extrabold text-[#0f172a] text-sm truncate">
+                          {d.model || d.serialNumber}
+                        </p>
+                        <span
+                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 ${
+                            online
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-[#f7f4ef] text-[#94a3b8] border-[#ede9e1]'
+                          }`}
+                        >
+                          {online ? <Wifi size={10} /> : <WifiOff size={10} />}
+                          {online ? 'online' : 'offline'}
+                        </span>
+                        {d.blocked && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200 inline-flex items-center gap-1">
+                            <Lock size={10} /> bloklangan
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-[#64748b] font-bold flex-wrap">
+                        <span className="inline-flex items-center gap-1">
+                          <Battery size={12} />
+                          {d.batteryLevel != null ? `${d.batteryLevel}%` : '—'}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin size={12} />
+                          {d.lastLatitude != null
+                            ? `${d.lastLatitude.toFixed(4)}, ${d.lastLongitude!.toFixed(4)}`
+                            : 'joylashuv yoʻq'}
+                        </span>
+                        <span>{ago(d.lastSeenAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 mt-3 flex-wrap">
+                    {d.blocked ? (
+                      <button
+                        onClick={() => unblock(d)}
+                        disabled={busy === d.id}
+                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+                      >
+                        <Unlock size={13} /> Blokni ochish
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setBlockTarget(d); setBlockReason(''); }}
+                        disabled={busy === d.id}
+                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-xl hover:bg-rose-100 disabled:opacity-50 transition-colors"
+                      >
+                        <Lock size={13} /> Bloklash
+                      </button>
+                    )}
+                    <button
+                      onClick={() => locate(d)}
+                      disabled={busy === d.id}
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] disabled:opacity-50 transition-colors"
+                    >
+                      <Crosshair size={13} /> Joylashuv
+                    </button>
+                    {d.lastLatitude != null && (
+                      <a
+                        href={`https://www.openstreetmap.org/?mlat=${d.lastLatitude}&mlon=${d.lastLongitude}#map=17/${d.lastLatitude}/${d.lastLongitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-xl hover:bg-violet-100 transition-colors"
+                      >
+                        <MapPin size={13} /> Xaritada
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Block confirm modal */}
+      <Modal open={blockTarget !== null} onClose={() => setBlockTarget(null)} title="Qurilmani bloklash" theme="light">
+        <p className="text-sm text-[#64748b] mb-3">
+          <span className="font-semibold text-[#0f172a]">{blockTarget?.model || blockTarget?.serialNumber}</span>{' '}
+          qurilmasini bloklaysizmi? Planshetda toʻliq qulf ekrani koʻrsatiladi.
+        </p>
+        <input
+          value={blockReason}
+          onChange={(e) => setBlockReason(e.target.value)}
+          placeholder="Sabab (ixtiyoriy) — ekranda koʻrinadi"
+          className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a] mb-4"
+        />
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setBlockTarget(null)}
+            className="px-4 py-2 rounded-xl border border-[#ede9e1] text-sm font-semibold text-[#64748b] hover:bg-[#f7f4ef]"
+          >
+            Bekor
+          </button>
+          <button
+            onClick={doBlock}
+            disabled={busy !== null}
+            className="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-50"
+          >
+            Bloklash
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ── Leaflet map (loaded from CDN, no npm dependency) ───────────────────── */
+
+interface MapDevice {
+  id: string;
+  serialNumber: string;
+  model: string | null;
+  lastLatitude: number | null;
+  lastLongitude: number | null;
+  blocked: boolean;
+}
+
+interface LMap {
+  setView(c: [number, number], z: number): LMap;
+  fitBounds(b: [number, number][], o?: { padding: [number, number] }): void;
+  invalidateSize(): void;
+}
+interface LLayerGroup {
+  clearLayers(): void;
+  addTo(m: LMap): LLayerGroup;
+}
+interface LMarker {
+  bindPopup(s: string): LMarker;
+  addTo(l: LLayerGroup): LMarker;
+}
+interface LTileLayer {
+  addTo(m: LMap): LTileLayer;
+}
+interface LStatic {
+  map(el: HTMLElement): LMap;
+  tileLayer(url: string, opts: Record<string, unknown>): LTileLayer;
+  layerGroup(): LLayerGroup;
+  marker(c: [number, number]): LMarker;
+}
+
+function DeviceMap({ devices }: { devices: MapDevice[] }) {
+  const elRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LMap | null>(null);
+  const layerRef = useRef<LLayerGroup | null>(null);
+  const [ready, setReady] = useState(false);
+
+  // Load Leaflet from CDN once.
+  useEffect(() => {
+    const w = window as unknown as { L?: LStatic };
+    if (w.L) { setReady(true); return; }
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    const existing = document.getElementById('leaflet-js') as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener('load', () => setReady(true));
+      return;
+    }
+    const script = document.createElement('script');
+    script.id = 'leaflet-js';
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => setReady(true);
+    document.body.appendChild(script);
+  }, []);
+
+  // Init map + (re)draw markers.
+  useEffect(() => {
+    if (!ready || !elRef.current) return;
+    const L = (window as unknown as { L: LStatic }).L;
+    if (!mapRef.current) {
+      const map = L.map(elRef.current).setView([41.311081, 69.240562], 11); // Tashkent default
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+      }).addTo(map);
+      mapRef.current = map;
+      layerRef.current = L.layerGroup().addTo(map);
+    }
+    const map = mapRef.current;
+    const layer = layerRef.current;
+    if (!map || !layer) return;
+    layer.clearLayers();
+    const pts: [number, number][] = [];
+    for (const d of devices) {
+      if (d.lastLatitude == null || d.lastLongitude == null) continue;
+      const m = L.marker([d.lastLatitude, d.lastLongitude]);
+      m.bindPopup(`${d.model || d.serialNumber}${d.blocked ? ' (bloklangan)' : ''}`);
+      m.addTo(layer);
+      pts.push([d.lastLatitude, d.lastLongitude]);
+    }
+    if (pts.length === 1) map.setView(pts[0], 16);
+    else if (pts.length > 1) map.fitBounds(pts, { padding: [40, 40] });
+    setTimeout(() => map.invalidateSize(), 100);
+  }, [ready, devices]);
+
+  return (
+    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
+      <div
+        ref={elRef}
+        style={{ height: 280, width: '100%', background: '#e8e5df' }}
+        aria-label="Qurilmalar xaritasi"
+      />
+      {devices.length === 0 && (
+        <p className="text-center text-xs text-[#94a3b8] py-2">
+          Joylashuvi maʼlum qurilma yoʻq
+        </p>
+      )}
+    </div>
+  );
+}
