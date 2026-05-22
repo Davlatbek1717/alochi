@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Tiny HTTP client for the device-facing backend API (/device-api/*).
+ * Tiny HTTP client for the device-facing backend API under /device-api.
  * Uses HttpURLConnection + org.json to avoid extra dependencies. All calls
  * are blocking and MUST run off the main thread (the monitor service does).
  */
