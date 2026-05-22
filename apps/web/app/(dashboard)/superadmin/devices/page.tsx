@@ -14,12 +14,29 @@ import {
   AlertTriangle,
   Power,
   Trash2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
 
 type Branch = { id: string; name: string };
 type Enrollment = { studentId: string; enrolledAt: string };
+type DeviceEvent = {
+  id: string;
+  type: string;
+  severity: string;
+  occurredAt: string;
+};
+type HealthPing = {
+  id: string;
+  batteryLevel: number | null;
+  networkType: string | null;
+  foregroundApp: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  pingedAt: string;
+};
 type Device = {
   id: string;
   serialNumber: string;
@@ -172,6 +189,35 @@ export default function SuperadminDevicesPage() {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
       setBusy(null);
+    }
+  }
+
+  // Per-device detail (events + health) — lazy loaded on expand.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [details, setDetails] = useState<
+    Record<string, { events: DeviceEvent[]; health: HealthPing[] }>
+  >({});
+  const [detailLoading, setDetailLoading] = useState<Record<string, boolean>>({});
+
+  async function toggleDetail(id: string) {
+    const open = !(expanded[id] ?? false);
+    setExpanded((p) => ({ ...p, [id]: open }));
+    if (open && !details[id]) {
+      setDetailLoading((p) => ({ ...p, [id]: true }));
+      try {
+        const [ev, he] = await Promise.all([
+          apiRequest<DeviceEvent[]>(`/devices/${id}/events?limit=20`, {}, token()),
+          apiRequest<HealthPing[]>(`/devices/${id}/health`, {}, token()),
+        ]);
+        setDetails((p) => ({
+          ...p,
+          [id]: { events: ev.data ?? [], health: he.data ?? [] },
+        }));
+      } catch {
+        setDetails((p) => ({ ...p, [id]: { events: [], health: [] } }));
+      } finally {
+        setDetailLoading((p) => ({ ...p, [id]: false }));
+      }
     }
   }
 
@@ -368,7 +414,75 @@ export default function SuperadminDevicesPage() {
                     >
                       <Trash2 size={13} /> Wipe
                     </button>
+                    <button
+                      onClick={() => toggleDetail(d.id)}
+                      className="inline-flex items-center gap-1 text-xs font-extrabold text-[#64748b] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] transition-colors ml-auto"
+                    >
+                      Tafsilot {expanded[d.id] ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
                   </div>
+
+                  {/* Expanded detail: tamper events + recent health */}
+                  {expanded[d.id] && (
+                    <div className="mt-3 pt-3 border-t border-[#ede9e1] space-y-3">
+                      {detailLoading[d.id] ? (
+                        <p className="text-xs text-[#94a3b8]">Yuklanmoqda...</p>
+                      ) : (
+                        <>
+                          <div>
+                            <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest mb-1.5">
+                              Ogohlantirishlar
+                            </p>
+                            {(details[d.id]?.events.length ?? 0) === 0 ? (
+                              <p className="text-xs text-[#94a3b8]">Ogohlantirish yoʻq</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {details[d.id]!.events.slice(0, 8).map((e) => (
+                                  <div key={e.id} className="flex items-center gap-2 text-xs">
+                                    <span
+                                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                        e.severity === 'critical'
+                                          ? 'bg-rose-500'
+                                          : e.severity === 'warning'
+                                            ? 'bg-amber-500'
+                                            : 'bg-[#94a3b8]'
+                                      }`}
+                                    />
+                                    <span className="font-bold text-[#0f172a]">{e.type}</span>
+                                    <span className="text-[#94a3b8] ml-auto">{ago(e.occurredAt)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest mb-1.5">
+                              Soʻnggi holat
+                            </p>
+                            {(details[d.id]?.health.length ?? 0) === 0 ? (
+                              <p className="text-xs text-[#94a3b8]">Maʼlumot yoʻq</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {details[d.id]!.health.slice(0, 5).map((h) => (
+                                  <div key={h.id} className="flex items-center gap-3 text-xs text-[#64748b]">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Battery size={11} />
+                                      {h.batteryLevel != null ? `${h.batteryLevel}%` : '—'}
+                                    </span>
+                                    <span>{h.networkType ?? '—'}</span>
+                                    {h.foregroundApp && (
+                                      <span className="truncate max-w-[140px]">{h.foregroundApp}</span>
+                                    )}
+                                    <span className="ml-auto text-[#94a3b8]">{ago(h.pingedAt)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
