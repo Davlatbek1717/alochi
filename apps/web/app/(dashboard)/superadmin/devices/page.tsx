@@ -93,7 +93,7 @@ export default function SuperadminDevicesPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await apiRequest<Device[]>('/devices', {}, token());
+      const res = await apiRequest<Device[]>('/mdm/devices', {}, token());
       setDevices(res.data ?? []);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Yuklab boʻlmadi');
@@ -122,7 +122,7 @@ export default function SuperadminDevicesPage() {
     setAdding(true);
     try {
       const res = await apiRequest<{ enrollmentToken: string }>(
-        '/devices',
+        '/mdm/devices',
         { method: 'POST', body: JSON.stringify({ branchId: addBranch, serialNumber: addSerial.trim() }) },
         token(),
       );
@@ -142,7 +142,7 @@ export default function SuperadminDevicesPage() {
     setBusy(id);
     try {
       await apiRequest(
-        `/devices/${id}/block`,
+        `/mdm/devices/${id}/block`,
         { method: 'POST', body: JSON.stringify({ reason: blockReason.trim() || undefined }) },
         token(),
       );
@@ -160,7 +160,7 @@ export default function SuperadminDevicesPage() {
   async function unblock(d: Device) {
     setBusy(d.id);
     try {
-      await apiRequest(`/devices/${d.id}/unblock`, { method: 'POST' }, token());
+      await apiRequest(`/mdm/devices/${d.id}/unblock`, { method: 'POST' }, token());
       toast.success('Blok ochildi');
       await load();
     } catch (err) {
@@ -173,7 +173,7 @@ export default function SuperadminDevicesPage() {
   async function locate(d: Device) {
     setBusy(d.id);
     try {
-      await apiRequest(`/devices/${d.id}/locate`, { method: 'POST' }, token());
+      await apiRequest(`/mdm/devices/${d.id}/locate`, { method: 'POST' }, token());
       toast.success('Joylashuv soʻraldi — keyingi aloqada yangilanadi');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
@@ -185,7 +185,7 @@ export default function SuperadminDevicesPage() {
   async function reboot(d: Device) {
     setBusy(d.id);
     try {
-      await apiRequest(`/devices/${d.id}/reboot`, { method: 'POST' }, token());
+      await apiRequest(`/mdm/devices/${d.id}/reboot`, { method: 'POST' }, token());
       toast.success('Qayta yoqish buyrugʻi yuborildi (device-owner)');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
@@ -208,8 +208,8 @@ export default function SuperadminDevicesPage() {
       setDetailLoading((p) => ({ ...p, [id]: true }));
       try {
         const [ev, he] = await Promise.all([
-          apiRequest<DeviceEvent[]>(`/devices/${id}/events?limit=20`, {}, token()),
-          apiRequest<HealthPing[]>(`/devices/${id}/health`, {}, token()),
+          apiRequest<DeviceEvent[]>(`/mdm/devices/${id}/events?limit=20`, {}, token()),
+          apiRequest<HealthPing[]>(`/mdm/devices/${id}/health`, {}, token()),
         ]);
         setDetails((p) => ({
           ...p,
@@ -226,7 +226,7 @@ export default function SuperadminDevicesPage() {
   async function ring(d: Device) {
     setBusy(d.id);
     try {
-      await apiRequest(`/devices/${d.id}/ring`, { method: 'POST' }, token());
+      await apiRequest(`/mdm/devices/${d.id}/ring`, { method: 'POST' }, token());
       toast.success('Tovush buyrugʻi yuborildi');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
@@ -244,7 +244,7 @@ export default function SuperadminDevicesPage() {
     setBusy(id);
     try {
       await apiRequest(
-        `/devices/${id}/message`,
+        `/mdm/devices/${id}/message`,
         { method: 'POST', body: JSON.stringify({ text: msgText.trim() }) },
         token(),
       );
@@ -264,7 +264,7 @@ export default function SuperadminDevicesPage() {
     setWipeTarget(null);
     setBusy(id);
     try {
-      await apiRequest(`/devices/${id}/wipe`, { method: 'POST' }, token());
+      await apiRequest(`/mdm/devices/${id}/wipe`, { method: 'POST' }, token());
       toast.success('Tozalash buyrugʻi yuborildi (device-owner)');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');

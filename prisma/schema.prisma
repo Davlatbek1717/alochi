@@ -1528,7 +1528,7 @@ model DeviceEnrollment {
   active       Boolean   @default(true)
   enrolledBy   String
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, active])
   @@index([studentId, active])
@@ -1559,7 +1559,7 @@ model DeviceEvent {
   occurredAt DateTime
   receivedAt DateTime @default(now())
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, occurredAt])
   @@index([type, occurredAt])
@@ -1579,7 +1579,7 @@ model DeviceCommand {
   resultPayload Json?
   expiresAt     DateTime
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, status])
 }
@@ -1597,7 +1597,7 @@ model DeviceHealthPing {
   foregroundApp  String?
   pingedAt       DateTime @default(now())
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, pingedAt])
 }
@@ -1623,7 +1623,7 @@ model ScreenCapture {
   reviewNote   String?
   tenantId     String
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([studentId, capturedAt])
   @@index([deviceId, capturedAt])

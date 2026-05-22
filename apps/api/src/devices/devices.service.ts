@@ -82,7 +82,12 @@ export class DevicesService {
       include: {
         enrollments: {
           where: { active: true },
-          select: { id: true, studentId: true, enrolledAt: true, enrolledBy: true },
+          select: {
+            id: true,
+            studentId: true,
+            enrolledAt: true,
+            enrolledBy: true,
+          },
         },
       },
     });
@@ -112,14 +117,21 @@ export class DevicesService {
 
   // ── Enrollment ────────────────────────────────────────────────────────────
 
-  async enroll(id: string, tenantId: string, studentId: string, enrolledBy: string) {
+  async enroll(
+    id: string,
+    tenantId: string,
+    studentId: string,
+    enrolledBy: string,
+  ) {
     await this.findById(id, tenantId);
 
     const existing = await this.prisma.deviceEnrollment.findFirst({
       where: { deviceId: id, active: true },
     });
     if (existing) {
-      throw new ConflictException('Qurilma allaqachon boshqa o\'quvchiga biriktirilgan');
+      throw new ConflictException(
+        "Qurilma allaqachon boshqa o'quvchiga biriktirilgan",
+      );
     }
 
     return this.prisma.deviceEnrollment.create({
@@ -259,11 +271,19 @@ export class DevicesService {
     await this.findById(id, tenantId);
     const WIPE_TYPES = ['WIPE_USER_DATA', 'FACTORY_RESET'];
     if (WIPE_TYPES.includes(type)) {
-      throw new ForbiddenException('Destructive commands require 2FA confirmation via /devices/:id/commands/wipe');
+      throw new ForbiddenException(
+        'Destructive commands require 2FA confirmation via /mdm/devices/:id/wipe',
+      );
     }
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min TTL
     const cmd = await this.prisma.deviceCommand.create({
-      data: { deviceId: id, type, payload: payload as any, createdBy, expiresAt },
+      data: {
+        deviceId: id,
+        type,
+        payload: payload as any,
+        createdBy,
+        expiresAt,
+      },
     });
     this.wakeDevice(id);
     return cmd;
@@ -279,7 +299,13 @@ export class DevicesService {
     await this.findById(id, tenantId);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
     const cmd = await this.prisma.deviceCommand.create({
-      data: { deviceId: id, type, payload: payload as any, createdBy, expiresAt },
+      data: {
+        deviceId: id,
+        type,
+        payload: payload as any,
+        createdBy,
+        expiresAt,
+      },
     });
     this.wakeDevice(id);
     return cmd;
@@ -314,7 +340,8 @@ export class DevicesService {
     const timestamps: Record<string, Date> = {};
     if (status === 'sent') timestamps.sentAt = new Date();
     if (status === 'acked') timestamps.ackedAt = new Date();
-    if (status === 'completed' || status === 'failed') timestamps.completedAt = new Date();
+    if (status === 'completed' || status === 'failed')
+      timestamps.completedAt = new Date();
 
     return this.prisma.deviceCommand.update({
       where: { id: cmdId },
@@ -357,7 +384,9 @@ export class DevicesService {
       forceUpdateMinVersion: string;
     }>,
   ) {
-    const current = await this.prisma.devicePolicy.findUnique({ where: { branchId } });
+    const current = await this.prisma.devicePolicy.findUnique({
+      where: { branchId },
+    });
     const nextVersion = (current?.policyVersion ?? 0) + 1;
 
     return this.prisma.devicePolicy.upsert({
@@ -531,7 +560,8 @@ export class DevicesService {
     const ts: Record<string, Date> = {};
     if (status === 'sent') ts.sentAt = new Date();
     if (status === 'acked') ts.ackedAt = new Date();
-    if (status === 'completed' || status === 'failed') ts.completedAt = new Date();
+    if (status === 'completed' || status === 'failed')
+      ts.completedAt = new Date();
     return this.prisma.deviceCommand.update({
       where: { id: cmdId },
       data: { status, ...ts, resultPayload: resultPayload as any },

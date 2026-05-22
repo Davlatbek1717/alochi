@@ -22,9 +22,13 @@ import { CreateDeviceDto } from './dto/create-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { UpsertDevicePolicyDto } from './dto/upsert-device-policy.dto';
 
-@ApiTags('devices')
+// Base path is /mdm/devices (mobile-device-management) to avoid colliding with
+// the face-attendance DevicesController at /devices — both previously declared
+// @Controller('devices'), so /devices/:id GET+DELETE silently resolved to
+// whichever module Nest registered first (face), shadowing MDM detail/delete.
+@ApiTags('mdm-devices')
 @ApiBearerAuth()
-@Controller('devices')
+@Controller('mdm/devices')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DevicesController {
   constructor(private svc: DevicesService) {}
