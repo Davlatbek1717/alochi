@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -58,6 +59,9 @@ class MainActivity : AppCompatActivity() {
     private val EXIT_TAPS = 5
     private val EXIT_WINDOW_MS = 3_000L
     private val REQ_MEDIA_PERMS = 1001
+
+    // "Enable accessibility" nudge dialog (non-device-owner blocking).
+    private var accDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -202,6 +206,33 @@ class MainActivity : AppCompatActivity() {
         // Re-block every time the kiosk comes to foreground (after admin
         // temporarily exits, or after any background stint).
         BlockedAppsManager.applyBlocking(this)
+        maybePromptAccessibility()
+    }
+
+    /**
+     * On non-device-owner tablets, blocking relies on the accessibility
+     * service, which the OS won't let us enable automatically. Nudge the
+     * admin to turn it on once; the dialog disappears as soon as it's on.
+     */
+    private fun maybePromptAccessibility() {
+        if (dpm.isDeviceOwnerApp(packageName)) return
+        if (!BlockedAppsManager.isBlockingEnabled(this)) return
+        if (BlockedAppsManager.isAccessibilityServiceEnabled(this)) {
+            accDialog?.dismiss()
+            accDialog = null
+            return
+        }
+        if (accDialog?.isShowing == true) return
+        accDialog = AlertDialog.Builder(this)
+            .setTitle(R.string.enable_blocking_title)
+            .setMessage(R.string.enable_blocking_message)
+            .setPositiveButton(R.string.enable_blocking_open) { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } catch (_: Exception) {}
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -289,8 +320,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAdminMenu() {
         val isDeviceOwner = dpm.isDeviceOwnerApp(packageName)
+        val blockingOn = BlockedAppsManager.isBlockingEnabled(this)
+        val toggleLabel = getString(
+            if (blockingOn) R.string.menu_disable_blocking else R.string.menu_enable_blocking,
+        )
         val options = buildList {
-            add(getString(R.string.menu_unblock_apps))
+            add(toggleLabel)
             add(getString(R.string.menu_change_password))
             if (!isDeviceOwner) add(getString(R.string.menu_exit_kiosk))
         }.toTypedArray()
@@ -298,9 +333,8 @@ class MainActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle(R.string.admin_menu_title)
             .setItems(options) { _, which ->
-                val label = options[which]
-                when (label) {
-                    getString(R.string.menu_unblock_apps) -> temporarilyUnblock()
+                when (options[which]) {
+                    toggleLabel -> if (blockingOn) disableBlocking() else enableBlocking()
                     getString(R.string.menu_change_password) -> showSetPasswordDialog()
                     getString(R.string.menu_exit_kiosk) -> exitKiosk()
                 }
@@ -309,11 +343,17 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun temporarilyUnblock() {
-        BlockedAppsManager.removeBlocking(this)
-        // Exit lock task so the admin can actually switch to other apps.
+    private fun disableBlocking() {
+        BlockedAppsManager.setBlockingEnabled(this, false)
+        BlockedAppsManager.removeBlocking(this) // unsuspend if device owner
         try { stopLockTask() } catch (_: Exception) {}
-        Toast.makeText(this, R.string.apps_unblocked_notice, Toast.LENGTH_LONG).show()
+        Toast.makeText(this, R.string.blocking_disabled_toast, Toast.LENGTH_LONG).show()
+    }
+
+    private fun enableBlocking() {
+        BlockedAppsManager.setBlockingEnabled(this, true)
+        BlockedAppsManager.applyBlocking(this)
+        Toast.makeText(this, R.string.blocking_enabled_toast, Toast.LENGTH_SHORT).show()
     }
 
     private fun exitKiosk() {

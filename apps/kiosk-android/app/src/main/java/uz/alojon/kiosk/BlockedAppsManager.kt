@@ -3,12 +3,39 @@ package uz.alojon.kiosk
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import android.app.admin.DevicePolicyManager
 
 object BlockedAppsManager {
 
     private const val TAG = "BlockedAppsManager"
+
+    private const val PREFS = "kiosk_blocking"
+    private const val KEY_ENABLED = "blocking_enabled"
+
+    /** Master on/off switch (default ON). The accessibility blocker and the
+     *  device-owner suspension both honour this flag, so the admin can
+     *  temporarily lift blocking from one place. */
+    fun isBlockingEnabled(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_ENABLED, true)
+
+    fun setBlockingEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_ENABLED, enabled).apply()
+    }
+
+    /** True when our AppBlockerAccessibilityService is enabled in system
+     *  settings (the non-device-owner blocking path). */
+    fun isAccessibilityServiceEnabled(context: Context): Boolean {
+        val expected = "${context.packageName}/${AppBlockerAccessibilityService::class.java.name}"
+        val enabled = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+        ) ?: return false
+        return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
+    }
 
     // Browsers and web engines
     private val BROWSERS = setOf(
@@ -73,10 +100,13 @@ object BlockedAppsManager {
     val BLOCKED_PACKAGES: Set<String> = BROWSERS + GOOGLE_APPS + SOCIAL
 
     fun applyBlocking(context: Context) {
+        if (!isBlockingEnabled(context)) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
         val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         if (!dpm.isDeviceOwnerApp(context.packageName)) {
-            Log.w(TAG, "Not device owner — cannot suspend packages")
+            // Non-device-owner: the AppBlockerAccessibilityService handles
+            // blocking instead (once the admin has enabled it in Settings).
+            Log.i(TAG, "Not device owner — relying on accessibility blocker")
             return
         }
         val admin = KioskDeviceAdminReceiver.componentName(context)

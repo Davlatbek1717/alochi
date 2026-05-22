@@ -16,8 +16,19 @@
 
     <!-- Admin menu options -->
     <string name="menu_unblock_apps">Ilovalarni vaqtincha ochish</string>
+    <string name="menu_disable_blocking">Bloklashni o\'chirish</string>
+    <string name="menu_enable_blocking">Bloklashni yoqish</string>
     <string name="menu_change_password">Parolni o\'zgartirish</string>
     <string name="menu_exit_kiosk">Kioskdan chiqish</string>
+
+    <!-- Accessibility-based app blocking (no device owner) -->
+    <string name="accessibility_desc">A\'lojon: bloklangan ilovalarni (brauzer, YouTube, ijtimoiy tarmoqlar) yopib turadi.</string>
+    <string name="app_blocked_toast">Bu ilova bloklangan</string>
+    <string name="enable_blocking_title">Ilovalarni bloklashni yoqing</string>
+    <string name="enable_blocking_message">Brauzer va ijtimoiy tarmoqlarni bloklash uchun ochiladigan sozlamalarda A\'lojon xizmatini toping va yoqing.</string>
+    <string name="enable_blocking_open">Sozlamalarni ochish</string>
+    <string name="blocking_enabled_toast">Bloklash yoqildi</string>
+    <string name="blocking_disabled_toast">Bloklash o\'chirildi</string>
 
     <!-- Feedback messages -->
     <string name="ok">OK</string>
