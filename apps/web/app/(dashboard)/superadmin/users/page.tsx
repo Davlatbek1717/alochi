@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Users,
   Plus,
@@ -7,10 +7,10 @@ import {
   ChevronDown,
   UserCheck,
   UserX,
-  Filter,
   Pencil,
   KeyRound,
   Trash2,
+  Search,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { EmptyState, Modal, Skeleton, useToast } from '@/components/ui';
@@ -30,11 +30,12 @@ interface User {
   groupId?: string;
 }
 
-const ROLES = ['student', 'mentor', 'manager', 'filadmin', 'superadmin'];
+const ROLES = ['student', 'mentor', 'manager', 'tester', 'filadmin', 'superadmin'];
 const ROLE_LABELS: Record<string, string> = {
   student: "O'quvchi",
   mentor: 'Mentor',
   manager: 'Menejer',
+  tester: 'Tester',
   filadmin: 'Filadmin',
   superadmin: 'Superadmin',
 };
@@ -42,6 +43,7 @@ const ROLE_COLORS: Record<string, string> = {
   student: 'bg-cyan-50 text-cyan-700 border-cyan-200',
   mentor: 'bg-[#15803d]/10 text-[#15803d] border-[#15803d]/30',
   manager: 'bg-[#6d28d9]/10 text-[#6d28d9] border-[#6d28d9]/30',
+  tester: 'bg-orange-50 text-orange-700 border-orange-200',
   filadmin: 'bg-[#0f172a]/[0.08] text-[#0f172a] border-[#ede9e1]',
   superadmin: 'bg-[#e11d48]/10 text-[#e11d48] border-[#e11d48]/20',
 };
@@ -72,6 +74,9 @@ export default function SuperadminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [filterRole, setFilterRole] = useState('');
   const [filterBranch, setFilterBranch] = useState('');
+  // Client-side search query layered on top of the server's role+branch
+  // filter — typing instantly narrows the rendered list without refetching.
+  const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [saving, setSaving] = useState(false);
@@ -98,6 +103,18 @@ export default function SuperadminUsersPage() {
   const [deleteSaving, setDeleteSaving] = useState(false);
 
   const toast = useToast();
+
+  // Derive the rendered list from the fetched users + client-side search.
+  // useMemo keeps it cheap on long lists; trim+lowercase once per keystroke.
+  const visibleUsers = useMemo<User[]>(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.login.toLowerCase().includes(q),
+    );
+  }, [users, search]);
 
   const token = () =>
     typeof window === 'undefined' ? '' : localStorage.getItem('accessToken') ?? '';
@@ -435,47 +452,78 @@ export default function SuperadminUsersPage() {
           </div>
         )}
 
-        <div className="flex gap-2 flex-wrap items-center">
-          <Filter size={14} className="text-[#94a3b8]" />
-          <div className="relative">
-            <select
-              value={filterRole}
-              onChange={(e) => applyFilter(e.target.value, filterBranch)}
-              aria-label="Rol bo'yicha filtrlash"
-              className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
+        {/* Search — client-side filter on top of server-fetched list */}
+        <div className="relative">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+            aria-hidden
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Ism yoki login boʻyicha qidirish"
+            placeholder="Ism yoki login boʻyicha qidiring..."
+            className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-3 py-2.5 text-sm text-[#0f172a] focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200 placeholder:text-[#94a3b8]"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Qidiruvni tozalash"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg hover:bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8]"
             >
-              <option value="">Barcha rollar</option>
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABELS[r]}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={12}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Role chip group */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest">
+            Rol
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <FilterChip
+              active={filterRole === ''}
+              onClick={() => applyFilter('', filterBranch)}
+              label="Barchasi"
             />
-          </div>
-          <div className="relative">
-            <select
-              value={filterBranch}
-              onChange={(e) => applyFilter(filterRole, e.target.value)}
-              aria-label="Filial bo'yicha filtrlash"
-              className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a] pr-7"
-            >
-              <option value="">Barcha filiallar</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={12}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
-            />
+            {ROLES.map((r) => (
+              <FilterChip
+                key={r}
+                active={filterRole === r}
+                onClick={() => applyFilter(r, filterBranch)}
+                label={ROLE_LABELS[r]}
+              />
+            ))}
           </div>
         </div>
+
+        {/* Branch chip group — wrapped in horizontal scroll on tight screens */}
+        {branches.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-extrabold text-[#64748b] uppercase tracking-widest">
+              Filial
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <FilterChip
+                active={filterBranch === ''}
+                onClick={() => applyFilter(filterRole, '')}
+                label="Barchasi"
+              />
+              {branches.map((b) => (
+                <FilterChip
+                  key={b.id}
+                  active={filterBranch === b.id}
+                  onClick={() => applyFilter(filterRole, b.id)}
+                  label={b.name}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-2">
@@ -487,21 +535,27 @@ export default function SuperadminUsersPage() {
               />
             ))}
           </div>
-        ) : users.length === 0 ? (
+        ) : visibleUsers.length === 0 ? (
           <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
             <EmptyState
               icon={<Users size={28} />}
               title="Foydalanuvchilar topilmadi"
-              description="Filtr shartlariga mos foydalanuvchi yo'q"
+              description={
+                search
+                  ? `"${search}" boʻyicha hech narsa topilmadi`
+                  : "Filtr shartlariga mos foydalanuvchi yo'q"
+              }
               theme="light"
             />
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-[#64748b] uppercase tracking-widest">
-              {users.length} ta foydalanuvchi
+              {visibleUsers.length === users.length
+                ? `${users.length} ta foydalanuvchi`
+                : `${visibleUsers.length} / ${users.length} ta foydalanuvchi`}
             </p>
-            {users.map((u) => (
+            {visibleUsers.map((u) => (
               <div
                 key={u.id}
                 className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] p-4 flex items-center gap-3 flex-wrap"
@@ -768,5 +822,37 @@ export default function SuperadminUsersPage() {
         </div>
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Pill-shaped filter chip used for role + branch filters. Tapping a chip
+ * is one gesture — much faster than opening a dropdown, scrolling, and
+ * selecting on mobile. Active state mirrors the violet accent the rest
+ * of the superadmin panel uses.
+ */
+function FilterChip({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        'px-3 py-1.5 min-h-[32px] rounded-full text-xs font-bold transition-colors border',
+        active
+          ? 'bg-violet-600 text-white border-violet-600'
+          : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-violet-300 hover:bg-violet-50',
+      ].join(' ')}
+    >
+      {label}
+    </button>
   );
 }

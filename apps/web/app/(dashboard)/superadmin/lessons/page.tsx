@@ -88,7 +88,7 @@ export default function SuperadminLessonsPage() {
     const token = localStorage.getItem('accessToken') ?? '';
     apiRequest<Lesson[]>('/lessons', {}, token)
       .then((res) => setLessons(res.data))
-      .catch((e) => toast.error(e.message))
+      .catch((e: unknown) => toast.error(e instanceof Error ? e.message : 'Xatolik'))
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

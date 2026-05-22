@@ -190,8 +190,7 @@ export default function EditLessonPage() {
       if (form.nRepetitions !== lesson.nRepetitions)
         body.nRepetitions = form.nRepetitions;
       if ((form.maxNOverride ?? null) !== (lesson.maxNOverride ?? null)) {
-        if (form.maxNOverride && form.maxNOverride > 0)
-          body.maxNOverride = form.maxNOverride;
+        body.maxNOverride = form.maxNOverride ?? null;
       }
 
       const res = await apiRequest<Lesson>(
@@ -265,6 +264,33 @@ export default function EditLessonPage() {
 
   async function handleDelete(comp: ConfigComponent) {
     setConfirmDeleteComp(comp);
+  }
+
+  /**
+   * Copy an existing component verbatim — same type, same config —
+   * via POST /lessons/:id/components. Saves the author the click-through-
+   * the-configurator dance when they want a near-identical exercise.
+   */
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  async function handleDuplicate(comp: ConfigComponent) {
+    setDuplicatingId(comp.id);
+    const token = localStorage.getItem('accessToken') ?? '';
+    try {
+      await apiRequest(
+        `/lessons/${id}/components`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ type: comp.type, config: comp.config }),
+        },
+        token,
+      );
+      toast.success('Topshiriq nusxalandi');
+      await refreshComponents();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Xatolik');
+    } finally {
+      setDuplicatingId(null);
+    }
   }
 
   async function doConfirmDelete() {
@@ -438,7 +464,9 @@ export default function EditLessonPage() {
             onAdd={openTypePicker}
             onEdit={openEdit}
             onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
             isDeleting={deletingId}
+            isDuplicating={duplicatingId}
           />
         )}
 

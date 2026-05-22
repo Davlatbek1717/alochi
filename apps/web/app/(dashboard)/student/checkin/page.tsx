@@ -64,7 +64,7 @@ function StatusBadge({ status }: { status: string | null }) {
   if (status === 'missed') {
     return (
       <span className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: 'var(--ember-tint)', color: 'var(--ember-deep)', border: '1px solid var(--ember-soft)' }}>
-        <XCircle size={11} /> O'tkazib yuborildi
+        <XCircle size={11} /> O&apos;tkazib yuborildi
       </span>
     );
   }
@@ -323,7 +323,7 @@ export default function StudentCheckinPage() {
         ) : null}
 
         <p className="text-[11px] text-center" style={{ color: 'var(--ink-4)' }}>
-          Video 2 kun saqlanadi, keyin avtomatik o'chiriladi
+          Video 2 kun saqlanadi, keyin avtomatik o&apos;chiriladi
         </p>
       </div>
     </div>
