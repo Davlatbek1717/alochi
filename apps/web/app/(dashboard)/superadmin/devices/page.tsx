@@ -786,7 +786,10 @@ function DeviceMap({ devices }: { devices: MapDevice[] }) {
   }, [ready, devices]);
 
   return (
-    <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden">
+    <div
+      className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] overflow-hidden relative z-0"
+      style={{ isolation: 'isolate' }}
+    >
       <div
         ref={elRef}
         style={{ height: 280, width: '100%', background: '#e8e5df' }}
