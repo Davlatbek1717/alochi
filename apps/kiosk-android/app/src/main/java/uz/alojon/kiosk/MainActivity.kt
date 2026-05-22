@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
@@ -98,10 +99,22 @@ class MainActivity : AppCompatActivity() {
         setContentView(webView)
         BlockedAppsManager.applyBlocking(this)
         ensureMediaPermissions()
+        startMonitorService()
 
         if (savedInstanceState == null) {
             webView.loadUrl(kioskUrl)
         }
+    }
+
+    private fun startMonitorService() {
+        try {
+            val i = Intent(this, DeviceMonitorService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(i)
+            } else {
+                startService(i)
+            }
+        } catch (_: Exception) {}
     }
 
     /**
@@ -111,7 +124,15 @@ class MainActivity : AppCompatActivity() {
      * fall back to a normal runtime request (sideloaded test installs).
      */
     private fun ensureMediaPermissions() {
-        val perms = arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+        val perms = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
         if (dpm.isDeviceOwnerApp(packageName)) {
             val admin = KioskDeviceAdminReceiver.componentName(this)
             perms.forEach { perm ->
@@ -141,6 +162,8 @@ class MainActivity : AppCompatActivity() {
         // Re-assert blocking every time A'lojon comes to the foreground.
         BlockedAppsManager.applyBlocking(this)
         maybePromptAccessibility()
+        // Retry starting the monitor once permissions are granted.
+        startMonitorService()
     }
 
     /**
@@ -248,6 +271,7 @@ class MainActivity : AppCompatActivity() {
         )
         val options = buildList {
             add(toggleLabel)
+            add(getString(R.string.menu_device_setup))
             add(getString(R.string.menu_change_password))
             if (!isDeviceOwner) add(getString(R.string.menu_exit_kiosk))
         }.toTypedArray()
@@ -257,8 +281,30 @@ class MainActivity : AppCompatActivity() {
             .setItems(options) { _, which ->
                 when (options[which]) {
                     toggleLabel -> if (blockingOn) disableBlocking() else enableBlocking()
+                    getString(R.string.menu_device_setup) -> showDeviceSetupDialog()
                     getString(R.string.menu_change_password) -> showSetPasswordDialog()
                     getString(R.string.menu_exit_kiosk) -> exitKiosk()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showDeviceSetupDialog() {
+        val input = EditText(this).apply {
+            hint = getString(R.string.device_setup_token_hint)
+            setText(DeviceConfig.token(this@MainActivity) ?: "")
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.device_setup_title)
+            .setMessage(R.string.device_setup_message)
+            .setView(input)
+            .setPositiveButton(R.string.ok) { _, _ ->
+                val tok = input.text.toString().trim()
+                if (tok.isNotEmpty()) {
+                    DeviceConfig.save(this, tok, null)
+                    startMonitorService()
+                    Toast.makeText(this, R.string.device_setup_saved, Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.cancel, null)

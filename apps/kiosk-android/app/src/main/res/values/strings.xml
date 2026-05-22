@@ -30,6 +30,16 @@
     <string name="blocking_enabled_toast">Bloklash yoqildi</string>
     <string name="blocking_disabled_toast">Bloklash o\'chirildi</string>
 
+    <!-- MDM (device management) -->
+    <string name="mdm_running">Qurilma boshqaruvi faol</string>
+    <string name="blocked_title">Qurilma bloklangan</string>
+    <string name="blocked_body">Bu qurilma administrator tomonidan vaqtincha bloklangan.</string>
+    <string name="menu_device_setup">Qurilmani sozlash (token)</string>
+    <string name="device_setup_title">Qurilma tokeni</string>
+    <string name="device_setup_message">Superadmin panelida qurilma uchun yaratilgan enrollment tokenini kiriting.</string>
+    <string name="device_setup_token_hint">Enrollment token</string>
+    <string name="device_setup_saved">Qurilma sozlandi</string>
+
     <!-- Feedback messages -->
     <string name="ok">OK</string>
     <string name="cancel">Bekor qilish</string>

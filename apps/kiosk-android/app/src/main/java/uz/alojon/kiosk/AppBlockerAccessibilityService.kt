@@ -21,11 +21,18 @@ import android.widget.Toast
  */
 class AppBlockerAccessibilityService : AccessibilityService() {
 
+    companion object {
+        /** Latest foreground app package — read by the MDM heartbeat. */
+        @Volatile
+        var currentPackage: String? = null
+    }
+
     private var lastToastMs = 0L
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
+        currentPackage = pkg
         if (pkg == packageName) return
         if (!BlockedAppsManager.isBlockingEnabled(this)) return
         if (!BlockedAppsManager.BLOCKED_PACKAGES.contains(pkg)) return
