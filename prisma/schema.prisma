@@ -1499,6 +1499,11 @@ model Device {
   storageFreePct  Int?
   policyVersion   Int          @default(1)
   fcmToken        String?
+  lastLatitude    Float?
+  lastLongitude   Float?
+  lastLocationAt  DateTime?
+  blocked         Boolean      @default(false)
+  blockReason     String?
   deletedAt       DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -1587,6 +1592,9 @@ model DeviceHealthPing {
   networkType    String?
   signalStrength Int?
   appVersion     String?
+  latitude       Float?
+  longitude      Float?
+  foregroundApp  String?
   pingedAt       DateTime @default(now())
 
   device Device @relation(fields: [deviceId], references: [id])

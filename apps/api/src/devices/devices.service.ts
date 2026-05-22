@@ -6,14 +6,27 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { randomBytes } from 'crypto';
 import { DeviceStatus } from '@prisma/client';
 
-const ENROLLMENT_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+// Device-event types that page the superadmin (tamper / security alerts).
+const ALERT_EVENT_TYPES = new Set([
+  'accessibility_disabled',
+  'blocking_disabled',
+  'app_uninstalled',
+  'sim_changed',
+  'sim_removed',
+  'gps_off',
+  'tamper',
+]);
 
 @Injectable()
 export class DevicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   // ── Registration ─────────────────────────────────────────────────────────
 
@@ -348,5 +361,206 @@ export class DevicesService {
       where: { branchId: device.branchId },
     });
     return { policyVersion: policy?.policyVersion ?? 1, policy };
+  }
+
+  // ── Device-facing (called by the Android app via DeviceAuthGuard) ──────────
+
+  /**
+   * One call per interval from the tablet: stores a health ping (with GPS),
+   * refreshes the device's latest snapshot, and returns the device's current
+   * block state + any pending commands (polling fallback for when FCM is
+   * unavailable).
+   */
+  async deviceHeartbeat(
+    deviceId: string,
+    body: {
+      batteryLevel?: number;
+      storageFreePct?: number;
+      networkType?: string;
+      signalStrength?: number;
+      appVersion?: string;
+      latitude?: number;
+      longitude?: number;
+      foregroundApp?: string;
+      fcmToken?: string;
+      model?: string;
+      manufacturer?: string;
+      osVersion?: string;
+    },
+  ) {
+    const hasLoc =
+      typeof body.latitude === 'number' && typeof body.longitude === 'number';
+    const [, device] = await this.prisma.$transaction([
+      this.prisma.deviceHealthPing.create({
+        data: {
+          deviceId,
+          batteryLevel: body.batteryLevel,
+          storageFreePct: body.storageFreePct,
+          networkType: body.networkType,
+          signalStrength: body.signalStrength,
+          appVersion: body.appVersion,
+          latitude: body.latitude,
+          longitude: body.longitude,
+          foregroundApp: body.foregroundApp,
+        },
+      }),
+      this.prisma.device.update({
+        where: { id: deviceId },
+        data: {
+          lastSeenAt: new Date(),
+          batteryLevel: body.batteryLevel ?? undefined,
+          storageFreePct: body.storageFreePct ?? undefined,
+          appVersion: body.appVersion ?? undefined,
+          fcmToken: body.fcmToken ?? undefined,
+          model: body.model ?? undefined,
+          manufacturer: body.manufacturer ?? undefined,
+          osVersion: body.osVersion ?? undefined,
+          ...(hasLoc
+            ? {
+                lastLatitude: body.latitude,
+                lastLongitude: body.longitude,
+                lastLocationAt: new Date(),
+              }
+            : {}),
+        },
+      }),
+    ]);
+
+    const commands = await this.prisma.deviceCommand.findMany({
+      where: { deviceId, status: 'pending', expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return {
+      blocked: device.blocked,
+      blockReason: device.blockReason,
+      policyVersion: device.policyVersion,
+      commands,
+    };
+  }
+
+  /**
+   * Tamper / security events from the tablet. Stores them and pages the
+   * tenant's superadmins for the high-severity ones (accessibility disabled,
+   * app uninstalled, SIM change, GPS off...).
+   */
+  async deviceSubmitEvents(
+    deviceId: string,
+    tenantId: string,
+    events: Array<{
+      type: string;
+      severity?: string;
+      payload?: unknown;
+      occurredAt: Date;
+    }>,
+  ) {
+    if (events.length === 0) return { count: 0 };
+
+    await this.prisma.deviceEvent.createMany({
+      data: events.map((e) => ({
+        deviceId,
+        type: e.type,
+        severity: e.severity ?? 'info',
+        payload: e.payload as any,
+        occurredAt: e.occurredAt,
+      })),
+    });
+    await this.prisma.device.update({
+      where: { id: deviceId },
+      data: { lastSeenAt: new Date() },
+    });
+
+    const alerts = events.filter(
+      (e) =>
+        ALERT_EVENT_TYPES.has(e.type) ||
+        e.severity === 'critical' ||
+        e.severity === 'warning',
+    );
+    if (alerts.length > 0) {
+      const device = await this.prisma.device.findUnique({
+        where: { id: deviceId },
+        select: { serialNumber: true },
+      });
+      const admins = await this.prisma.user.findMany({
+        where: { tenantId, role: 'superadmin', status: 'active' },
+        select: { id: true },
+      });
+      const label = device?.serialNumber ?? deviceId;
+      for (const ev of alerts) {
+        for (const a of admins) {
+          await this.notifications
+            .send(
+              a.id,
+              'device_alert',
+              'Qurilma ogohlantirishi',
+              `${label}: ${ev.type}`,
+              { deviceId, type: ev.type, severity: ev.severity ?? 'info' },
+            )
+            .catch(() => undefined);
+        }
+      }
+    }
+
+    return { count: events.length };
+  }
+
+  async ackCommandByDevice(
+    deviceId: string,
+    cmdId: string,
+    status: string,
+    resultPayload?: unknown,
+  ) {
+    const cmd = await this.prisma.deviceCommand.findFirst({
+      where: { id: cmdId, deviceId },
+    });
+    if (!cmd) throw new NotFoundException('Buyruq topilmadi');
+    const ts: Record<string, Date> = {};
+    if (status === 'sent') ts.sentAt = new Date();
+    if (status === 'acked') ts.ackedAt = new Date();
+    if (status === 'completed' || status === 'failed') ts.completedAt = new Date();
+    return this.prisma.deviceCommand.update({
+      where: { id: cmdId },
+      data: { status, ...ts, resultPayload: resultPayload as any },
+    });
+  }
+
+  // ── Superadmin/filadmin remote control ────────────────────────────────────
+
+  async setBlocked(
+    id: string,
+    tenantId: string,
+    blocked: boolean,
+    reason: string | undefined,
+    by: string,
+  ) {
+    await this.findById(id, tenantId);
+    const device = await this.prisma.device.update({
+      where: { id },
+      data: { blocked, blockReason: blocked ? (reason ?? null) : null },
+    });
+    // Queue a command so an online device reacts on its next poll even
+    // before FCM is wired up.
+    await this.prisma.deviceCommand.create({
+      data: {
+        deviceId: id,
+        type: blocked ? 'BLOCK' : 'UNBLOCK',
+        payload: { reason: reason ?? null } as any,
+        createdBy: by,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
+    return device;
+  }
+
+  async issueLocate(id: string, tenantId: string, by: string) {
+    await this.findById(id, tenantId);
+    return this.prisma.deviceCommand.create({
+      data: {
+        deviceId: id,
+        type: 'LOCATE',
+        createdBy: by,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+      },
+    });
   }
 }

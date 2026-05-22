@@ -234,6 +234,33 @@ export class DevicesController {
   ) {
     return this.svc.cancelCommand(id, req.user.tenantId, cmdId);
   }
+
+  // ── Remote control (block / unblock / locate) ─────────────────────────────
+
+  @Post(':id/block')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  block(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @Request() req: any,
+  ) {
+    return this.svc.setBlocked(id, req.user.tenantId, true, body?.reason, req.user.userId);
+  }
+
+  @Post(':id/unblock')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  unblock(@Param('id') id: string, @Request() req: any) {
+    return this.svc.setBlocked(id, req.user.tenantId, false, undefined, req.user.userId);
+  }
+
+  @Post(':id/locate')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  locate(@Param('id') id: string, @Request() req: any) {
+    return this.svc.issueLocate(id, req.user.tenantId, req.user.userId);
+  }
 }
 
 // ── Policy controller ────────────────────────────────────────────────────────
