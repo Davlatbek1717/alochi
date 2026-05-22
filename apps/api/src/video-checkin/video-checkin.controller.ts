@@ -11,11 +11,13 @@ import {
   Res,
   ForbiddenException,
   BadRequestException,
+  GoneException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Readable } from 'stream';
 import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/auth.guard';
@@ -233,13 +235,21 @@ export class VideoCheckinController {
     @Request() req: { user: JwtUser },
     @Res() res: Response,
   ) {
-    const { absolutePath, mimeType } = await this.service.getVideoFilePath(id, {
-      role: req.user.role,
-      userId: req.user.userId,
-      tenantId: req.user.tenantId,
-      branchId: req.user.branchId ?? null,
-      groupId: req.user.groupId ?? null,
-    });
+    const { absolutePath, telegramFileId, mimeType } =
+      await this.service.getVideoFilePath(id, {
+        role: req.user.role,
+        userId: req.user.userId,
+        tenantId: req.user.tenantId,
+        branchId: req.user.branchId ?? null,
+        groupId: req.user.groupId ?? null,
+      });
+
+    // Legacy Telegram-bot video: proxy the stream from Telegram (the bot
+    // token must never reach the client, so we can't redirect).
+    if (telegramFileId) {
+      await this.streamFromTelegram(telegramFileId, mimeType, res);
+      return;
+    }
 
     res.set({
       'Content-Type': mimeType,
@@ -247,6 +257,37 @@ export class VideoCheckinController {
       'Accept-Ranges': 'bytes',
     });
     // sendFile handles Range requests and efficient streaming
-    res.sendFile(absolutePath);
+    res.sendFile(absolutePath as string);
+  }
+
+  private async streamFromTelegram(
+    fileId: string,
+    mimeType: string,
+    res: Response,
+  ): Promise<void> {
+    const token = this.config.get<string>('TELEGRAM_BOT_TOKEN');
+    if (!token) throw new GoneException('Video mavjud emas');
+    try {
+      const metaRes = await fetch(
+        `https://api.telegram.org/bot${token}/getFile?file_id=${encodeURIComponent(fileId)}`,
+      );
+      const meta = (await metaRes.json()) as {
+        ok: boolean;
+        result?: { file_path?: string };
+      };
+      const filePath = meta?.result?.file_path;
+      if (!meta.ok || !filePath) throw new GoneException('Video mavjud emas');
+
+      const dl = await fetch(
+        `https://api.telegram.org/file/bot${token}/${filePath}`,
+      );
+      if (!dl.ok || !dl.body) throw new GoneException('Video mavjud emas');
+
+      res.set({ 'Content-Type': mimeType, 'Cache-Control': 'private, no-store' });
+      Readable.fromWeb(dl.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
+    } catch (err) {
+      if (err instanceof GoneException) throw err;
+      throw new GoneException('Video mavjud emas');
+    }
   }
 }

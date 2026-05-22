@@ -92,7 +92,7 @@ export class VideoCheckinService {
       branchId: string | null;
       groupId: string | null;
     },
-  ): Promise<{ absolutePath: string; mimeType: string }> {
+  ): Promise<{ absolutePath?: string; telegramFileId?: string; mimeType: string }> {
     const checkin = await this.prisma.videoCheckin.findFirst({
       where: { id: checkinId, student: { tenantId: caller.tenantId } },
       include: {
@@ -116,6 +116,13 @@ export class VideoCheckinService {
       (caller.role === 'mentor' && checkin.student.groupId === caller.groupId) ||
       (caller.role === 'student' && checkin.student.id === caller.userId);
     if (!allowed) throw new ForbiddenException("Ruxsat yo'q");
+
+    // Legacy videos uploaded via the Telegram bot stored the Telegram
+    // file_id in videoPath (no path separator). Serve those by proxying
+    // from Telegram; locally-uploaded videos always contain a "/".
+    if (!checkin.videoPath.includes('/')) {
+      return { telegramFileId: checkin.videoPath, mimeType: 'video/mp4' };
+    }
 
     const absolutePath = this.fullPath(checkin.videoPath);
     if (!fs.existsSync(absolutePath)) {
