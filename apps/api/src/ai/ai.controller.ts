@@ -47,6 +47,7 @@ export class AiController {
       body.text,
       body.voice ?? 'en-US-JennyNeural',
       body.language,
+      body.accent ?? 'us',
     );
   }
 

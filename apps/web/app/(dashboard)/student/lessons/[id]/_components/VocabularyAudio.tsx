@@ -10,6 +10,8 @@ import {
   speak,
   stopSpeaking,
 } from '@/lib/speech';
+import { englishVariantsEqual } from '@/lib/english-variant';
+import { getTtsAudio } from '@/lib/exercises';
 import { Waveform } from './Waveform';
 
 type VocabularyAudioProps = {
@@ -74,11 +76,30 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
     };
   }, []);
 
-  function playExample() {
-    if (!ttsAvailable) return;
-    void speak(word, { lang: 'en-US', rate: 0.9 }).catch(() => {
+  // Students learn both American and British English, so we expose both
+  // pronunciations. Browser TTS first (offline, instant); on failure or when
+  // the browser lacks the locale voice, fall back to the server TTS which
+  // renders the requested accent via Google/Azure neural voices.
+  async function playExample(accent: 'us' | 'uk') {
+    const lang = accent === 'uk' ? 'en-GB' : 'en-US';
+    if (ttsAvailable) {
+      try {
+        await speak(word, { lang, rate: 0.9 });
+        return;
+      } catch {
+        /* fall through to server TTS */
+      }
+    }
+    try {
+      const token = localStorage.getItem('accessToken') ?? '';
+      const res = await getTtsAudio(word, 'en', token, accent);
+      if (res?.audioBase64) {
+        const audio = new Audio(`data:${res.mimeType};base64,${res.audioBase64}`);
+        await audio.play();
+      }
+    } catch {
       // Silent — pronunciation example is a nice-to-have.
-    });
+    }
   }
 
   // Whenever a score is set, route it to onPassed/onFailed once.
@@ -270,8 +291,8 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
   function submitTextAnswer() {
     const trimmed = textAnswer.trim();
     if (!trimmed) return;
-    // Simple local match: case-insensitive equality with the target word.
-    const ok = trimmed.toLowerCase() === word.toLowerCase();
+    // Local match accepts US/UK spelling variants (color/colour).
+    const ok = englishVariantsEqual(trimmed, word);
     const finalScore = ok ? 100 : 50;
     setScore(finalScore);
     setPermError('');
@@ -326,23 +347,31 @@ export default function VocabularyAudio({ word, lessonId, onPassed, onFailed }: 
         >
           {word}
         </p>
-        {/* Pronunciation example — Web Speech only; hidden if unsupported so
-            we don't dangle a dead button. Server fallback isn't worth the
-            complexity here since the recording flow already works fine. */}
-        {ttsAvailable && (
-          <div className="flex justify-center pt-1">
-            <button
-              type="button"
-              onClick={playExample}
-              aria-label="Talaffuz namunasini eshitish"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold border-2 border-b-[3px] active:translate-y-[1px] active:border-b-2 transition-all duration-150 bg-white border-[#e8e0d0] text-[#7a5e2c] hover:border-[#c8b890]"
-              style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
-            >
-              <Volume2 size={14} />
-              <span>Talaffuzni eshitish</span>
-            </button>
-          </div>
-        )}
+        {/* Pronunciation example in BOTH accents — students learn American
+            and British English. Browser TTS first with a server fallback so
+            the buttons work even without local voices. */}
+        <div className="flex justify-center items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => playExample('us')}
+            aria-label="Amerikacha talaffuzni eshitish"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold border-2 border-b-[3px] active:translate-y-[1px] active:border-b-2 transition-all duration-150 bg-white border-[#e8e0d0] text-[#7a5e2c] hover:border-[#c8b890]"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            <Volume2 size={14} />
+            <span>US</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => playExample('uk')}
+            aria-label="Britaniyacha talaffuzni eshitish"
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-extrabold border-2 border-b-[3px] active:translate-y-[1px] active:border-b-2 transition-all duration-150 bg-white border-[#e8e0d0] text-[#7a5e2c] hover:border-[#c8b890]"
+            style={{ fontFamily: 'var(--font-display, var(--font-nunito))' }}
+          >
+            <Volume2 size={14} />
+            <span>UK</span>
+          </button>
+        </div>
       </div>
 
       {permError && (

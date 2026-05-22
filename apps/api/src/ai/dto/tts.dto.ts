@@ -17,6 +17,11 @@ export class TtsDto {
   @IsOptional()
   language?: 'en' | 'uz';
 
+  /** English accent: 'us' (American, default) or 'uk' (British). */
+  @IsIn(['us', 'uk'])
+  @IsOptional()
+  accent?: 'us' | 'uk';
+
   @IsString()
   @IsOptional()
   voice?: string;

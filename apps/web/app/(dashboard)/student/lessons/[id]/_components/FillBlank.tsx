@@ -5,6 +5,7 @@ import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
+import { englishVariantsEqual } from '@/lib/english-variant';
 import type { FillBlankConfig } from './exercise-types';
 
 interface FillBlankProps {
@@ -88,10 +89,10 @@ export function FillBlank({ config, onPassed, onFailed }: FillBlankProps) {
   const canSubmit = phase === 'idle' && Boolean(currentAnswer && currentAnswer.length >= 1);
 
   function isCorrectAnswer(value: string): boolean {
-    const norm = value.trim().toLowerCase();
-    if (!norm) return false;
-    if (norm === blank.trim().toLowerCase()) return true;
-    return accepted.some((a) => a.trim().toLowerCase() === norm);
+    if (!value.trim()) return false;
+    // US/UK spelling variants both pass (color/colour, organise/organize).
+    if (englishVariantsEqual(value, blank)) return true;
+    return accepted.some((a) => englishVariantsEqual(a, value));
   }
 
   function handleCheck() {

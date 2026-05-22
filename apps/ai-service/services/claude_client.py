@@ -16,6 +16,7 @@ Qoidalar:
 - Dars mavzusidan chetga chiqmang
 - Maksimal 3-4 gap bilan javob bering
 - Rag'batlantiruvchi, ijobiy ton saqlang
+- Amerikacha va Britaniyacha inglizchani BARAVAR qabul qiling (color/colour, organize/organise, elevator/lift). Ikkala variant ham to'g'ri — birortasini xato deb hisoblamang
 
 Dars mavzusi va konteksti:
 {lesson_context}"""
@@ -90,7 +91,11 @@ JSON formatida javob bering:
 }}
 
 status qiymatlari: "green" (yaxshi), "yellow" (o'rta), "red" (yomon)
-score: 0.0 dan 1.0 gacha"""
+score: 0.0 dan 1.0 gacha
+
+MUHIM: Amerikacha va Britaniyacha inglizchani BARAVAR to'g'ri deb hisoblang
+(color/colour, organize/organise, elevator/lift). Variant farqi uchun ball
+kamaytirmang."""
 
         response = self.client.messages.create(
             model=CLAUDE_SONNET,

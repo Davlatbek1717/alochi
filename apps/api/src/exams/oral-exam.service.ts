@@ -100,7 +100,7 @@ ${input.aiPrompt}
 CONVERSATION RULES:
 1. ${
   input.language === 'uz'
-    ? "Speak in Uzbek for all context, explanations, and questions. However, English vocabulary words, phrases, and example sentences that the student needs to learn MUST be said in English (standard English spelling/pronunciation). Example: \"Keling, 'weather' so'zi haqida gaplashamiz. What does 'cloudy' mean?\""
+    ? "Speak in Uzbek for all context, explanations, and questions. However, English vocabulary words, phrases, and example sentences that the student needs to learn MUST be said in English. Accept BOTH American and British English. Example: \"Keling, 'weather' so'zi haqida gaplashamiz. What does 'cloudy' mean?\""
     : 'Speak ONLY in English. Do not switch languages mid-exam.'
 }
 2. Keep your turns SHORT — 1-2 sentences. This is a spoken exam.
@@ -135,6 +135,10 @@ GRADING RUBRIC (0-100):
   - Vocabulary range        (0-25)
   - Fluency / pronunciation (0-25)
   - Comprehension / relevance to question (0-25)
+
+Accept BOTH American and British English equally — spelling, vocabulary
+(elevator/lift), and accent. NEVER deduct points for using one variant
+over the other.
 
 PASS THRESHOLD: ${input.passThreshold}% — score >= threshold means passed.
 Be fair but realistic. A beginner answering haltingly can still pass with ~70 if they understand and respond appropriately.`;

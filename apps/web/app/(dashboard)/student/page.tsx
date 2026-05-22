@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Video } from 'lucide-react';
 import { useFocusRevalidate } from '@/lib/useFocusRevalidate';
 import { useRevalidateOnEvent } from '@/lib/useRevalidateOnEvent';
 import { SocialFeed } from './_components/SocialFeed';
@@ -35,6 +35,14 @@ type Profile = {
   id: string;
   name: string;
   login: string;
+};
+
+type VideoSlotStatus = 'submitted' | 'late' | 'missed' | 'pending' | null;
+type VideoToday = {
+  canUploadMorning: boolean;
+  canUploadEvening: boolean;
+  morningStatus: VideoSlotStatus;
+  eveningStatus: VideoSlotStatus;
 };
 
 type LessonInfo = {
@@ -94,6 +102,7 @@ export default function StudentDashboard() {
   const [nextLessonSession, setNextLessonSession] = useState<{ count: number; total: number } | null>(null);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [examProgress, setExamProgress] = useState<ExamProgress | null>(null);
+  const [videoToday, setVideoToday] = useState<VideoToday | null>(null);
   // Initial-load failure surface. Background refreshes (focus, visibility)
   // intentionally don't update this so a brief flake on a tab switch
   // doesn't tear down a working dashboard. Retry bumps reloadKey which
@@ -119,6 +128,7 @@ export default function StudentDashboard() {
         nextLessonRes,
         statusRes,
         examProgressRes,
+        videoTodayRes,
       ] = await Promise.all([
         apiRequest<Profile>('/users/my-profile', {}, token).catch(() => ({ data: null as Profile | null })),
         apiRequest<StreakData>('/gamification/streak', {}, token),
@@ -129,6 +139,7 @@ export default function StudentDashboard() {
         apiRequest<LessonInfo | null>('/lessons/next', {}, token).catch(() => ({ data: null as LessonInfo | null })),
         apiRequest<StatusData>('/status/my', {}, token).catch(() => ({ data: null as StatusData | null })),
         apiRequest<ExamProgress>('/exams/my-progress', {}, token).catch(() => ({ data: null as ExamProgress | null })),
+        apiRequest<VideoToday>('/video-checkins/my-today', {}, token).catch(() => ({ data: null as VideoToday | null })),
       ]);
       if (profileRes.data) setProfile(profileRes.data);
       setStreak(streakRes.data.streak);
@@ -139,6 +150,7 @@ export default function StudentDashboard() {
       setCertificates(certsRes.data ?? []);
       setStatusData(statusRes.data);
       setExamProgress(examProgressRes.data);
+      setVideoToday(videoTodayRes.data);
 
       const nextL = nextLessonRes.data ?? null;
       setNextLesson(nextL);
@@ -337,6 +349,11 @@ export default function StudentDashboard() {
             </div>
           </div>
         )}
+
+        {/* ── Daily video — prominent standout card ── */}
+        <div className="px-4 mb-3">
+          <DailyVideoCard status={videoToday} />
+        </div>
 
         {/* ── Hero CTA ── */}
         <div className="px-4">
@@ -557,6 +574,129 @@ export default function StudentDashboard() {
 }
 
 /* ── Subcomponents ───────────────────────────────────────────────── */
+
+/**
+ * Prominent daily-video card. Dark "REC" treatment so it visually stands
+ * apart from the rest of the (light) dashboard. Shows today's morning and
+ * evening submission state and deep-links to the upload page.
+ */
+function DailyVideoCard({ status }: { status: VideoToday | null }) {
+  const morningDone =
+    status?.morningStatus === 'submitted' || status?.morningStatus === 'late';
+  const eveningDone =
+    status?.eveningStatus === 'submitted' || status?.eveningStatus === 'late';
+  const actionNow =
+    (!!status?.canUploadMorning && !morningDone) ||
+    (!!status?.canUploadEvening && !eveningDone);
+  const bothDone = morningDone && eveningDone;
+
+  const heading = bothDone
+    ? 'Bugungi videolar topshirildi 🎉'
+    : actionNow
+      ? 'Hozir video yuklang'
+      : 'Ertalabki va kechki video';
+  const cta = bothDone
+    ? 'Videolarni ko‘rish →'
+    : actionNow
+      ? 'Hozir yuklash →'
+      : 'Video bo‘limi →';
+
+  return (
+    <Link
+      href="/student/checkin"
+      className="block relative overflow-hidden active:translate-y-[2px] transition-transform"
+      style={{
+        background: 'var(--ink)',
+        color: 'var(--bone)',
+        borderRadius: 'var(--r-4)',
+        boxShadow: '0 6px 0 rgba(0,0,0,0.32)',
+      }}
+    >
+      <div className="relative p-5">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="relative flex items-center justify-center w-2.5 h-2.5">
+            <span
+              className="absolute inline-flex h-full w-full rounded-full motion-safe:animate-ping"
+              style={{ background: 'var(--ember)' }}
+              aria-hidden
+            />
+            <span
+              className="relative inline-flex rounded-full w-2.5 h-2.5"
+              style={{ background: 'var(--ember)' }}
+            />
+          </span>
+          <span className="sp-eyebrow" style={{ color: 'var(--gold-soft)' }}>
+            Kunlik video
+          </span>
+        </div>
+        <h2 className="sp-display text-xl leading-tight mb-3.5">{heading}</h2>
+        <div className="flex gap-2 mb-4">
+          <VideoSlotChip label="Ertalabki" state={status?.morningStatus ?? null} />
+          <VideoSlotChip label="Kechki" state={status?.eveningStatus ?? null} />
+        </div>
+        <span
+          className="sp-display inline-flex items-center gap-1.5 px-5 py-2.5 min-h-[44px]"
+          style={{
+            background: bothDone ? 'rgba(255,255,255,0.14)' : 'var(--gold)',
+            color: bothDone ? 'var(--bone)' : 'var(--ink)',
+            border: bothDone
+              ? '2px solid rgba(255,255,255,0.2)'
+              : '2px solid var(--gold-deep)',
+            borderRadius: 14,
+            boxShadow: bothDone ? 'none' : '0 4px 0 var(--gold-deep)',
+            fontWeight: 700,
+          }}
+        >
+          <Video size={16} />
+          {cta}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function VideoSlotChip({
+  label,
+  state,
+}: {
+  label: string;
+  state: VideoSlotStatus;
+}) {
+  const done = state === 'submitted' || state === 'late';
+  const tone = done
+    ? {
+        dot: 'var(--leaf-2)',
+        text: state === 'late' ? 'kech topshirildi' : 'topshirildi',
+      }
+    : state === 'missed'
+      ? { dot: 'var(--ember)', text: "o‘tkazib yuborildi" }
+      : { dot: 'var(--gold)', text: 'kutilmoqda' };
+
+  return (
+    <div
+      className="flex-1 flex items-center gap-2 px-3 py-2 min-w-0"
+      style={{
+        background: 'rgba(255,255,255,0.08)',
+        borderRadius: 'var(--r-2)',
+        border: '1px solid rgba(255,255,255,0.1)',
+      }}
+    >
+      <span
+        className="w-2 h-2 rounded-full shrink-0"
+        style={{ background: tone.dot }}
+      />
+      <div className="min-w-0">
+        <div className="sp-display text-[13px] leading-tight">{label}</div>
+        <div
+          className="text-[10px] leading-tight truncate"
+          style={{ color: 'var(--bone)', opacity: 0.7 }}
+        >
+          {tone.text}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SectionTitle({
   children,

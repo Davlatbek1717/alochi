@@ -15,6 +15,7 @@ import {
 } from './llm-client';
 import { StatusService } from '../student-status/status.service';
 import { StatusColor } from '../student-status/status.types';
+import { normalizeEnglishVariant } from './english-variant';
 
 // Active LLM model — set in apps/api/.env via GEMINI_MODEL or defaults to
 // gemini-2.5-flash. Used for tutor chat, translation grading, wrong-answer
@@ -111,6 +112,7 @@ export class AiService {
           "Sen 3-7 sinf o'quvchilari uchun do'stona ingliz tili o'qituvchisisan. " +
           "Javoblaringni o'zbek tilida ber, qisqa va aniq (1-3 jumla). " +
           'Iloji boricha 1-2 ta inglizcha misol qoshib, ularni qavs ichida tarjima qil. ' +
+          'Amerikacha va Britaniyacha inglizchani baravar qabul qil — ikkala variant ham (color/colour, elevator/lift) toʻgʻri. ' +
           'Faqat darsdagi mavzuga oid javob ber.\n\n' +
           `DARS KONTEKSTI: ${lessonContext || 'umumiy ingliz tili savol-javobi'}`,
       },
@@ -514,6 +516,7 @@ export class AiService {
     text: string,
     voiceOrLanguage: string = 'en-US-JennyNeural',
     language?: 'en' | 'uz',
+    accent: 'us' | 'uk' = 'us',
   ): Promise<{
     audioBase64: string;
     mimeType: string;
@@ -521,6 +524,9 @@ export class AiService {
     if (!text) return { audioBase64: '', mimeType: 'audio/mpeg' };
 
     const lang = language ?? 'en';
+    // English locale tag — students learn both American and British English,
+    // so the caller can request either accent. Uzbek ignores accent.
+    const enLocale = accent === 'uk' ? 'en-GB' : 'en-US';
 
     // ── Path 1: Google Cloud Text-to-Speech ────────────────────────────
     const googleKey =
@@ -532,8 +538,12 @@ export class AiService {
       // — a friendly young-adult female reader — so existing copy aimed
       // at kids still feels right.
       const googleVoice =
-        lang === 'uz' ? 'uz-UZ-Standard-A' : 'en-US-Wavenet-F';
-      const languageCode = lang === 'uz' ? 'uz-UZ' : 'en-US';
+        lang === 'uz'
+          ? 'uz-UZ-Standard-A'
+          : accent === 'uk'
+            ? 'en-GB-Wavenet-A'
+            : 'en-US-Wavenet-F';
+      const languageCode = lang === 'uz' ? 'uz-UZ' : enLocale;
       try {
         const res = await fetch(
           `https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleKey}`,
@@ -588,7 +598,8 @@ export class AiService {
     // text on sentence/word boundaries and concatenate the MP3 frames.
     // Most lesson sentences fit in one request.
     try {
-      const ttsLang = lang === 'uz' ? 'uz' : 'en';
+      const ttsLang =
+        lang === 'uz' ? 'uz' : accent === 'uk' ? 'en-GB' : 'en';
       const chunks = splitForTranslateTts(text);
       const buffers: Buffer[] = [];
       for (const chunk of chunks) {
@@ -647,12 +658,16 @@ export class AiService {
     }
 
     const defaultVoice =
-      lang === 'uz' ? 'uz-UZ-MadinaNeural' : 'en-US-JennyNeural';
+      lang === 'uz'
+        ? 'uz-UZ-MadinaNeural'
+        : accent === 'uk'
+          ? 'en-GB-LibbyNeural'
+          : 'en-US-JennyNeural';
     const voice =
       voiceOrLanguage && voiceOrLanguage !== 'en-US-JennyNeural'
         ? voiceOrLanguage
         : defaultVoice;
-    const xmlLang = lang === 'uz' ? 'uz-UZ' : 'en-US';
+    const xmlLang = lang === 'uz' ? 'uz-UZ' : enLocale;
 
     const ssml =
       `<speak version='1.0' xml:lang='${xmlLang}'>` +
@@ -727,6 +742,7 @@ export class AiService {
         : '') +
       `CONTEXT: ${input.context ?? 'none'}\n\n` +
       `Rules:\n` +
+      `- Accept BOTH American and British English equally — spelling (color/colour, organize/organise, center/centre) AND vocabulary (elevator/lift, candy/sweets, soccer/football). NEVER mark an answer wrong just because it uses the other variant; both score 100.\n` +
       `- Forgive minor typos (1-2 character differences) — score >= 70 still\n` +
       `- Forgive synonyms and natural variations\n` +
       `- Capitalization doesn't matter\n` +
@@ -776,11 +792,13 @@ export class AiService {
     correctAnswer: string,
     acceptedAnswers?: string[],
   ): { correct: boolean; score: number; feedback: string } | null {
-    const norm = studentAnswer.trim().toLowerCase();
+    const norm = normalizeEnglishVariant(studentAnswer);
     if (!norm) return null;
+    // Normalise candidates the same way so US/UK spelling variants
+    // (color/colour, organize/organise) both match the canonical answer.
     const candidates = [correctAnswer, ...(acceptedAnswers ?? [])]
-      .map((a) => a?.trim().toLowerCase())
-      .filter((a): a is string => Boolean(a));
+      .filter((a): a is string => Boolean(a && a.trim()))
+      .map((a) => normalizeEnglishVariant(a));
     if (candidates.includes(norm)) {
       return {
         correct: true,
@@ -902,6 +920,7 @@ export class AiService {
       `STUDENT WROTE: "${input.studentAnswer}"\n` +
       `CORRECT ANSWER: "${input.correctAnswer}"\n` +
       (input.context ? `CONTEXT: ${input.context}\n` : '') +
+      `\nIMPORTANT: Both American and British English are correct. If the only difference is US/UK spelling (color/colour) or vocabulary (elevator/lift), the student is NOT wrong — say it is also accepted instead of explaining an error.\n` +
       `\nRespond in JSON:\n` +
       `{\n` +
       `  "explanation": "2-3 sentence Uzbek explanation focusing on the rule",\n` +

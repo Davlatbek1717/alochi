@@ -12,6 +12,7 @@ import { Button, Mascot } from '@/components/ui';
 import { playSound } from '@/lib/sound';
 import { getTtsAudio, gradeTranslation } from '@/lib/exercises';
 import { getSpeechCapabilities, speak, stopSpeaking } from '@/lib/speech';
+import { englishVariantsEqual } from '@/lib/english-variant';
 import { XpFloater } from './XpFloater';
 import { ExplainPanel } from './ExplainPanel';
 import type { ListenTypeConfig } from './exercise-types';
@@ -191,10 +192,10 @@ export function ListenType({ config, onPassed, onFailed }: ListenTypeProps) {
   const canSubmit = trimmed.length >= 1 && phase === 'idle';
 
   function strictMatch(value: string): boolean {
-    const norm = value.trim().toLowerCase();
-    if (!norm) return false;
-    if (norm === text.trim().toLowerCase()) return true;
-    return acceptedAnswers.some((a) => a.trim().toLowerCase() === norm);
+    if (!value.trim()) return false;
+    // US/UK spelling variants both pass (color/colour, organise/organize).
+    if (englishVariantsEqual(value, text)) return true;
+    return acceptedAnswers.some((a) => englishVariantsEqual(a, value));
   }
 
   async function handleCheck() {

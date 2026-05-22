@@ -119,10 +119,11 @@ export async function getTtsAudio(
   text: string,
   language: 'en' | 'uz',
   token: string,
+  accent: 'us' | 'uk' = 'us',
 ): Promise<TtsResponse> {
   const res = await apiRequest<TtsResponse>(
     '/ai/tts',
-    { method: 'POST', body: JSON.stringify({ text, language }) },
+    { method: 'POST', body: JSON.stringify({ text, language, accent }) },
     token,
   );
   return res.data;
