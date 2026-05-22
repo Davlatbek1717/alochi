@@ -69,8 +69,36 @@ class DeviceMonitorService : Service() {
         if (!running) {
             running = true
             thread(name = "mdm-loop") { loop() }
+            thread(name = "mdm-poll") { pollLoop() }
         }
         return START_STICKY
+    }
+
+    /**
+     * Long-poll loop for near-instant command delivery (no FCM). Each request
+     * blocks on the server up to ~25s; on return we run any commands and
+     * immediately reconnect.
+     */
+    private fun pollLoop() {
+        while (running) {
+            try {
+                if (!DeviceConfig.isConfigured(this)) {
+                    Thread.sleep(10_000)
+                    continue
+                }
+                val cmds = DeviceApi.pollCommands(this)
+                if (cmds == null) {
+                    Thread.sleep(5_000) // network error backoff
+                } else {
+                    for (cmd in cmds) handleCommand(cmd)
+                }
+            } catch (_: InterruptedException) {
+                break
+            } catch (e: Exception) {
+                Log.w(TAG, "poll failed: ${e.message}")
+                try { Thread.sleep(5_000) } catch (_: InterruptedException) { break }
+            }
+        }
     }
 
     override fun onDestroy() {

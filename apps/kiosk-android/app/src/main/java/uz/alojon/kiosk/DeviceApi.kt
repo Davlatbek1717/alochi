@@ -47,6 +47,27 @@ object DeviceApi {
         )
     }
 
+    /**
+     * GET /device-api/poll — long-poll for commands (server holds up to ~25s).
+     * Returns the command list, or null on error. Near-instant remote control
+     * without FCM.
+     */
+    fun pollCommands(ctx: Context): List<Command>? {
+        val resp = get(ctx, "/device-api/poll", 30000) ?: return null
+        val data = resp.optJSONObject("data") ?: resp
+        return parseCommands(data.optJSONArray("commands"))
+    }
+
+    private fun parseCommands(arr: JSONArray?): List<Command> {
+        val cmds = mutableListOf<Command>()
+        val a = arr ?: return cmds
+        for (i in 0 until a.length()) {
+            val c = a.optJSONObject(i) ?: continue
+            cmds.add(Command(c.optString("id"), c.optString("type"), c.optJSONObject("payload")))
+        }
+        return cmds
+    }
+
     /** POST /device-api/events — fire-and-forget tamper/security events. */
     fun sendEvents(ctx: Context, events: JSONArray) {
         val body = JSONObject().put("events", events)
@@ -58,6 +79,33 @@ object DeviceApi {
         val body = JSONObject().put("status", status)
         if (result != null) body.put("resultPayload", result)
         post(ctx, "/device-api/commands/$cmdId/ack", body)
+    }
+
+    private fun get(ctx: Context, path: String, readTimeoutMs: Int): JSONObject? {
+        val token = DeviceConfig.token(ctx) ?: return null
+        val url = DeviceConfig.baseUrl(ctx).trimEnd('/') + path
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TIMEOUT
+                readTimeout = readTimeoutMs
+                setRequestProperty("Authorization", "Device $token")
+            }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            if (code !in 200..299) {
+                Log.w(TAG, "GET $path -> $code")
+                return null
+            }
+            if (text.isBlank()) JSONObject() else JSONObject(text)
+        } catch (e: Exception) {
+            Log.w(TAG, "GET $path failed: ${e.message}")
+            null
+        } finally {
+            conn?.disconnect()
+        }
     }
 
     private fun post(ctx: Context, path: String, body: JSONObject): JSONObject? {

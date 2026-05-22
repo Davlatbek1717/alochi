@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   Param,
@@ -47,6 +48,16 @@ export class DeviceClientController {
     @Request() req: DeviceReq,
   ) {
     return this.svc.deviceHeartbeat(req.device.id, body);
+  }
+
+  /**
+   * Long-poll for commands — blocks up to ~25s until a command is queued,
+   * giving near-instant remote control without FCM. The device reconnects
+   * immediately after each response.
+   */
+  @Get('poll')
+  poll(@Request() req: DeviceReq) {
+    return this.svc.longPollCommands(req.device.id);
   }
 
   /** Tamper / security events (accessibility off, app uninstalled, SIM change...). */

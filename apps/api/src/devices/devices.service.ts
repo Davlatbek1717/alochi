@@ -7,8 +7,12 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomBytes } from 'crypto';
 import { DeviceStatus } from '@prisma/client';
+
+/** Event fired when a new command is queued, to wake a device's long-poll. */
+const DEVICE_CMD_EVENT = 'device.command';
 
 // Device-event types that page the superadmin (tamper / security alerts).
 const ALERT_EVENT_TYPES = new Set([
@@ -26,7 +30,13 @@ export class DevicesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private events: EventEmitter2,
   ) {}
+
+  /** Wake any long-poll waiting for this device. */
+  private wakeDevice(deviceId: string) {
+    this.events.emit(DEVICE_CMD_EVENT, { deviceId });
+  }
 
   // ── Registration ─────────────────────────────────────────────────────────
 
@@ -252,9 +262,11 @@ export class DevicesService {
       throw new ForbiddenException('Destructive commands require 2FA confirmation via /devices/:id/commands/wipe');
     }
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min TTL
-    return this.prisma.deviceCommand.create({
+    const cmd = await this.prisma.deviceCommand.create({
       data: { deviceId: id, type, payload: payload as any, createdBy, expiresAt },
     });
+    this.wakeDevice(id);
+    return cmd;
   }
 
   async issueWipeCommand(
@@ -266,9 +278,11 @@ export class DevicesService {
   ) {
     await this.findById(id, tenantId);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-    return this.prisma.deviceCommand.create({
+    const cmd = await this.prisma.deviceCommand.create({
       data: { deviceId: id, type, payload: payload as any, createdBy, expiresAt },
     });
+    this.wakeDevice(id);
+    return cmd;
   }
 
   async getPendingCommands(id: string, tenantId: string) {
@@ -549,12 +563,13 @@ export class DevicesService {
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
+    this.wakeDevice(id);
     return device;
   }
 
   async issueLocate(id: string, tenantId: string, by: string) {
     await this.findById(id, tenantId);
-    return this.prisma.deviceCommand.create({
+    const cmd = await this.prisma.deviceCommand.create({
       data: {
         deviceId: id,
         type: 'LOCATE',
@@ -562,5 +577,41 @@ export class DevicesService {
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       },
     });
+    this.wakeDevice(id);
+    return cmd;
+  }
+
+  /**
+   * Long-poll: returns pending commands immediately, or waits up to ~25s for
+   * one to be queued (woken by wakeDevice via EventEmitter). This gives
+   * near-instant command delivery without FCM/Firebase.
+   */
+  async longPollCommands(deviceId: string): Promise<{ commands: unknown[] }> {
+    const fetchPending = () =>
+      this.prisma.deviceCommand.findMany({
+        where: { deviceId, status: 'pending', expiresAt: { gt: new Date() } },
+        orderBy: { createdAt: 'asc' },
+      });
+
+    let cmds = await fetchPending();
+    if (cmds.length === 0) {
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          this.events.off(DEVICE_CMD_EVENT, handler);
+          resolve();
+        };
+        const handler = (p: { deviceId: string }) => {
+          if (p?.deviceId === deviceId) finish();
+        };
+        const timer = setTimeout(finish, 25_000);
+        this.events.on(DEVICE_CMD_EVENT, handler);
+      });
+      cmds = await fetchPending();
+    }
+    return { commands: cmds };
   }
 }
