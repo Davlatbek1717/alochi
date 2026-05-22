@@ -458,10 +458,10 @@ export default function FiladminStudentDetailPage() {
                       }`}
                     >
                       {p.status === 'paid'
-                        ? 'Paid'
+                        ? "To'landi"
                         : p.status === 'overdue'
-                          ? 'Overdue'
-                          : 'Unpaid'}
+                          ? 'Kechikkan'
+                          : "To'lanmagan"}
                     </span>
                   </div>
                 </li>

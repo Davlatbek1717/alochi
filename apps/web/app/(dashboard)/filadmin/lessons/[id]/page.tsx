@@ -187,8 +187,7 @@ export default function FiladminEditLessonPage() {
       if (form.nRepetitions !== lesson.nRepetitions)
         body.nRepetitions = form.nRepetitions;
       if ((form.maxNOverride ?? null) !== (lesson.maxNOverride ?? null)) {
-        if (form.maxNOverride && form.maxNOverride > 0)
-          body.maxNOverride = form.maxNOverride;
+        body.maxNOverride = form.maxNOverride ?? null;
       }
 
       const res = await apiRequest<Lesson>(
