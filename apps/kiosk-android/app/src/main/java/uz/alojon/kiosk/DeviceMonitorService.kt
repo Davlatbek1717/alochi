@@ -18,7 +18,9 @@ import android.os.Build
 import android.os.Environment
 import android.os.IBinder
 import android.os.StatFs
+import android.telephony.TelephonyManager
 import android.util.Log
+import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.concurrent.thread
 
@@ -42,6 +44,11 @@ class DeviceMonitorService : Service() {
     }
 
     @Volatile private var running = false
+
+    // Tamper de-dupe flags so we alert once per state change, not every tick.
+    private var sentAccessibilityOff = false
+    private var sentGpsOff = false
+    private var sentSimAbsent = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -88,7 +95,55 @@ class DeviceMonitorService : Service() {
         val res = DeviceApi.heartbeat(this, body) ?: return
         applyBlockState(res.blocked, res.blockReason)
         for (cmd in res.commands) handleCommand(cmd)
+        checkTamper()
     }
+
+    /**
+     * Detect tamper / security conditions and report them once per state
+     * change: accessibility blocker disabled, GPS off, SIM removed.
+     */
+    private fun checkTamper() {
+        val events = JSONArray()
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+        val isOwner = dpm?.isDeviceOwnerApp(packageName) == true
+
+        // Blocking on but the accessibility blocker switched off (non-owner only).
+        val accessibilityTampered = !isOwner &&
+            BlockedAppsManager.isBlockingEnabled(this) &&
+            !BlockedAppsManager.isAccessibilityServiceEnabled(this)
+        if (accessibilityTampered) {
+            if (!sentAccessibilityOff) {
+                events.put(ev("accessibility_disabled", "warning"))
+                sentAccessibilityOff = true
+            }
+        } else {
+            sentAccessibilityOff = false
+        }
+
+        // Location services off.
+        val lm = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val gpsOn = lm?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true ||
+            lm?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true
+        if (!gpsOn) {
+            if (!sentGpsOff) { events.put(ev("gps_off", "warning")); sentGpsOff = true }
+        } else {
+            sentGpsOff = false
+        }
+
+        // SIM removed.
+        val tm = getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+        val simAbsent = tm?.simState == TelephonyManager.SIM_STATE_ABSENT
+        if (simAbsent) {
+            if (!sentSimAbsent) { events.put(ev("sim_removed", "warning")); sentSimAbsent = true }
+        } else {
+            sentSimAbsent = false
+        }
+
+        if (events.length() > 0) DeviceApi.sendEvents(this, events)
+    }
+
+    private fun ev(type: String, severity: String): JSONObject =
+        JSONObject().put("type", type).put("severity", severity)
 
     // ── Telemetry ─────────────────────────────────────────────────────────────
 

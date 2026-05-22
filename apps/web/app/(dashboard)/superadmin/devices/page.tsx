@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Plus,
   AlertTriangle,
+  Power,
+  Trash2,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
@@ -154,6 +156,34 @@ export default function SuperadminDevicesPage() {
     try {
       await apiRequest(`/devices/${d.id}/locate`, { method: 'POST' }, token());
       toast.success('Joylashuv soʻraldi — keyingi aloqada yangilanadi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reboot(d: Device) {
+    setBusy(d.id);
+    try {
+      await apiRequest(`/devices/${d.id}/reboot`, { method: 'POST' }, token());
+      toast.success('Qayta yoqish buyrugʻi yuborildi (device-owner)');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const [wipeTarget, setWipeTarget] = useState<Device | null>(null);
+  async function doWipe() {
+    if (!wipeTarget) return;
+    const id = wipeTarget.id;
+    setWipeTarget(null);
+    setBusy(id);
+    try {
+      await apiRequest(`/devices/${id}/wipe`, { method: 'POST' }, token());
+      toast.success('Tozalash buyrugʻi yuborildi (device-owner)');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Xatolik');
     } finally {
@@ -322,6 +352,22 @@ export default function SuperadminDevicesPage() {
                         <MapPin size={13} /> Xaritada
                       </a>
                     )}
+                    <button
+                      onClick={() => reboot(d)}
+                      disabled={busy === d.id}
+                      title="Qayta yoqish (device-owner)"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#64748b] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] disabled:opacity-50 transition-colors"
+                    >
+                      <Power size={13} /> Reboot
+                    </button>
+                    <button
+                      onClick={() => setWipeTarget(d)}
+                      disabled={busy === d.id}
+                      title="Maʼlumotlarni tozalash (device-owner)"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-rose-700 bg-white border border-rose-200 px-3 py-1.5 rounded-xl hover:bg-rose-50 disabled:opacity-50 transition-colors"
+                    >
+                      <Trash2 size={13} /> Wipe
+                    </button>
                   </div>
                 </div>
               );
@@ -392,6 +438,32 @@ export default function SuperadminDevicesPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Wipe confirm modal (destructive) */}
+      <Modal open={wipeTarget !== null} onClose={() => setWipeTarget(null)} title="Maʼlumotlarni tozalash" theme="light">
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start gap-2 mb-4">
+          <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+          <p className="text-sm font-semibold text-rose-700">
+            <span className="font-bold">{wipeTarget?.model || wipeTarget?.serialNumber}</span> planshetidagi
+            barcha maʼlumot oʻchiriladi (factory reset). Bu amalni qaytarib boʻlmaydi va faqat
+            device-owner planshetda ishlaydi.
+          </p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setWipeTarget(null)}
+            className="px-4 py-2 rounded-xl border border-[#ede9e1] text-sm font-semibold text-[#64748b] hover:bg-[#f7f4ef]"
+          >
+            Bekor
+          </button>
+          <button
+            onClick={doWipe}
+            className="px-4 py-2 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700"
+          >
+            Tozalash
+          </button>
+        </div>
       </Modal>
 
       {/* Block confirm modal */}

@@ -261,6 +261,27 @@ export class DevicesController {
   locate(@Param('id') id: string, @Request() req: any) {
     return this.svc.issueLocate(id, req.user.tenantId, req.user.userId);
   }
+
+  // Device-owner only on the tablet side; arrives via heartbeat/FCM.
+  @Post(':id/reboot')
+  @Roles(UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  reboot(@Param('id') id: string, @Request() req: any) {
+    return this.svc.issueCommand(id, req.user.tenantId, 'REBOOT', undefined, req.user.userId);
+  }
+
+  @Post(':id/wipe')
+  @Roles(UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  wipe(@Param('id') id: string, @Request() req: any) {
+    return this.svc.issueWipeCommand(
+      id,
+      req.user.tenantId,
+      'WIPE_USER_DATA',
+      undefined,
+      req.user.userId,
+    );
+  }
 }
 
 // ── Policy controller ────────────────────────────────────────────────────────
