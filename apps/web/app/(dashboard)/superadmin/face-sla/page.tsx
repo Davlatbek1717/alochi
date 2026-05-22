@@ -64,8 +64,8 @@ export default function FaceSlaPage() {
         </div>
       </div>
 
-      <div className="p-5">
-      {loading ? (
+      <div className="px-4 pt-5 pb-6">
+        {loading ? (
         <div className="grid grid-cols-2 gap-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} theme="light" className="h-20 rounded-[18px]" />
@@ -134,3 +134,4 @@ export default function FaceSlaPage() {
     </div>
   );
 }
+

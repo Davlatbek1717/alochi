@@ -1,8 +1,12 @@
 'use client';
+import { useMemo, useState } from 'react';
 import {
   Pencil,
   Plus,
   Trash2,
+  Copy,
+  Search,
+  X,
   type LucideIcon,
   CheckSquare,
   ArrowDownNarrowWide,
@@ -162,7 +166,12 @@ interface Props {
   onAdd: () => void;
   onEdit: (comp: ConfigComponent) => void;
   onDelete: (comp: ConfigComponent) => void;
+  /** Optional: when provided, each row gets a Duplicate button that calls
+   *  this with the source component. The parent posts a new component
+   *  with the same config and refreshes the list. */
+  onDuplicate?: (comp: ConfigComponent) => void;
   isDeleting?: string | null;
+  isDuplicating?: string | null;
 }
 
 export function ComponentsList({
@@ -170,8 +179,49 @@ export function ComponentsList({
   onAdd,
   onEdit,
   onDelete,
+  onDuplicate,
   isDeleting,
+  isDuplicating,
 }: Props) {
+  // Filter by type (chip group at top) + text search inside the summary.
+  // Both narrow the rendered list; the count badge stays accurate.
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+
+  // Count components per type so filter chips can show "MCQ (12)" badges
+  // and admins know what's worth filtering for.
+  const typeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of components) counts[c.type] = (counts[c.type] ?? 0) + 1;
+    return counts;
+  }, [components]);
+
+  // Types present in this lesson, ordered by frequency desc — surfaces the
+  // most-used type as the first chip after "All".
+  const presentTypes = useMemo(
+    () =>
+      Object.keys(typeCounts).sort(
+        (a, b) => typeCounts[b] - typeCounts[a],
+      ),
+    [typeCounts],
+  );
+
+  const filtered = useMemo(() => {
+    let list = components;
+    if (typeFilter !== 'all') {
+      list = list.filter((c) => c.type === typeFilter);
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) => {
+        const label = (COMPONENT_LABELS[c.type] ?? c.type).toLowerCase();
+        const summary = summarizeConfig(c).toLowerCase();
+        return label.includes(q) || summary.includes(q);
+      });
+    }
+    return list;
+  }, [components, typeFilter, search]);
+
   return (
     <div className="space-y-3">
       {components.length === 0 ? (
@@ -190,8 +240,85 @@ export function ComponentsList({
         </button>
       ) : (
         <>
+          {/* Filter + search — only render when worth it (>= 5 items). On
+              short lessons the chip row is more clutter than help. */}
+          {components.length >= 5 && (
+            <div className="space-y-2">
+              {/* Search input */}
+              <div className="relative">
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] pointer-events-none"
+                  aria-hidden
+                />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Topshiriqlar boʻyicha qidirish"
+                  placeholder="Topshiriq matni boʻyicha qidiring..."
+                  className="w-full bg-white border-[1.5px] border-[#ede9e1] rounded-xl pl-9 pr-9 py-2 text-sm text-[#0f172a] focus:outline-none focus:border-[#0d9488] placeholder:text-[#94a3b8]"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    aria-label="Qidiruvni tozalash"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md hover:bg-[#f7f4ef] flex items-center justify-center text-[#94a3b8]"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Type chips — All + every type present in this lesson */}
+              <div className="flex flex-wrap gap-1.5">
+                <TypeChip
+                  active={typeFilter === 'all'}
+                  onClick={() => setTypeFilter('all')}
+                  label={`Hammasi · ${components.length}`}
+                />
+                {presentTypes.map((t) => (
+                  <TypeChip
+                    key={t}
+                    active={typeFilter === t}
+                    onClick={() => setTypeFilter(t)}
+                    label={`${COMPONENT_LABELS[t] ?? t} · ${typeCounts[t]}`}
+                  />
+                ))}
+              </div>
+
+              {/* Live count when filters narrow the list */}
+              {filtered.length !== components.length && (
+                <p className="text-[11px] font-bold text-[#64748b]">
+                  {filtered.length} / {components.length} ta topshiriq
+                </p>
+              )}
+            </div>
+          )}
+
+          {filtered.length === 0 && components.length > 0 ? (
+            <div className="border-2 border-dashed border-[#ede9e1] rounded-2xl py-8 text-center">
+              <p className="text-sm font-bold text-[#64748b]">
+                Hech narsa topilmadi
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setTypeFilter('all');
+                }}
+                className="text-xs font-bold text-[#0d9488] hover:underline mt-1"
+              >
+                Filtrlarni tozalash
+              </button>
+            </div>
+          ) : (
           <ul className="space-y-2">
-            {components.map((comp, idx) => {
+            {filtered.map((comp) => {
+              // Display # by position in the FULL list so the student-facing
+              // order is honest even when filters are applied.
+              const idx = components.indexOf(comp);
               const label = COMPONENT_LABELS[comp.type] ?? comp.type;
               const badgeClass =
                 COMPONENT_BADGE_STYLES[comp.type] ??
@@ -240,6 +367,18 @@ export function ComponentsList({
                       >
                         <Pencil size={12} /> Tahrir
                       </button>
+                      {onDuplicate && (
+                        <button
+                          type="button"
+                          onClick={() => onDuplicate(comp)}
+                          disabled={isDuplicating === comp.id}
+                          aria-label={`${label} dublikat`}
+                          title="Nusxa olish"
+                          className="p-2 rounded-lg text-[#0d9488] hover:bg-[#0d9488]/10 transition-colors disabled:opacity-50"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => onDelete(comp)}
@@ -255,6 +394,7 @@ export function ComponentsList({
               );
             })}
           </ul>
+          )}
 
           {/* Add-another CTA at the bottom — feels natural after scrolling
               through the list, and stays out of the way when empty. */}
@@ -272,3 +412,34 @@ export function ComponentsList({
 }
 
 export default ComponentsList;
+
+/**
+ * Compact pill used for the type-filter row above the component list.
+ * Mirrors the FilterChip pattern from /superadmin/users so the visual
+ * language stays consistent across the panel.
+ */
+function TypeChip({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        'px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors border',
+        active
+          ? 'bg-[#0d9488] text-white border-[#0d9488]'
+          : 'bg-white text-[#0f172a] border-[#ede9e1] hover:border-[#0d9488]/40 hover:bg-[#0d9488]/5',
+      ].join(' ')}
+    >
+      {label}
+    </button>
+  );
+}

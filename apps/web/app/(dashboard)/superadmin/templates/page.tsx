@@ -91,6 +91,11 @@ export default function SuperadminTemplatesPage() {
   return (
     <div className="min-h-full bg-[#f7f4ef]">
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
+        <div
+          aria-hidden
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
+          style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', transform: 'translate(30%, -30%)' }}
+        />
         <div className="relative z-10 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-violet-500/20 flex items-center justify-center">
             <Bell size={18} className="text-violet-300" />

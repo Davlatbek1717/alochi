@@ -1,4 +1,3 @@
-/* eslint-disable react/no-unescaped-entities */
 'use client';
 import { useEffect, useState } from 'react';
 import { Shield, User, Key, AlertTriangle, ChevronDown } from 'lucide-react';
@@ -129,7 +128,7 @@ export default function AuditLogPage() {
               <div className="bg-white rounded-[18px] border-[1.5px] border-[#ede9e1] overflow-hidden">
                 <div className="px-5 py-3 border-b border-[#ede9e1] bg-[#fffaf0] flex items-center justify-between">
                   <h2 className="text-sm font-extrabold text-[#0f172a] uppercase tracking-widest">
-                    So'nggi harakatlar
+                    So&apos;nggi harakatlar
                   </h2>
                   <span className="text-xs text-[#94a3b8] font-semibold">{filtered.length} ta yozuv</span>
                 </div>
@@ -165,7 +164,7 @@ export default function AuditLogPage() {
                     onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
                     className="text-sm font-bold text-[#0f172a] bg-white border border-[#ede9e1] hover:bg-[#f7f4ef] px-5 py-2.5 rounded-xl transition-colors"
                   >
-                    Ko'proq ko'rsatish ({filtered.length - visibleCount} ta qoldi)
+                    Ko&apos;proq ko&apos;rsatish ({filtered.length - visibleCount} ta qoldi)
                   </button>
                 </div>
               )}

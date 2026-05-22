@@ -83,8 +83,8 @@ export default function SuperadminBlockedStudentsPage() {
         </div>
       </div>
 
-      <div className="p-5">
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="px-4 pt-5 pb-6 space-y-4">
+        <div className="flex gap-2 flex-wrap">
         {(['all', 'warning', 'payment'] as const).map((r) => (
           <button
             key={r}
@@ -197,3 +197,4 @@ export default function SuperadminBlockedStudentsPage() {
     </div>
   );
 }
+

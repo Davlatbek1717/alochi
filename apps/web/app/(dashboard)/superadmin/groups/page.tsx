@@ -210,16 +210,16 @@ export default function SuperadminGroupsPage() {
 
       <div className="px-4 pt-4 pb-6 space-y-4">
         {/* Branch filter */}
-        <div className="flex items-center gap-2">
+        <div className="relative inline-flex items-center">
           <select
             value={branchFilter}
             onChange={(e) => setBranchFilter(e.target.value)}
-            className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
+            className="appearance-none bg-white border border-[#ede9e1] rounded-xl px-3 py-2 pr-8 text-sm focus:outline-none focus:border-[#0f172a] text-[#0f172a]"
           >
             <option value="">Barcha filiallar</option>
             {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
-          <ChevronDown size={12} className="text-[#94a3b8] -ml-6 pointer-events-none" />
+          <ChevronDown size={12} className="absolute right-2.5 text-[#94a3b8] pointer-events-none" />
         </div>
 
         {loading ? (
