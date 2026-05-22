@@ -10,10 +10,13 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  Plus,
+  AlertTriangle,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
 
+type Branch = { id: string; name: string };
 type Enrollment = { studentId: string; enrolledAt: string };
 type Device = {
   id: string;
@@ -59,6 +62,14 @@ export default function SuperadminDevicesPage() {
   const [blockReason, setBlockReason] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Add-device (mint enrollment token) state
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addBranch, setAddBranch] = useState('');
+  const [addSerial, setAddSerial] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [createdToken, setCreatedToken] = useState('');
+
   const load = useCallback(async () => {
     try {
       const res = await apiRequest<Device[]>('/devices', {}, token());
@@ -75,6 +86,34 @@ export default function SuperadminDevicesPage() {
     const t = setInterval(load, 30_000); // refresh every 30s
     return () => clearInterval(t);
   }, [load]);
+
+  useEffect(() => {
+    apiRequest<Branch[]>('/branches', {}, token())
+      .then((r) => setBranches(r.data ?? []))
+      .catch(() => undefined);
+  }, []);
+
+  async function createDevice() {
+    if (!addBranch || !addSerial.trim()) {
+      toast.error('Filial va seriya raqamini kiriting');
+      return;
+    }
+    setAdding(true);
+    try {
+      const res = await apiRequest<{ enrollmentToken: string }>(
+        '/devices',
+        { method: 'POST', body: JSON.stringify({ branchId: addBranch, serialNumber: addSerial.trim() }) },
+        token(),
+      );
+      setCreatedToken(res.data.enrollmentToken);
+      setAddSerial('');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Yaratib boʻlmadi');
+    } finally {
+      setAdding(false);
+    }
+  }
 
   async function doBlock() {
     if (!blockTarget) return;
@@ -154,13 +193,21 @@ export default function SuperadminDevicesPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => load()}
-            aria-label="Yangilash"
-            className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition-colors"
-          >
-            <RefreshCw size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setShowAdd(true); setCreatedToken(''); setAddSerial(''); }}
+              className="inline-flex items-center gap-1.5 bg-[#7c3aed] text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-violet-700 transition-colors"
+            >
+              <Plus size={15} /> Yangi qurilma
+            </button>
+            <button
+              onClick={() => load()}
+              aria-label="Yangilash"
+              className="w-9 h-9 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition-colors"
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -282,6 +329,70 @@ export default function SuperadminDevicesPage() {
           </div>
         )}
       </div>
+
+      {/* Add device (mint enrollment token) modal */}
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Yangi qurilma" theme="light">
+        {createdToken ? (
+          <div className="space-y-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+              <AlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm font-semibold text-amber-700">
+                Tokenni nusxalang va planshetdagi A&apos;lojon ilovasiga kiriting
+                (5-tap → admin parol → &quot;Qurilmani sozlash&quot;).
+              </p>
+            </div>
+            <code className="block text-xs bg-[#f7f4ef] border border-[#ede9e1] rounded-lg px-3 py-3 font-mono break-all select-all text-[#0f172a]">
+              {createdToken}
+            </code>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="px-4 py-2 rounded-xl bg-[#0f172a] text-white text-sm font-bold hover:bg-[#1e293b]"
+              >
+                Yopish
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-[#94a3b8] mb-1">Filial</label>
+              <select
+                value={addBranch}
+                onChange={(e) => setAddBranch(e.target.value)}
+                className="w-full appearance-none bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a]"
+              >
+                <option value="">— tanlang —</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-[#94a3b8] mb-1">Seriya raqami</label>
+              <input
+                value={addSerial}
+                onChange={(e) => setAddSerial(e.target.value)}
+                placeholder="Masalan: TAB-001"
+                className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20 text-[#0f172a]"
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="px-4 py-2 rounded-xl border border-[#ede9e1] text-sm font-semibold text-[#64748b] hover:bg-[#f7f4ef]"
+              >
+                Bekor
+              </button>
+              <button
+                onClick={createDevice}
+                disabled={adding}
+                className="px-4 py-2 rounded-xl bg-[#7c3aed] text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50"
+              >
+                {adding ? 'Yaratilmoqda...' : 'Yaratish'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Block confirm modal */}
       <Modal open={blockTarget !== null} onClose={() => setBlockTarget(null)} title="Qurilmani bloklash" theme="light">
