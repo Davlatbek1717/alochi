@@ -20,6 +20,7 @@ import * as fs from 'fs';
 import { Readable } from 'stream';
 import type { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -47,22 +48,33 @@ export class VideoCheckinController {
   ) {}
 
   private get uploadDir(): string {
-    return this.config.get<string>('VIDEO_UPLOAD_DIR') ?? '/var/www/alochi/uploads/videos';
+    return (
+      this.config.get<string>('VIDEO_UPLOAD_DIR') ??
+      '/var/www/alochi/uploads/videos'
+    );
   }
 
   /**
    * GET /video-checkins/today?branchId=
    */
   @Get('today')
-  @Roles(UserRole.filadmin, UserRole.mentor, UserRole.manager, UserRole.superadmin)
+  @Roles(
+    UserRole.filadmin,
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
   async getToday(
     @Query('branchId') branchId: string,
     @Request() req: { user: JwtUser },
   ) {
-    if (!branchId) throw new BadRequestException('branchId parametri talab etiladi');
+    if (!branchId)
+      throw new BadRequestException('branchId parametri talab etiladi');
     if (req.user.role === UserRole.filadmin) {
       if (req.user.branchId && req.user.branchId !== branchId) {
-        throw new ForbiddenException("Siz faqat o'z filialingizni ko'ra olasiz");
+        throw new ForbiddenException(
+          "Siz faqat o'z filialingizni ko'ra olasiz",
+        );
       }
     }
     return this.service.getTodayList(branchId);
@@ -72,7 +84,12 @@ export class VideoCheckinController {
    * GET /video-checkins/monitoring?date=YYYY-MM-DD
    */
   @Get('monitoring')
-  @Roles(UserRole.filadmin, UserRole.mentor, UserRole.manager, UserRole.superadmin)
+  @Roles(
+    UserRole.filadmin,
+    UserRole.mentor,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
   async getMonitoring(
     @Query('date') date: string | undefined,
     @Request() req: { user: JwtUser },
@@ -106,6 +123,10 @@ export class VideoCheckinController {
    */
   @Post('upload')
   @Roles(UserRole.student)
+  @Throttle({
+    short: { limit: 4, ttl: 60_000 },
+    medium: { limit: 12, ttl: 600_000 },
+  })
   @UseInterceptors(
     FileInterceptor('video', {
       limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB cap
@@ -121,12 +142,16 @@ export class VideoCheckinController {
         if (okMime || okExt) {
           cb(null, true);
         } else {
-          cb(new BadRequestException('Faqat video fayllar qabul qilinadi'), false);
+          cb(
+            new BadRequestException('Faqat video fayllar qabul qilinadi'),
+            false,
+          );
         }
       },
       storage: diskStorage({
         destination: (_req, _file, cb) => {
-          const uploadDir = process.env.VIDEO_UPLOAD_DIR ?? '/var/www/alochi/uploads/videos';
+          const uploadDir =
+            process.env.VIDEO_UPLOAD_DIR ?? '/var/www/alochi/uploads/videos';
           const dateStr = tashkentDateString();
           const dir = path.join(uploadDir, dateStr);
           fs.mkdirSync(dir, { recursive: true });
@@ -155,7 +180,11 @@ export class VideoCheckinController {
     const result = await this.service.recordWebUpload(
       req.user.userId,
       req.user.tenantId,
-      { originalname: file.originalname, mimetype: file.mimetype, size: file.size },
+      {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+      },
       relativePath,
     );
 
@@ -187,15 +216,25 @@ export class VideoCheckinController {
    * GET /video-checkins/student/:studentId/history?days=30
    */
   @Get('student/:studentId/history')
-  @Roles(UserRole.student, UserRole.mentor, UserRole.filadmin, UserRole.manager, UserRole.superadmin)
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
   async getHistory(
     @Param('studentId') studentId: string,
     @Query('days') daysStr: string,
     @Request() req: { user: JwtUser },
   ) {
-    if (req.user.role === UserRole.student && req.user.userId !== studentId) {
-      throw new ForbiddenException("Faqat o'zingizning tarixingizni ko'ra olasiz");
-    }
+    await this.service.assertCanViewStudent(studentId, {
+      role: req.user.role,
+      userId: req.user.userId,
+      tenantId: req.user.tenantId,
+      branchId: req.user.branchId ?? null,
+      groupId: req.user.groupId ?? null,
+    });
     const days = daysStr ? parseInt(daysStr, 10) : 30;
     if (isNaN(days) || days < 1 || days > 365) {
       throw new BadRequestException("days 1-365 oraligida bo'lishi kerak");
@@ -207,15 +246,25 @@ export class VideoCheckinController {
    * GET /video-checkins/student/:studentId/missed-count?since=30
    */
   @Get('student/:studentId/missed-count')
-  @Roles(UserRole.student, UserRole.mentor, UserRole.filadmin, UserRole.manager, UserRole.superadmin)
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
   async getMissedCount(
     @Param('studentId') studentId: string,
     @Query('since') sinceStr: string,
     @Request() req: { user: JwtUser },
   ) {
-    if (req.user.role === UserRole.student && req.user.userId !== studentId) {
-      throw new ForbiddenException("Faqat o'zingizni tekshira olasiz");
-    }
+    await this.service.assertCanViewStudent(studentId, {
+      role: req.user.role,
+      userId: req.user.userId,
+      tenantId: req.user.tenantId,
+      branchId: req.user.branchId ?? null,
+      groupId: req.user.groupId ?? null,
+    });
     const since = sinceStr ? parseInt(sinceStr, 10) : 30;
     if (isNaN(since) || since < 1 || since > 365) {
       throw new BadRequestException("since 1-365 oraligida bo'lishi kerak");
@@ -229,7 +278,13 @@ export class VideoCheckinController {
    * Streams the stored video file. Auth-checked in service.
    */
   @Get(':id/video')
-  @Roles(UserRole.student, UserRole.mentor, UserRole.filadmin, UserRole.manager, UserRole.superadmin)
+  @Roles(
+    UserRole.student,
+    UserRole.mentor,
+    UserRole.filadmin,
+    UserRole.manager,
+    UserRole.superadmin,
+  )
   async streamVideo(
     @Param('id') id: string,
     @Request() req: { user: JwtUser },
@@ -283,8 +338,13 @@ export class VideoCheckinController {
       );
       if (!dl.ok || !dl.body) throw new GoneException('Video mavjud emas');
 
-      res.set({ 'Content-Type': mimeType, 'Cache-Control': 'private, no-store' });
-      Readable.fromWeb(dl.body as Parameters<typeof Readable.fromWeb>[0]).pipe(res);
+      res.set({
+        'Content-Type': mimeType,
+        'Cache-Control': 'private, no-store',
+      });
+      Readable.fromWeb(dl.body as Parameters<typeof Readable.fromWeb>[0]).pipe(
+        res,
+      );
     } catch (err) {
       if (err instanceof GoneException) throw err;
       throw new GoneException('Video mavjud emas');

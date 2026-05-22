@@ -18,6 +18,9 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateDeviceDto } from './dto/create-device.dto';
+import { UpdateDeviceDto } from './dto/update-device.dto';
+import { UpsertDevicePolicyDto } from './dto/upsert-device-policy.dto';
 
 @ApiTags('devices')
 @ApiBearerAuth()
@@ -30,24 +33,17 @@ export class DevicesController {
 
   @Post()
   @Roles(UserRole.filadmin, UserRole.superadmin)
-  create(
-    @Body()
-    body: {
-      serialNumber: string;
-      imei?: string;
-      macAddress?: string;
-      manufacturer?: string;
-      model?: string;
-      osVersion?: string;
-      androidId?: string;
-      purchasedAt?: string;
-      branchId: string;
-    },
-    @Request() req: any,
-  ) {
+  create(@Body() dto: CreateDeviceDto, @Request() req: any) {
     return this.svc.create({
-      ...body,
-      purchasedAt: body.purchasedAt ? new Date(body.purchasedAt) : undefined,
+      serialNumber: dto.serialNumber,
+      branchId: dto.branchId,
+      imei: dto.imei,
+      macAddress: dto.macAddress,
+      manufacturer: dto.manufacturer,
+      model: dto.model,
+      osVersion: dto.osVersion,
+      androidId: dto.androidId,
+      purchasedAt: dto.purchasedAt ? new Date(dto.purchasedAt) : undefined,
       tenantId: req.user.tenantId,
     });
   }
@@ -72,10 +68,10 @@ export class DevicesController {
   @Roles(UserRole.filadmin, UserRole.superadmin)
   update(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() dto: UpdateDeviceDto,
     @Request() req: any,
   ) {
-    return this.svc.update(id, req.user.tenantId, body);
+    return this.svc.update(id, req.user.tenantId, dto);
   }
 
   @Delete(':id')
@@ -94,7 +90,12 @@ export class DevicesController {
     @Body() body: { studentId: string },
     @Request() req: any,
   ) {
-    return this.svc.enroll(id, req.user.tenantId, body.studentId, req.user.userId);
+    return this.svc.enroll(
+      id,
+      req.user.tenantId,
+      body.studentId,
+      req.user.userId,
+    );
   }
 
   @Post(':id/unenroll')
@@ -198,7 +199,13 @@ export class DevicesController {
     @Body() body: { type: string; payload?: unknown },
     @Request() req: any,
   ) {
-    return this.svc.issueCommand(id, req.user.tenantId, body.type, body.payload, req.user.userId);
+    return this.svc.issueCommand(
+      id,
+      req.user.tenantId,
+      body.type,
+      body.payload,
+      req.user.userId,
+    );
   }
 
   @Get(':id/commands')
@@ -245,14 +252,26 @@ export class DevicesController {
     @Body() body: { reason?: string },
     @Request() req: any,
   ) {
-    return this.svc.setBlocked(id, req.user.tenantId, true, body?.reason, req.user.userId);
+    return this.svc.setBlocked(
+      id,
+      req.user.tenantId,
+      true,
+      body?.reason,
+      req.user.userId,
+    );
   }
 
   @Post(':id/unblock')
   @Roles(UserRole.filadmin, UserRole.superadmin)
   @HttpCode(HttpStatus.OK)
   unblock(@Param('id') id: string, @Request() req: any) {
-    return this.svc.setBlocked(id, req.user.tenantId, false, undefined, req.user.userId);
+    return this.svc.setBlocked(
+      id,
+      req.user.tenantId,
+      false,
+      undefined,
+      req.user.userId,
+    );
   }
 
   @Post(':id/locate')
@@ -283,7 +302,13 @@ export class DevicesController {
   @Roles(UserRole.filadmin, UserRole.superadmin)
   @HttpCode(HttpStatus.OK)
   ring(@Param('id') id: string, @Request() req: any) {
-    return this.svc.issueCommand(id, req.user.tenantId, 'RING', undefined, req.user.userId);
+    return this.svc.issueCommand(
+      id,
+      req.user.tenantId,
+      'RING',
+      undefined,
+      req.user.userId,
+    );
   }
 
   // Device-owner only on the tablet side; arrives via heartbeat/FCM.
@@ -291,7 +316,13 @@ export class DevicesController {
   @Roles(UserRole.superadmin)
   @HttpCode(HttpStatus.OK)
   reboot(@Param('id') id: string, @Request() req: any) {
-    return this.svc.issueCommand(id, req.user.tenantId, 'REBOOT', undefined, req.user.userId);
+    return this.svc.issueCommand(
+      id,
+      req.user.tenantId,
+      'REBOOT',
+      undefined,
+      req.user.userId,
+    );
   }
 
   @Post(':id/wipe')
@@ -327,7 +358,10 @@ export class DevicePolicyController {
 
   @Patch()
   @Roles(UserRole.filadmin, UserRole.superadmin)
-  upsert(@Param('branchId') branchId: string, @Body() body: any) {
-    return this.svc.upsertPolicy(branchId, body);
+  upsert(
+    @Param('branchId') branchId: string,
+    @Body() dto: UpsertDevicePolicyDto,
+  ) {
+    return this.svc.upsertPolicy(branchId, dto);
   }
 }

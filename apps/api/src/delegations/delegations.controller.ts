@@ -16,6 +16,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateDelegationDto } from './dto/create-delegation.dto';
+import {
+  RespondDelegationDto,
+  CancelDelegationDto,
+} from './dto/respond-delegation.dto';
 
 @ApiTags('delegations')
 @ApiBearerAuth()
@@ -26,17 +31,19 @@ export class DelegationsController {
 
   @Post()
   @Roles(UserRole.filadmin, UserRole.superadmin)
-  create(@Body() body: any, @Request() req: any) {
-    // tenantId, branchId, fromUserId are always derived from JWT — never from body
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { tenantId: _t, branchId: _b, fromUserId: _f, ...rest } = body;
+  create(@Body() dto: CreateDelegationDto, @Request() req: any) {
+    // tenantId, branchId, fromUserId are always derived from JWT — never from
+    // the body, so a caller can't forge a delegation into another tenant.
     return this.delegations.create({
-      ...rest,
+      toUserId: dto.toUserId,
+      delegatedRole: dto.delegatedRole,
+      permissions: dto.permissions,
+      reason: dto.reason,
       tenantId: req.user.tenantId,
       branchId: req.user.branchId ?? undefined,
       fromUserId: req.user.userId,
-      startsAt: new Date(body.startsAt),
-      endsAt: new Date(body.endsAt),
+      startsAt: new Date(dto.startsAt),
+      endsAt: new Date(dto.endsAt),
     });
   }
 
@@ -68,23 +75,23 @@ export class DelegationsController {
   @Post(':id/respond')
   respond(
     @Param('id') id: string,
-    @Body() body: { action: 'accepted' | 'rejected'; reason?: string },
+    @Body() dto: RespondDelegationDto,
     @Request() req: any,
   ) {
     return this.delegations.respond(
       id,
       req.user.userId,
-      body.action,
-      body.reason,
+      dto.action,
+      dto.reason,
     );
   }
 
   @Delete(':id')
   cancel(
     @Param('id') id: string,
-    @Body('reason') reason: string,
+    @Body() dto: CancelDelegationDto,
     @Request() req: any,
   ) {
-    return this.delegations.cancel(id, req.user.userId, reason);
+    return this.delegations.cancel(id, req.user.userId, dto.reason ?? '');
   }
 }

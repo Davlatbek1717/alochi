@@ -19,6 +19,8 @@ import {
   DelegationPermissionGuard,
   RequiresDelegationPermission,
 } from '../delegations/guards/delegation-permission.guard';
+import { GiveWarningDto } from './dto/give-warning.dto';
+import { CancelWarningDto } from './dto/cancel-warning.dto';
 
 @ApiTags('warnings')
 @ApiBearerAuth()
@@ -53,12 +55,13 @@ export class WarningsController {
   @RequiresDelegationPermission('warnings')
   give(
     @Param('studentId') studentId: string,
-    @Body() body: any,
+    @Body() dto: GiveWarningDto,
     @Request() req: any,
     @CurrentDelegation() delegationId: string | null,
   ) {
     return this.warnings.give({
-      ...body,
+      reasonType: dto.reasonType,
+      reasonText: dto.reasonText,
       studentId,
       tenantId: req.user.tenantId,
       givenBy: req.user.userId,
@@ -73,10 +76,10 @@ export class WarningsController {
   @Roles(UserRole.filadmin, UserRole.superadmin)
   cancelWarning(
     @Param('warningId') warningId: string,
-    @Body('reason') reason: string,
+    @Body() dto: CancelWarningDto,
     @Request() req: any,
   ) {
-    return this.warnings.cancel(warningId, req.user.userId, reason);
+    return this.warnings.cancel(warningId, req.user.userId, dto.reason);
   }
 
   /**
