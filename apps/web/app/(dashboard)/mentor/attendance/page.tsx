@@ -268,7 +268,7 @@ export default function MentorAttendancePage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-36 md:pb-24 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-36 md:pb-24 space-y-3 max-w-lg mx-auto">
         {noGroup ? (
           <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-6 text-center">
             <p className="text-rose-600 text-sm font-bold">

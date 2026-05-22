@@ -377,7 +377,7 @@ export default function MentorGroupPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-5 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #f59e0b 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -449,7 +449,7 @@ export default function MentorGroupPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-28 md:pb-16 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-28 md:pb-16 space-y-3 max-w-lg mx-auto">
         {/* Search + bulk actions */}
         <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-3 space-y-3">
           <div className="relative">

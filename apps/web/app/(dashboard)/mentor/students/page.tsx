@@ -201,7 +201,7 @@ export default function MentorStudentsPage() {
       <div className="bg-[#0f172a] px-5 pt-5 pb-6 relative overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-15 pointer-events-none"
+          className="absolute top-0 right-0 w-48 h-48 rounded-full opacity-10 pointer-events-none"
           style={{
             background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)',
             transform: 'translate(30%, -30%)',
@@ -244,7 +244,7 @@ export default function MentorStudentsPage() {
       </div>
 
       {/* Body */}
-      <div className="px-4 pt-4 pb-6 space-y-3 max-w-lg mx-auto">
+      <div className="px-4 pt-5 pb-6 space-y-3 max-w-lg mx-auto">
 
         {/* Live snapshot panel */}
         {snapshot.length > 0 && (
