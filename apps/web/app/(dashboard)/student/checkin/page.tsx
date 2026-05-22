@@ -208,9 +208,16 @@ function VideoCard({ label, window: windowStr, status, submittedAt, checkinId, c
     if (!stream) return;
     chunksRef.current = [];
     const mime = pickRecorderMime();
+    // Cap bitrate so a 90s clip stays well under the upload limit and uploads
+    // fast on tablet data: ~1.5 Mbps video + 64 kbps audio ≈ 12-18 MB.
+    const opts: MediaRecorderOptions = {
+      videoBitsPerSecond: 1_500_000,
+      audioBitsPerSecond: 64_000,
+    };
+    if (mime) opts.mimeType = mime;
     let rec: MediaRecorder;
     try {
-      rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      rec = new MediaRecorder(stream, opts);
     } catch {
       rec = new MediaRecorder(stream);
     }

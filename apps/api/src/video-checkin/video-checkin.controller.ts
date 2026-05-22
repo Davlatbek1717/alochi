@@ -108,7 +108,15 @@ export class VideoCheckinController {
     FileInterceptor('video', {
       limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB cap
       fileFilter: (_req, file, cb) => {
-        if (file.mimetype.startsWith('video/')) {
+        // Accept by mimetype OR by file extension. Mobile WebView recordings
+        // (Android getUserMedia/MediaRecorder, SAF pickers) frequently arrive
+        // with an empty or generic mimetype, so the extension is the reliable
+        // signal — without this they were wrongly rejected with a 400.
+        const okMime = !!file.mimetype && file.mimetype.startsWith('video/');
+        const okExt = /\.(mp4|webm|mov|m4v|avi|mkv|3gp)$/i.test(
+          file.originalname ?? '',
+        );
+        if (okMime || okExt) {
           cb(null, true);
         } else {
           cb(new BadRequestException('Faqat video fayllar qabul qilinadi'), false);
