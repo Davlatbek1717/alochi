@@ -321,7 +321,7 @@ export default function MentorAttendancePage() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="O'quvchini qidirish..."
-                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#0f172a]"
+                  className="w-full bg-[#f7f4ef] border border-[#ede9e1] rounded-xl pl-9 pr-9 py-2.5 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#0f172a]/20"
                 />
                 {search && (
                   <button

@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Users,
@@ -13,6 +14,9 @@ import {
   TrendingUp,
   Target,
   CalendarDays,
+  Clock,
+  Video,
+  Trophy,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { fetchMyBranchId, fetchMyGroupId } from '@/lib/jwt';
@@ -25,6 +29,11 @@ import VideoCheckinsPanel from '@/app/(dashboard)/_components/VideoCheckinsPanel
 
 type Task = { id: string; status: string };
 type Student = { id: string; name: string; role: string };
+type AttentionStudent = {
+  studentId: string;
+  studentName: string;
+  worst: 'yashil' | 'sariq' | 'qizil';
+};
 
 const KPI_TARGET_DAILY = 50;
 const KPI_TARGET_MONTHLY = 1000;
@@ -41,6 +50,10 @@ export default function MentorDashboard() {
   const [loading, setLoading] = useState(true);
   const [branchIdForPanel, setBranchIdForPanel] = useState('');
   const [groupError, setGroupError] = useState('');
+  // Inline preview of students who need attention today — pulled from
+  // /status/red-students + /status/yellow-students and trimmed to the
+  // 5 worst so the home stays scannable.
+  const [attention, setAttention] = useState<AttentionStudent[]>([]);
 
   const load = useCallback(async () => {
     const token = localStorage.getItem('accessToken') ?? '';
@@ -75,21 +88,69 @@ export default function MentorDashboard() {
       token,
     ).catch(() => ({ data: [] as Student[] }));
 
+    type StatusRow = {
+      studentId?: string;
+      student?: { id?: string; name?: string };
+      englishStatus?: string;
+      personalStatus?: string;
+      criticalStatus?: string;
+    };
+    const worstFromRow = (r: StatusRow): 'yashil' | 'sariq' | 'qizil' => {
+      const order: Array<'qizil' | 'sariq' | 'yashil'> = ['qizil', 'sariq', 'yashil'];
+      for (const want of order) {
+        if (r.englishStatus === want || r.personalStatus === want || r.criticalStatus === want) {
+          return want;
+        }
+      }
+      return 'yashil';
+    };
+
     Promise.all([
       apiRequest<number>('/kpi/daily', {}, token).catch(() => ({ data: 0 })),
       apiRequest<number>(`/kpi/monthly?year=${year}&month=${month}`, {}, token).catch(() => ({ data: 0 })),
       studentsPromise,
       apiRequest<Task[]>('/tasks/my', {}, token).catch(() => ({ data: [] as Task[] })),
       apiRequest<Task[]>('/tasks/sent', {}, token).catch(() => ({ data: [] as Task[] })),
-    ]).then(([kpiT, kpiM, studentsRes, tasksRes, sentRes]) => {
+      apiRequest<StatusRow[]>('/status/red-students', {}, token).catch(() => ({ data: [] as StatusRow[] })),
+      apiRequest<StatusRow[]>('/status/yellow-students', {}, token).catch(() => ({ data: [] as StatusRow[] })),
+    ]).then(([kpiT, kpiM, studentsRes, tasksRes, sentRes, redRes, yellowRes]) => {
       setKpiToday((kpiT as { data: number }).data ?? 0);
       setKpiMonthly((kpiM as { data: number }).data ?? 0);
       const allStudents = (studentsRes as { data: Student[] }).data ?? [];
-      setStudentCount(allStudents.filter((u) => u.role === 'student').length);
+      const studentSet = new Set(allStudents.filter((u) => u.role === 'student').map((u) => u.id));
+      setStudentCount(studentSet.size);
       const allTasks = (tasksRes as { data: Task[] }).data ?? [];
       setPendingTasks(allTasks.filter((t) => t.status !== 'done' && t.status !== 'confirmed').length);
       const sentTasks = (sentRes as { data: Task[] }).data ?? [];
       setConfirmedTasks(sentTasks.filter((t) => t.status === 'done' || t.status === 'confirmed').length);
+
+      // Build attention preview — red first, then yellow, restricted to
+      // this mentor's group and capped at 5 entries.
+      const rows: StatusRow[] = [
+        ...((redRes as { data: StatusRow[] }).data ?? []),
+        ...((yellowRes as { data: StatusRow[] }).data ?? []),
+      ];
+      const byId = new Map<string, AttentionStudent>();
+      for (const r of rows) {
+        const sid = r.student?.id ?? r.studentId;
+        if (!sid || !studentSet.has(sid)) continue;
+        const existing = byId.get(sid);
+        const worst = worstFromRow(r);
+        if (!existing) {
+          byId.set(sid, {
+            studentId: sid,
+            studentName: r.student?.name ?? '?',
+            worst,
+          });
+        } else if (existing.worst === 'sariq' && worst === 'qizil') {
+          existing.worst = 'qizil';
+        }
+      }
+      const list = [...byId.values()].sort((a, b) => {
+        const rank: Record<'qizil' | 'sariq' | 'yashil', number> = { qizil: 0, sariq: 1, yashil: 2 };
+        return rank[a.worst] - rank[b.worst];
+      });
+      setAttention(list.slice(0, 5));
     }).finally(() => setLoading(false));
   }, []);
 
@@ -124,6 +185,14 @@ export default function MentorDashboard() {
       hoverBorder: 'hover:border-emerald-300',
     },
     {
+      href: '/mentor/study-time',
+      icon: <Clock size={20} />,
+      title: "O'quv vaqti",
+      desc: 'Kunlik / oraliq hisobot',
+      tint: 'text-sky-700 bg-sky-50 border-sky-200',
+      hoverBorder: 'hover:border-sky-300',
+    },
+    {
       href: '/mentor/attendance',
       icon: <BarChart2 size={20} />,
       title: 'Davomat tarixi',
@@ -149,6 +218,22 @@ export default function MentorDashboard() {
       desc: 'AI xato tahlili',
       tint: 'text-violet-700 bg-violet-50 border-violet-200',
       hoverBorder: 'hover:border-violet-300',
+    },
+    {
+      href: '/mentor/video-monitoring',
+      icon: <Video size={20} />,
+      title: 'Video monitoring',
+      desc: 'Kunlik video tekshir',
+      tint: 'text-teal-700 bg-teal-50 border-teal-200',
+      hoverBorder: 'hover:border-teal-300',
+    },
+    {
+      href: '/mentor/leaderboard',
+      icon: <Trophy size={20} />,
+      title: 'Reyting',
+      desc: 'Guruh reytingi',
+      tint: 'text-amber-700 bg-amber-50 border-amber-200',
+      hoverBorder: 'hover:border-amber-300',
     },
   ];
 
@@ -357,6 +442,61 @@ export default function MentorDashboard() {
             </div>
           )}
         </section>
+
+        {/* Attention preview — surfaces yellow/red students inline so the
+            mentor doesn't have to navigate-then-filter just to know who
+            needs follow-up today. Hidden when everyone is green. */}
+        {!loading && attention.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-2.5 px-1">
+              <p className="text-xs font-extrabold text-[#0f172a] uppercase tracking-widest">
+                E&apos;tibor kerakli o&apos;quvchilar
+              </p>
+              <Link
+                href="/mentor/group"
+                className="text-[11px] font-bold text-[#f59e0b] hover:underline"
+              >
+                Hammasini ko&apos;rish →
+              </Link>
+            </div>
+            <ul className="space-y-1.5">
+              {attention.map((a) => (
+                <li key={a.studentId}>
+                  <Link
+                    href={`/mentor/students/${a.studentId}`}
+                    className="flex items-center gap-3 bg-white rounded-2xl border-[1.5px] border-[#ede9e1] px-3 py-2.5 min-h-[48px] hover:border-amber-300 hover:bg-amber-50/40 transition-colors"
+                  >
+                    <span
+                      className={[
+                        'w-2.5 h-2.5 rounded-full shrink-0',
+                        a.worst === 'qizil'
+                          ? 'bg-rose-500'
+                          : a.worst === 'sariq'
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500',
+                      ].join(' ')}
+                      aria-hidden
+                    />
+                    <span className="flex-1 text-sm font-extrabold text-[#0f172a] truncate">
+                      {a.studentName}
+                    </span>
+                    <span
+                      className={[
+                        'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full',
+                        a.worst === 'qizil'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-amber-50 text-amber-800 border border-amber-200',
+                      ].join(' ')}
+                    >
+                      {a.worst === 'qizil' ? 'Qizil' : 'Sariq'}
+                    </span>
+                    <ChevronRight size={14} className="text-[#94a3b8] shrink-0" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Nav cards — refreshed with badges and tinted icons */}
         <section>

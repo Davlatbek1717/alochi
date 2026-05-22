@@ -28,6 +28,7 @@ import {
   Shield,
   ChevronDown,
   ChevronRight,
+  Clock,
   LogOut,
   Send,
   Swords,
@@ -196,6 +197,8 @@ const NAV: Record<string, NavEntry[]> = {
     { label: 'Davomat', href: '/mentor/attendance', icon: <BarChart2 size={16} /> },
     { label: 'Vazifalar', href: '/mentor/tasks', icon: <ClipboardList size={16} /> },
     { label: "O'quvchilar", href: '/mentor/students', icon: <Users size={16} /> },
+    { label: "O'quv vaqti", href: '/mentor/study-time', icon: <Clock size={16} /> },
+    { label: 'Video monitoring', href: '/mentor/video-monitoring', icon: <Video size={16} /> },
     { label: 'Reyting', href: '/mentor/leaderboard', icon: <Trophy size={16} /> },
   ],
 
