@@ -17,23 +17,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AlojonKiosk">
 
-        <!-- Single-purpose activity. It registers as HOME so pressing the
-             Home button can never escape A'lojon, and as LAUNCHER so the
-             OS provisioning flow can find it. singleInstance + the
-             configChanges list keep one resilient instance alive. -->
+        <!-- A normal launchable app (NOT a HOME replacement) so the student
+             can leave it freely and the device's phone / SMS / other apps
+             stay usable. App blocking is what keeps things safe, not trapping
+             the user in this activity. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="fullSensor"
-            android:resizeableActivity="false"
-            android:stateNotNeeded="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 

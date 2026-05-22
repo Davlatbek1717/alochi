@@ -1,21 +1,16 @@
 package uz.alojon.kiosk
 
 import android.Manifest
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.InputType
-import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Toast
@@ -27,20 +22,18 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 
 /**
- * The entire app: a hardened, full-screen WebView of the A'lojon web
- * app that the user cannot leave.
+ * Full-screen WebView of the A'lojon web app. NOT a locked kiosk — the
+ * student can leave the app freely (Home/Back/Recents all work) so the
+ * tablet's phone, SMS and other system apps stay usable.
  *
- * Two layers of lockdown:
- *  1. App level — immersive UI, HOME/launcher role, back button pinned
- *     to in-WebView history, navigation fenced to the alojon.uz domain.
- *  2. OS level — when this app is *device owner*, Lock Task (kiosk)
- *     mode is entered, which the OS itself enforces (status bar,
- *     recents, other apps all blocked). Without device owner the app
- *     still runs but the OS guarantees are absent (see PROVISIONING.md).
- *  3. App blocking — browser, YouTube, and social media apps are
- *     suspended via DevicePolicyManager.setPackagesSuspended() whenever
- *     this activity is in the foreground. Unblocking requires the admin
- *     password (5 corner taps → password dialog).
+ * The lockdown is limited to APP BLOCKING: browsers, YouTube and social
+ * media are blocked system-wide so that leaving A'lojon is harmless.
+ * Blocking works two ways:
+ *  - device owner → DevicePolicyManager.setPackagesSuspended() (bulletproof)
+ *  - plain install → AppBlockerAccessibilityService bounces the user out of
+ *    blocked apps (needs a one-time accessibility enable).
+ * Admin (5 corner taps → password) can toggle blocking and change the
+ * password. Navigation inside the WebView is fenced to the alojon.uz domain.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -103,8 +96,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
         setContentView(webView)
-        enterImmersive()
-        enforceKioskPolicies()
         BlockedAppsManager.applyBlocking(this)
         ensureMediaPermissions()
 
@@ -145,66 +136,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Device-owner-only hardening + Lock Task entry. No-ops cleanly
-     *  when the app is not device owner. */
-    private fun enforceKioskPolicies() {
-        val admin = KioskDeviceAdminReceiver.componentName(this)
-        if (!dpm.isDeviceOwnerApp(packageName)) {
-            startLockTaskSafely()
-            return
-        }
-
-        dpm.setLockTaskPackages(admin, arrayOf(packageName))
-
-        val filter = IntentFilter(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-            addCategory(Intent.CATEGORY_DEFAULT)
-        }
-        dpm.addPersistentPreferredActivity(
-            admin,
-            filter,
-            ComponentNameOf(this, MainActivity::class.java)
-        )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            dpm.setKeyguardDisabled(admin, true)
-            dpm.setStatusBarDisabled(admin, true)
-        }
-        startLockTaskSafely()
-    }
-
-    private fun startLockTaskSafely() {
-        try {
-            val am = getSystemService(Context.ACTIVITY_SERVICE)
-                as android.app.ActivityManager
-            @Suppress("DEPRECATION")
-            val locked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                am.lockTaskModeState != android.app.ActivityManager.LOCK_TASK_MODE_NONE
-            } else {
-                am.isInLockTaskMode
-            }
-            if (!locked) startLockTask()
-        } catch (_: Exception) {}
-    }
-
-    private fun enterImmersive() {
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            )
-    }
-
     override fun onResume() {
         super.onResume()
-        enterImmersive()
-        startLockTaskSafely()
-        // Re-block every time the kiosk comes to foreground (after admin
-        // temporarily exits, or after any background stint).
+        // Re-assert blocking every time A'lojon comes to the foreground.
         BlockedAppsManager.applyBlocking(this)
         maybePromptAccessibility()
     }
@@ -235,23 +169,11 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) enterImmersive()
-    }
-
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        if (webView.canGoBack()) webView.goBack()
-    }
-
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        return when (keyCode) {
-            KeyEvent.KEYCODE_HOME,
-            KeyEvent.KEYCODE_APP_SWITCH,
-            KeyEvent.KEYCODE_MENU -> true
-            else -> super.onKeyDown(keyCode, event)
-        }
+        // Back navigates the web history; once at the start, let the OS
+        // handle it (so the student can leave the app freely).
+        if (webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -346,7 +268,6 @@ class MainActivity : AppCompatActivity() {
     private fun disableBlocking() {
         BlockedAppsManager.setBlockingEnabled(this, false)
         BlockedAppsManager.removeBlocking(this) // unsuspend if device owner
-        try { stopLockTask() } catch (_: Exception) {}
         Toast.makeText(this, R.string.blocking_disabled_toast, Toast.LENGTH_LONG).show()
     }
 
@@ -357,13 +278,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun exitKiosk() {
-        try { stopLockTask() } catch (_: Exception) {}
         finishAndRemoveTask()
     }
-
-    @Suppress("FunctionName")
-    private fun ComponentNameOf(ctx: Context, cls: Class<out Activity>) =
-        android.content.ComponentName(ctx.packageName, cls.name)
 
     override fun onDestroy() {
         try {
