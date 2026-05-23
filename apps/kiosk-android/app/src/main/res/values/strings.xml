@@ -39,6 +39,8 @@
     <string name="device_setup_message">Superadmin panelida qurilma uchun yaratilgan enrollment tokenini kiriting.</string>
     <string name="device_setup_token_hint">Enrollment token</string>
     <string name="device_setup_saved">Qurilma sozlandi</string>
+    <string name="device_setup_scan">QR skan</string>
+    <string name="device_setup_scan_prompt">Enrollment QR kodini kameraga koʻrsating</string>
 
     <!-- Feedback messages -->
     <string name="ok">OK</string>

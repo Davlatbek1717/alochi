@@ -20,6 +20,8 @@ object DeviceApi {
         val blocked: Boolean,
         val blockReason: String?,
         val commands: List<Command>,
+        val adminSalt: String?,
+        val adminHash: String?,
     )
 
     data class Command(val id: String, val type: String, val payload: JSONObject?)
@@ -44,6 +46,8 @@ object DeviceApi {
             blocked = data.optBoolean("blocked", false),
             blockReason = if (data.isNull("blockReason")) null else data.optString("blockReason"),
             commands = cmds,
+            adminSalt = if (data.isNull("adminSalt")) null else data.optString("adminSalt"),
+            adminHash = if (data.isNull("adminHash")) null else data.optString("adminHash"),
         )
     }
 

@@ -23,6 +23,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 /**
  * Full-screen WebView of the A'lojon web app. NOT a locked kiosk — the
@@ -58,6 +60,11 @@ class MainActivity : AppCompatActivity() {
 
     // "Enable accessibility" nudge dialog (non-device-owner blocking).
     private var accDialog: AlertDialog? = null
+
+    // QR scan for device enrollment (#20). Result fills + saves the token.
+    private val scanLauncher = registerForActivityResult(ScanContract()) { result ->
+        result.contents?.let { saveEnrollmentToken(it) }
+    }
 
     // Reloads the WebView to the login screen when the monitor service
     // processes a remote FORCE_LOGOUT command (#23).
@@ -244,7 +251,9 @@ class MainActivity : AppCompatActivity() {
     // ─── Admin unlock flow ────────────────────────────────────────────────
 
     private fun showAdminPrompt() {
-        if (!AdminAuth.isPasswordSet(this)) {
+        // A central org-wide password (#19) counts too — only fall back to the
+        // "set a local password" flow when neither is available.
+        if (!AdminAuth.isAnyPasswordSet(this)) {
             showSetPasswordDialog()
             return
         }
@@ -325,15 +334,28 @@ class MainActivity : AppCompatActivity() {
             .setMessage(R.string.device_setup_message)
             .setView(input)
             .setPositiveButton(R.string.ok) { _, _ ->
-                val tok = input.text.toString().trim()
-                if (tok.isNotEmpty()) {
-                    DeviceConfig.save(this, tok, null)
-                    startMonitorService()
-                    Toast.makeText(this, R.string.device_setup_saved, Toast.LENGTH_SHORT).show()
-                }
+                saveEnrollmentToken(input.text.toString())
+            }
+            // Scan the enrollment QR shown in the superadmin panel (#20).
+            .setNeutralButton(R.string.device_setup_scan) { _, _ ->
+                scanLauncher.launch(
+                    ScanOptions()
+                        .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                        .setOrientationLocked(false)
+                        .setBeepEnabled(false)
+                        .setPrompt(getString(R.string.device_setup_scan_prompt)),
+                )
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun saveEnrollmentToken(raw: String) {
+        val tok = raw.trim()
+        if (tok.isEmpty()) return
+        DeviceConfig.save(this, tok, null)
+        startMonitorService()
+        Toast.makeText(this, R.string.device_setup_saved, Toast.LENGTH_SHORT).show()
     }
 
     private fun disableBlocking() {

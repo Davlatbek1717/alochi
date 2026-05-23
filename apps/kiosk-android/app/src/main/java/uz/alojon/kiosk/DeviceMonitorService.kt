@@ -131,6 +131,9 @@ class DeviceMonitorService : Service() {
         val body = collectTelemetry()
         val res = DeviceApi.heartbeat(this, body) ?: return
         applyBlockState(res.blocked, res.blockReason)
+        // Cache the central admin password (salt+hash) so the admin gesture
+        // works offline with the org-wide password (#19).
+        DeviceConfig.saveCentralAdmin(this, res.adminSalt, res.adminHash)
         for (cmd in res.commands) handleCommand(cmd)
         checkTamper()
     }

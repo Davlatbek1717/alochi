@@ -11,6 +11,8 @@ object DeviceConfig {
     private const val PREFS = "device_mdm"
     private const val KEY_BASE_URL = "base_url"
     private const val KEY_TOKEN = "enrollment_token"
+    private const val KEY_ADMIN_SALT = "central_admin_salt"
+    private const val KEY_ADMIN_HASH = "central_admin_hash"
 
     /** Default backend (same host the WebView loads, /api is stripped by nginx). */
     const val DEFAULT_BASE_URL = "https://alojon.uz/api"
@@ -39,4 +41,24 @@ object DeviceConfig {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .remove(KEY_TOKEN).apply()
     }
+
+    // ── Central kiosk admin password (#19) ────────────────────────────────────
+    // Cached salt+hash (never the plaintext) delivered via the heartbeat, so
+    // the admin gesture can be unlocked by the org-wide password offline.
+
+    fun saveCentralAdmin(ctx: Context, salt: String?, hash: String?) {
+        val e = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        if (salt.isNullOrBlank() || hash.isNullOrBlank()) {
+            e.remove(KEY_ADMIN_SALT).remove(KEY_ADMIN_HASH)
+        } else {
+            e.putString(KEY_ADMIN_SALT, salt).putString(KEY_ADMIN_HASH, hash)
+        }
+        e.apply()
+    }
+
+    fun centralAdminSalt(ctx: Context): String? =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_ADMIN_SALT, null)
+
+    fun centralAdminHash(ctx: Context): String? =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_ADMIN_HASH, null)
 }
