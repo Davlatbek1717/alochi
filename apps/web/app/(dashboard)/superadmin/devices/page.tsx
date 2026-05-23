@@ -22,7 +22,8 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
-import { useToast, Modal } from '@/components/ui';
+import { useToast, Modal, ErrorState } from '@/components/ui';
+import { useVisibilityInterval } from '@/lib/useVisibilityInterval';
 
 type Branch = { id: string; name: string };
 type Enrollment = { studentId: string; enrolledAt: string };
@@ -81,6 +82,7 @@ export default function SuperadminDevicesPage() {
   const toast = useToast();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [blockTarget, setBlockTarget] = useState<Device | null>(null);
   const [blockReason, setBlockReason] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -97,18 +99,20 @@ export default function SuperadminDevicesPage() {
     try {
       const res = await apiRequest<Device[]>('/mdm/devices', {}, token());
       setDevices(res.data ?? []);
+      setLoadError(null);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Yuklab boʻlmadi');
+      setLoadError(err instanceof Error ? err.message : 'Yuklab boʻlmadi');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 30_000); // refresh every 30s
-    return () => clearInterval(t);
   }, [load]);
+
+  // Refresh every 30s, but only while the tab is foregrounded (#26).
+  useVisibilityInterval(load, 30_000);
 
   useEffect(() => {
     apiRequest<Branch[]>('/branches', {}, token())
@@ -366,6 +370,10 @@ export default function SuperadminDevicesPage() {
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] h-24 animate-pulse" />
             ))}
+          </div>
+        ) : loadError && devices.length === 0 ? (
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1]">
+            <ErrorState message={loadError} onRetry={load} />
           </div>
         ) : devices.length === 0 ? (
           <div className="bg-white rounded-2xl border-[1.5px] border-[#ede9e1] p-10 text-center">

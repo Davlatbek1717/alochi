@@ -3,6 +3,7 @@ export { Card, CardHeader, CardTitle, CardDescription, CardEyebrow } from './Car
 export { Table } from './Table';
 export type { Column } from './Table';
 export { EmptyState } from './EmptyState';
+export { ErrorState } from './ErrorState';
 export { Skeleton, SkeletonText, SkeletonCard, SkeletonStats } from './LoadingSkeleton';
 export { ToastProvider, useToast } from './Toast';
 export { Modal } from './Modal';
