@@ -315,6 +315,20 @@ export class DevicesController {
     );
   }
 
+  @Post(':id/force-logout')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  forceLogout(@Param('id') id: string, @Request() req: any) {
+    return this.svc.forceLogout(id, req.user.tenantId, req.user.userId);
+  }
+
+  @Post(':id/rotate-token')
+  @Roles(UserRole.filadmin, UserRole.superadmin)
+  @HttpCode(HttpStatus.OK)
+  rotateToken(@Param('id') id: string, @Request() req: any) {
+    return this.svc.rotateToken(id, req.user.tenantId, req.user.userId);
+  }
+
   // Device-owner only on the tablet side; arrives via heartbeat/FCM.
   @Post(':id/reboot')
   @Roles(UserRole.superadmin)

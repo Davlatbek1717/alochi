@@ -18,6 +18,8 @@ import {
   ChevronUp,
   MessageSquare,
   Volume2,
+  LogOut,
+  KeyRound,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api';
 import { useToast, Modal } from '@/components/ui';
@@ -235,6 +237,37 @@ export default function SuperadminDevicesPage() {
     }
   }
 
+  async function forceLogout(d: Device) {
+    setBusy(d.id);
+    try {
+      await apiRequest(`/mdm/devices/${d.id}/force-logout`, { method: 'POST' }, token());
+      toast.success('Tizimdan chiqarish buyrugʻi yuborildi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Rotating the token invalidates the old one — show the new token so the
+  // admin can re-provision the tablet (QR/manual).
+  async function rotateToken(d: Device) {
+    setBusy(d.id);
+    try {
+      const res = await apiRequest<{ enrollmentToken: string }>(
+        `/mdm/devices/${d.id}/rotate-token`,
+        { method: 'POST' },
+        token(),
+      );
+      setCreatedToken(res.data.enrollmentToken);
+      toast.success('Token yangilandi — eski token bekor qilindi');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Xatolik');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const [msgTarget, setMsgTarget] = useState<Device | null>(null);
   const [msgText, setMsgText] = useState('');
   async function doMessage() {
@@ -437,6 +470,22 @@ export default function SuperadminDevicesPage() {
                       className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0f172a] bg-[#f7f4ef] border border-[#ede9e1] px-3 py-1.5 rounded-xl hover:bg-[#ede9e1] disabled:opacity-50 transition-colors"
                     >
                       <Volume2 size={13} /> Tovush
+                    </button>
+                    <button
+                      onClick={() => forceLogout(d)}
+                      disabled={busy === d.id}
+                      title="Tabletni tizimdan chiqarish (login ekraniga qaytarish)"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                    >
+                      <LogOut size={13} /> Chiqarish
+                    </button>
+                    <button
+                      onClick={() => rotateToken(d)}
+                      disabled={busy === d.id}
+                      title="Enrollment tokenni yangilash (eski token bekor qilinadi)"
+                      className="inline-flex items-center gap-1.5 text-xs font-extrabold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-xl hover:bg-violet-100 disabled:opacity-50 transition-colors"
+                    >
+                      <KeyRound size={13} /> Token
                     </button>
                     {d.lastLatitude != null && (
                       <a

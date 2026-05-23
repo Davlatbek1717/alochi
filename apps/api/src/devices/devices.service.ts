@@ -54,8 +54,51 @@ export class DevicesService {
   }) {
     const enrollmentToken = randomBytes(24).toString('hex');
     return this.prisma.device.create({
-      data: { ...dto, enrollmentToken },
+      data: { ...dto, enrollmentToken, tokenIssuedAt: new Date() },
     });
+  }
+
+  /**
+   * Rotates a device's enrollment token (#8). The old token is invalidated
+   * immediately, so this is the response to a suspected leak. The new token
+   * must be re-provisioned onto the tablet (QR/manual), after which the kiosk
+   * authenticates with it. Tokens have no hard TTL on purpose — a field tablet
+   * that is offline past an expiry would lock itself out — so rotation is the
+   * deliberate, admin-triggered control.
+   */
+  async rotateToken(id: string, tenantId: string, rotatedBy: string) {
+    await this.findById(id, tenantId);
+    const enrollmentToken = randomBytes(24).toString('hex');
+    const device = await this.prisma.device.update({
+      where: { id },
+      data: { enrollmentToken, tokenIssuedAt: new Date() },
+      select: { id: true, enrollmentToken: true, tokenIssuedAt: true },
+    });
+    await this.prisma.deviceEvent.create({
+      data: {
+        deviceId: id,
+        type: 'token_rotated',
+        severity: 'warning',
+        payload: { rotatedBy },
+        occurredAt: new Date(),
+      },
+    });
+    return device;
+  }
+
+  /**
+   * Queues a FORCE_LOGOUT command (#23): the kiosk clears its session and
+   * returns to the lock/login screen on next poll. Non-destructive (no data
+   * wipe), so it goes through the normal command path.
+   */
+  async forceLogout(id: string, tenantId: string, createdBy: string) {
+    return this.issueCommand(
+      id,
+      tenantId,
+      'FORCE_LOGOUT',
+      undefined,
+      createdBy,
+    );
   }
 
   async findAll(tenantId: string, branchId?: string, status?: DeviceStatus) {
