@@ -10,12 +10,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.media.RingtoneManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.IBinder
@@ -25,6 +27,8 @@ import android.telephony.TelephonyManager
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 /**
@@ -43,7 +47,9 @@ class DeviceMonitorService : Service() {
         private const val CHANNEL_ID = "alojon_mdm"
         private const val NOTIF_ID = 4711
         private const val INTERVAL_MS = 60_000L
+        private const val LOCATE_TIMEOUT_MS = 20_000L
         const val ACTION_UNBLOCK = "uz.alojon.kiosk.UNBLOCK"
+        const val ACTION_FORCE_LOGOUT = "uz.alojon.kiosk.FORCE_LOGOUT"
     }
 
     @Volatile private var running = false
@@ -178,7 +184,7 @@ class DeviceMonitorService : Service() {
 
     // ── Telemetry ─────────────────────────────────────────────────────────────
 
-    private fun collectTelemetry(): JSONObject {
+    private fun collectTelemetry(freshLocation: Location? = null): JSONObject {
         val o = JSONObject()
         o.put("batteryLevel", batteryPct())
         o.put("storageFreePct", storageFreePct())
@@ -188,7 +194,7 @@ class DeviceMonitorService : Service() {
         o.put("model", Build.MODEL)
         o.put("osVersion", Build.VERSION.RELEASE)
         AppBlockerAccessibilityService.currentPackage?.let { o.put("foregroundApp", it) }
-        lastLocation()?.let {
+        (freshLocation ?: lastLocation())?.let {
             o.put("latitude", it.latitude)
             o.put("longitude", it.longitude)
         }
@@ -258,6 +264,60 @@ class DeviceMonitorService : Service() {
         }
     }
 
+    /**
+     * Actively acquires a fresh GPS fix (#29) instead of relying on a possibly
+     * hours-old getLastKnownLocation — used when an admin requests LOCATE.
+     * Requests a single update delivered on the main looper, waits up to
+     * [timeoutMs] on this background thread, then removes the listener and
+     * falls back to the last known location if no fresh fix arrived.
+     */
+    private fun requestFreshLocation(timeoutMs: Long): Location? {
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED &&
+            checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
+        val lm = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return lastLocation()
+        val provider = when {
+            lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+            lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) ->
+                LocationManager.NETWORK_PROVIDER
+            else -> return lastLocation()
+        }
+
+        val latch = CountDownLatch(1)
+        // No @Volatile needed: latch.countDown()/await() establish a
+        // happens-before edge, so the read after await sees the write.
+        var fresh: Location? = null
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                fresh = location
+                latch.countDown()
+            }
+
+            // Empty overrides kept for pre-API-30 LocationListener compatibility.
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+            @Deprecated("Deprecated in Java")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+        }
+
+        return try {
+            lm.requestLocationUpdates(provider, 0L, 0f, listener, Looper.getMainLooper())
+            latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+            fresh ?: lastLocation()
+        } catch (_: SecurityException) {
+            lastLocation()
+        } catch (_: Exception) {
+            lastLocation()
+        } finally {
+            try { lm.removeUpdates(listener) } catch (_: Exception) {}
+        }
+    }
+
     // ── Block state ─────────────────────────────────────────────────────────
 
     private fun applyBlockState(blocked: Boolean, reason: String?) {
@@ -285,11 +345,13 @@ class DeviceMonitorService : Service() {
                 "UNBLOCK" ->
                     applyBlockState(false, null)
                 "LOCATE" -> {
-                    val body = collectTelemetry()
-                    DeviceApi.heartbeat(this, body)
+                    // Acquire a fresh fix rather than reporting a stale one.
+                    val loc = requestFreshLocation(LOCATE_TIMEOUT_MS)
+                    DeviceApi.heartbeat(this, collectTelemetry(loc))
                 }
                 "MESSAGE" -> showMessage(cmd.payload?.optString("text") ?: "")
                 "RING" -> ringDevice()
+                "FORCE_LOGOUT" -> forceLogout()
                 "REBOOT" -> if (!deviceOwnerReboot()) status = "failed"
                 "WIPE_USER_DATA", "FACTORY_RESET" -> if (!deviceOwnerWipe()) status = "failed"
                 else -> status = "failed"
@@ -342,6 +404,27 @@ class DeviceMonitorService : Service() {
                 try { rt.stop() } catch (_: Exception) {}
             }, 15_000)
         } catch (_: Exception) {}
+    }
+
+    /**
+     * Force-logout (#23): clear the WebView's auth cookies + DOM/localStorage
+     * (where the web app keeps its JWT) so the next load lands on the login
+     * screen, then broadcast so a foreground MainActivity reloads immediately.
+     * If the activity isn't alive the cleared session already guarantees the
+     * next launch starts logged-out. Non-destructive — no data wipe.
+     */
+    private fun forceLogout() {
+        Handler(Looper.getMainLooper()).post {
+            try {
+                val cm = android.webkit.CookieManager.getInstance()
+                cm.removeAllCookies(null)
+                cm.flush()
+                android.webkit.WebStorage.getInstance().deleteAllData()
+            } catch (e: Exception) {
+                Log.w(TAG, "clear session failed: ${e.message}")
+            }
+        }
+        sendBroadcast(Intent(ACTION_FORCE_LOGOUT).setPackage(packageName))
     }
 
     private fun deviceOwnerReboot(): Boolean {

@@ -3,8 +3,10 @@ package uz.alojon.kiosk
 import android.Manifest
 import android.app.AlertDialog
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -57,6 +59,16 @@ class MainActivity : AppCompatActivity() {
     // "Enable accessibility" nudge dialog (non-device-owner blocking).
     private var accDialog: AlertDialog? = null
 
+    // Reloads the WebView to the login screen when the monitor service
+    // processes a remote FORCE_LOGOUT command (#23).
+    private val logoutReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            try {
+                webView.loadUrl(kioskUrl)
+            } catch (_: Exception) {}
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -99,10 +111,23 @@ class MainActivity : AppCompatActivity() {
         setContentView(webView)
         BlockedAppsManager.applyBlocking(this)
         ensureMediaPermissions()
+        registerLogoutReceiver()
         startMonitorService()
 
         if (savedInstanceState == null) {
             webView.loadUrl(kioskUrl)
+        }
+    }
+
+    private fun registerLogoutReceiver() {
+        val filter = IntentFilter(DeviceMonitorService.ACTION_FORCE_LOGOUT)
+        // The broadcast is app-internal (setPackage); on API 33+ it must be
+        // registered as not-exported.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(logoutReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(logoutReceiver, filter)
         }
     }
 
@@ -328,6 +353,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(logoutReceiver) } catch (_: Exception) {}
         try {
             webView.stopLoading()
             webView.destroy()
